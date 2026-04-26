@@ -2,6 +2,7 @@
 import React, { useState } from 'react';
 import Link from 'next/link';
 import { Icon } from '@/components/ui/Icon';
+import { BarcodeDisplay } from '@/components/ui/BarcodeDisplay';
 
 const WAREHOUSE_CARGO = [
   { id: 'LCL-8842-1', type: 'Pallet', desc: 'Auto Parts (Toyota)', weight: 1200, vol: 1.5, qty: 1, loc: 'WH-A1-01', bkg: 'BKG-2026-991' },
@@ -91,6 +92,14 @@ export default function StuffingPage() {
                 <div style={{ fontSize: 11, fontWeight: 700, color: 'var(--gecko-text-secondary)', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Booking</div>
                 <div style={{ fontSize: 14, fontWeight: 700, fontFamily: 'var(--gecko-font-mono)', marginTop: 4 }}>BKG-2026-991</div>
               </div>
+            </div>
+
+            {/* Container barcode */}
+            <div style={{ marginTop: 10, paddingTop: 10, borderTop: '1px dashed var(--gecko-border)' }}>
+              <BarcodeDisplay value="MSKU8812900" variant="both" qrSize={64} showValue={false} label="Container" />
+            </div>
+            <div style={{ marginTop: 8 }}>
+              <BarcodeDisplay value="TL-26-00892" variant="qr" qrSize={52} showValue={false} label="Tally Job" />
             </div>
 
             {/* Capacity Meters */}

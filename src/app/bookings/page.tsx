@@ -2,6 +2,7 @@
 import React, { useState, useMemo } from 'react';
 import Link from 'next/link';
 import { Icon } from '@/components/ui/Icon';
+import { BarcodeScanInput } from '@/components/ui/BarcodeDisplay';
 
 // ─── Types ─────────────────────────────────────────────────────────────────────
 
@@ -201,6 +202,12 @@ export default function BookingRegisterPage() {
 
       {/* ── Filters + Search ── */}
       <div style={{ display: 'flex', gap: 10, alignItems: 'center', flexWrap: 'wrap' }}>
+        <BarcodeScanInput
+          onScan={v => setSearch(v)}
+          placeholder="Scan booking no…"
+          size="sm"
+          style={{ width: 200 }}
+        />
         {/* Direction toggle */}
         <div style={{ display: 'flex', background: 'var(--gecko-bg-subtle)', borderRadius: 8, padding: 2, border: '1px solid var(--gecko-border)' }}>
           {(['ALL', 'EXPORT', 'IMPORT'] as const).map(d => (

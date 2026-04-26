@@ -3,6 +3,7 @@ import React, { useState } from 'react';
 import Link from 'next/link';
 import { Icon } from '@/components/ui/Icon';
 import { FilterPopover, FilterField, SortOption } from '@/components/ui/FilterPopover';
+import { PrintDocumentModal, BarcodeScanInput } from '@/components/ui/BarcodeDisplay';
 
 const CREDIT_NOTES = [
   { id: 'CN-26-00184', date: 'Apr 24, 2026', customer: 'C-00308', custName: 'PTT Global Chemical', invoice: 'INV-26-009411', reason: 'Billing Error - Lift duplicate', amount: '฿850.00', status: 'Approved' },
@@ -33,6 +34,8 @@ function StatusBadge({ status }: { status: string }) {
 export default function CreditNotesPage() {
   const [filters, setFilters] = useState<Record<string, string>>({ query: '', status: '', date: '' });
   const [sortBy, setSortBy] = useState('date_desc');
+  const [printDoc, setPrintDoc] = useState<{ id: string; docType: string; details: {label:string;value:string}[] } | null>(null);
+  const [scannedId, setScannedId] = useState<string | null>(null);
 
   return (
     <div style={{ maxWidth: 'var(--gecko-container-max)', margin: '0 auto', display: 'flex', flexDirection: 'column', gap: 24, paddingBottom: 40 }}>
@@ -48,6 +51,7 @@ export default function CreditNotesPage() {
         </div>
         <div className="gecko-toolbar">
           <button className="gecko-btn gecko-btn-ghost gecko-btn-sm"><Icon name="download" size={16} /> Export</button>
+          <BarcodeScanInput onScan={v => setScannedId(v)} placeholder="Scan CN number…" size="sm" style={{ width: 200 }} />
           <FilterPopover
             fields={CN_FILTER_FIELDS}
             values={filters}
@@ -79,7 +83,7 @@ export default function CreditNotesPage() {
           </thead>
           <tbody>
             {CREDIT_NOTES.map((cn) => (
-              <tr key={cn.id}>
+              <tr key={cn.id} style={scannedId === cn.id ? { background: 'var(--gecko-primary-50)', borderLeft: '3px solid var(--gecko-primary-500)' } : undefined}>
                 <td className="gecko-text-mono" style={{ fontWeight: 700, color: 'var(--gecko-error-600)' }}>
                   <a href="#" style={{ color: 'inherit', textDecoration: 'none' }}>{cn.id}</a>
                 </td>
@@ -97,6 +101,20 @@ export default function CreditNotesPage() {
                   <StatusBadge status={cn.status} />
                 </td>
                 <td style={{ textAlign: 'right' }}>
+                  <button
+                    onClick={() => setPrintDoc({ id: cn.id, docType: 'Credit Note', details: [
+                      { label: 'Date', value: cn.date },
+                      { label: 'Customer', value: cn.custName },
+                      { label: 'Original Invoice', value: cn.invoice },
+                      { label: 'Reason', value: cn.reason },
+                      { label: 'Amount', value: cn.amount },
+                      { label: 'Status', value: cn.status },
+                    ]})}
+                    className="gecko-btn gecko-btn-ghost gecko-btn-icon gecko-btn-sm"
+                    title="Print / Barcode"
+                  >
+                    <Icon name="printer" size={13} />
+                  </button>
                   <button style={{ background: 'transparent', border: 'none', color: 'var(--gecko-text-disabled)', cursor: 'pointer' }}><Icon name="moreHorizontal" size={16} /></button>
                 </td>
               </tr>
@@ -104,6 +122,17 @@ export default function CreditNotesPage() {
           </tbody>
         </table>
       </div>
+
+      {printDoc && (
+        <PrintDocumentModal
+          open={!!printDoc}
+          onClose={() => setPrintDoc(null)}
+          docType={printDoc.docType}
+          docNo={printDoc.id}
+          barcodeValue={printDoc.id}
+          details={printDoc.details}
+        />
+      )}
 
     </div>
   );

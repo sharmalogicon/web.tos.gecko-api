@@ -3,6 +3,7 @@ import React, { useState } from 'react';
 import Link from 'next/link';
 import { Icon } from '@/components/ui/Icon';
 import { FilterPopover, FilterField, SortOption } from '@/components/ui/FilterPopover';
+import { PrintDocumentModal, BarcodeScanInput } from '@/components/ui/BarcodeDisplay';
 
 const SERVICE_ORDERS = [
   { id: 'SO-2026-0881', unit: 'MSKU 744218-3', type: '20GP', customer: 'C-00142', custName: 'Thai Union Group', code: 'STORAGE-L', desc: 'Storage, laden (4 days)', amount: '฿320.00', date: '2026-04-24 14:30', status: 'Pending' },
@@ -38,6 +39,8 @@ function StatusBadge({ status }: { status: string }) {
 export default function ServiceOrdersPage() {
   const [filters, setFilters] = useState<Record<string, string>>({ query: '', code: '', status: 'pending', date: '' });
   const [sortBy, setSortBy] = useState('date_desc');
+  const [printDoc, setPrintDoc] = useState<{ id: string; docType: string; details: {label:string;value:string}[] } | null>(null);
+  const [scannedId, setScannedId] = useState<string | null>(null);
 
   return (
     <div style={{ maxWidth: 'var(--gecko-container-max)', margin: '0 auto', display: 'flex', flexDirection: 'column', gap: 24, paddingBottom: 40 }}>
@@ -53,6 +56,7 @@ export default function ServiceOrdersPage() {
         </div>
         <div className="gecko-toolbar">
           <button className="gecko-btn gecko-btn-ghost gecko-btn-sm"><Icon name="download" size={16} /> Export</button>
+          <BarcodeScanInput onScan={v => setScannedId(v)} placeholder="Scan SO number…" size="sm" style={{ width: 200 }} />
           <FilterPopover
             fields={SO_FILTER_FIELDS}
             values={filters}
@@ -84,7 +88,7 @@ export default function ServiceOrdersPage() {
           </thead>
           <tbody>
             {SERVICE_ORDERS.map((so) => (
-              <tr key={so.id}>
+              <tr key={so.id} style={scannedId === so.id ? { background: 'var(--gecko-primary-50)', borderLeft: '3px solid var(--gecko-primary-500)' } : undefined}>
                 <td className="gecko-text-mono" style={{ fontWeight: 600, color: 'var(--gecko-primary-600)' }}>
                   <a href="#" style={{ color: 'inherit', textDecoration: 'none' }}>{so.id}</a>
                 </td>
@@ -106,6 +110,20 @@ export default function ServiceOrdersPage() {
                   <StatusBadge status={so.status} />
                 </td>
                 <td style={{ textAlign: 'right' }}>
+                  <button
+                    onClick={() => setPrintDoc({ id: so.id, docType: 'Service Order', details: [
+                      { label: 'Unit', value: so.unit },
+                      { label: 'Charge Code', value: so.code },
+                      { label: 'Customer', value: so.custName },
+                      { label: 'Amount', value: so.amount },
+                      { label: 'Date', value: so.date },
+                      { label: 'Status', value: so.status },
+                    ]})}
+                    className="gecko-btn gecko-btn-ghost gecko-btn-icon gecko-btn-sm"
+                    title="Print / Barcode"
+                  >
+                    <Icon name="printer" size={13} />
+                  </button>
                   <button style={{ background: 'transparent', border: 'none', color: 'var(--gecko-text-disabled)', cursor: 'pointer' }}><Icon name="moreHorizontal" size={16} /></button>
                 </td>
               </tr>
@@ -113,6 +131,17 @@ export default function ServiceOrdersPage() {
           </tbody>
         </table>
       </div>
+
+      {printDoc && (
+        <PrintDocumentModal
+          open={!!printDoc}
+          onClose={() => setPrintDoc(null)}
+          docType={printDoc.docType}
+          docNo={printDoc.id}
+          barcodeValue={printDoc.id}
+          details={printDoc.details}
+        />
+      )}
 
     </div>
   );

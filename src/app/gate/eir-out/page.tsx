@@ -1,9 +1,11 @@
 "use client";
 import React, { useState, useEffect } from 'react';
 import { Icon } from '@/components/ui/Icon';
+import { BarcodeDisplay, BarcodeScanInput } from '@/components/ui/BarcodeDisplay';
 
 // High-speed exception-based HUD for gate delivery (EIR-Out).
 export default function EirOutPage() {
+  const [scanHighlight, setScanHighlight] = useState<string | null>(null);
   const [containers, setContainers] = useState([
     {
       id: 1,
@@ -111,11 +113,35 @@ export default function EirOutPage() {
         </div>
       </div>
 
+      {/* Scan Bar */}
+      <div style={{ padding: '10px 14px', background: 'var(--gecko-primary-50)', border: '1px solid var(--gecko-primary-200)', borderRadius: 10, marginBottom: 12, display: 'flex', alignItems: 'center', gap: 14 }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexShrink: 0 }}>
+          <div style={{ width: 32, height: 32, borderRadius: 8, background: 'var(--gecko-primary-600)', color: '#fff', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M3 7V5a2 2 0 0 1 2-2h2"/><path d="M17 3h2a2 2 0 0 1 2 2v2"/><path d="M21 17v2a2 2 0 0 1-2 2h-2"/><path d="M7 21H5a2 2 0 0 1-2-2v-2"/><line x1="3" y1="12" x2="21" y2="12" strokeWidth="2"/></svg>
+          </div>
+          <div>
+            <div style={{ fontSize: 12, fontWeight: 700, color: 'var(--gecko-primary-700)' }}>Scanner Ready</div>
+            <div style={{ fontSize: 10.5, color: 'var(--gecko-primary-600)' }}>Scan container no or EDO to highlight</div>
+          </div>
+        </div>
+        <BarcodeScanInput
+          onScan={v => setScanHighlight(v)}
+          placeholder="Scan container no or EDO number…"
+          style={{ flex: 1 }}
+        />
+        {scanHighlight && (
+          <button onClick={() => setScanHighlight(null)} style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--gecko-text-secondary)', fontSize: 12, fontFamily: 'inherit' }}>
+            Clear ×
+          </button>
+        )}
+      </div>
+
       {/* 2. Vertically Stacked Container HUD */}
       <div style={{ flex: 1, overflowY: 'auto', display: 'flex', flexDirection: 'column', gap: 14 }}>
         {containers.map((c, i) => (
-          <div key={c.id} style={{ 
-            background: 'var(--gecko-bg-surface)', border: `2px solid ${c.ready ? 'var(--gecko-success-500)' : 'var(--gecko-warning-500)'}`, 
+          <div key={c.id} style={{
+            background: scanHighlight && (c.unit.replace(/\s/g,'').toLowerCase().includes(scanHighlight.toLowerCase()) || c.edo.toLowerCase().includes(scanHighlight.toLowerCase())) ? 'var(--gecko-primary-50)' : 'var(--gecko-bg-surface)',
+            border: scanHighlight && (c.unit.replace(/\s/g,'').toLowerCase().includes(scanHighlight.toLowerCase()) || c.edo.toLowerCase().includes(scanHighlight.toLowerCase())) ? '2px solid var(--gecko-primary-500)' : `2px solid ${c.ready ? 'var(--gecko-success-500)' : 'var(--gecko-warning-500)'}`,
             borderRadius: 10, overflow: 'hidden', boxShadow: 'var(--gecko-shadow-sm)'
           }}>
             {/* Header row for container */}
@@ -161,6 +187,11 @@ export default function EirOutPage() {
               >
                 {c.ready ? <><Icon name="check" size={14} /> READY</> : <><Icon name="alertTriangle" size={14} /> PENDING</>}
               </button>
+            </div>
+
+            {/* Unit barcode */}
+            <div style={{ padding: '4px 16px 8px' }}>
+              <BarcodeDisplay value={c.unit.replace(/\s/g,'')} variant="code128" showValue={false} />
             </div>
 
             {/* Inputs row */}

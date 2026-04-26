@@ -3,6 +3,7 @@ import React, { useState } from 'react';
 import Link from 'next/link';
 import { Icon } from '@/components/ui/Icon';
 import { FilterPopover, FilterField, SortOption } from '@/components/ui/FilterPopover';
+import { PrintDocumentModal, BarcodeScanInput } from '@/components/ui/BarcodeDisplay';
 
 const TALLY_LISTS = [
   { id: 'TL-26-00892', date: 'Apr 24, 2026', type: 'Stuffing', container: 'MSKU 881290-0', clerk: 'Somchai K.', items: 14, weight: '12,450 kg', status: 'In Progress' },
@@ -35,6 +36,8 @@ function StatusBadge({ status }: { status: string }) {
 export default function TallyListsPage() {
   const [filters, setFilters] = useState<Record<string, string>>({ query: '', type: '', status: '', date: '' });
   const [sortBy, setSortBy] = useState('');
+  const [printDoc, setPrintDoc] = useState<{ id: string; docType: string; details: {label:string;value:string}[] } | null>(null);
+  const [scannedId, setScannedId] = useState<string | null>(null);
 
   return (
     <div style={{ maxWidth: 'var(--gecko-container-max)', margin: '0 auto', display: 'flex', flexDirection: 'column', gap: 24, paddingBottom: 40 }}>
@@ -50,6 +53,7 @@ export default function TallyListsPage() {
         </div>
         <div className="gecko-toolbar">
           <button className="gecko-btn gecko-btn-ghost gecko-btn-sm"><Icon name="download" size={16} /> Export</button>
+          <BarcodeScanInput onScan={v => setScannedId(v)} placeholder="Scan tally no or container…" size="sm" style={{ width: 220 }} />
           <FilterPopover
             fields={TALLY_FILTER_FIELDS}
             values={filters}
@@ -83,26 +87,40 @@ export default function TallyListsPage() {
             </tr>
           </thead>
           <tbody>
-            {TALLY_LISTS.map((tally) => (
-              <tr key={tally.id}>
+            {TALLY_LISTS.map((tl) => (
+              <tr key={tl.id} style={scannedId && (tl.id === scannedId || tl.container.toLowerCase().includes(scannedId.toLowerCase())) ? { background: 'var(--gecko-primary-50)', borderLeft: '3px solid var(--gecko-primary-500)' } : undefined}>
                 <td className="gecko-text-mono" style={{ fontWeight: 700, color: 'var(--gecko-primary-600)' }}>
-                  <a href="#" style={{ color: 'inherit', textDecoration: 'none' }}>{tally.id}</a>
+                  <a href="#" style={{ color: 'inherit', textDecoration: 'none' }}>{tl.id}</a>
                 </td>
-                <td style={{ color: 'var(--gecko-text-secondary)' }}>{tally.date}</td>
+                <td style={{ color: 'var(--gecko-text-secondary)' }}>{tl.date}</td>
                 <td>
-                  {tally.type === 'Stuffing'
+                  {tl.type === 'Stuffing'
                     ? <span style={{ display: 'flex', alignItems: 'center', gap: 6, fontWeight: 600, color: 'var(--gecko-primary-700)' }}><Icon name="chevronRight" size={14} /> Stuffing</span>
                     : <span style={{ display: 'flex', alignItems: 'center', gap: 6, fontWeight: 600, color: 'var(--gecko-error-700)' }}><Icon name="chevronLeft" size={14} /> Stripping</span>
                   }
                 </td>
-                <td className="gecko-text-mono" style={{ fontWeight: 600, color: 'var(--gecko-text-primary)' }}>{tally.container}</td>
-                <td style={{ color: 'var(--gecko-text-secondary)' }}>{tally.clerk}</td>
-                <td style={{ textAlign: 'right', fontWeight: 600 }}>{tally.items}</td>
-                <td className="gecko-text-mono" style={{ textAlign: 'right' }}>{tally.weight}</td>
+                <td className="gecko-text-mono" style={{ fontWeight: 600, color: 'var(--gecko-text-primary)' }}>{tl.container}</td>
+                <td style={{ color: 'var(--gecko-text-secondary)' }}>{tl.clerk}</td>
+                <td style={{ textAlign: 'right', fontWeight: 600 }}>{tl.items}</td>
+                <td className="gecko-text-mono" style={{ textAlign: 'right' }}>{tl.weight}</td>
                 <td>
-                  <StatusBadge status={tally.status} />
+                  <StatusBadge status={tl.status} />
                 </td>
                 <td style={{ textAlign: 'right' }}>
+                  <button
+                    onClick={() => setPrintDoc({ id: tl.id, docType: 'Cargo Tally', details: [
+                      { label: 'Date', value: tl.date },
+                      { label: 'Type', value: tl.type },
+                      { label: 'Container', value: tl.container },
+                      { label: 'Clerk', value: tl.clerk },
+                      { label: 'Items', value: String(tl.items) },
+                      { label: 'Total Weight', value: tl.weight },
+                    ]})}
+                    className="gecko-btn gecko-btn-ghost gecko-btn-icon gecko-btn-sm"
+                    title="Print / Barcode"
+                  >
+                    <Icon name="printer" size={13} />
+                  </button>
                   <button style={{ background: 'transparent', border: 'none', color: 'var(--gecko-text-disabled)', cursor: 'pointer' }}><Icon name="moreHorizontal" size={16} /></button>
                 </td>
               </tr>
@@ -110,6 +128,17 @@ export default function TallyListsPage() {
           </tbody>
         </table>
       </div>
+
+      {printDoc && (
+        <PrintDocumentModal
+          open={!!printDoc}
+          onClose={() => setPrintDoc(null)}
+          docType={printDoc.docType}
+          docNo={printDoc.id}
+          barcodeValue={printDoc.id}
+          details={printDoc.details}
+        />
+      )}
 
     </div>
   );

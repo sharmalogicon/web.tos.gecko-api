@@ -3,6 +3,7 @@ import React, { useState, useMemo } from 'react';
 import Link from 'next/link';
 import { Icon } from '@/components/ui/Icon';
 import { EntitySearch, type EntityOption } from '@/components/ui/EntitySearch';
+import { BarcodeDisplay } from '@/components/ui/BarcodeDisplay';
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -956,6 +957,21 @@ export default function BookingDetailPage() {
                   {qa.label}
                 </button>
               ))}
+            </div>
+          </div>
+
+          {/* Barcode Card */}
+          <div className="gecko-card" style={{ padding: 14 }}>
+            <div style={{ fontSize: 10, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.08em', color: 'var(--gecko-text-secondary)', marginBottom: 12 }}>Document Barcodes</div>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+              <div>
+                <div style={{ fontSize: 9.5, color: 'var(--gecko-text-disabled)', marginBottom: 5 }}>Booking No</div>
+                <BarcodeDisplay value="EGLV149602390729" variant="qr" qrSize={90} showValue={false} />
+              </div>
+              <div style={{ borderTop: '1px dashed var(--gecko-border)', paddingTop: 10 }}>
+                <div style={{ fontSize: 9.5, color: 'var(--gecko-text-disabled)', marginBottom: 5 }}>Machine Readable</div>
+                <BarcodeDisplay value="EGLV149602390729" variant="code128" showValue={false} />
+              </div>
             </div>
           </div>
 

@@ -2,6 +2,7 @@
 import React, { useState } from 'react';
 import Link from 'next/link';
 import { Icon } from '@/components/ui/Icon';
+import { BarcodeDisplay } from '@/components/ui/BarcodeDisplay';
 
 const CONTAINER_CARGO = [
   { id: 'LCL-IM-001', type: 'Pallet', desc: 'Apparel (Nike)', weight: 800, qty: 1, seal: 'OK', marks: 'NKE-TH' },
@@ -80,6 +81,11 @@ export default function StrippingPage() {
                 <div style={{ fontSize: 11, fontWeight: 700, color: 'var(--gecko-text-secondary)', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Manifest (EDO)</div>
                 <div style={{ fontSize: 14, fontWeight: 700, fontFamily: 'var(--gecko-font-mono)', marginTop: 4 }}>EDO-2026-1142</div>
               </div>
+            </div>
+
+            {/* Container barcode */}
+            <div style={{ marginTop: 10, paddingTop: 10, borderTop: '1px dashed var(--gecko-border)' }}>
+              <BarcodeDisplay value="CMAU4419221" variant="both" qrSize={64} showValue={false} label="Container" />
             </div>
 
             <div style={{ display: 'flex', alignItems: 'center', gap: 16, background: 'var(--gecko-warning-50)', padding: '8px 12px', borderRadius: 8, border: '1px solid var(--gecko-warning-200)' }}>

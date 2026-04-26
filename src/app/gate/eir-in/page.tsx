@@ -2,6 +2,7 @@
 import React, { useState } from 'react';
 import { Icon } from '@/components/ui/Icon';
 import { PageToolbar, Field } from '@/components/ui/OpsPrimitives';
+import { BarcodeDisplay, BarcodeScanInput } from '@/components/ui/BarcodeDisplay';
 
 function SectionHeader({ icon, title, subtitle, step, right }: any) {
   return (
@@ -82,6 +83,15 @@ function PaymentRail({ tariff, subtotal, vat, wht, net, vatRate, whtRate }: any)
           <Icon name="check" size={14} />Commit Visit · Open Gate
         </button>
         <div style={{ fontSize: 10, color: 'var(--gecko-text-disabled)', textAlign: 'center' }}>Committing issues EIR + invoice and releases the truck</div>
+      </div>
+
+      {/* EIR Document Barcode */}
+      <div style={{ padding: '12px 14px', borderTop: '1px solid var(--gecko-border)', background: 'var(--gecko-bg-subtle)' }}>
+        <div style={{ fontSize: 10, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.08em', color: 'var(--gecko-text-secondary)', marginBottom: 10 }}>EIR Barcodes</div>
+        <BarcodeDisplay value="EIR-2026-SCT-0441" variant="qr" qrSize={72} showValue label="EIR No" />
+        <div style={{ marginTop: 8 }}>
+          <BarcodeDisplay value="MSKU7442183" variant="code128" showValue={false} />
+        </div>
       </div>
     </aside>
   );
@@ -627,6 +637,24 @@ export default function EirInPage() {
           </>
         }
       />
+
+      {/* Barcode Scan Bar */}
+      <div style={{ padding: '10px 14px', background: 'var(--gecko-primary-50)', border: '1px solid var(--gecko-primary-200)', borderRadius: 10, display: 'flex', alignItems: 'center', gap: 14, marginBottom: 4 }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexShrink: 0 }}>
+          <div style={{ width: 32, height: 32, borderRadius: 8, background: 'var(--gecko-primary-600)', color: '#fff', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M3 7V5a2 2 0 0 1 2-2h2"/><path d="M17 3h2a2 2 0 0 1 2 2v2"/><path d="M21 17v2a2 2 0 0 1-2 2h-2"/><path d="M7 21H5a2 2 0 0 1-2-2v-2"/><line x1="3" y1="12" x2="21" y2="12" strokeWidth="2"/></svg>
+          </div>
+          <div>
+            <div style={{ fontSize: 12, fontWeight: 700, color: 'var(--gecko-primary-700)' }}>Scanner Ready</div>
+            <div style={{ fontSize: 10.5, color: 'var(--gecko-primary-600)' }}>Scan booking no, container no, or EDO</div>
+          </div>
+        </div>
+        <BarcodeScanInput
+          onScan={v => alert(`Scanned: ${v} — would auto-fill container details`)}
+          placeholder="Scan container no, booking no, or EDO…"
+          style={{ flex: 1 }}
+        />
+      </div>
 
       <div style={{ display: 'grid', gridTemplateColumns: '1fr 340px', gap: 14, alignItems: 'flex-start' }}>
         <div style={{ display: 'flex', flexDirection: 'column', gap: 14, minWidth: 0 }}>

@@ -74,6 +74,8 @@ const IconPaths: Record<string, React.ReactNode> = {
   chevronUp: <path d="m18 15-6-6-6 6"/>,
   packageOpen: <><path d="M20.9 18.6 12 22l-8.9-3.4A2 2 0 0 1 2 16.8V7.2a2 2 0 0 1 1.1-1.8L12 2l8.9 3.4A2 2 0 0 1 22 7.2v9.6a2 2 0 0 1-1.1 1.8Z"/><path d="M12 22V12"/><path d="m2 7 10 5 10-5"/></>,
   transferH: <><path d="m16 3 4 4-4 4"/><path d="M20 7H4"/><path d="m8 21-4-4 4-4"/><path d="M4 17h16"/></>,
+  scan: <><path d="M3 7V5a2 2 0 0 1 2-2h2"/><path d="M17 3h2a2 2 0 0 1 2 2v2"/><path d="M21 17v2a2 2 0 0 1-2 2h-2"/><path d="M7 21H5a2 2 0 0 1-2-2v-2"/><line x1="3" y1="12" x2="21" y2="12" strokeWidth="2"/></>,
+  printer: <><path d="M6 9V2h12v7"/><path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"/><path d="M6 14h12v8H6z"/></>,
 };
 
 export interface IconProps {
