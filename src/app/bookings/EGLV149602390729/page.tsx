@@ -4,6 +4,7 @@ import Link from 'next/link';
 import { Icon } from '@/components/ui/Icon';
 import { EntitySearch, type EntityOption } from '@/components/ui/EntitySearch';
 import { BarcodeDisplay } from '@/components/ui/BarcodeDisplay';
+import { DateField } from '@/components/ui/DateField';
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -203,7 +204,7 @@ function ContainerDrawer({ container, onClose, onDuplicate, onDelete }: {
               </div>
               <div className="gecko-form-group">
                 <label className="gecko-label gecko-label-required">Pickup Date</label>
-                <input className="gecko-input" type="date" value={form.pickupDate} onChange={e => set('pickupDate', e.target.value)} />
+                <DateField value={form.pickupDate} onChange={v => set('pickupDate', v)} />
               </div>
               <div className="gecko-form-group">
                 <label className="gecko-label">Stowage</label>
@@ -372,6 +373,7 @@ function ContainerDrawer({ container, onClose, onDuplicate, onDelete }: {
 function TabVoyage() {
   const [editMode, setEditMode] = useState(false);
   const b = BOOKING;
+  const [etdEdit, setEtdEdit] = useState(b.etd);
 
   // Party edit state — pre-seeded from mock booking data
   const [editAgent,   setEditAgent]   = useState<EntityOption | null>({ code: b.agent.code,    name: b.agent.name });
@@ -462,8 +464,8 @@ function TabVoyage() {
             <div style={{ display: 'flex', flexDirection: 'column', gap: 3 }}>
               <div style={{ fontSize: 10, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.06em', color: 'var(--gecko-text-disabled)' }}>ETD</div>
               {editMode
-                ? <input className="gecko-input gecko-input-sm" type="date" defaultValue={b.etd} />
-                : <div style={{ fontSize: 15, fontWeight: 800, color: 'var(--gecko-primary-700)', fontFamily: 'var(--gecko-font-mono)' }}>{new Date(b.etd).toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' })}</div>
+                ? <DateField value={etdEdit} onChange={setEtdEdit} size="sm" />
+                : <div style={{ fontSize: 15, fontWeight: 800, color: 'var(--gecko-primary-700)', fontFamily: 'var(--gecko-font-mono)' }}>{new Date(etdEdit).toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' })}</div>
               }
             </div>
             <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>

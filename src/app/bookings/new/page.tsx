@@ -3,6 +3,7 @@ import React, { useState } from 'react';
 import Link from 'next/link';
 import { Icon } from '@/components/ui/Icon';
 import { EntitySearch, type EntityOption } from '@/components/ui/EntitySearch';
+import { DateField } from '@/components/ui/DateField';
 
 const ORDER_TYPES: Record<string, { code: string; label: string; desc: string; movements: string[] }[]> = {
   EXPORT: [
@@ -166,7 +167,7 @@ export default function NewBookingPage() {
                 <input className="gecko-input gecko-text-mono" placeholder="Optional" value={subBLNo} onChange={e => setSubBLNo(e.target.value)} />
               </FieldGroup>
               <FieldGroup label="Booking Date" required>
-                <input className="gecko-input" type="date" value={bookingDate} onChange={e => setBookingDate(e.target.value)} />
+                <DateField value={bookingDate} onChange={setBookingDate} />
               </FieldGroup>
             </div>
           </div>

@@ -2,6 +2,7 @@
 import React, { useState } from 'react';
 import Link from 'next/link';
 import { Icon } from '@/components/ui/Icon';
+import { DateField } from '@/components/ui/DateField';
 
 type ChargeType = 'Revenue' | 'Cost' | 'Pass-through';
 type ChargeModule = 'TOS' | 'Trucking' | 'CFS' | 'M&R';
@@ -34,6 +35,7 @@ interface FormState {
   cargoStatus: string[];
   status: string;
   effectiveFrom: string;
+  effectiveTo: string;
 }
 
 const INITIAL_FORM: FormState = {
@@ -46,7 +48,7 @@ const INITIAL_FORM: FormState = {
   revenueGL: '', costGL: '', revenueStream: '',
   directions: ['All'], sizes: ['All sizes'],
   containerTypes: ['All types'], cargoStatus: ['Both'],
-  status: 'Active', effectiveFrom: '',
+  status: 'Active', effectiveFrom: '', effectiveTo: '',
 };
 
 const STEPS = [
@@ -187,10 +189,10 @@ function Step1({ form, set }: { form: FormState; set: (f: Partial<FormState>) =>
         <div style={{ fontSize: 14, fontWeight: 700, color: 'var(--gecko-text-primary)', marginBottom: 18 }}>Effective Date</div>
         <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 18 }}>
           <Field label="Effective From">
-            <input className="gecko-input" type="date" value={form.effectiveFrom} onChange={e => set({ effectiveFrom: e.target.value })} />
+            <DateField value={form.effectiveFrom} onChange={v => set({ effectiveFrom: v })} />
           </Field>
           <Field label="Effective To" hint="Leave blank for no expiry">
-            <input className="gecko-input" type="date" />
+            <DateField value={form.effectiveTo} onChange={v => set({ effectiveTo: v })} placeholder="No expiry" />
           </Field>
         </div>
       </div>

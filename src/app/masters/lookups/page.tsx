@@ -1,6 +1,7 @@
 "use client";
 import React, { useState, useMemo } from 'react';
 import { Icon } from '@/components/ui/Icon';
+import { DateField } from '@/components/ui/DateField';
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -204,118 +205,204 @@ function CompliancePill({ compliance }: { compliance: Compliance }) {
   return <span style={{ fontSize: 9, fontWeight: 800, letterSpacing: '0.06em', padding: '1px 5px', borderRadius: 3, background: s.bg, color: s.color }}>{compliance}</span>;
 }
 
-// ─── Edit Drawer ──────────────────────────────────────────────────────────────
+// ─── Entry Modal ──────────────────────────────────────────────────────────────
 
-function EditDrawer({ entry, isNew, onClose }: { entry: LookupEntry; isNew: boolean; onClose: () => void }) {
-  const locked = entry.entryType === 'SYSTEM';
+interface EntryModalProps {
+  entry: LookupEntry;
+  isNew: boolean;
+  catMeta: CategoryMeta;
+  groupColor: string;
+  groupBg: string;
+  onClose: () => void;
+}
+
+function EntryModal({ entry, isNew, catMeta, groupColor, groupBg, onClose }: EntryModalProps) {
+  const [form, setForm] = useState<Record<string, string>>({
+    code:          entry.code,
+    description:   entry.description,
+    shortLabel:    entry.shortLabel,
+    smdgCode:      entry.smdgCode,
+    edifactCode:   entry.edifactCode,
+    isoCode:       entry.isoCode,
+    customsCode:   entry.customsCode,
+    sortOrder:     String(entry.sortOrder),
+    facilityScope: entry.facilityScope,
+    lifecycle:     entry.lifecycle,
+    effectiveFrom: entry.effectiveFrom,
+    effectiveTo:   entry.effectiveTo,
+  });
+
+  const set = (field: string) => (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) =>
+    setForm(prev => ({ ...prev, [field]: e.target.value }));
+
+  const locked  = entry.entryType === 'SYSTEM';
+  const canSave = !isNew || (form.code.trim() !== '' && form.description.trim() !== '');
+
+  const sectionHead = (title: string) => (
+    <div style={{ fontSize: 10.5, fontWeight: 800, textTransform: 'uppercase' as const, letterSpacing: '0.09em', color: groupColor, marginBottom: 12, paddingBottom: 7, borderBottom: `2px solid ${groupColor}28` }}>
+      {title}
+    </div>
+  );
+
+  const roStyle = locked ? { background: 'var(--gecko-bg-subtle)', color: 'var(--gecko-text-disabled)' } : {};
+
   return (
-    <div style={{ width: 360, flexShrink: 0, borderLeft: '1px solid var(--gecko-border)', background: 'var(--gecko-bg-surface)', display: 'flex', flexDirection: 'column', height: '100%', overflowY: 'auto' }}>
-      {/* Drawer Header */}
-      <div style={{ padding: '16px 20px', borderBottom: '1px solid var(--gecko-border)', display: 'flex', alignItems: 'center', justifyContent: 'space-between', background: 'var(--gecko-bg-subtle)', flexShrink: 0 }}>
-        <div>
-          <div style={{ fontSize: 13, fontWeight: 700, color: 'var(--gecko-text-primary)' }}>{isNew ? 'New Entry' : `Edit — ${entry.code}`}</div>
-          <div style={{ fontSize: 11, color: 'var(--gecko-text-secondary)', marginTop: 2 }}>{entry.entryType === 'SYSTEM' ? 'System-locked · description only' : 'User-defined entry'}</div>
-        </div>
-        <button onClick={onClose} style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--gecko-text-secondary)', padding: 4 }}>
-          <Icon name="x" size={16} />
-        </button>
-      </div>
+    <div
+      style={{ position: 'fixed', inset: 0, zIndex: 9000, background: 'rgba(0,0,0,0.52)', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '24px 16px' }}
+      onClick={e => { if (e.target === e.currentTarget) onClose(); }}
+    >
+      <div style={{ background: 'var(--gecko-bg-surface)', borderRadius: 12, width: '100%', maxWidth: 660, maxHeight: '92vh', display: 'flex', flexDirection: 'column', boxShadow: '0 24px 80px rgba(0,0,0,0.3)' }}>
 
-      {locked && (
-        <div style={{ margin: '14px 20px 0', padding: '10px 12px', background: 'var(--gecko-warning-50)', border: '1px solid var(--gecko-warning-200)', borderRadius: 8, display: 'flex', gap: 8, alignItems: 'flex-start' }}>
-          <Icon name="lock" size={13} style={{ color: 'var(--gecko-warning-600)', marginTop: 1, flexShrink: 0 }} />
-          <div style={{ fontSize: 11, color: 'var(--gecko-warning-800)', lineHeight: 1.5 }}>
-            This is a <strong>SYSTEM</strong> entry sourced from {entry.smdgCode ? 'SMDG' : entry.edifactCode ? 'EDIFACT' : 'ISO'}. Code and external mappings are read-only. You may update the description and lifecycle state only.
+        {/* ── Modal Header ── */}
+        <div style={{ padding: '18px 24px', borderBottom: '1px solid var(--gecko-border)', background: groupBg, borderRadius: '12px 12px 0 0', flexShrink: 0, display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: 16 }}>
+          <div>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
+              <span style={{ fontSize: 16, fontWeight: 800, color: 'var(--gecko-text-primary)' }}>{catMeta.label}</span>
+              <CompliancePill compliance={catMeta.compliance} />
+              {!isNew && <EntryTypeBadge type={entry.entryType} />}
+            </div>
+            <div style={{ fontSize: 12, color: 'var(--gecko-text-secondary)', marginTop: 3 }}>
+              {isNew
+                ? 'New Entry — complete the required fields below'
+                : `Edit · ${entry.code} · Last saved by ${entry.modifiedBy || '—'} on ${entry.modifiedOn || '—'}`}
+            </div>
           </div>
-        </div>
-      )}
-
-      {/* Form */}
-      <div style={{ padding: '20px', display: 'flex', flexDirection: 'column', gap: 16, flex: 1 }}>
-        {/* Identity */}
-        <div style={{ fontSize: 12, fontWeight: 700, color: 'var(--gecko-text-secondary)', textTransform: 'uppercase', letterSpacing: '0.06em' }}>Identity</div>
-        <div className="gecko-form-group">
-          <label className="gecko-label gecko-label-required">Code</label>
-          <input className="gecko-input gecko-text-mono" defaultValue={entry.code} readOnly={locked} style={locked ? { background: 'var(--gecko-bg-subtle)', color: 'var(--gecko-text-disabled)' } : {}} />
-        </div>
-        <div className="gecko-form-group">
-          <label className="gecko-label gecko-label-required">Description</label>
-          <input className="gecko-input" defaultValue={entry.description} />
-        </div>
-        <div className="gecko-form-group">
-          <label className="gecko-label">Short Label</label>
-          <input className="gecko-input" defaultValue={entry.shortLabel} readOnly={locked} />
+          <button onClick={onClose} style={{ width: 32, height: 32, border: '1px solid var(--gecko-border)', borderRadius: 7, background: 'var(--gecko-bg-surface)', color: 'var(--gecko-text-secondary)', fontSize: 17, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', fontFamily: 'inherit', flexShrink: 0 }}>×</button>
         </div>
 
-        {/* External Codes */}
-        <div style={{ fontSize: 12, fontWeight: 700, color: 'var(--gecko-text-secondary)', textTransform: 'uppercase', letterSpacing: '0.06em', marginTop: 4 }}>External Code Mappings</div>
-        {[
-          { label: 'SMDG Code',     value: entry.smdgCode,     placeholder: 'e.g. GTIN', hint: 'SMDG Edifact Message Standard' },
-          { label: 'EDIFACT Code',  value: entry.edifactCode,  placeholder: 'e.g. IF',   hint: 'UN/EDIFACT qualifier' },
-          { label: 'ISO Code',      value: entry.isoCode,      placeholder: 'e.g. TEU',  hint: 'ISO reference code' },
-          { label: 'Customs Code',  value: entry.customsCode,  placeholder: 'e.g. CBM',  hint: 'Local customs / BoC code' },
-        ].map(f => (
-          <div key={f.label} className="gecko-form-group">
-            <label className="gecko-label">{f.label}</label>
-            <input className="gecko-input gecko-text-mono" defaultValue={f.value} placeholder={f.placeholder} readOnly={locked} style={locked ? { background: 'var(--gecko-bg-subtle)', color: 'var(--gecko-text-disabled)' } : {}} />
-            <div style={{ fontSize: 10, color: 'var(--gecko-text-disabled)', marginTop: 3 }}>{f.hint}</div>
-          </div>
-        ))}
-
-        {/* Config */}
-        <div style={{ fontSize: 12, fontWeight: 700, color: 'var(--gecko-text-secondary)', textTransform: 'uppercase', letterSpacing: '0.06em', marginTop: 4 }}>Configuration</div>
-        <div className="gecko-form-group">
-          <label className="gecko-label">Sort Order</label>
-          <input className="gecko-input gecko-text-mono" defaultValue={entry.sortOrder} type="number" />
-        </div>
-        <div className="gecko-form-group">
-          <label className="gecko-label">Facility Scope</label>
-          <select className="gecko-input" defaultValue={entry.facilityScope}>
-            <option value="GLOBAL">GLOBAL — all facilities</option>
-            <option value="LCB-ICD">LCB-ICD only</option>
-            <option value="LCB-CFS">LCB-CFS only</option>
-            <option value="DEPOT-MR">Depot M&R only</option>
-          </select>
-        </div>
-        <div className="gecko-form-group">
-          <label className="gecko-label">Lifecycle State</label>
-          <select className="gecko-input" defaultValue={entry.lifecycle}>
-            <option value="DRAFT">Draft — not live yet</option>
-            <option value="ACTIVE">Active</option>
-            <option value="DEPRECATED">Deprecated — avoid new usage</option>
-            <option value="RETIRED">Retired — historical only</option>
-          </select>
-        </div>
-        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
-          <div className="gecko-form-group">
-            <label className="gecko-label">Effective From</label>
-            <input className="gecko-input" type="date" defaultValue={entry.effectiveFrom} />
-          </div>
-          <div className="gecko-form-group">
-            <label className="gecko-label">Effective To</label>
-            <input className="gecko-input" type="date" defaultValue={entry.effectiveTo || ''} placeholder="No expiry" />
-          </div>
-        </div>
-
-        {/* Usage Info (read-only) */}
-        {!isNew && (
-          <div style={{ marginTop: 4, padding: '12px 14px', background: 'var(--gecko-bg-subtle)', borderRadius: 8 }}>
-            <div style={{ fontSize: 10, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.06em', color: 'var(--gecko-text-secondary)', marginBottom: 6 }}>Live Usage</div>
-            <div style={{ fontSize: 22, fontWeight: 800, color: entry.usageCount > 0 ? 'var(--gecko-primary-600)' : 'var(--gecko-text-disabled)' }}>{entry.usageCount.toLocaleString()}</div>
-            <div style={{ fontSize: 11, color: 'var(--gecko-text-secondary)', marginTop: 2 }}>records referencing this code</div>
-            {entry.usageCount > 0 && (
-              <button style={{ marginTop: 8, background: 'none', border: 'none', color: 'var(--gecko-primary-600)', fontSize: 11, fontWeight: 600, cursor: 'pointer', padding: 0 }}>View usages →</button>
-            )}
+        {/* ── System lock notice ── */}
+        {locked && (
+          <div style={{ margin: '16px 24px 0', padding: '10px 14px', background: 'var(--gecko-warning-50)', border: '1px solid var(--gecko-warning-200)', borderRadius: 8, display: 'flex', gap: 10, alignItems: 'flex-start', flexShrink: 0 }}>
+            <Icon name="lock" size={13} style={{ color: 'var(--gecko-warning-600)', marginTop: 1, flexShrink: 0 }} />
+            <div style={{ fontSize: 11.5, color: 'var(--gecko-warning-800)', lineHeight: 1.55 }}>
+              <strong>SYSTEM</strong> entry — sourced from {entry.smdgCode ? 'SMDG' : entry.edifactCode ? 'EDIFACT' : 'ISO'}. Code and external mappings are read-only. You may update description and lifecycle state only.
+            </div>
           </div>
         )}
-      </div>
 
-      {/* Footer */}
-      <div style={{ padding: '14px 20px', borderTop: '1px solid var(--gecko-border)', display: 'flex', gap: 10, flexShrink: 0, background: 'var(--gecko-bg-surface)' }}>
-        <button className="gecko-btn gecko-btn-outline gecko-btn-sm" style={{ flex: 1 }} onClick={onClose}>Cancel</button>
-        <button className="gecko-btn gecko-btn-primary gecko-btn-sm" style={{ flex: 2 }} onClick={onClose}>
-          <Icon name="save" size={14} /> Save Entry
-        </button>
+        {/* ── Form body (scrollable) ── */}
+        <div style={{ padding: '22px 24px', flex: 1, overflowY: 'auto', display: 'flex', flexDirection: 'column', gap: 24 }}>
+
+          {/* Section 1 — Identity */}
+          <div>
+            {sectionHead('Identity')}
+            <div style={{ display: 'grid', gridTemplateColumns: '160px 1fr', gap: 14, marginBottom: 14 }}>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 3 }}>
+                <label className="gecko-label gecko-label-required">Code</label>
+                <input className="gecko-input gecko-text-mono" value={form.code} onChange={set('code')} readOnly={locked} placeholder="e.g. AVAIL" style={roStyle} />
+                <div style={{ fontSize: 10, color: 'var(--gecko-text-disabled)' }}>Unique within category</div>
+              </div>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 3 }}>
+                <label className="gecko-label gecko-label-required">Description</label>
+                <input className="gecko-input" value={form.description} onChange={set('description')} placeholder="Full descriptive text for this code" />
+              </div>
+            </div>
+            <div style={{ maxWidth: 260, display: 'flex', flexDirection: 'column', gap: 3 }}>
+              <label className="gecko-label">Short Label</label>
+              <input className="gecko-input" value={form.shortLabel} onChange={set('shortLabel')} readOnly={locked} placeholder="e.g. Available" style={roStyle} />
+              <div style={{ fontSize: 10, color: 'var(--gecko-text-disabled)' }}>Abbreviated label for dropdowns & reports</div>
+            </div>
+          </div>
+
+          {/* Section 2 — External Code Mappings */}
+          <div>
+            {sectionHead('External Code Mappings')}
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 14 }}>
+              {[
+                { field: 'smdgCode',    label: 'SMDG Code',    badge: 'SMDG',    badgeBg: 'var(--gecko-primary-100)', badgeClr: 'var(--gecko-primary-700)', ph: 'e.g. GTIN', hint: 'SMDG Edifact Message Standard' },
+                { field: 'edifactCode', label: 'EDIFACT Code', badge: 'EDIFACT', badgeBg: 'var(--gecko-warning-100)', badgeClr: 'var(--gecko-warning-700)', ph: 'e.g. IF',   hint: 'UN/EDIFACT Annex qualifier'    },
+                { field: 'isoCode',     label: 'ISO Code',     badge: 'ISO',     badgeBg: 'var(--gecko-info-100)',    badgeClr: 'var(--gecko-info-700)',    ph: 'e.g. TEU',  hint: 'ISO reference identifier'      },
+                { field: 'customsCode', label: 'Customs Code', badge: null,      badgeBg: '',                        badgeClr: '',                        ph: 'e.g. CBM',  hint: 'Local customs / BoC code'      },
+              ].map(f => (
+                <div key={f.field} style={{ display: 'flex', flexDirection: 'column', gap: 3 }}>
+                  <label className="gecko-label" style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+                    {f.label}
+                    {f.badge && <span style={{ fontSize: 9, fontWeight: 800, letterSpacing: '0.04em', padding: '1px 5px', borderRadius: 3, background: f.badgeBg, color: f.badgeClr }}>{f.badge}</span>}
+                  </label>
+                  <input className="gecko-input gecko-text-mono" value={form[f.field]} onChange={set(f.field)} readOnly={locked} placeholder={f.ph} style={roStyle} />
+                  <div style={{ fontSize: 10, color: 'var(--gecko-text-disabled)' }}>{f.hint}</div>
+                </div>
+              ))}
+            </div>
+          </div>
+
+          {/* Section 3 — Classification & Lifecycle */}
+          <div>
+            {sectionHead('Classification & Lifecycle')}
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 110px', gap: 14, marginBottom: 14 }}>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 3 }}>
+                <label className="gecko-label">Lifecycle State</label>
+                <select className="gecko-input" value={form.lifecycle} onChange={set('lifecycle')}>
+                  <option value="DRAFT">Draft — not live yet</option>
+                  <option value="ACTIVE">Active</option>
+                  <option value="DEPRECATED">Deprecated — avoid new usage</option>
+                  <option value="RETIRED">Retired — historical only</option>
+                </select>
+              </div>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 3 }}>
+                <label className="gecko-label">Facility Scope</label>
+                <select className="gecko-input" value={form.facilityScope} onChange={set('facilityScope')}>
+                  <option value="GLOBAL">GLOBAL — all facilities</option>
+                  <option value="LCB-ICD">LCB-ICD only</option>
+                  <option value="LCB-CFS">LCB-CFS only</option>
+                  <option value="DEPOT-MR">Depot M&R only</option>
+                </select>
+              </div>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 3 }}>
+                <label className="gecko-label">Sort Order</label>
+                <input className="gecko-input gecko-text-mono" type="number" value={form.sortOrder} onChange={set('sortOrder')} />
+              </div>
+            </div>
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 14 }}>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 3 }}>
+                <label className="gecko-label">Effective From</label>
+                <DateField value={form.effectiveFrom} onChange={v => setForm(p => ({ ...p, effectiveFrom: v }))} placeholder="dd mmm yyyy" />
+              </div>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 3 }}>
+                <label className="gecko-label">Effective To</label>
+                <DateField value={form.effectiveTo} onChange={v => setForm(p => ({ ...p, effectiveTo: v }))} placeholder="No expiry" />
+                <div style={{ fontSize: 10, color: 'var(--gecko-text-disabled)' }}>Leave blank for no expiry</div>
+              </div>
+            </div>
+          </div>
+
+          {/* Section 4 — Live Usage (edit mode only) */}
+          {!isNew && (
+            <div>
+              {sectionHead('Live Usage')}
+              <div style={{ display: 'flex', alignItems: 'center', gap: 20, padding: '14px 16px', background: 'var(--gecko-bg-subtle)', borderRadius: 8, border: '1px solid var(--gecko-border)' }}>
+                <div>
+                  <div style={{ fontSize: 28, fontWeight: 800, color: entry.usageCount > 0 ? groupColor : 'var(--gecko-text-disabled)', lineHeight: 1 }}>{entry.usageCount.toLocaleString()}</div>
+                  <div style={{ fontSize: 11, color: 'var(--gecko-text-secondary)', marginTop: 3 }}>records referencing this code</div>
+                  {entry.usageCount > 0 && (
+                    <button style={{ marginTop: 6, background: 'none', border: 'none', color: groupColor, fontSize: 11, fontWeight: 600, cursor: 'pointer', padding: 0 }}>View usages →</button>
+                  )}
+                </div>
+                <div style={{ marginLeft: 'auto', textAlign: 'right' }}>
+                  <div style={{ fontSize: 10, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.06em', color: 'var(--gecko-text-disabled)', marginBottom: 2 }}>Last Modified</div>
+                  <div style={{ fontSize: 12, fontWeight: 600, color: 'var(--gecko-text-primary)', fontFamily: 'var(--gecko-font-mono)' }}>{entry.modifiedOn || '—'}</div>
+                  <div style={{ fontSize: 11, color: 'var(--gecko-text-secondary)' }}>by {entry.modifiedBy || '—'}</div>
+                </div>
+              </div>
+            </div>
+          )}
+        </div>
+
+        {/* ── Footer ── */}
+        <div style={{ padding: '14px 24px', borderTop: '1px solid var(--gecko-border)', background: 'var(--gecko-bg-surface)', borderRadius: '0 0 12px 12px', flexShrink: 0, display: 'flex', alignItems: 'center', gap: 10 }}>
+          {isNew && (
+            <div style={{ flex: 1, fontSize: 11, color: 'var(--gecko-text-disabled)' }}>* Code and Description required to save</div>
+          )}
+          <button className="gecko-btn gecko-btn-outline gecko-btn-sm" onClick={onClose}>Cancel</button>
+          <button
+            className="gecko-btn gecko-btn-primary gecko-btn-sm"
+            onClick={onClose}
+            disabled={!canSave}
+            style={!canSave ? { opacity: 0.45, cursor: 'not-allowed' } : {}}
+          >
+            <Icon name="save" size={14} /> {isNew ? 'Save Entry' : 'Save Changes'}
+          </button>
+        </div>
       </div>
     </div>
   );
@@ -586,15 +673,19 @@ export default function LookupMasterPage() {
           )}
         </div>
 
-        {/* ── Edit Drawer ── */}
-        {editEntry && (
-          <EditDrawer
-            entry={editEntry}
-            isNew={isNewEntry}
-            onClose={() => { setEditEntry(null); setIsNewEntry(false); }}
-          />
-        )}
       </div>
+
+      {/* ── Entry Modal ── */}
+      {editEntry && (
+        <EntryModal
+          entry={editEntry}
+          isNew={isNewEntry}
+          catMeta={activeCatMeta}
+          groupColor={activeGroup.color}
+          groupBg={activeGroup.bg}
+          onClose={() => { setEditEntry(null); setIsNewEntry(false); }}
+        />
+      )}
     </div>
   );
 }

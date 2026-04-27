@@ -1,0 +1,1210 @@
+{
+  "nodes": [
+    {
+      "id": "agents_md_nextjs_agent_rules",
+      "label": "Next.js Agent Rules",
+      "file_type": "document",
+      "source_file": "AGENTS.md",
+      "source_location": null,
+      "source_url": null,
+      "captured_at": null,
+      "author": null,
+      "contributor": null
+    },
+    {
+      "id": "agents_md_nextjs_docs_guide",
+      "label": "Next.js Docs in node_modules",
+      "file_type": "document",
+      "source_file": "AGENTS.md",
+      "source_location": "node_modules/next/dist/docs/",
+      "source_url": null,
+      "captured_at": null,
+      "author": null,
+      "contributor": null
+    },
+    {
+      "id": "claude_md_config",
+      "label": "CLAUDE.md Configuration",
+      "file_type": "document",
+      "source_file": "CLAUDE.md",
+      "source_location": null,
+      "source_url": null,
+      "captured_at": null,
+      "author": null,
+      "contributor": null
+    },
+    {
+      "id": "readme_gecko_web_ui",
+      "label": "Gecko Web UI — LOGICON TOS",
+      "file_type": "document",
+      "source_file": "README.md",
+      "source_location": null,
+      "source_url": null,
+      "captured_at": null,
+      "author": null,
+      "contributor": null
+    },
+    {
+      "id": "readme_nextjs16",
+      "label": "Next.js 16 (App Router)",
+      "file_type": "document",
+      "source_file": "README.md",
+      "source_location": null,
+      "source_url": null,
+      "captured_at": null,
+      "author": null,
+      "contributor": null
+    },
+    {
+      "id": "readme_react19",
+      "label": "React 19",
+      "file_type": "document",
+      "source_file": "README.md",
+      "source_location": null,
+      "source_url": null,
+      "captured_at": null,
+      "author": null,
+      "contributor": null
+    },
+    {
+      "id": "readme_typescript5",
+      "label": "TypeScript 5",
+      "file_type": "document",
+      "source_file": "README.md",
+      "source_location": null,
+      "source_url": null,
+      "captured_at": null,
+      "author": null,
+      "contributor": null
+    },
+    {
+      "id": "readme_gecko_design_system",
+      "label": "Gecko Design System (CSS Custom Properties)",
+      "file_type": "document",
+      "source_file": "README.md",
+      "source_location": null,
+      "source_url": null,
+      "captured_at": null,
+      "author": null,
+      "contributor": null
+    },
+    {
+      "id": "readme_tailwind_css4",
+      "label": "Tailwind CSS 4",
+      "file_type": "document",
+      "source_file": "README.md",
+      "source_location": null,
+      "source_url": null,
+      "captured_at": null,
+      "author": null,
+      "contributor": null
+    },
+    {
+      "id": "readme_logicon_tos",
+      "label": "LOGICON Terminal Operating System (TOS)",
+      "file_type": "document",
+      "source_file": "README.md",
+      "source_location": null,
+      "source_url": null,
+      "captured_at": null,
+      "author": null,
+      "contributor": null
+    },
+    {
+      "id": "readme_icd_cfs",
+      "label": "ICD + CFS Operations Domain",
+      "file_type": "document",
+      "source_file": "README.md",
+      "source_location": null,
+      "source_url": null,
+      "captured_at": null,
+      "author": null,
+      "contributor": null
+    },
+    {
+      "id": "readme_appshell",
+      "label": "AppShell Component (Collapsible Sidebar + Sticky Header)",
+      "file_type": "code",
+      "source_file": "README.md",
+      "source_location": "src/components/layout/AppShell.tsx",
+      "source_url": null,
+      "captured_at": null,
+      "author": null,
+      "contributor": null
+    },
+    {
+      "id": "readme_icon_component",
+      "label": "Icon Component (SVG Library 40+ icons)",
+      "file_type": "code",
+      "source_file": "README.md",
+      "source_location": "src/components/ui/Icon.tsx",
+      "source_url": null,
+      "captured_at": null,
+      "author": null,
+      "contributor": null
+    },
+    {
+      "id": "readme_opsprimitives",
+      "label": "OpsPrimitives Component (PageToolbar, Badges, Shared Primitives)",
+      "file_type": "code",
+      "source_file": "README.md",
+      "source_location": "src/components/ui/OpsPrimitives.tsx",
+      "source_url": null,
+      "captured_at": null,
+      "author": null,
+      "contributor": null
+    },
+    {
+      "id": "readme_entitysearch",
+      "label": "EntitySearch Component (Autocomplete: Agent, Customer, Vessel, Haulier)",
+      "file_type": "code",
+      "source_file": "README.md",
+      "source_location": "src/components/ui/EntitySearch.tsx",
+      "source_url": null,
+      "captured_at": null,
+      "author": null,
+      "contributor": null
+    },
+    {
+      "id": "readme_booking_management",
+      "label": "Booking Management Module",
+      "file_type": "document",
+      "source_file": "README.md",
+      "source_location": "src/app/bookings/",
+      "source_url": null,
+      "captured_at": null,
+      "author": null,
+      "contributor": null
+    },
+    {
+      "id": "readme_gate_yard",
+      "label": "Gate & Yard Module (EIR-In, EIR-Out, Yard Plan, Moves Planner)",
+      "file_type": "document",
+      "source_file": "README.md",
+      "source_location": "src/app/gate/",
+      "source_url": null,
+      "captured_at": null,
+      "author": null,
+      "contributor": null
+    },
+    {
+      "id": "readme_cfs_operations",
+      "label": "CFS Operations Module (Stuffing, Stripping, LCL Cargo, Tally)",
+      "file_type": "document",
+      "source_file": "README.md",
+      "source_location": "src/app/cfs/",
+      "source_url": null,
+      "captured_at": null,
+      "author": null,
+      "contributor": null
+    },
+    {
+      "id": "readme_billing_tariff",
+      "label": "Billing & Tariff Module",
+      "file_type": "document",
+      "source_file": "README.md",
+      "source_location": "src/app/billing/",
+      "source_url": null,
+      "captured_at": null,
+      "author": null,
+      "contributor": null
+    },
+    {
+      "id": "readme_masters",
+      "label": "Master Data Module",
+      "file_type": "document",
+      "source_file": "README.md",
+      "source_location": "src/app/masters/",
+      "source_url": null,
+      "captured_at": null,
+      "author": null,
+      "contributor": null
+    },
+    {
+      "id": "readme_arch_no_external_state",
+      "label": "Architecture Decision: No External State Management",
+      "file_type": "document",
+      "source_file": "README.md",
+      "source_location": null,
+      "source_url": null,
+      "captured_at": null,
+      "author": null,
+      "contributor": null
+    },
+    {
+      "id": "readme_arch_inline_styles",
+      "label": "Architecture Decision: Inline Styles via Gecko CSS Tokens",
+      "file_type": "document",
+      "source_file": "README.md",
+      "source_location": null,
+      "source_url": null,
+      "captured_at": null,
+      "author": null,
+      "contributor": null
+    },
+    {
+      "id": "readme_arch_mock_data",
+      "label": "Architecture Decision: Mock Data at Top of File",
+      "file_type": "document",
+      "source_file": "README.md",
+      "source_location": null,
+      "source_url": null,
+      "captured_at": null,
+      "author": null,
+      "contributor": null
+    },
+    {
+      "id": "readme_arch_use_client",
+      "label": "Architecture Decision: use client Everywhere",
+      "file_type": "document",
+      "source_file": "README.md",
+      "source_location": null,
+      "source_url": null,
+      "captured_at": null,
+      "author": null,
+      "contributor": null
+    },
+    {
+      "id": "readme_arch_flat_hierarchy",
+      "label": "Architecture Decision: Flat Component Hierarchy",
+      "file_type": "document",
+      "source_file": "README.md",
+      "source_location": null,
+      "source_url": null,
+      "captured_at": null,
+      "author": null,
+      "contributor": null
+    },
+    {
+      "id": "readme_navis_n4",
+      "label": "NAVIS N4 (Competing TOS Platform)",
+      "file_type": "document",
+      "source_file": "README.md",
+      "source_location": null,
+      "source_url": null,
+      "captured_at": null,
+      "author": null,
+      "contributor": null
+    },
+    {
+      "id": "readme_cargowise",
+      "label": "CargoWise (Competing TOS Platform)",
+      "file_type": "document",
+      "source_file": "README.md",
+      "source_location": null,
+      "source_url": null,
+      "captured_at": null,
+      "author": null,
+      "contributor": null
+    },
+    {
+      "id": "readme_redis",
+      "label": "Redis (Planned API Integration Backend)",
+      "file_type": "document",
+      "source_file": "README.md",
+      "source_location": null,
+      "source_url": null,
+      "captured_at": null,
+      "author": null,
+      "contributor": null
+    },
+    {
+      "id": "readme_reference_codes_lifecycle",
+      "label": "Reference Codes Lifecycle: DRAFT → ACTIVE → DEPRECATED → RETIRED",
+      "file_type": "document",
+      "source_file": "README.md",
+      "source_location": null,
+      "source_url": null,
+      "captured_at": null,
+      "author": null,
+      "contributor": null
+    },
+    {
+      "id": "readme_location_tree",
+      "label": "6-Level Spatial Location Tree (Facility → Yard → Block → Row → Slot)",
+      "file_type": "document",
+      "source_file": "README.md",
+      "source_location": null,
+      "source_url": null,
+      "captured_at": null,
+      "author": null,
+      "contributor": null
+    },
+    {
+      "id": "spec_ui_standardization",
+      "label": "UI Standardization — Pilot: Customers Page (Spec)",
+      "file_type": "document",
+      "source_file": "docs/superpowers/specs/2026-04-25-ui-standardization-pilot-customers-design.md",
+      "source_location": null,
+      "source_url": null,
+      "captured_at": "2026-04-25",
+      "author": null,
+      "contributor": null
+    },
+    {
+      "id": "spec_filterpopover_component",
+      "label": "FilterPopover Component",
+      "file_type": "code",
+      "source_file": "docs/superpowers/specs/2026-04-25-ui-standardization-pilot-customers-design.md",
+      "source_location": "src/components/ui/FilterPopover.tsx",
+      "source_url": null,
+      "captured_at": null,
+      "author": null,
+      "contributor": null
+    },
+    {
+      "id": "spec_gecko_btn_sm",
+      "label": "gecko-btn-sm (32px Toolbar Button Standard)",
+      "file_type": "document",
+      "source_file": "docs/superpowers/specs/2026-04-25-ui-standardization-pilot-customers-design.md",
+      "source_location": null,
+      "source_url": null,
+      "captured_at": null,
+      "author": null,
+      "contributor": null
+    },
+    {
+      "id": "spec_eir_in_gold_standard",
+      "label": "EIR-In Page (Gold Standard for Toolbar Button Sizing)",
+      "file_type": "document",
+      "source_file": "docs/superpowers/specs/2026-04-25-ui-standardization-pilot-customers-design.md",
+      "source_location": "src/app/gate/eir-in/",
+      "source_url": null,
+      "captured_at": null,
+      "author": null,
+      "contributor": null
+    },
+    {
+      "id": "spec_customers_page",
+      "label": "Customers Master Page",
+      "file_type": "code",
+      "source_file": "docs/superpowers/specs/2026-04-25-ui-standardization-pilot-customers-design.md",
+      "source_location": "src/app/masters/customers/page.tsx",
+      "source_url": null,
+      "captured_at": null,
+      "author": null,
+      "contributor": null
+    },
+    {
+      "id": "spec_filter_field_type",
+      "label": "FilterField Type (search | select)",
+      "file_type": "code",
+      "source_file": "docs/superpowers/specs/2026-04-25-ui-standardization-pilot-customers-design.md",
+      "source_location": null,
+      "source_url": null,
+      "captured_at": null,
+      "author": null,
+      "contributor": null
+    },
+    {
+      "id": "spec_customer_filter_fields",
+      "label": "CUSTOMER_FILTER_FIELDS Constant (query, role, tier, tariff, status, country)",
+      "file_type": "code",
+      "source_file": "docs/superpowers/specs/2026-04-25-ui-standardization-pilot-customers-design.md",
+      "source_location": null,
+      "source_url": null,
+      "captured_at": null,
+      "author": null,
+      "contributor": null
+    },
+    {
+      "id": "spec_rationale_inline_filter_bar_waste",
+      "label": "Rationale: Inline Filter Bar Card Wastes Vertical Chrome (~56px)",
+      "file_type": "document",
+      "source_file": "docs/superpowers/specs/2026-04-25-ui-standardization-pilot-customers-design.md",
+      "source_location": null,
+      "source_url": null,
+      "captured_at": null,
+      "author": null,
+      "contributor": null
+    },
+    {
+      "id": "spec_rationale_inconsistent_btn_sizing",
+      "label": "Rationale: Inconsistent Toolbar Button Sizing (40px vs 32px)",
+      "file_type": "document",
+      "source_file": "docs/superpowers/specs/2026-04-25-ui-standardization-pilot-customers-design.md",
+      "source_location": null,
+      "source_url": null,
+      "captured_at": null,
+      "author": null,
+      "contributor": null
+    },
+    {
+      "id": "spec_rationale_opsprimitives_no_use_client",
+      "label": "Rationale: FilterPopover Must Not Be Added to OpsPrimitives (no use client)",
+      "file_type": "document",
+      "source_file": "docs/superpowers/specs/2026-04-25-ui-standardization-pilot-customers-design.md",
+      "source_location": null,
+      "source_url": null,
+      "captured_at": null,
+      "author": null,
+      "contributor": null
+    },
+    {
+      "id": "spec_gecko_z_modal",
+      "label": "gecko-z-modal CSS Variable (z-index 50)",
+      "file_type": "document",
+      "source_file": "docs/superpowers/specs/2026-04-25-ui-standardization-pilot-customers-design.md",
+      "source_location": null,
+      "source_url": null,
+      "captured_at": null,
+      "author": null,
+      "contributor": null
+    },
+    {
+      "id": "spec_gecko_select",
+      "label": "gecko-select CSS Class (Chevron + appearance:none)",
+      "file_type": "document",
+      "source_file": "docs/superpowers/specs/2026-04-25-ui-standardization-pilot-customers-design.md",
+      "source_location": null,
+      "source_url": null,
+      "captured_at": null,
+      "author": null,
+      "contributor": null
+    },
+    {
+      "id": "spec_outside_click_escape",
+      "label": "Outside-Click and Escape Close Pattern (useRef + useEffect)",
+      "file_type": "code",
+      "source_file": "docs/superpowers/specs/2026-04-25-ui-standardization-pilot-customers-design.md",
+      "source_location": null,
+      "source_url": null,
+      "captured_at": null,
+      "author": null,
+      "contributor": null
+    },
+    {
+      "id": "spec_active_filter_count",
+      "label": "Active Filter Count Badge Logic",
+      "file_type": "code",
+      "source_file": "docs/superpowers/specs/2026-04-25-ui-standardization-pilot-customers-design.md",
+      "source_location": null,
+      "source_url": null,
+      "captured_at": null,
+      "author": null,
+      "contributor": null
+    },
+    {
+      "id": "public_file_svg",
+      "label": "file.svg — Generic File / Document Icon",
+      "file_type": "image",
+      "source_file": "public/file.svg",
+      "source_location": null,
+      "source_url": null,
+      "captured_at": null,
+      "author": null,
+      "contributor": null
+    },
+    {
+      "id": "public_globe_svg",
+      "label": "globe.svg — Globe / Web / World Icon",
+      "file_type": "image",
+      "source_file": "public/globe.svg",
+      "source_location": null,
+      "source_url": null,
+      "captured_at": null,
+      "author": null,
+      "contributor": null
+    },
+    {
+      "id": "public_next_svg",
+      "label": "next.svg — Next.js Wordmark Logo",
+      "file_type": "image",
+      "source_file": "public/next.svg",
+      "source_location": null,
+      "source_url": null,
+      "captured_at": null,
+      "author": null,
+      "contributor": null
+    },
+    {
+      "id": "public_vercel_svg",
+      "label": "vercel.svg — Vercel Triangle Logo",
+      "file_type": "image",
+      "source_file": "public/vercel.svg",
+      "source_location": null,
+      "source_url": null,
+      "captured_at": null,
+      "author": null,
+      "contributor": null
+    },
+    {
+      "id": "public_window_svg",
+      "label": "window.svg — Browser Window / Desktop App Icon",
+      "file_type": "image",
+      "source_file": "public/window.svg",
+      "source_location": null,
+      "source_url": null,
+      "captured_at": null,
+      "author": null,
+      "contributor": null
+    }
+  ],
+  "edges": [
+    {
+      "source": "claude_md_config",
+      "target": "agents_md_nextjs_agent_rules",
+      "relation": "references",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "CLAUDE.md",
+      "source_location": null,
+      "weight": 1.0
+    },
+    {
+      "source": "agents_md_nextjs_agent_rules",
+      "target": "agents_md_nextjs_docs_guide",
+      "relation": "references",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "AGENTS.md",
+      "source_location": null,
+      "weight": 1.0
+    },
+    {
+      "source": "readme_gecko_web_ui",
+      "target": "readme_nextjs16",
+      "relation": "implements",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "README.md",
+      "source_location": null,
+      "weight": 1.0
+    },
+    {
+      "source": "readme_gecko_web_ui",
+      "target": "readme_react19",
+      "relation": "implements",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "README.md",
+      "source_location": null,
+      "weight": 1.0
+    },
+    {
+      "source": "readme_gecko_web_ui",
+      "target": "readme_typescript5",
+      "relation": "implements",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "README.md",
+      "source_location": null,
+      "weight": 1.0
+    },
+    {
+      "source": "readme_gecko_web_ui",
+      "target": "readme_gecko_design_system",
+      "relation": "implements",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "README.md",
+      "source_location": null,
+      "weight": 1.0
+    },
+    {
+      "source": "readme_gecko_web_ui",
+      "target": "readme_tailwind_css4",
+      "relation": "implements",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "README.md",
+      "source_location": null,
+      "weight": 1.0
+    },
+    {
+      "source": "readme_gecko_web_ui",
+      "target": "readme_logicon_tos",
+      "relation": "implements",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "README.md",
+      "source_location": null,
+      "weight": 1.0
+    },
+    {
+      "source": "readme_logicon_tos",
+      "target": "readme_icd_cfs",
+      "relation": "references",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "README.md",
+      "source_location": null,
+      "weight": 1.0
+    },
+    {
+      "source": "readme_gecko_web_ui",
+      "target": "readme_appshell",
+      "relation": "references",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "README.md",
+      "source_location": null,
+      "weight": 1.0
+    },
+    {
+      "source": "readme_gecko_web_ui",
+      "target": "readme_icon_component",
+      "relation": "references",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "README.md",
+      "source_location": null,
+      "weight": 1.0
+    },
+    {
+      "source": "readme_gecko_web_ui",
+      "target": "readme_opsprimitives",
+      "relation": "references",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "README.md",
+      "source_location": null,
+      "weight": 1.0
+    },
+    {
+      "source": "readme_gecko_web_ui",
+      "target": "readme_entitysearch",
+      "relation": "references",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "README.md",
+      "source_location": null,
+      "weight": 1.0
+    },
+    {
+      "source": "readme_gecko_web_ui",
+      "target": "readme_booking_management",
+      "relation": "references",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "README.md",
+      "source_location": null,
+      "weight": 1.0
+    },
+    {
+      "source": "readme_gecko_web_ui",
+      "target": "readme_gate_yard",
+      "relation": "references",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "README.md",
+      "source_location": null,
+      "weight": 1.0
+    },
+    {
+      "source": "readme_gecko_web_ui",
+      "target": "readme_cfs_operations",
+      "relation": "references",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "README.md",
+      "source_location": null,
+      "weight": 1.0
+    },
+    {
+      "source": "readme_gecko_web_ui",
+      "target": "readme_billing_tariff",
+      "relation": "references",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "README.md",
+      "source_location": null,
+      "weight": 1.0
+    },
+    {
+      "source": "readme_gecko_web_ui",
+      "target": "readme_masters",
+      "relation": "references",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "README.md",
+      "source_location": null,
+      "weight": 1.0
+    },
+    {
+      "source": "readme_gecko_web_ui",
+      "target": "readme_navis_n4",
+      "relation": "references",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "README.md",
+      "source_location": null,
+      "weight": 1.0
+    },
+    {
+      "source": "readme_gecko_web_ui",
+      "target": "readme_cargowise",
+      "relation": "references",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "README.md",
+      "source_location": null,
+      "weight": 1.0
+    },
+    {
+      "source": "readme_entitysearch",
+      "target": "readme_redis",
+      "relation": "references",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "README.md",
+      "source_location": null,
+      "weight": 1.0
+    },
+    {
+      "source": "readme_arch_no_external_state",
+      "target": "readme_gecko_web_ui",
+      "relation": "rationale_for",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "README.md",
+      "source_location": null,
+      "weight": 1.0
+    },
+    {
+      "source": "readme_arch_inline_styles",
+      "target": "readme_gecko_design_system",
+      "relation": "rationale_for",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "README.md",
+      "source_location": null,
+      "weight": 1.0
+    },
+    {
+      "source": "readme_arch_mock_data",
+      "target": "readme_gecko_web_ui",
+      "relation": "rationale_for",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "README.md",
+      "source_location": null,
+      "weight": 1.0
+    },
+    {
+      "source": "readme_arch_use_client",
+      "target": "readme_gecko_web_ui",
+      "relation": "rationale_for",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "README.md",
+      "source_location": null,
+      "weight": 1.0
+    },
+    {
+      "source": "readme_arch_flat_hierarchy",
+      "target": "readme_gecko_web_ui",
+      "relation": "rationale_for",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "README.md",
+      "source_location": null,
+      "weight": 1.0
+    },
+    {
+      "source": "readme_masters",
+      "target": "readme_reference_codes_lifecycle",
+      "relation": "references",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "README.md",
+      "source_location": null,
+      "weight": 1.0
+    },
+    {
+      "source": "readme_masters",
+      "target": "readme_location_tree",
+      "relation": "references",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "README.md",
+      "source_location": null,
+      "weight": 1.0
+    },
+    {
+      "source": "spec_ui_standardization",
+      "target": "spec_customers_page",
+      "relation": "references",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "docs/superpowers/specs/2026-04-25-ui-standardization-pilot-customers-design.md",
+      "source_location": null,
+      "weight": 1.0
+    },
+    {
+      "source": "spec_ui_standardization",
+      "target": "spec_filterpopover_component",
+      "relation": "references",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "docs/superpowers/specs/2026-04-25-ui-standardization-pilot-customers-design.md",
+      "source_location": null,
+      "weight": 1.0
+    },
+    {
+      "source": "spec_ui_standardization",
+      "target": "spec_gecko_btn_sm",
+      "relation": "references",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "docs/superpowers/specs/2026-04-25-ui-standardization-pilot-customers-design.md",
+      "source_location": null,
+      "weight": 1.0
+    },
+    {
+      "source": "spec_ui_standardization",
+      "target": "spec_eir_in_gold_standard",
+      "relation": "references",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "docs/superpowers/specs/2026-04-25-ui-standardization-pilot-customers-design.md",
+      "source_location": null,
+      "weight": 1.0
+    },
+    {
+      "source": "spec_filterpopover_component",
+      "target": "readme_icon_component",
+      "relation": "references",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "docs/superpowers/specs/2026-04-25-ui-standardization-pilot-customers-design.md",
+      "source_location": null,
+      "weight": 1.0
+    },
+    {
+      "source": "spec_filterpopover_component",
+      "target": "spec_filter_field_type",
+      "relation": "implements",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "docs/superpowers/specs/2026-04-25-ui-standardization-pilot-customers-design.md",
+      "source_location": null,
+      "weight": 1.0
+    },
+    {
+      "source": "spec_filterpopover_component",
+      "target": "spec_outside_click_escape",
+      "relation": "implements",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "docs/superpowers/specs/2026-04-25-ui-standardization-pilot-customers-design.md",
+      "source_location": null,
+      "weight": 1.0
+    },
+    {
+      "source": "spec_filterpopover_component",
+      "target": "spec_active_filter_count",
+      "relation": "implements",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "docs/superpowers/specs/2026-04-25-ui-standardization-pilot-customers-design.md",
+      "source_location": null,
+      "weight": 1.0
+    },
+    {
+      "source": "spec_filterpopover_component",
+      "target": "spec_gecko_z_modal",
+      "relation": "references",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "docs/superpowers/specs/2026-04-25-ui-standardization-pilot-customers-design.md",
+      "source_location": null,
+      "weight": 1.0
+    },
+    {
+      "source": "spec_filterpopover_component",
+      "target": "spec_gecko_select",
+      "relation": "references",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "docs/superpowers/specs/2026-04-25-ui-standardization-pilot-customers-design.md",
+      "source_location": null,
+      "weight": 1.0
+    },
+    {
+      "source": "spec_customers_page",
+      "target": "spec_filterpopover_component",
+      "relation": "references",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "docs/superpowers/specs/2026-04-25-ui-standardization-pilot-customers-design.md",
+      "source_location": null,
+      "weight": 1.0
+    },
+    {
+      "source": "spec_customers_page",
+      "target": "spec_customer_filter_fields",
+      "relation": "references",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "docs/superpowers/specs/2026-04-25-ui-standardization-pilot-customers-design.md",
+      "source_location": null,
+      "weight": 1.0
+    },
+    {
+      "source": "spec_customers_page",
+      "target": "readme_masters",
+      "relation": "references",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "docs/superpowers/specs/2026-04-25-ui-standardization-pilot-customers-design.md",
+      "source_location": null,
+      "weight": 1.0
+    },
+    {
+      "source": "spec_rationale_inline_filter_bar_waste",
+      "target": "spec_filterpopover_component",
+      "relation": "rationale_for",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "docs/superpowers/specs/2026-04-25-ui-standardization-pilot-customers-design.md",
+      "source_location": null,
+      "weight": 1.0
+    },
+    {
+      "source": "spec_rationale_inconsistent_btn_sizing",
+      "target": "spec_gecko_btn_sm",
+      "relation": "rationale_for",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "docs/superpowers/specs/2026-04-25-ui-standardization-pilot-customers-design.md",
+      "source_location": null,
+      "weight": 1.0
+    },
+    {
+      "source": "spec_rationale_opsprimitives_no_use_client",
+      "target": "spec_filterpopover_component",
+      "relation": "rationale_for",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "docs/superpowers/specs/2026-04-25-ui-standardization-pilot-customers-design.md",
+      "source_location": null,
+      "weight": 1.0
+    },
+    {
+      "source": "spec_filterpopover_component",
+      "target": "readme_opsprimitives",
+      "relation": "references",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "docs/superpowers/specs/2026-04-25-ui-standardization-pilot-customers-design.md",
+      "source_location": null,
+      "weight": 1.0
+    },
+    {
+      "source": "spec_gecko_btn_sm",
+      "target": "readme_gecko_design_system",
+      "relation": "implements",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "docs/superpowers/specs/2026-04-25-ui-standardization-pilot-customers-design.md",
+      "source_location": null,
+      "weight": 1.0
+    },
+    {
+      "source": "spec_gecko_z_modal",
+      "target": "readme_gecko_design_system",
+      "relation": "implements",
+      "confidence": "INFERRED",
+      "confidence_score": 0.9,
+      "source_file": "docs/superpowers/specs/2026-04-25-ui-standardization-pilot-customers-design.md",
+      "source_location": null,
+      "weight": 0.9
+    },
+    {
+      "source": "spec_gecko_select",
+      "target": "readme_gecko_design_system",
+      "relation": "implements",
+      "confidence": "INFERRED",
+      "confidence_score": 0.9,
+      "source_file": "docs/superpowers/specs/2026-04-25-ui-standardization-pilot-customers-design.md",
+      "source_location": null,
+      "weight": 0.9
+    },
+    {
+      "source": "spec_ui_standardization",
+      "target": "readme_navis_n4",
+      "relation": "references",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "docs/superpowers/specs/2026-04-25-ui-standardization-pilot-customers-design.md",
+      "source_location": null,
+      "weight": 1.0
+    },
+    {
+      "source": "spec_ui_standardization",
+      "target": "readme_cargowise",
+      "relation": "references",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "docs/superpowers/specs/2026-04-25-ui-standardization-pilot-customers-design.md",
+      "source_location": null,
+      "weight": 1.0
+    },
+    {
+      "source": "public_next_svg",
+      "target": "readme_nextjs16",
+      "relation": "conceptually_related_to",
+      "confidence": "INFERRED",
+      "confidence_score": 0.85,
+      "source_file": "public/next.svg",
+      "source_location": null,
+      "weight": 0.85
+    },
+    {
+      "source": "public_vercel_svg",
+      "target": "readme_gecko_web_ui",
+      "relation": "conceptually_related_to",
+      "confidence": "INFERRED",
+      "confidence_score": 0.7,
+      "source_file": "public/vercel.svg",
+      "source_location": null,
+      "weight": 0.7
+    },
+    {
+      "source": "public_file_svg",
+      "target": "readme_gecko_web_ui",
+      "relation": "conceptually_related_to",
+      "confidence": "INFERRED",
+      "confidence_score": 0.6,
+      "source_file": "public/file.svg",
+      "source_location": null,
+      "weight": 0.6
+    },
+    {
+      "source": "public_globe_svg",
+      "target": "readme_gecko_web_ui",
+      "relation": "conceptually_related_to",
+      "confidence": "INFERRED",
+      "confidence_score": 0.6,
+      "source_file": "public/globe.svg",
+      "source_location": null,
+      "weight": 0.6
+    },
+    {
+      "source": "public_window_svg",
+      "target": "readme_gecko_web_ui",
+      "relation": "conceptually_related_to",
+      "confidence": "INFERRED",
+      "confidence_score": 0.6,
+      "source_file": "public/window.svg",
+      "source_location": null,
+      "weight": 0.6
+    },
+    {
+      "source": "agents_md_nextjs_agent_rules",
+      "target": "readme_nextjs16",
+      "relation": "references",
+      "confidence": "INFERRED",
+      "confidence_score": 0.9,
+      "source_file": "AGENTS.md",
+      "source_location": null,
+      "weight": 0.9
+    },
+    {
+      "source": "readme_gecko_web_ui",
+      "target": "readme_redis",
+      "relation": "references",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "README.md",
+      "source_location": null,
+      "weight": 1.0
+    }
+  ],
+  "hyperedges": [
+    {
+      "id": "gecko_tech_stack",
+      "label": "Gecko Web UI Tech Stack",
+      "nodes": [
+        "readme_gecko_web_ui",
+        "readme_nextjs16",
+        "readme_react19",
+        "readme_typescript5",
+        "readme_gecko_design_system",
+        "readme_tailwind_css4"
+      ],
+      "relation": "implement",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "README.md"
+    },
+    {
+      "id": "tos_modules",
+      "label": "TOS Core Modules",
+      "nodes": [
+        "readme_logicon_tos",
+        "readme_booking_management",
+        "readme_gate_yard",
+        "readme_cfs_operations",
+        "readme_billing_tariff",
+        "readme_masters"
+      ],
+      "relation": "implement",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "README.md"
+    },
+    {
+      "id": "ui_standardization_changes",
+      "label": "UI Standardization Pilot Changes",
+      "nodes": [
+        "spec_ui_standardization",
+        "spec_filterpopover_component",
+        "spec_gecko_btn_sm",
+        "spec_customers_page",
+        "spec_eir_in_gold_standard"
+      ],
+      "relation": "participate_in",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "docs/superpowers/specs/2026-04-25-ui-standardization-pilot-customers-design.md"
+    },
+    {
+      "id": "filterpopover_api",
+      "label": "FilterPopover Component API and Supporting Types",
+      "nodes": [
+        "spec_filterpopover_component",
+        "spec_filter_field_type",
+        "spec_customer_filter_fields",
+        "spec_active_filter_count",
+        "spec_outside_click_escape"
+      ],
+      "relation": "implement",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "docs/superpowers/specs/2026-04-25-ui-standardization-pilot-customers-design.md"
+    },
+    {
+      "id": "gecko_design_tokens",
+      "label": "Gecko Design System Tokens Used in Spec",
+      "nodes": [
+        "readme_gecko_design_system",
+        "spec_gecko_btn_sm",
+        "spec_gecko_z_modal",
+        "spec_gecko_select"
+      ],
+      "relation": "form",
+      "confidence": "INFERRED",
+      "confidence_score": 0.85,
+      "source_file": "docs/superpowers/specs/2026-04-25-ui-standardization-pilot-customers-design.md"
+    },
+    {
+      "id": "default_nextjs_public_assets",
+      "label": "Default Next.js Public Assets (Boilerplate SVGs)",
+      "nodes": [
+        "public_file_svg",
+        "public_globe_svg",
+        "public_next_svg",
+        "public_vercel_svg",
+        "public_window_svg"
+      ],
+      "relation": "form",
+      "confidence": "INFERRED",
+      "confidence_score": 0.8,
+      "source_file": "public/next.svg"
+    }
+  ],
+  "input_tokens": 0,
+  "output_tokens": 0
+}
