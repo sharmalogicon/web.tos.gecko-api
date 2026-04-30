@@ -1,8 +1,9 @@
 "use client";
-import React, { useState } from 'react';
+import React, { useState, useMemo } from 'react';
 import Link from 'next/link';
 import { Icon } from '@/components/ui/Icon';
 import { FilterPopover, FilterField, SortOption } from '@/components/ui/FilterPopover';
+import { usePagination, TablePagination } from '@/components/ui/TablePagination';
 
 const CUSTOMERS = [
   { id: 'C-00142', name: 'Thai Union Group PCL', country: 'TH', roles: ['Bill-to', 'Consignee'], tier: 'Key', taxId: '0107537000084', tariff: 'Custom • TU-2026', credit: '฿5.0M', balance: '฿2.14M', status: 'Active' },
@@ -46,6 +47,22 @@ export default function CustomersListPage() {
   });
   const [sortBy, setSortBy] = useState('activity');
 
+  const filtered = useMemo(() => {
+    return CUSTOMERS.filter((c) => {
+      if (filters.query) {
+        const q = filters.query.toLowerCase();
+        if (!c.name.toLowerCase().includes(q) && !c.id.toLowerCase().includes(q) && !c.taxId.toLowerCase().includes(q)) return false;
+      }
+      if (filters.status) {
+        const s = filters.status.toLowerCase().replace('-', ' ');
+        if (c.status.toLowerCase() !== s) return false;
+      }
+      return true;
+    });
+  }, [filters.query, filters.status]);
+
+  const { page, setPage, pageSize, setPageSize, totalPages, pageItems, totalItems, startRow, endRow } = usePagination(filtered);
+
   return (
     <div style={{ maxWidth: 'var(--gecko-container-max)', margin: '0 auto', display: 'flex', flexDirection: 'column', gap: 24 }}>
 
@@ -54,7 +71,7 @@ export default function CustomersListPage() {
         <div className="gecko-page-actions-left">
           <div style={{ display: 'flex', alignItems: 'baseline', gap: 12 }}>
             <h1 style={{ fontSize: 24, fontWeight: 700, margin: 0, color: 'var(--gecko-text-primary)' }}>Customers</h1>
-            <span className="gecko-count-badge">11 shown of 284</span>
+            <span className="gecko-count-badge">{pageItems.length} shown of {totalItems}</span>
           </div>
           <div style={{ fontSize: 13, color: 'var(--gecko-text-secondary)' }}>Unified party master — bill-to, consignee, shipper, agent, prospect. One record, many roles.</div>
         </div>
@@ -93,7 +110,7 @@ export default function CustomersListPage() {
             </tr>
           </thead>
           <tbody>
-            {CUSTOMERS.map((c) => (
+            {pageItems.map((c) => (
               <tr key={c.id}>
                 <td>
                   <Link href={`/masters/customers/${c.id}`} className="gecko-text-mono" style={{ fontWeight: 600, color: 'var(--gecko-primary-600)' }}>{c.id}</Link>
@@ -131,6 +148,12 @@ export default function CustomersListPage() {
             ))}
           </tbody>
         </table>
+        <TablePagination
+          page={page} pageSize={pageSize} totalItems={totalItems}
+          totalPages={totalPages} startRow={startRow} endRow={endRow}
+          onPageChange={setPage} onPageSizeChange={setPageSize}
+          noun="customers"
+        />
       </div>
 
     </div>

@@ -1,5 +1,6 @@
 "use client";
 import React, { useState, useMemo } from 'react';
+import { usePagination, TablePagination } from '@/components/ui/TablePagination';
 import { Icon } from '@/components/ui/Icon';
 
 // ─── Types ────────────────────────────────────────────────────────────────────
@@ -503,6 +504,8 @@ export default function CommoditiesPage() {
     return true;
   }), [search, levelFilter, dgFilter, reeferFilter, oogFilter, activeFilter]);
 
+  const { page, setPage, pageSize, setPageSize, totalPages, pageItems, totalItems, startRow, endRow } = usePagination(filtered);
+
   const totalCodes   = COMMODITIES.length;
   const chapters     = COMMODITIES.filter(c => c.level === 'CHAPTER').length;
   const dgFlagged    = COMMODITIES.filter(c => c.dgClass !== 'NONE').length;
@@ -534,7 +537,7 @@ export default function CommoditiesPage() {
         <div className="gecko-page-actions-left">
           <div style={{ display: 'flex', alignItems: 'baseline', gap: 12 }}>
             <h1 style={{ fontSize: 24, fontWeight: 700, margin: 0, color: 'var(--gecko-text-primary)' }}>Commodity Codes</h1>
-            <span className="gecko-count-badge">{filtered.length} shown of {totalCodes}</span>
+            <span className="gecko-count-badge">{pageItems.length} shown of {totalItems}</span>
           </div>
           <div style={{ fontSize: 13, color: 'var(--gecko-text-secondary)', marginTop: 2 }}>
             WCO Harmonized System (HS) catalog. Used on BL, customs declaration, DG verification, and reefer planning.
@@ -631,7 +634,7 @@ export default function CommoditiesPage() {
                 </td>
               </tr>
             ) : (
-              filtered.map(c => {
+              pageItems.map(c => {
                 const indent = LEVEL_STYLE[c.level].indent;
                 const isChapter = c.level === 'CHAPTER';
                 return (
@@ -708,36 +711,9 @@ export default function CommoditiesPage() {
           </tbody>
         </table>
 
-        {/* Table footer */}
-        {filtered.length > 0 && (
-          <div style={{
-            padding: '8px 20px', borderTop: '1px solid var(--gecko-border)',
-            background: 'var(--gecko-bg-subtle)', display: 'flex', alignItems: 'center',
-          }}>
-            <span style={{ fontSize: 11, color: 'var(--gecko-text-secondary)' }}>
-              Showing <strong>{filtered.length}</strong> of <strong>{totalCodes}</strong> codes
-              {' '}&middot; WCO HS 2022 Edition
-            </span>
-            <span style={{ marginLeft: 'auto', fontSize: 11, color: 'var(--gecko-text-disabled)', display: 'flex', gap: 12 }}>
-              <span style={{ display: 'inline-flex', alignItems: 'center', gap: 4 }}>
-                <span style={{ width: 8, height: 8, borderRadius: 2, background: 'var(--gecko-gray-800)', display: 'inline-block' }} />
-                Chapter
-              </span>
-              <span style={{ display: 'inline-flex', alignItems: 'center', gap: 4 }}>
-                <span style={{ width: 8, height: 8, borderRadius: 2, background: 'var(--gecko-primary-600)', display: 'inline-block' }} />
-                Heading
-              </span>
-              <span style={{ display: 'inline-flex', alignItems: 'center', gap: 4 }}>
-                <span style={{ width: 8, height: 8, borderRadius: 2, background: 'var(--gecko-info-600)', display: 'inline-block' }} />
-                Sub-heading
-              </span>
-              <span style={{ display: 'inline-flex', alignItems: 'center', gap: 4 }}>
-                <span style={{ width: 8, height: 8, borderRadius: 2, background: '#6d28d9', display: 'inline-block' }} />
-                Tariff Line
-              </span>
-            </span>
-          </div>
-        )}
+        <TablePagination page={page} pageSize={pageSize} totalItems={totalItems}
+          totalPages={totalPages} startRow={startRow} endRow={endRow}
+          onPageChange={setPage} onPageSizeChange={setPageSize} noun="commodity codes" />
       </div>
 
       {/* Modal */}

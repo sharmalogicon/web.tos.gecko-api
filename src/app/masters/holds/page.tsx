@@ -1,5 +1,6 @@
 "use client";
 import React, { useState, useMemo } from 'react';
+import { usePagination, TablePagination } from '@/components/ui/TablePagination';
 import { Icon } from '@/components/ui/Icon';
 import { FilterPopover, FilterField, SortOption } from '@/components/ui/FilterPopover';
 
@@ -740,6 +741,8 @@ export default function HoldsPage() {
     return result;
   }, [filters, sortBy]);
 
+  const { page, setPage, pageSize, setPageSize, totalPages, pageItems, totalItems, startRow, endRow } = usePagination(filtered);
+
   // Stats
   const totalActive  = HOLDS.filter(h => h.active).length;
   const customsCount = HOLDS.filter(h => h.holdType === 'CUSTOMS').length;
@@ -765,7 +768,7 @@ export default function HoldsPage() {
         <div className="gecko-page-actions-left">
           <div style={{ display: 'flex', alignItems: 'baseline', gap: 12, flexWrap: 'wrap' }}>
             <h1 style={{ fontSize: 24, fontWeight: 700, margin: 0, color: 'var(--gecko-text-primary)' }}>Holds &amp; Remarks</h1>
-            <span className="gecko-count-badge">{filtered.length} shown of {HOLDS.length}</span>
+            <span className="gecko-count-badge">{pageItems.length} shown of {totalItems}</span>
           </div>
           <div style={{ fontSize: 13, color: 'var(--gecko-text-secondary)', marginTop: 4 }}>
             Named hold catalog. Applied to containers to block gate-out, load, or all movement pending resolution.
@@ -833,7 +836,7 @@ export default function HoldsPage() {
                 </td>
               </tr>
             )}
-            {filtered.map(h => (
+            {pageItems.map(h => (
               <tr key={h.code} style={{ opacity: h.active ? 1 : 0.55 }}>
 
                 {/* Hold Code — mono pill */}
@@ -912,30 +915,9 @@ export default function HoldsPage() {
           </tbody>
         </table>
 
-        {/* Table footer */}
-        {filtered.length > 0 && (
-          <div style={{ padding: '8px 20px', borderTop: '1px solid var(--gecko-border)', background: 'var(--gecko-bg-subtle)', display: 'flex', alignItems: 'center', gap: 16 }}>
-            <span style={{ fontSize: 11, color: 'var(--gecko-text-secondary)' }}>
-              Showing <strong>{filtered.length}</strong> of <strong>{HOLDS.length}</strong> holds
-            </span>
-            <div style={{ marginLeft: 'auto', display: 'flex', gap: 8, flexWrap: 'wrap' }}>
-              {[
-                { label: 'All Moves',       scope: 'ALL_MOVES'         as BlockingScope },
-                { label: 'Gate-Out & Load', scope: 'GATE_OUT_AND_LOAD' as BlockingScope },
-                { label: 'Gate-Out Only',   scope: 'GATE_OUT_ONLY'     as BlockingScope },
-                { label: 'Load Only',       scope: 'LOAD_ONLY'         as BlockingScope },
-              ].map(b => {
-                const count = HOLDS.filter(h => h.blockingScope === b.scope && h.active).length;
-                const s = SCOPE_STYLE[b.scope];
-                return (
-                  <span key={b.scope} style={{ fontSize: 10, fontWeight: 700, padding: '2px 8px', borderRadius: 8, background: s.bg, color: s.color }}>
-                    {b.label}: {count}
-                  </span>
-                );
-              })}
-            </div>
-          </div>
-        )}
+        <TablePagination page={page} pageSize={pageSize} totalItems={totalItems}
+          totalPages={totalPages} startRow={startRow} endRow={endRow}
+          onPageChange={setPage} onPageSizeChange={setPageSize} noun="holds" />
       </div>
 
       {/* Modal */}

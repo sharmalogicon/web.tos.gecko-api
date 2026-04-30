@@ -1,0 +1,50 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(npx tsc *)",
+      "Bash(npm run *)",
+      "Bash(curl -s -o /dev/null -w \"%{http_code}\" http://localhost:3000/masters/customers)",
+      "Bash(sed -i \"s/useState\\({ query: '', code: '', status: 'pending', date: '' }\\)/useState<Record<string, string>>\\({ query: '', code: '', status: 'pending', date: '' }\\)/\" src/app/billing/service-orders/page.tsx)",
+      "Bash(sed -i \"s/useState\\({ query: '', status: '', date: 'month', terms: '' }\\)/useState<Record<string, string>>\\({ query: '', status: '', date: 'month', terms: '' }\\)/\" src/app/billing/invoices/page.tsx)",
+      "Bash(sed -i \"s/useState\\({ query: '', status: '', date: '' }\\)/useState<Record<string, string>>\\({ query: '', status: '', date: '' }\\)/\" src/app/billing/credit-notes/page.tsx)",
+      "Bash(sed -i \"s/useState\\({ query: '', type: '', status: '' }\\)/useState<Record<string, string>>\\({ query: '', type: '', status: '' }\\)/\" src/app/cfs/lcl-cargo/page.tsx)",
+      "Bash(sed -i \"s/useState\\({ query: '', type: '', status: '', date: '' }\\)/useState<Record<string, string>>\\({ query: '', type: '', status: '', date: '' }\\)/\" src/app/cfs/tally/page.tsx)",
+      "Skill(gsd:plan-phase)",
+      "Skill(gsd:plan-phase:*)",
+      "Bash(curl -s -o /dev/null -w \"%{http_code}\" http://localhost:3000)",
+      "Bash(npx next *)",
+      "Bash(curl -s -o /dev/null -w \"%{http_code}\" http://localhost:3000/masters/charge-codes)",
+      "Bash(curl -s http://localhost:3000/masters/charge-codes)",
+      "Bash(curl -s http://localhost:3000/masters/charge-codes/GATE-IN)",
+      "Bash(curl -s http://localhost:3000/masters/charge-codes/new)",
+      "Read(//d/SHARMA/PROJECT/DMS PROJECT 08102022/dms.web/dms.web/src/master/components/**)",
+      "Read(//d/SHARMA/PROJECT/DMS PROJECT 08102022/dms.web/dms.web/src/models/**)",
+      "Read(//d/SHARMA/PROJECT/DMS PROJECT 08102022/dms.web/dms.web/src/services/**)",
+      "Bash(curl -s -o /dev/null -w \"%{http_code}\" http://localhost:3000/masters/lookups)",
+      "Read(//d/SHARMA/PROJECT/DMS PROJECT 08102022/dms.web/dms.web/src/icdoperations/components/booking/**)",
+      "Read(//d/SHARMA/PROJECT/DMS PROJECT 08102022/**)",
+      "Bash(git remote *)",
+      "Bash(git add *)",
+      "Bash(git commit -m ' *)",
+      "Bash(git push *)",
+      "Bash(npm install *)",
+      "Bash(npm list *)",
+      "PowerShell(New-Item -ItemType Directory -Force -Path graphify-out)",
+      "PowerShell(cd \"d:\\\\SHARMA\\\\PROJECT\\\\gecko\\\\web.tos.gecko-api\"; $py = Get-Content .graphify_python; & $py .graphify_label.py)",
+      "PowerShell(cd \"d:\\\\SHARMA\\\\PROJECT\\\\gecko\\\\web.tos.gecko-api\"; $py = Get-Content .graphify_python; & $py .graphify_viz.py)",
+      "PowerShell(cd \"d:\\\\SHARMA\\\\PROJECT\\\\gecko\\\\web.tos.gecko-api\"; $py = Get-Content .graphify_python; & $py -c \"import graphify; print\\(dir\\(graphify\\)\\)\")",
+      "PowerShell(cd \"d:\\\\SHARMA\\\\PROJECT\\\\gecko\\\\web.tos.gecko-api\"; $py = Get-Content .graphify_python; & $py -c \"import inspect; from graphify.export import to_html; print\\(inspect.signature\\(to_html\\)\\)\")",
+      "PowerShell(cd \"d:\\\\SHARMA\\\\PROJECT\\\\gecko\\\\web.tos.gecko-api\"; $py = Get-Content .graphify_python; & $py .graphify_manifest.py)",
+      "PowerShell(cd \"d:\\\\SHARMA\\\\PROJECT\\\\gecko\\\\web.tos.gecko-api\"; $py = Get-Content .graphify_python; & $py -c \"import inspect; from graphify.manifest import save_manifest; print\\(inspect.signature\\(save_manifest\\)\\)\")",
+      "PowerShell(cd \"d:\\\\SHARMA\\\\PROJECT\\\\gecko\\\\web.tos.gecko-api\"; $py = Get-Content .graphify_python; & $py .graphify_incremental_detect.py)",
+      "Bash(vercel whoami *)",
+      "Bash(vercel --yes --name tos-gecko-api --prod)",
+      "PowerShell(cd \"d:\\\\SHARMA\\\\PROJECT\\\\gecko\\\\web.tos.gecko-api\"; $py = Get-Content .graphify_python; & $py .graphify_inc.py)",
+      "WebSearch",
+      "Bash(node -e ' *)"
+    ],
+    "additionalDirectories": [
+      "C:\\Users\\APPLE\\.claude\\projects\\d--SHARMA-PROJECT-gecko-web-tos-gecko-api\\memory"
+    ]
+  }
+}

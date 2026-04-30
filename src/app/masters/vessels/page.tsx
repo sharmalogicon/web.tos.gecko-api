@@ -1,5 +1,6 @@
 "use client";
-import React, { useState } from 'react';
+import React, { useState, useMemo } from 'react';
+import { usePagination, TablePagination } from '@/components/ui/TablePagination';
 import Link from 'next/link';
 import { Icon } from '@/components/ui/Icon';
 import { FilterPopover, FilterField, SortOption } from '@/components/ui/FilterPopover';
@@ -43,6 +44,10 @@ function StatusBadge({ status }: { status: string }) {
 export default function VesselsPage() {
   const [filters, setFilters] = useState<Record<string, string>>({ query: '', line: '', class: '', eta: '7d' });
   const [sortBy, setSortBy] = useState('eta_asc');
+
+  const filtered = useMemo(() => VESSELS, []);
+  const { page, setPage, pageSize, setPageSize, totalPages, pageItems, totalItems, startRow, endRow } = usePagination(filtered);
+
   return (
     <div style={{ maxWidth: 'var(--gecko-container-max)', margin: '0 auto', display: 'flex', flexDirection: 'column', gap: 24, paddingBottom: 40 }}>
 
@@ -91,7 +96,7 @@ export default function VesselsPage() {
             </tr>
           </thead>
           <tbody>
-            {VESSELS.map((v, i) => (
+            {pageItems.map((v, i) => (
               <tr key={v.imo}>
                 <td className="gecko-text-mono" style={{ fontWeight: 600, color: 'var(--gecko-primary-600)' }}>
                   <Link href={`/masters/vessels/${v.imo}`}>{v.imo}</Link>
@@ -119,6 +124,9 @@ export default function VesselsPage() {
             ))}
           </tbody>
         </table>
+        <TablePagination page={page} pageSize={pageSize} totalItems={totalItems}
+          totalPages={totalPages} startRow={startRow} endRow={endRow}
+          onPageChange={setPage} onPageSizeChange={setPageSize} noun="vessels" />
       </div>
 
       {/* Active Voyages Section */}

@@ -1,6 +1,7 @@
 "use client";
-import React from 'react';
+import React, { useMemo, useState } from 'react';
 import { Icon } from '@/components/ui/Icon';
+import { usePagination, TablePagination } from '@/components/ui/TablePagination';
 
 const CONTAINER_TYPES = [
   { id: '22G1', iso: '22G1', name: "20' Standard", dims: "20' × 8'6\"", type: 'GP', cat: 'GENERAL', payload: '28,230 kg', tare: '2,300 kg', cube: '33.2 m³', active: 12, color: 'var(--gecko-primary-500)', bg: 'var(--gecko-primary-50)' },
@@ -39,6 +40,9 @@ function ContainerGraphic({ width, height, color }: { width: number, height: num
 }
 
 export default function ContainerTypesPage() {
+  const filtered = useMemo(() => CONTAINER_TYPES, []);
+  const { page, setPage, pageSize, setPageSize, totalPages, pageItems, totalItems, startRow, endRow } = usePagination(filtered);
+
   return (
     <div style={{ maxWidth: 'var(--gecko-container-max)', margin: '0 auto', display: 'flex', flexDirection: 'column', gap: 24, paddingBottom: 40 }}>
 
@@ -99,7 +103,7 @@ export default function ContainerTypesPage() {
         {/* Right Grid */}
         <div style={{ flex: 1 }}>
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(280px, 1fr))', gap: 20 }}>
-            {CONTAINER_TYPES.map((c) => (
+            {pageItems.map((c) => (
               <div key={c.iso} style={{ background: 'var(--gecko-bg-surface)', border: '1px solid var(--gecko-border)', borderRadius: 12, overflow: 'hidden', boxShadow: 'var(--gecko-shadow-sm)', display: 'flex', flexDirection: 'column' }}>
 
                 {/* Graphic Area */}
@@ -149,6 +153,9 @@ export default function ContainerTypesPage() {
               </div>
             ))}
           </div>
+          <TablePagination page={page} pageSize={pageSize} totalItems={totalItems}
+            totalPages={totalPages} startRow={startRow} endRow={endRow}
+            onPageChange={setPage} onPageSizeChange={setPageSize} noun="container types" />
         </div>
 
       </div>

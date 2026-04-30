@@ -1,7 +1,8 @@
 "use client";
-import React, { useState } from 'react';
+import React, { useState, useMemo } from 'react';
 import Link from 'next/link';
 import { Icon } from '@/components/ui/Icon';
+import { usePagination, TablePagination } from '@/components/ui/TablePagination';
 
 // ── Keyframe animations injected into document ─────────────────────────────
 const ANIM_CSS = `
@@ -686,9 +687,11 @@ export default function OrderTypeMasterPage() {
     return s;
   });
 
-  const filtered = ORDER_TYPES.filter(ot =>
+  const filtered = useMemo(() => ORDER_TYPES.filter(ot =>
     !search || ot.code.toLowerCase().includes(search.toLowerCase()) || ot.description.toLowerCase().includes(search.toLowerCase())
-  );
+  ), [search]);
+
+  const { page, setPage, pageSize, setPageSize, totalPages, pageItems, totalItems, startRow, endRow } = usePagination(filtered);
 
   const activeMovement = selectedSeq !== null ? selected.movements.find(m => m.seq === selectedSeq) ?? null : null;
   const bt = BTYPE[selected.bookingType];
@@ -735,7 +738,7 @@ export default function OrderTypeMasterPage() {
             </div>
           </div>
           <div style={{ maxHeight: 540, overflowY: 'auto' }}>
-            {filtered.map(ot => {
+            {pageItems.map(ot => {
               const b = BTYPE[ot.bookingType];
               const active = ot.id === selected.id;
               return (
@@ -769,6 +772,17 @@ export default function OrderTypeMasterPage() {
               );
             })}
           </div>
+          <TablePagination
+            page={page}
+            pageSize={pageSize}
+            totalItems={totalItems}
+            totalPages={totalPages}
+            startRow={startRow}
+            endRow={endRow}
+            onPageChange={setPage}
+            onPageSizeChange={setPageSize}
+            noun="order types"
+          />
         </div>
 
         {/* RIGHT: Detail area */}

@@ -1,5 +1,6 @@
 "use client";
 import React, { useState, useMemo } from 'react';
+import { usePagination, TablePagination } from '@/components/ui/TablePagination';
 import { Icon } from '@/components/ui/Icon';
 import { FilterPopover, FilterField, SortOption } from '@/components/ui/FilterPopover';
 
@@ -551,6 +552,8 @@ export default function PortsListPage() {
     return list;
   }, [ports, filters, sortBy]);
 
+  const { page, setPage, pageSize, setPageSize, totalPages, pageItems, totalItems, startRow, endRow } = usePagination(displayed);
+
   function openNew() {
     setModalPort(null);
     setModalOpen(true);
@@ -589,7 +592,7 @@ export default function PortsListPage() {
               <h1 style={{ fontSize: 24, fontWeight: 700, margin: 0, color: 'var(--gecko-text-primary)' }}>
                 Ports &amp; Locations
               </h1>
-              <span className="gecko-count-badge">{displayed.length} shown of {ports.length}</span>
+              <span className="gecko-count-badge">{pageItems.length} shown of {totalItems}</span>
             </div>
             <div style={{ fontSize: 13, color: 'var(--gecko-text-secondary)', marginTop: 2 }}>
               UN/LOCODE global place catalog. References POL, POD, and transshipment on every booking and B/L.
@@ -674,7 +677,7 @@ export default function PortsListPage() {
                   </td>
                 </tr>
               )}
-              {displayed.map((p) => (
+              {pageItems.map((p) => (
                 <tr key={p.locode} style={{ cursor: 'pointer' }} onClick={() => openEdit(p)}>
                   <td onClick={(e) => e.stopPropagation()}>
                     <LOCODEBadge locode={p.locode} />
@@ -735,6 +738,9 @@ export default function PortsListPage() {
               ))}
             </tbody>
           </table>
+          <TablePagination page={page} pageSize={pageSize} totalItems={totalItems}
+            totalPages={totalPages} startRow={startRow} endRow={endRow}
+            onPageChange={setPage} onPageSizeChange={setPageSize} noun="ports" />
         </div>
 
       </div>

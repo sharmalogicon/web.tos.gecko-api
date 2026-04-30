@@ -1,8 +1,9 @@
 "use client";
-import React, { useState } from 'react';
+import React, { useState, useMemo } from 'react';
 import Link from 'next/link';
 import { Icon } from '@/components/ui/Icon';
 import { FilterPopover, FilterField, SortOption } from '@/components/ui/FilterPopover';
+import { usePagination, TablePagination } from '@/components/ui/TablePagination';
 
 const LINE_FILTER_FIELDS: FilterField[] = [
   { type: 'search', key: 'query', placeholder: 'Search SCAC, name, prefix...' },
@@ -34,6 +35,23 @@ const SHIPPING_LINES = [
 export default function ShippingLinesPage() {
   const [filters, setFilters] = useState<Record<string, string>>({ query: '', edi: '', alliance: '', status: 'active' });
   const [sortBy, setSortBy] = useState('name');
+
+  const filtered = useMemo(() => {
+    return SHIPPING_LINES.filter((line) => {
+      if (filters.query) {
+        const q = filters.query.toLowerCase();
+        if (!line.name.toLowerCase().includes(q) && !line.id.toLowerCase().includes(q) && !line.scac.toLowerCase().includes(q) && !line.prefix.toLowerCase().includes(q)) return false;
+      }
+      if (filters.status) {
+        const s = filters.status.toLowerCase().replace('-', ' ');
+        if (line.status.toLowerCase() !== s) return false;
+      }
+      return true;
+    });
+  }, [filters.query, filters.status]);
+
+  const { page, setPage, pageSize, setPageSize, totalPages, pageItems, totalItems, startRow, endRow } = usePagination(filtered);
+
   return (
     <div style={{ maxWidth: 'var(--gecko-container-max)', margin: '0 auto', display: 'flex', flexDirection: 'column', gap: 24 }}>
 
@@ -42,7 +60,7 @@ export default function ShippingLinesPage() {
         <div className="gecko-page-actions-left">
           <div style={{ display: 'flex', alignItems: 'baseline', gap: 12 }}>
             <h1 style={{ fontSize: 24, fontWeight: 700, margin: 0, color: 'var(--gecko-text-primary)' }}>Shipping Lines</h1>
-            <span className="gecko-count-badge">42 lines</span>
+            <span className="gecko-count-badge">{pageItems.length} shown of {totalItems}</span>
             <span style={{ fontSize: 12, fontWeight: 600, color: 'var(--gecko-info-700)', background: 'var(--gecko-info-100)', padding: '2px 8px', borderRadius: 12 }}>34 EDI-linked</span>
           </div>
           <div style={{ fontSize: 13, color: 'var(--gecko-text-secondary)', marginTop: 4 }}>Line operators and carriers. Source of EDO, BL, and vessel schedule.</div>
@@ -82,7 +100,7 @@ export default function ShippingLinesPage() {
             </tr>
           </thead>
           <tbody>
-            {SHIPPING_LINES.map((line, i) => (
+            {pageItems.map((line, i) => (
               <tr key={line.id}>
                 <td>
                   <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
@@ -117,6 +135,12 @@ export default function ShippingLinesPage() {
             ))}
           </tbody>
         </table>
+        <TablePagination
+          page={page} pageSize={pageSize} totalItems={totalItems}
+          totalPages={totalPages} startRow={startRow} endRow={endRow}
+          onPageChange={setPage} onPageSizeChange={setPageSize}
+          noun="lines"
+        />
       </div>
 
     </div>

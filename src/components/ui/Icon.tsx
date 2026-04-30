@@ -14,6 +14,8 @@ const IconPaths: Record<string, React.ReactNode> = {
   chevronDown: <path d="m6 9 6 6 6-6"/>,
   chevronRight: <path d="m9 6 6 6-6 6"/>,
   chevronLeft: <path d="m15 6-6 6 6 6"/>,
+  chevronsLeft: <><path d="m11 17-5-5 5-5"/><path d="m18 17-5-5 5-5"/></>,
+  chevronsRight: <><path d="m13 17 5-5-5-5"/><path d="m6 17 5-5-5-5"/></>,
   menu: <><path d="M3 6h18"/><path d="M3 12h18"/><path d="M3 18h18"/></>,
   bell: <><path d="M6 8a6 6 0 1 1 12 0c0 7 3 9 3 9H3s3-2 3-9"/><path d="M10.3 21a1.94 1.94 0 0 0 3.4 0"/></>,
   user: <><circle cx="12" cy="8" r="4"/><path d="M4 21a8 8 0 0 1 16 0"/></>,

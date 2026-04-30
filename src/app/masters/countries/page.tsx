@@ -1,5 +1,6 @@
 "use client";
 import React, { useState, useMemo } from 'react';
+import { usePagination, TablePagination } from '@/components/ui/TablePagination';
 import { Icon } from '@/components/ui/Icon';
 import { FilterPopover, FilterField, SortOption } from '@/components/ui/FilterPopover';
 
@@ -424,6 +425,8 @@ export default function CountriesPage() {
     return list;
   }, [filters, sortBy]);
 
+  const { page, setPage, pageSize, setPageSize, totalPages, pageItems, totalItems, startRow, endRow } = usePagination(filtered);
+
   const totalCount   = COUNTRIES.length;
   const activeCount  = COUNTRIES.filter(c => c.active).length;
   const regionCount  = new Set(COUNTRIES.map(c => c.region)).size;
@@ -446,7 +449,7 @@ export default function CountriesPage() {
         <div className="gecko-page-actions-left">
           <div style={{ display: 'flex', alignItems: 'baseline', gap: 12 }}>
             <h1 style={{ fontSize: 24, fontWeight: 700, margin: 0, color: 'var(--gecko-text-primary)' }}>Countries</h1>
-            <span className="gecko-count-badge">{filtered.length} shown of {totalCount}</span>
+            <span className="gecko-count-badge">{pageItems.length} shown of {totalItems}</span>
           </div>
           <div style={{ fontSize: 13, color: 'var(--gecko-text-secondary)' }}>
             ISO 3166-1 country catalog. Reference for ports, customers, customs, and trade compliance.
@@ -513,7 +516,7 @@ export default function CountriesPage() {
                 </td>
               </tr>
             ) : (
-              filtered.map(c => (
+              pageItems.map(c => (
                 <tr key={c.code} style={{ opacity: c.active ? 1 : 0.55 }}>
 
                   {/* Code */}
@@ -591,20 +594,9 @@ export default function CountriesPage() {
           </tbody>
         </table>
 
-        {/* Table footer */}
-        {filtered.length > 0 && (
-          <div style={{ padding: '8px 20px', borderTop: '1px solid var(--gecko-border)', background: 'var(--gecko-bg-subtle)', display: 'flex', alignItems: 'center', gap: 16 }}>
-            <span style={{ fontSize: 11, color: 'var(--gecko-text-secondary)' }}>
-              Showing <strong>{filtered.length}</strong> of <strong>{totalCount}</strong> countries
-              {' · '}Standard: <span style={{ fontSize: 9, fontWeight: 800, letterSpacing: '0.04em', padding: '1px 5px', borderRadius: 3, background: 'var(--gecko-info-100)', color: 'var(--gecko-info-700)' }}>ISO 3166-1</span>
-            </span>
-            <div style={{ marginLeft: 'auto' }}>
-              <button className="gecko-btn gecko-btn-ghost gecko-btn-sm" style={{ fontSize: 11 }}>
-                <Icon name="download" size={12} /> Export CSV
-              </button>
-            </div>
-          </div>
-        )}
+        <TablePagination page={page} pageSize={pageSize} totalItems={totalItems}
+          totalPages={totalPages} startRow={startRow} endRow={endRow}
+          onPageChange={setPage} onPageSizeChange={setPageSize} noun="countries" />
       </div>
 
       {/* ── Country Modal ── */}

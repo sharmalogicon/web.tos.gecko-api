@@ -1,8 +1,9 @@
 "use client";
-import React, { useState } from 'react';
+import React, { useState, useMemo } from 'react';
 import Link from 'next/link';
 import { Icon } from '@/components/ui/Icon';
 import { FilterPopover, FilterField, SortOption } from '@/components/ui/FilterPopover';
+import { usePagination, TablePagination } from '@/components/ui/TablePagination';
 
 type ChargeType = 'Revenue' | 'Cost' | 'Pass-through';
 type ChargeBasis = 'Flat' | 'Per-unit' | 'Tiered';
@@ -157,6 +158,23 @@ export default function ChargeCodesPage() {
   const [filters, setFilters] = useState<Record<string, string>>({ query: '', module: '', type: '', category: '', status: '' });
   const [sortBy, setSortBy] = useState('category');
 
+  const filtered = useMemo(() => {
+    let rows = CHARGE_CATEGORIES.flatMap(cat =>
+      cat.codes.map(c => ({ ...c, catId: cat.id, catName: cat.name, catColor: cat.color, catBg: cat.bg, catIcon: cat.icon }))
+    );
+    if (filters.query)    rows = rows.filter(r => r.code.toLowerCase().includes(filters.query.toLowerCase()) || r.desc.toLowerCase().includes(filters.query.toLowerCase()));
+    if (filters.module)   rows = rows.filter(r => r.module === filters.module);
+    if (filters.type)     rows = rows.filter(r => r.type === filters.type);
+    if (filters.category) rows = rows.filter(r => r.catId === filters.category);
+    if (filters.status)   rows = rows.filter(r => r.status === filters.status);
+    if (sortBy === 'code')     rows = [...rows].sort((a, b) => a.code.localeCompare(b.code));
+    if (sortBy === 'usage')    rows = [...rows].sort((a, b) => parseInt(b.inUse.replace(/,/g, '')) - parseInt(a.inUse.replace(/,/g, '')));
+    if (sortBy === 'tariffs')  rows = [...rows].sort((a, b) => b.tariffs - a.tariffs);
+    return rows;
+  }, [filters, sortBy]);
+
+  const { page, setPage, pageSize, setPageSize, totalPages, pageItems, totalItems, startRow, endRow } = usePagination(filtered);
+
   return (
     <div style={{ maxWidth: 'var(--gecko-container-max)', margin: '0 auto', display: 'flex', flexDirection: 'column', gap: 24, paddingBottom: 60 }}>
 
@@ -208,84 +226,71 @@ export default function ChargeCodesPage() {
         ))}
       </div>
 
-      {/* Category Sections */}
-      <div style={{ display: 'flex', flexDirection: 'column', gap: 20 }}>
-        {CHARGE_CATEGORIES.map(cat => (
-          <div key={cat.id} style={{ background: 'var(--gecko-bg-surface)', border: '1px solid var(--gecko-border)', borderRadius: 12, overflow: 'hidden', boxShadow: 'var(--gecko-shadow-sm)' }}>
-
-            {/* Category Header */}
-            <div style={{ padding: '14px 24px', borderBottom: '1px solid var(--gecko-border)', display: 'flex', alignItems: 'center', justifyContent: 'space-between', background: cat.bg }}>
-              <div style={{ display: 'flex', alignItems: 'center', gap: 14 }}>
-                <div style={{ width: 36, height: 36, borderRadius: 9, background: 'rgba(255,255,255,0.7)', color: cat.color, display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
-                  <Icon name={cat.icon} size={18} />
-                </div>
-                <div>
-                  <div style={{ fontSize: 14, fontWeight: 700, color: 'var(--gecko-text-primary)' }}>{cat.name}</div>
-                  <div style={{ fontSize: 11, color: 'var(--gecko-text-secondary)' }}>{cat.codes.length} codes · {cat.codes.filter(c => c.status === 'Active').length} active</div>
-                </div>
-              </div>
-              <div style={{ display: 'flex', gap: 8 }}>
-                <Link href={`/masters/charge-codes/new?cat=${cat.id}`} className="gecko-btn gecko-btn-ghost gecko-btn-sm" style={{ color: cat.color, background: 'rgba(255,255,255,0.7)' }}>
-                  <Icon name="plus" size={14} /> Add
-                </Link>
-              </div>
-            </div>
-
-            {/* Table */}
-            <table className="gecko-table gecko-table-comfortable" style={{ fontSize: 12.5 }}>
-              <thead>
-                <tr>
-                  <th style={{ width: 160, whiteSpace: 'nowrap' }}>Code</th>
-                  <th>Description</th>
-                  <th style={{ width: 76 }}>Module</th>
-                  <th style={{ width: 108 }}>Type</th>
-                  <th style={{ width: 120 }}>Billing Unit</th>
-                  <th style={{ width: 80 }}>Basis</th>
-                  <th style={{ width: 44 }}>Curr</th>
-                  <th style={{ textAlign: 'right', width: 100 }}>Base Rate</th>
-                  <th style={{ width: 50 }}>VAT</th>
-                  <th style={{ textAlign: 'right', width: 90 }}>In Use (30d)</th>
-                  <th style={{ textAlign: 'right', width: 70 }}>Tariffs</th>
-                  <th style={{ width: 56 }}>GL Rev</th>
-                  <th style={{ width: 72 }}>Status</th>
-                  <th style={{ width: 40 }}></th>
-                </tr>
-              </thead>
-              <tbody>
-                {cat.codes.map(c => (
-                  <tr key={c.code} style={{ opacity: c.status === 'Inactive' ? 0.55 : 1 }}>
-                    <td style={{ whiteSpace: 'nowrap' }}>
-                      <Link href={`/masters/charge-codes/${c.code}`} style={{ fontFamily: 'var(--gecko-font-mono)', fontWeight: 700, color: cat.color, fontSize: 12, whiteSpace: 'nowrap' }}>{c.code}</Link>
-                    </td>
-                    <td style={{ fontWeight: 500, color: 'var(--gecko-text-primary)' }}>{c.desc}</td>
-                    <td>
-                      <span style={{ fontSize: 10, fontWeight: 700, color: MODULE_COLOR[c.module], background: 'var(--gecko-bg-subtle)', padding: '2px 6px', borderRadius: 4, letterSpacing: '0.04em' }}>{c.module}</span>
-                    </td>
-                    <td>
-                      <span style={{ fontSize: 10, fontWeight: 700, padding: '2px 7px', borderRadius: 4, background: TYPE_STYLE[c.type].bg, color: TYPE_STYLE[c.type].color }}>{c.type}</span>
-                    </td>
-                    <td style={{ color: 'var(--gecko-text-secondary)', fontSize: 12 }}>{c.unit}</td>
-                    <td style={{ color: 'var(--gecko-text-secondary)', fontSize: 12 }}>{c.basis}</td>
-                    <td style={{ fontSize: 11, fontWeight: 600, color: c.currency === 'USD' ? 'var(--gecko-info-700)' : 'var(--gecko-text-secondary)' }}>{c.currency}</td>
-                    <td style={{ textAlign: 'right', fontFamily: 'var(--gecko-font-mono)', fontWeight: 700, fontSize: 12.5 }}>{c.base}</td>
-                    <td style={{ color: 'var(--gecko-info-600)', fontWeight: 600, fontSize: 12 }}>{c.vat}</td>
-                    <td style={{ textAlign: 'right', fontFamily: 'var(--gecko-font-mono)', color: 'var(--gecko-text-secondary)', fontSize: 12 }}>{c.inUse}</td>
-                    <td style={{ textAlign: 'right', fontWeight: 600, fontSize: 12 }}>{c.tariffs}</td>
-                    <td style={{ fontFamily: 'var(--gecko-font-mono)', color: 'var(--gecko-text-disabled)', fontSize: 11 }}>{c.glRev}</td>
-                    <td>
-                      <span className={`gecko-status-dot gecko-status-dot-${c.status === 'Active' ? 'active' : 'neutral'}`}>{c.status}</span>
-                    </td>
-                    <td style={{ textAlign: 'right' }}>
-                      <button style={{ background: 'transparent', border: 'none', color: 'var(--gecko-text-disabled)', cursor: 'pointer', padding: '2px 4px' }}>
-                        <Icon name="moreHorizontal" size={15} />
-                      </button>
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-        ))}
+      {/* Flat Charge Codes Table */}
+      <div style={{ background: 'var(--gecko-bg-surface)', border: '1px solid var(--gecko-border)', borderRadius: 12, overflow: 'hidden', boxShadow: 'var(--gecko-shadow-sm)' }}>
+        <table className="gecko-table gecko-table-comfortable" style={{ fontSize: 12.5 }}>
+          <thead>
+            <tr>
+              <th style={{ width: 160, whiteSpace: 'nowrap' }}>Code</th>
+              <th>Description</th>
+              <th style={{ width: 76 }}>Module</th>
+              <th style={{ width: 108 }}>Type</th>
+              <th style={{ width: 120 }}>Billing Unit</th>
+              <th style={{ width: 80 }}>Basis</th>
+              <th style={{ width: 44 }}>Curr</th>
+              <th style={{ textAlign: 'right', width: 100 }}>Base Rate</th>
+              <th style={{ width: 50 }}>VAT</th>
+              <th style={{ textAlign: 'right', width: 90 }}>In Use (30d)</th>
+              <th style={{ textAlign: 'right', width: 70 }}>Tariffs</th>
+              <th style={{ width: 56 }}>GL Rev</th>
+              <th style={{ width: 72 }}>Status</th>
+              <th style={{ width: 40 }}></th>
+            </tr>
+          </thead>
+          <tbody>
+            {pageItems.map(c => (
+              <tr key={c.code} style={{ opacity: c.status === 'Inactive' ? 0.55 : 1 }}>
+                <td style={{ whiteSpace: 'nowrap' }}>
+                  <Link href={`/masters/charge-codes/${c.code}`} style={{ fontFamily: 'var(--gecko-font-mono)', fontWeight: 700, color: c.catColor, fontSize: 12, whiteSpace: 'nowrap' }}>{c.code}</Link>
+                </td>
+                <td style={{ fontWeight: 500, color: 'var(--gecko-text-primary)' }}>{c.desc}</td>
+                <td>
+                  <span style={{ fontSize: 10, fontWeight: 700, color: MODULE_COLOR[c.module], background: 'var(--gecko-bg-subtle)', padding: '2px 6px', borderRadius: 4, letterSpacing: '0.04em' }}>{c.module}</span>
+                </td>
+                <td>
+                  <span style={{ fontSize: 10, fontWeight: 700, padding: '2px 7px', borderRadius: 4, background: TYPE_STYLE[c.type].bg, color: TYPE_STYLE[c.type].color }}>{c.type}</span>
+                </td>
+                <td style={{ color: 'var(--gecko-text-secondary)', fontSize: 12 }}>{c.unit}</td>
+                <td style={{ color: 'var(--gecko-text-secondary)', fontSize: 12 }}>{c.basis}</td>
+                <td style={{ fontSize: 11, fontWeight: 600, color: c.currency === 'USD' ? 'var(--gecko-info-700)' : 'var(--gecko-text-secondary)' }}>{c.currency}</td>
+                <td style={{ textAlign: 'right', fontFamily: 'var(--gecko-font-mono)', fontWeight: 700, fontSize: 12.5 }}>{c.base}</td>
+                <td style={{ color: 'var(--gecko-info-600)', fontWeight: 600, fontSize: 12 }}>{c.vat}</td>
+                <td style={{ textAlign: 'right', fontFamily: 'var(--gecko-font-mono)', color: 'var(--gecko-text-secondary)', fontSize: 12 }}>{c.inUse}</td>
+                <td style={{ textAlign: 'right', fontWeight: 600, fontSize: 12 }}>{c.tariffs}</td>
+                <td style={{ fontFamily: 'var(--gecko-font-mono)', color: 'var(--gecko-text-disabled)', fontSize: 11 }}>{c.glRev}</td>
+                <td>
+                  <span className={`gecko-status-dot gecko-status-dot-${c.status === 'Active' ? 'active' : 'neutral'}`}>{c.status}</span>
+                </td>
+                <td style={{ textAlign: 'right' }}>
+                  <button style={{ background: 'transparent', border: 'none', color: 'var(--gecko-text-disabled)', cursor: 'pointer', padding: '2px 4px' }}>
+                    <Icon name="moreHorizontal" size={15} />
+                  </button>
+                </td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+        <TablePagination
+          page={page}
+          pageSize={pageSize}
+          totalItems={totalItems}
+          totalPages={totalPages}
+          startRow={startRow}
+          endRow={endRow}
+          onPageChange={setPage}
+          onPageSizeChange={setPageSize}
+          noun="charge codes"
+        />
       </div>
 
     </div>
