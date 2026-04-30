@@ -70,7 +70,11 @@ const NAV = [
       { id: 'container-types', label: 'ISO Container Types', path: '/masters/container-types' },
       { id: 'order-types', label: 'Work Order Types', path: '/masters/order-types' },
       { id: 'charge-codes', label: 'Charge Codes', path: '/masters/charge-codes' },
-      { id: 'locations', label: 'Locations', path: '/masters/locations' },
+      { id: 'locations', label: 'Facility & Yard Locations', path: '/masters/locations' },
+      { id: 'countries', label: 'Countries', path: '/masters/countries' },
+      { id: 'ports', label: 'Ports & Locations (UN/LOCODE)', path: '/masters/ports' },
+      { id: 'commodities', label: 'Commodity / HS Codes', path: '/masters/commodities' },
+      { id: 'holds', label: 'Holds & Remarks', path: '/masters/holds' },
       { id: 'lookups', label: 'Reference Codes', path: '/masters/lookups' },
     ]
   },

@@ -40,13 +40,17 @@ function EntityCard({ entity }: { entity: any }) {
 
 export default function MastersHubPage() {
   const entities = [
-    { id: 'customers',       icon: 'user',       label: 'Customers',        count: 284,  desc: 'Bill-to · consignee · shipper · agent. One entity, many roles.', updated: '2h ago', stats: [['active', 268], ['on-hold', 4], ['prospect', 12]] },
-    { id: 'lines',           icon: 'anchor',     label: 'Shipping Lines',   count: 42,   desc: 'Line operators / carriers. Drives EDO linkage and line tariff.', updated: 'Yesterday', stats: [['with-tariff', 38], ['edi-linked', 34]] },
-    { id: 'vessels',         icon: 'ship',       label: 'Vessels & Voyages', count: 126, desc: 'Vessel catalog + active voyages. Links to bookings and EDO.',    updated: '10m ago', stats: [['in-port', 3], ['next-7d', 14], ['archived', 89]] },
-    { id: 'container-types', icon: 'box',        label: 'ISO Container Types', count: 58, desc: 'ISO 6346 code catalog. Feeds rate matrix dimension.',           updated: 'Mar 12', stats: [['dry', 34], ['reefer', 8], ['special', 16]] },
-    { id: 'charge-codes',    icon: 'tag',        label: 'Charge Codes',      count: 96,  desc: 'Billable services. The atomic unit of every tariff and invoice.',  updated: '4d ago', stats: [['gate', 12], ['yard', 18], ['cfs', 24], ['vas', 42]] },
-    { id: 'locations',       icon: 'layers',     label: 'Locations',         count: 1842,desc: 'Facility → Yard → Block → Row → Slot. 6-level spatial tree.',     updated: 'Apr 20', stats: [['facilities', 3], ['blocks', 24], ['slots', 1815]] },
-    { id: 'lookups',         icon: 'database',   label: 'Reference Codes',   count: 420, desc: 'Global reference codelist — SMDG, ISO, IICL, EDIFACT. Drives every dropdown.', updated: '2d ago', stats: [['categories', 22], ['system', 186], ['user', 234]] },
+    { id: 'customers',       icon: 'user',       label: 'Customers',                    count: 284,  desc: 'Bill-to · consignee · shipper · agent. One entity, many roles.',                              updated: '2h ago',    stats: [['active', 268], ['on-hold', 4], ['prospect', 12]] },
+    { id: 'lines',           icon: 'anchor',     label: 'Shipping Lines',               count: 42,   desc: 'Line operators / carriers. Drives EDO linkage and line tariff.',                              updated: 'Yesterday', stats: [['with-tariff', 38], ['edi-linked', 34]] },
+    { id: 'vessels',         icon: 'ship',       label: 'Vessels & Voyages',            count: 126,  desc: 'Vessel catalog + active voyages. Links to bookings and EDO.',                                 updated: '10m ago',   stats: [['in-port', 3], ['next-7d', 14], ['archived', 89]] },
+    { id: 'container-types', icon: 'box',        label: 'ISO Container Types',          count: 58,   desc: 'ISO 6346 code catalog. Feeds rate matrix and EIR.',                                           updated: 'Mar 12',    stats: [['dry', 34], ['reefer', 8], ['special', 16]] },
+    { id: 'charge-codes',    icon: 'tag',        label: 'Charge Codes',                 count: 96,   desc: 'Billable services. The atomic unit of every tariff and invoice.',                             updated: '4d ago',    stats: [['gate', 12], ['yard', 18], ['cfs', 24], ['vas', 42]] },
+    { id: 'locations',       icon: 'layers',     label: 'Facility & Yard Locations',    count: 1842, desc: 'Facility → Yard → Block → Row → Slot. 6-level spatial hierarchy.',                           updated: 'Apr 20',    stats: [['facilities', 3], ['blocks', 24], ['slots', 1815]] },
+    { id: 'countries',       icon: 'globe',      label: 'Countries',                    count: 249,  desc: 'ISO 3166-1 country catalog. Reference for ports, customers, customs, and trade compliance.',  updated: 'Jan 01',    stats: [['asia-pacific', 38], ['europe', 44], ['americas', 57]] },
+    { id: 'ports',           icon: 'anchor',     label: 'Ports & Locations (UN/LOCODE)', count: 112, desc: 'UN/LOCODE global place catalog. References POL, POD, and transshipment on every BL.',        updated: '1d ago',    stats: [['seaports', 84], ['icd', 18], ['cfs-depot', 10]] },
+    { id: 'commodities',     icon: 'layers',     label: 'Commodity / HS Codes',         count: 1241, desc: 'WCO Harmonized System catalog. Used on BL, customs declaration, and DG/reefer verification.', updated: 'Jan 01',    stats: [['chapters', 97], ['headings', 1144], ['dg-flagged', 48]] },
+    { id: 'holds',           icon: 'shieldCheck',label: 'Holds & Remarks',              count: 24,   desc: 'Named hold catalog. Applied to containers to block gate-out, load, or all movement.',         updated: '1w ago',    stats: [['customs', 4], ['line', 3], ['critical', 6]] },
+    { id: 'lookups',         icon: 'database',   label: 'Reference Codes',              count: 420,  desc: 'Global reference codelist — SMDG, ISO, IICL, EDIFACT. Drives every dropdown.',               updated: '2d ago',    stats: [['categories', 22], ['system', 186], ['user', 234]] },
   ];
 
   const recent = [
@@ -62,7 +66,7 @@ export default function MastersHubPage() {
       <PageToolbar
         title="Master Data"
         subtitle="Central catalog for every reference entity used across Gate, Yard, CFS, Billing, and Tariff"
-        badges={[{ label: '7 catalogs', kind: 'gray' }, { label: 'Single source of truth', kind: 'info' }]}
+        badges={[{ label: '11 catalogs', kind: 'gray' }, { label: 'Single source of truth', kind: 'info' }]}
         actions={
           <>
             <button className="gecko-btn gecko-btn-ghost gecko-btn-sm"><Icon name="download" size={13} />Export All</button>
