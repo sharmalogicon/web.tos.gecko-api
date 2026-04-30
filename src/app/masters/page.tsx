@@ -1,14 +1,16 @@
 import React from 'react';
+import Link from 'next/link';
 import { Icon } from '@/components/ui/Icon';
 import { PageToolbar } from '@/components/ui/OpsPrimitives';
 
 function EntityCard({ entity }: { entity: any }) {
   return (
-    <button style={{
+    <Link href={`/masters/${entity.id}`} style={{
       padding: 18, textAlign: 'left', cursor: 'pointer', fontFamily: 'inherit',
       background: 'var(--gecko-bg-surface)', border: '1px solid var(--gecko-border)', borderRadius: 10,
       display: 'flex', flexDirection: 'column', gap: 12,
-      transition: 'border-color 120ms, transform 120ms',
+      transition: 'border-color 120ms, box-shadow 120ms',
+      textDecoration: 'none', color: 'inherit',
     }}>
       <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
         <div style={{ width: 38, height: 38, borderRadius: 9, background: 'var(--gecko-primary-50)', color: 'var(--gecko-primary-700)', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
@@ -34,7 +36,7 @@ function EntityCard({ entity }: { entity: any }) {
           </div>
         ))}
       </div>
-    </button>
+    </Link>
   );
 }
 
