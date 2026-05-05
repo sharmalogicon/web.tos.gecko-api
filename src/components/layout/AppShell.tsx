@@ -8,8 +8,19 @@ import { Icon } from '../ui/Icon';
 const NAV = [
   { id: 'dashboard', icon: 'home', label: 'Dashboard',
     children: [
-      { id: 'overview', label: 'Overview', path: '/dashboard/overview' },
-      { id: 'yard-glance', label: 'Yard at a Glance', path: '/dashboard/yard-glance' },
+      { id: 'overview',       label: 'Overview',               path: '/dashboard/overview' },
+      { id: 'yard-glance',    label: 'Yard at a Glance',       path: '/dashboard/yard-glance' },
+      { id: 'gate-traffic',   label: 'Gate & Traffic',         path: '/dashboard/gate-traffic' },
+      { id: 'voyage-dash',    label: 'Voyage & Vessel',        path: '/dashboard/voyage' },
+      { id: 'dwell-time',     label: 'Container Dwell Time',   path: '/dashboard/dwell-time' },
+      { id: 'dd-accrual',     label: 'D&D Accrual',            path: '/dashboard/dd-accrual' },
+      { id: 'accounts-dash',  label: 'Accounts & Revenue',     path: '/dashboard/accounts' },
+      { id: 'billing-health', label: 'Billing Health',         path: '/dashboard/billing-health' },
+      { id: 'edi-dash',       label: 'EDI & Partners',         path: '/dashboard/edi' },
+      { id: 'cfs-ops',        label: 'CFS Operations',         path: '/dashboard/cfs-ops' },
+      { id: 'special-cargo',  label: 'Reefer & Special Cargo', path: '/dashboard/special-cargo' },
+      { id: 'customs-dash',   label: 'Customs & Holds',        path: '/dashboard/customs' },
+      { id: 'kpi',            label: 'Productivity & KPI',     path: '/dashboard/kpi' },
     ]
   },
   { id: 'bookings', icon: 'clipboardList', label: 'Bookings',
@@ -58,6 +69,17 @@ const NAV = [
       { id: 'plans', label: 'Tariff Schedules', path: '/tariff/plans' },
       { id: 'rate-cards', label: 'Rate Cards', path: '/tariff/rate-cards' },
       { id: 'free-time', label: 'Free Time & D&D Rules', path: '/tariff/free-time' },
+    ]
+  },
+  { id: 'config', icon: 'settings', label: 'Configuration',
+    children: [
+      { id: 'gate-slots',     label: 'Gate Slot Capacity',   path: '/config/gate-slots' },
+      { id: 'gate-hours',     label: 'Operating Hours',      path: '/config/gate-hours' },
+      { id: 'yard-zones',     label: 'Yard Zones & Blocks',  path: '/config/yard-zones' },
+      { id: 'roles',          label: 'Roles & Rights',       path: '/config/roles' },
+      { id: 'users',          label: 'Users & Roles',        path: '/config/users' },
+      { id: 'edi-partners',   label: 'EDI Partners',         path: '/config/edi-partners' },
+      { id: 'system-params',  label: 'System Parameters',    path: '/config/system-params' },
     ]
   },
   { id: 'masters', icon: 'database', label: 'Master Data',
@@ -110,7 +132,7 @@ function Sidebar({ collapsed, onToggle }: { collapsed: boolean, onToggle: () => 
         </div>
         {!collapsed && (
           <div style={{ display: 'flex', flexDirection: 'column', lineHeight: 1.1 }}>
-            <span className="gecko-logo-text" style={{ fontSize: 15 }}>LOGICON</span>
+            <span className="gecko-logo-text" style={{ fontSize: 15 }}>GECKO</span>
             <span style={{ fontSize: 10, color: 'var(--gecko-text-secondary)', fontWeight: 500, letterSpacing: '0.1em' }}>TOS · ICD + CFS</span>
           </div>
         )}
@@ -223,10 +245,10 @@ function Header({ collapsed, onToggleSidebar, pageTitle = "Dashboard", breadcrum
       <div style={{ marginLeft: 'auto', display: 'flex', alignItems: 'center', gap: 6 }}>
         {/* Tenant → Facility → Yard switcher */}
         <button style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '5px 10px 5px 8px', background: 'var(--gecko-bg-surface)', border: '1px solid var(--gecko-border)', borderRadius: 8, fontSize: 12, cursor: 'pointer', fontFamily: 'inherit' }}>
-          <div style={{ width: 26, height: 26, borderRadius: 5, background: 'var(--gecko-primary-600)', color: '#fff', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 10, fontWeight: 700, letterSpacing: '0.04em' }}>LG</div>
+          <div style={{ width: 26, height: 26, borderRadius: 5, background: 'var(--gecko-primary-600)', color: '#fff', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 10, fontWeight: 700, letterSpacing: '0.04em' }}>GK</div>
           <div style={{ display: 'flex', alignItems: 'center', gap: 4, lineHeight: 1.15 }}>
             <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-start' }}>
-              <span style={{ fontSize: 10, color: 'var(--gecko-text-secondary)', fontWeight: 500 }}>LOGICON Group</span>
+              <span style={{ fontSize: 10, color: 'var(--gecko-text-secondary)', fontWeight: 500 }}>GECKO</span>
               <div style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 12, fontWeight: 600, color: 'var(--gecko-text-primary)' }}>
                 <span>Laem Chabang ICD</span>
                 <span style={{ color: 'var(--gecko-text-disabled)', fontWeight: 400 }}>/</span>

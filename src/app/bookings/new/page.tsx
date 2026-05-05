@@ -58,7 +58,7 @@ export default function NewBookingPage() {
   const canCreate = bookingNo && agent && shipper && orderType;
 
   return (
-    <div style={{ maxWidth: 740, margin: '0 auto', paddingBottom: 60 }}>
+    <div style={{ maxWidth: 1040, margin: '0 auto', paddingBottom: 60 }}>
 
       {/* Page header */}
       <div style={{ display: 'flex', alignItems: 'center', gap: 14, marginBottom: 28 }}>

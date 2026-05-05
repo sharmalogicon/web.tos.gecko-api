@@ -1,5 +1,6 @@
 "use client";
 import React, { useState, useRef, useEffect } from 'react';
+import { createPortal } from 'react-dom';
 import { Icon } from './Icon';
 
 // ─── Types ──────────────────────────────────────────────────────────────────────
@@ -180,33 +181,58 @@ export function EntitySearch({
   style,
   className,
 }: EntitySearchProps) {
-  const [query, setQuery]       = useState('');
-  const [open, setOpen]         = useState(false);
-  const [results, setResults]   = useState<EntityOption[]>([]);
+  const [query, setQuery]         = useState('');
+  const [open, setOpen]           = useState(false);
+  const [results, setResults]     = useState<EntityOption[]>([]);
   const [activeIdx, setActiveIdx] = useState(-1);
+  const [mounted, setMounted]     = useState(false);
+  const [dropCoords, setDropCoords] = useState<{ top: number; left: number; width: number }>({ top: 0, left: 0, width: 0 });
 
   const inputRef     = useRef<HTMLInputElement>(null);
   const containerRef = useRef<HTMLDivElement>(null);
+  const popupRef     = useRef<HTMLDivElement>(null);
 
   const inputClass = size === 'sm' ? 'gecko-input gecko-input-sm' : 'gecko-input';
 
-  // Close on outside click/tap
+  useEffect(() => { setMounted(true); }, []);
+
+  function calcDropCoords() {
+    if (!containerRef.current) return;
+    const rect = containerRef.current.getBoundingClientRect();
+    setDropCoords({ top: rect.bottom + 4, left: rect.left, width: rect.width });
+  }
+
+  // Close on outside pointer down — checks across portal boundary
   useEffect(() => {
     function onPointerDown(e: PointerEvent) {
-      if (containerRef.current && !containerRef.current.contains(e.target as Node)) {
-        setOpen(false);
-      }
+      const target = e.target as Node;
+      if (containerRef.current?.contains(target)) return;
+      if (popupRef.current?.contains(target)) return;
+      setOpen(false);
     }
     document.addEventListener('pointerdown', onPointerDown);
     return () => document.removeEventListener('pointerdown', onPointerDown);
   }, []);
+
+  // Reposition dropdown on scroll / resize while open
+  useEffect(() => {
+    if (!open) return;
+    const reposition = () => calcDropCoords();
+    window.addEventListener('scroll', reposition, true);
+    window.addEventListener('resize', reposition);
+    return () => {
+      window.removeEventListener('scroll', reposition, true);
+      window.removeEventListener('resize', reposition);
+    };
+  }, [open]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const q = e.target.value;
     setQuery(q);
     const found = doSearch(entityType, q);
     setResults(found);
-    setOpen(q.length >= 3);
+    if (q.length >= 3) { calcDropCoords(); setOpen(true); }
+    else setOpen(false);
     setActiveIdx(-1);
   };
 
@@ -261,7 +287,7 @@ export function EntitySearch({
           className={inputClass}
           value={displayValue}
           onChange={showingSelection ? undefined : handleChange}
-          onFocus={() => { if (!value && results.length > 0) setOpen(true); }}
+          onFocus={() => { if (!value && results.length > 0) { calcDropCoords(); setOpen(true); } }}
           onKeyDown={showingSelection ? undefined : handleKeyDown}
           placeholder={showingSelection ? '' : placeholder}
           disabled={disabled}
@@ -313,81 +339,90 @@ export function EntitySearch({
         )}
       </div>
 
-      {/* Dropdown: results */}
-      {showDropdown && (
-        <ul
-          role="listbox"
+      {/* Portaled overlays — render on document.body to escape all overflow:hidden parents */}
+      {mounted && (showDropdown || showHint || showNoRes) && createPortal(
+        <div
+          ref={popupRef}
           style={{
-            position: 'absolute', top: 'calc(100% + 4px)', left: 0, right: 0, zIndex: 9999,
-            background: 'var(--gecko-bg-surface)',
-            border: '1px solid var(--gecko-border)',
-            borderRadius: 8,
-            boxShadow: '0 6px 20px rgba(0,0,0,0.10)',
-            listStyle: 'none',
-            margin: 0, padding: '4px 0',
-            maxHeight: 256,
-            overflowY: 'auto',
+            position: 'fixed',
+            top: dropCoords.top,
+            left: dropCoords.left,
+            width: dropCoords.width,
+            zIndex: 9999,
           }}
         >
-          {results.map((opt, i) => (
-            <li
-              key={opt.code}
-              role="option"
-              aria-selected={i === activeIdx}
-              onPointerDown={e => { e.preventDefault(); handleSelect(opt); }}
-              onMouseEnter={() => setActiveIdx(i)}
+          {showDropdown && (
+            <ul
+              role="listbox"
               style={{
-                display: 'flex', alignItems: 'baseline', gap: 12,
-                padding: '9px 14px', cursor: 'pointer',
-                background: i === activeIdx ? 'var(--gecko-primary-50)' : 'transparent',
-                transition: 'background 60ms',
+                background: 'var(--gecko-bg-surface)',
+                border: '1px solid var(--gecko-border)',
+                borderRadius: 8,
+                boxShadow: '0 6px 20px rgba(0,0,0,0.12)',
+                listStyle: 'none',
+                margin: 0, padding: '4px 0',
+                maxHeight: 256,
+                overflowY: 'auto',
               }}
             >
-              <span style={{
-                fontFamily: 'var(--gecko-font-mono)', fontWeight: 700, fontSize: 12,
-                color: 'var(--gecko-primary-600)', flexShrink: 0, minWidth: 80,
-              }}>
-                {opt.code}
-              </span>
-              <span style={{
-                fontSize: 12.5, color: 'var(--gecko-text-primary)',
-                overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
-              }}>
-                {opt.name}
-              </span>
-            </li>
-          ))}
-        </ul>
-      )}
+              {results.map((opt, i) => (
+                <li
+                  key={opt.code}
+                  role="option"
+                  aria-selected={i === activeIdx}
+                  onPointerDown={e => { e.preventDefault(); handleSelect(opt); }}
+                  onMouseEnter={() => setActiveIdx(i)}
+                  style={{
+                    display: 'flex', alignItems: 'baseline', gap: 12,
+                    padding: '9px 14px', cursor: 'pointer',
+                    background: i === activeIdx ? 'var(--gecko-primary-50)' : 'transparent',
+                    transition: 'background 60ms',
+                  }}
+                >
+                  <span style={{
+                    fontFamily: 'var(--gecko-font-mono)', fontWeight: 700, fontSize: 12,
+                    color: 'var(--gecko-primary-600)', flexShrink: 0, minWidth: 80,
+                  }}>
+                    {opt.code}
+                  </span>
+                  <span style={{
+                    fontSize: 12.5, color: 'var(--gecko-text-primary)',
+                    overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
+                  }}>
+                    {opt.name}
+                  </span>
+                </li>
+              ))}
+            </ul>
+          )}
 
-      {/* Min-char hint */}
-      {showHint && (
-        <div style={{
-          position: 'absolute', top: 'calc(100% + 4px)', left: 0, right: 0, zIndex: 9999,
-          padding: '8px 14px',
-          background: 'var(--gecko-bg-surface)',
-          border: '1px solid var(--gecko-border)',
-          borderRadius: 8,
-          fontSize: 11,
-          color: 'var(--gecko-text-secondary)',
-        }}>
-          Type at least <strong>3 characters</strong> to search…
-        </div>
-      )}
+          {showHint && (
+            <div style={{
+              padding: '8px 14px',
+              background: 'var(--gecko-bg-surface)',
+              border: '1px solid var(--gecko-border)',
+              borderRadius: 8,
+              fontSize: 11,
+              color: 'var(--gecko-text-secondary)',
+            }}>
+              Type at least <strong>3 characters</strong> to search…
+            </div>
+          )}
 
-      {/* No results */}
-      {showNoRes && (
-        <div style={{
-          position: 'absolute', top: 'calc(100% + 4px)', left: 0, right: 0, zIndex: 9999,
-          padding: '10px 14px',
-          background: 'var(--gecko-bg-surface)',
-          border: '1px solid var(--gecko-border)',
-          borderRadius: 8,
-          fontSize: 12,
-          color: 'var(--gecko-text-secondary)',
-        }}>
-          No results for <strong>"{query}"</strong>
-        </div>
+          {showNoRes && (
+            <div style={{
+              padding: '10px 14px',
+              background: 'var(--gecko-bg-surface)',
+              border: '1px solid var(--gecko-border)',
+              borderRadius: 8,
+              fontSize: 12,
+              color: 'var(--gecko-text-secondary)',
+            }}>
+              No results for <strong>&ldquo;{query}&rdquo;</strong>
+            </div>
+          )}
+        </div>,
+        document.body
       )}
     </div>
   );
