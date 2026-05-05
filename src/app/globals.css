@@ -556,7 +556,7 @@ hr {
     color var(--gecko-transition-base),
     opacity var(--gecko-transition-base),
     box-shadow var(--gecko-transition-base);
-  text-decoration: none;
+  text-decoration: none !important;
   /* Default: medium size */
   height: 40px;
   padding: 0 16px;
@@ -2165,11 +2165,11 @@ hr {
 }
 
 .gecko-table-row-selected {
-  background: var(--gecko-primary-50) !important;
+  background: var(--gecko-primary-100) !important;
 }
 
 .gecko-table-row-selected td {
-  border-bottom-color: var(--gecko-primary-100);
+  border-bottom-color: var(--gecko-primary-200);
 }
 
 .gecko-table.gecko-table-selectable tbody tr {
@@ -2808,7 +2808,7 @@ input[type="checkbox"].gecko-toggle.gecko-toggle-sm:checked::after { transform: 
   font-size: 13px;
   font-weight: 400;
   color: var(--gecko-text-secondary);
-  text-decoration: none;
+  text-decoration: none !important;
   transition: background-color var(--gecko-transition-fast), color var(--gecko-transition-fast);
   position: relative;
 }
@@ -2824,9 +2824,9 @@ input[type="checkbox"].gecko-toggle.gecko-toggle-sm:checked::after { transform: 
 }
 
 .gecko-nav-child-active {
-  background-color: var(--gecko-primary-50);
-  color: var(--gecko-primary-700);
-  font-weight: 500;
+  background-color: var(--gecko-primary-100);
+  color: var(--gecko-primary-900);
+  font-weight: 600;
 }
 
 .gecko-nav-child-active::before { background: var(--gecko-primary-500); }
@@ -3661,7 +3661,7 @@ input[type="checkbox"].gecko-toggle.gecko-toggle-sm:checked::after { transform: 
   height: 42px;
   border-radius: 8px;
   font-size: 14px;
-  font-weight: 500;
+  font-weight: 700;
   color: var(--gecko-text-secondary);
   cursor: pointer;
   text-decoration: none;

@@ -1,5 +1,6 @@
 "use client";
 import React, { useMemo, useState } from 'react';
+import Link from 'next/link';
 import { Icon } from '@/components/ui/Icon';
 import { usePagination, TablePagination } from '@/components/ui/TablePagination';
 
@@ -59,7 +60,7 @@ export default function ContainerTypesPage() {
         <div className="gecko-toolbar">
           <button className="gecko-btn gecko-btn-ghost gecko-btn-sm"><Icon name="download" size={16} /> Export</button>
           <button className="gecko-btn gecko-btn-outline gecko-btn-sm"><Icon name="refreshCcw" size={16} /> Sync BIC</button>
-          <button className="gecko-btn gecko-btn-primary gecko-btn-sm"><Icon name="plus" size={16} /> New Type</button>
+          <Link href="/masters/container-types/new" className="gecko-btn gecko-btn-primary gecko-btn-sm"><Icon name="plus" size={16} /> New Type</Link>
         </div>
       </div>
 
@@ -148,7 +149,7 @@ export default function ContainerTypesPage() {
                 {/* Footer Link */}
                 <div style={{ padding: '12px 16px', borderTop: '1px solid var(--gecko-border)', display: 'flex', justifyContent: 'space-between', alignItems: 'center', background: 'var(--gecko-bg-subtle)' }}>
                   <span style={{ fontSize: 11, color: 'var(--gecko-text-secondary)' }}>Rate row in tariff</span>
-                  <button style={{ background: 'none', border: 'none', color: 'var(--gecko-text-primary)', fontSize: 12, fontWeight: 600, cursor: 'pointer' }}>View →</button>
+                  <Link href={`/masters/container-types/${c.iso}`} style={{ color: 'var(--gecko-primary-600)', fontSize: 12, fontWeight: 600 }}>View →</Link>
                 </div>
               </div>
             ))}

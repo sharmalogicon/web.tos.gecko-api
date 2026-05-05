@@ -184,11 +184,12 @@ function VoyageDot({ voyage, onHover, onLeave }: {
   const lc = LINE_COLORS[voyage.line] ?? { dot: '#6b7280', bg: '#f3f4f6', text: '#374151' };
 
   return (
-    <div
-      ref={ref}
-      onMouseEnter={() => ref.current && onHover(voyage, ref.current.getBoundingClientRect())}
+    <Link
+      href={`/masters/vessels/schedule/${voyage.id}`}
+      ref={ref as React.Ref<HTMLAnchorElement>}
+      onMouseEnter={() => ref.current && onHover(voyage, (ref.current as unknown as HTMLElement).getBoundingClientRect())}
       onMouseLeave={onLeave}
-      title={voyage.id}
+      title={`${voyage.id} — click to open`}
       style={{
         width: 22, height: 22, borderRadius: 6,
         background: lc.bg,
@@ -197,6 +198,7 @@ function VoyageDot({ voyage, onHover, onLeave }: {
         cursor: 'pointer',
         transition: 'transform 100ms, box-shadow 100ms',
         flexShrink: 0,
+        textDecoration: 'none',
       }}
       onMouseOver={e => { (e.currentTarget as HTMLElement).style.transform = 'scale(1.2)'; (e.currentTarget as HTMLElement).style.boxShadow = `0 2px 8px ${lc.dot}44`; }}
       onMouseOut={e => { (e.currentTarget as HTMLElement).style.transform = 'scale(1)'; (e.currentTarget as HTMLElement).style.boxShadow = 'none'; }}
@@ -204,7 +206,7 @@ function VoyageDot({ voyage, onHover, onLeave }: {
       <span style={{ fontSize: 8, fontWeight: 700, color: lc.text, letterSpacing: '-0.02em' }}>
         {voyage.line.slice(0, 3)}
       </span>
-    </div>
+    </Link>
   );
 }
 
@@ -331,6 +333,9 @@ export default function VesselSchedulePage() {
             <Icon name="list" size={16} /> List View
           </Link>
           <button className="gecko-btn gecko-btn-outline gecko-btn-sm"><Icon name="download" size={16} /> Export</button>
+          <Link href="/masters/vessels/schedule/new" className="gecko-btn gecko-btn-primary gecko-btn-sm">
+            <Icon name="plus" size={16} /> New Voyage
+          </Link>
         </div>
       </div>
 

@@ -1,285 +1,341 @@
 "use client";
-import React, { useState, useEffect } from 'react';
+import React, { useState, useMemo, useEffect } from 'react';
+import Link from 'next/link';
 import { Icon } from '@/components/ui/Icon';
-import { BarcodeDisplay, BarcodeScanInput } from '@/components/ui/BarcodeDisplay';
+import { PageToolbar } from '@/components/ui/OpsPrimitives';
+import { usePagination, TablePagination } from '@/components/ui/TablePagination';
 
-// High-speed exception-based HUD for gate delivery (EIR-Out).
-export default function EirOutPage() {
-  const [scanHighlight, setScanHighlight] = useState<string | null>(null);
-  const [containers, setContainers] = useState([
-    {
-      id: 1,
-      unit: 'MSKU 744218-3', iso: '20GP', laden: 'F', line: 'MSK', edo: 'EDO-2026-9921',
-      recordedSeal: 'SH-884221', checkedSeal: '',
-      sealMatch: false, 
-      damageMinor: false, damageMajor: false,
-      holdCustoms: false, holdLine: false,
-      location: 'Yard A / A-01 / Row 2 / Tier 1',
-      ready: false
-    },
-    {
-      id: 2,
-      unit: 'MSKU 881290-0', iso: '20GP', laden: 'F', line: 'MSK', edo: 'EDO-2026-9921',
-      recordedSeal: 'SH-884222', checkedSeal: 'SH-884222',
-      sealMatch: true,
-      damageMinor: true, damageMajor: false,
-      holdCustoms: false, holdLine: false,
-      location: 'Yard A / A-01 / Row 2 / Tier 2',
-      ready: true
-    }
-  ]);
+// ── Sample data ──────────────────────────────────────────────────────────────
+// arrivedMinsAgo: simulates live wait. In production this comes from gate-in record timestamp.
 
-  // Handle keyboard shortcut F12 to commit
+interface QueueContainer { edo: string; iso: string; line: string; ctr: string; }
+
+interface QueueItem {
+  id: string; plate: string; trailer: string; driver: string; haulier: string;
+  lane: string; appt: string; arrivedAt: string; arrivedMinsAgo: number;
+  containers: QueueContainer[];
+  status: 'waiting' | 'processing' | 'overdue';
+}
+
+const QUEUE: QueueItem[] = [
+  { id: 'GIN-4429', plate: '70-4455', trailer: 'TLR-442-9', driver: 'Prem Kanchana',    haulier: 'Laem Chabang Trans.',  lane: 'Lane 3', appt: 'APT-04-4432', arrivedAt: '14:05', arrivedMinsAgo: 42,
+    containers: [{ edo:'EDO-9912', iso:'20GP', line:'OOL', ctr:'TGHU 552040-3' }, { edo:'EDO-9913', iso:'20GP', line:'OOL', ctr:'OOLU 629114-7' }],
+    status: 'overdue' },
+  { id: 'GIN-4430', plate: '80-2211', trailer: 'TLR-381-4', driver: 'Somchai Phakdi',   haulier: 'THA Logistics Co.',    lane: 'Lane 1', appt: 'APT-04-4418', arrivedAt: '14:28', arrivedMinsAgo: 19,
+    containers: [{ edo:'EDO-9901', iso:'40HC', line:'CMA', ctr:'CMAU 331876-2' }],
+    status: 'waiting' },
+  { id: 'GIN-4431', plate: '71-9033', trailer: 'TLR-209-1', driver: 'Wichai Boonsri',   haulier: 'Siam Freight Ltd.',    lane: 'Lane 2', appt: 'APT-04-4401', arrivedAt: '13:55', arrivedMinsAgo: 52,
+    containers: [{ edo:'EDO-9888', iso:'40HC', line:'MSK', ctr:'MSKU 744218-3' }, { edo:'EDO-9889', iso:'20GP', line:'MSK', ctr:'MSCU 881290-0' }],
+    status: 'overdue' },
+  { id: 'GIN-4432', plate: '82-5670', trailer: 'TLR-560-8', driver: 'Kanit Rattana',    haulier: 'Eastern Gateway Trans.', lane: 'Lane 4', appt: 'APT-04-4440', arrivedAt: '14:38', arrivedMinsAgo: 9,
+    containers: [{ edo:'EDO-9920', iso:'20GP', line:'OOL', ctr:'TEMU 458223-1' }],
+    status: 'waiting' },
+  { id: 'GIN-4433', plate: '73-1124', trailer: 'TLR-771-3', driver: 'Prasert Duangjai', haulier: 'LC Haulage PCL',        lane: 'Lane 3', appt: 'Walk-in',    arrivedAt: '14:15', arrivedMinsAgo: 32,
+    containers: [{ edo:'EDO-9931', iso:'40HC', line:'CMA', ctr:'CMAU 509871-4' }],
+    status: 'overdue' },
+  { id: 'GIN-4434', plate: '84-8892', trailer: 'TLR-114-5', driver: 'Nattawut Srisuk',  haulier: 'Nakhon Trans.',         lane: 'Lane 1', appt: 'APT-04-4451', arrivedAt: '14:40', arrivedMinsAgo: 7,
+    containers: [{ edo:'EDO-9944', iso:'20GP', line:'OOL', ctr:'OOLU 774422-6' }, { edo:'EDO-9945', iso:'20RF', line:'OOL', ctr:'OOLU 889012-2' }],
+    status: 'waiting' },
+  { id: 'GIN-4435', plate: '70-3341', trailer: 'TLR-330-2', driver: 'Anon Khamwong',    haulier: 'Laem Chabang Trans.',  lane: 'Lane 2', appt: 'APT-04-4457', arrivedAt: '14:42', arrivedMinsAgo: 5,
+    containers: [{ edo:'EDO-9960', iso:'40HC', line:'EVR', ctr:'EISU 330015-9' }],
+    status: 'waiting' },
+  { id: 'GIN-4436', plate: '72-6618', trailer: 'TLR-891-6', driver: 'Chalerm Siripat',  haulier: 'Thai Union Trans.',    lane: 'Lane 4', appt: 'APT-04-4398', arrivedAt: '13:48', arrivedMinsAgo: 59,
+    containers: [{ edo:'EDO-9872', iso:'40HC', line:'CMA', ctr:'CMAU 220451-5' }],
+    status: 'overdue' },
+  { id: 'GIN-4437', plate: '81-4403', trailer: 'TLR-004-7', driver: 'Surachai Bunnak',  haulier: 'Map Ta Phut Cargo',    lane: 'Lane 1', appt: 'APT-04-4461', arrivedAt: '14:44', arrivedMinsAgo: 3,
+    containers: [{ edo:'EDO-9977', iso:'20GP', line:'MSK', ctr:'MSKU 661200-8' }],
+    status: 'waiting' },
+  { id: 'GIN-4438', plate: '75-7722', trailer: 'TLR-228-0', driver: 'Boonchai Laolek',  haulier: 'Siam Freight Ltd.',    lane: 'Lane 3', appt: 'Walk-in',    arrivedAt: '14:22', arrivedMinsAgo: 25,
+    containers: [{ edo:'EDO-9910', iso:'20GP', line:'OOL', ctr:'TGHU 118844-1' }, { edo:'EDO-9911', iso:'20GP', line:'OOL', ctr:'TGHU 229955-3' }],
+    status: 'waiting' },
+  { id: 'GIN-4439', plate: '83-9001', trailer: 'TLR-601-9', driver: 'Teerayut Wongsri', haulier: 'Eastern Gateway Trans.', lane: 'Lane 2', appt: 'APT-04-4470', arrivedAt: '14:46', arrivedMinsAgo: 1,
+    containers: [{ edo:'EDO-9990', iso:'40HC', line:'EVR', ctr:'EISU 770088-4' }],
+    status: 'waiting' },
+  { id: 'GIN-4440', plate: '76-2234', trailer: 'TLR-450-1', driver: 'Panya Chaisuwan',  haulier: 'LC Haulage PCL',       lane: 'Lane 1', appt: 'APT-04-4411', arrivedAt: '14:00', arrivedMinsAgo: 47,
+    containers: [{ edo:'EDO-9855', iso:'40HC', line:'CMA', ctr:'CMAU 445002-1' }],
+    status: 'overdue' },
+  { id: 'GIN-4441', plate: '85-5519', trailer: 'TLR-119-4', driver: 'Ratchanon Saelee', haulier: 'THA Logistics Co.',    lane: 'Lane 4', appt: 'APT-04-4480', arrivedAt: '14:45', arrivedMinsAgo: 2,
+    containers: [{ edo:'EDO-9998', iso:'20GP', line:'MSK', ctr:'MSKU 330244-7' }],
+    status: 'waiting' },
+  { id: 'GIN-4442', plate: '74-6677', trailer: 'TLR-887-2', driver: 'Mongkol Phetsom',  haulier: 'Nakhon Trans.',        lane: 'Lane 3', appt: 'Walk-in',    arrivedAt: '14:12', arrivedMinsAgo: 35,
+    containers: [{ edo:'EDO-9904', iso:'20GP', line:'OOL', ctr:'OOLU 552011-8' }, { edo:'EDO-9905', iso:'40GP', line:'OOL', ctr:'OOLU 663022-0' }],
+    status: 'overdue' },
+  { id: 'GIN-4443', plate: '86-3344', trailer: 'TLR-772-3', driver: 'Suthep Jankaew',   haulier: 'Map Ta Phut Cargo',    lane: 'Lane 2', appt: 'APT-04-4490', arrivedAt: '14:43', arrivedMinsAgo: 4,
+    containers: [{ edo:'EDO-9995', iso:'40HC', line:'CMA', ctr:'CMAU 881123-6' }],
+    status: 'waiting' },
+];
+
+// ── Wait time helpers ─────────────────────────────────────────────────────────
+
+function fmtWait(mins: number) {
+  if (mins < 60) return `${mins}m`;
+  return `${Math.floor(mins / 60)}h ${mins % 60}m`;
+}
+
+function WaitBadge({ mins }: { mins: number }) {
+  const overdue = mins > 30;
+  return (
+    <span style={{
+      display: 'inline-flex', alignItems: 'center', gap: 5,
+      padding: '3px 8px', borderRadius: 5, fontSize: 11, fontWeight: 700,
+      fontFamily: 'var(--gecko-font-mono)',
+      background: overdue ? 'var(--gecko-error-600)' : mins > 20 ? 'var(--gecko-warning-100)' : 'var(--gecko-success-50)',
+      color: overdue ? '#fff' : mins > 20 ? 'var(--gecko-warning-700)' : 'var(--gecko-success-700)',
+    }}>
+      {overdue && <Icon name="warning" size={10} />}
+      {fmtWait(mins)}
+    </span>
+  );
+}
+
+// ── Page ──────────────────────────────────────────────────────────────────────
+
+export default function GateOutQueuePage() {
+  const [query, setQuery]       = useState('');
+  const [filterStatus, setFilterStatus] = useState('all');
+  const [filterLane, setFilterLane]     = useState('all');
+  const [tick, setTick] = useState(0);
+
+  // Increment tick every 60s so waiting times stay fresh
   useEffect(() => {
-    const handleKeyDown = (e: KeyboardEvent) => {
-      if (e.key === 'F12') {
-        e.preventDefault();
-        if (allReady) alert('Gate Delivery (EIR-Out) Committed via F12!');
+    const t = setInterval(() => setTick(n => n + 1), 60_000);
+    return () => clearInterval(t);
+  }, []);
+
+  const filtered = useMemo(() => {
+    return QUEUE.filter(r => {
+      if (filterStatus === 'overdue'  && r.arrivedMinsAgo <= 30) return false;
+      if (filterStatus === 'waiting'  && r.arrivedMinsAgo >  30) return false;
+      if (filterLane !== 'all' && r.lane !== filterLane) return false;
+      if (query) {
+        const q = query.toLowerCase();
+        const match = r.plate.toLowerCase().includes(q)
+          || r.driver.toLowerCase().includes(q)
+          || r.haulier.toLowerCase().includes(q)
+          || r.id.toLowerCase().includes(q)
+          || r.containers.some(c => c.edo.toLowerCase().includes(q) || c.ctr.toLowerCase().includes(q));
+        if (!match) return false;
       }
-    };
-    window.addEventListener('keydown', handleKeyDown);
-    return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [containers]);
-
-  const toggleReady = (id: number) => {
-    setContainers(prev => prev.map(c => c.id === id ? { ...c, ready: !c.ready } : c));
-  };
-
-  const updateContainer = (id: number, field: string, val: any) => {
-    setContainers(prev => {
-      return prev.map(c => {
-        if (c.id !== id) return c;
-        const updated = { ...c, [field]: val };
-        
-        // Auto-check seal match
-        if (field === 'checkedSeal') {
-          updated.sealMatch = val === c.recordedSeal;
-        }
-        return updated;
-      });
+      return true;
     });
-  };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [query, filterStatus, filterLane, tick]);
 
-  const allReady = containers.every(c => c.ready);
+  const { page, setPage, pageSize, setPageSize, totalPages, pageItems, totalItems, startRow, endRow } = usePagination(filtered);
+
+  const overdueCount = QUEUE.filter(r => r.arrivedMinsAgo > 30).length;
+  const onTimeCount  = QUEUE.filter(r => r.arrivedMinsAgo <= 30).length;
+  const avgWait      = Math.round(QUEUE.reduce((s, r) => s + r.arrivedMinsAgo, 0) / QUEUE.length);
+  const totalCtr     = QUEUE.reduce((s, r) => s + r.containers.length, 0);
+
+  const lanes = ['Lane 1', 'Lane 2', 'Lane 3', 'Lane 4'];
 
   return (
-    <div role="main" style={{ display: 'flex', flexDirection: 'column', gap: 14, height: 'calc(100vh - 120px)' }}>
-      
-      {/* 1. Ultra-dense Top Ribbon (HUD) */}
-      <div role="banner" style={{
-        display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 20,
-        padding: '12px 20px', background: 'var(--gecko-primary-900)', color: '#fff', 
-        borderRadius: 10, boxShadow: 'var(--gecko-shadow-md)'
-      }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: 24 }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-            <Icon name="logOut" size={24} style={{ color: 'var(--gecko-primary-300)', transform: 'rotate(180deg)' }} />
+    <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
+      <PageToolbar
+        title="Gate-Out · Truck Queue"
+        subtitle="Live list of trucks waiting in the yard for container release · refresh every 60 s"
+        badges={[
+          { label: `${QUEUE.length} trucks`, kind: 'gray' },
+          overdueCount > 0 ? { label: `${overdueCount} overdue`, kind: 'error' } : { label: 'All on time', kind: 'success' },
+        ]}
+        actions={
+          <>
+            <button className="gecko-btn gecko-btn-ghost gecko-btn-sm"><Icon name="refresh" size={13} />Refresh</button>
+            <button className="gecko-btn gecko-btn-outline gecko-btn-sm"><Icon name="print" size={13} />Print Queue</button>
+            <Link href="/gate/eir-in" className="gecko-btn gecko-btn-primary gecko-btn-sm" style={{ textDecoration: 'none', display: 'inline-flex', alignItems: 'center', gap: 6 }}>
+              <Icon name="plus" size={13} />New Gate-In
+            </Link>
+          </>
+        }
+      />
+
+      {/* KPI strip */}
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 12 }}>
+        {[
+          { label: 'Trucks in queue',  value: QUEUE.length,  sub: `${totalCtr} containers total`,     icon: 'truck',   tone: 'primary' },
+          { label: 'On time (≤ 30m)', value: onTimeCount,  sub: 'within SLA',                        icon: 'check',   tone: 'success' },
+          { label: 'Overdue (> 30m)', value: overdueCount, sub: 'exceeding dwell SLA',               icon: 'warning', tone: 'error'   },
+          { label: 'Avg wait',         value: `${avgWait}m`, sub: 'across all trucks today',          icon: 'clock',   tone: overdueCount > 0 ? 'warning' : 'success' },
+        ].map(k => (
+          <div key={k.label} className="gecko-card" style={{ padding: '14px 16px', display: 'flex', alignItems: 'center', gap: 12 }}>
+            <div style={{ width: 36, height: 36, borderRadius: 8, background: `var(--gecko-${k.tone}-50)`, color: `var(--gecko-${k.tone}-600)`, display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+              <Icon name={k.icon} size={17} />
+            </div>
             <div>
-              <div style={{ fontSize: 11, color: 'var(--gecko-primary-200)', textTransform: 'uppercase', letterSpacing: '0.05em' }}>OCR Plate Out</div>
-              <div style={{ fontSize: 20, fontWeight: 800, fontFamily: 'var(--gecko-font-mono)', lineHeight: 1 }}>72-8819</div>
-            </div>
-            <Icon name="checkCircle" size={16} style={{ color: 'var(--gecko-success-400)', alignSelf: 'flex-end', marginBottom: 2 }} />
-          </div>
-
-          <div style={{ width: 1, height: 32, background: 'rgba(255,255,255,0.2)' }} />
-
-          <div>
-            <div style={{ fontSize: 11, color: 'var(--gecko-primary-200)', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Driver & Haulier</div>
-            <div style={{ fontSize: 14, fontWeight: 600, lineHeight: 1.2 }}>Sompong Saelee</div>
-            <div style={{ fontSize: 11, color: 'var(--gecko-primary-300)' }}>Thai Logistics Co.</div>
-          </div>
-
-          <div style={{ width: 1, height: 32, background: 'rgba(255,255,255,0.2)' }} />
-
-          <div>
-            <div style={{ fontSize: 11, color: 'var(--gecko-primary-200)', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Delivery Order (EDO)</div>
-            <div style={{ fontSize: 14, fontWeight: 600, fontFamily: 'var(--gecko-font-mono)', lineHeight: 1.2 }}>EDO-2026-9921</div>
-            <div style={{ fontSize: 11, color: 'var(--gecko-success-400)', fontWeight: 600 }}>Valid thru Apr 28</div>
-          </div>
-          
-          <div style={{ width: 1, height: 32, background: 'rgba(255,255,255,0.2)' }} />
-
-          <div>
-            <div style={{ fontSize: 11, color: 'var(--gecko-primary-200)', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Release Status</div>
-            <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginTop: 2 }}>
-               <div style={{ background: 'var(--gecko-success-500)', color: '#fff', padding: '2px 8px', borderRadius: 12, fontSize: 11, fontWeight: 700 }}>CLEARED</div>
-               <span style={{ fontSize: 11, color: 'var(--gecko-primary-300)' }}>No holds</span>
-            </div>
-          </div>
-        </div>
-
-        <div style={{ display: 'flex', gap: 10 }}>
-          <button style={{ padding: '6px 12px', background: 'rgba(255,255,255,0.1)', border: '1px solid rgba(255,255,255,0.2)', borderRadius: 6, color: '#fff', fontSize: 12, fontWeight: 600, cursor: 'pointer' }}>Cancel (ESC)</button>
-        </div>
-      </div>
-
-      {/* Scan Bar */}
-      <div style={{ padding: '10px 14px', background: 'var(--gecko-primary-50)', border: '1px solid var(--gecko-primary-200)', borderRadius: 10, marginBottom: 12, display: 'flex', alignItems: 'center', gap: 14 }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexShrink: 0 }}>
-          <div style={{ width: 32, height: 32, borderRadius: 8, background: 'var(--gecko-primary-600)', color: '#fff', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M3 7V5a2 2 0 0 1 2-2h2"/><path d="M17 3h2a2 2 0 0 1 2 2v2"/><path d="M21 17v2a2 2 0 0 1-2 2h-2"/><path d="M7 21H5a2 2 0 0 1-2-2v-2"/><line x1="3" y1="12" x2="21" y2="12" strokeWidth="2"/></svg>
-          </div>
-          <div>
-            <div style={{ fontSize: 12, fontWeight: 700, color: 'var(--gecko-primary-700)' }}>Scanner Ready</div>
-            <div style={{ fontSize: 10.5, color: 'var(--gecko-primary-600)' }}>Scan container no or EDO to highlight</div>
-          </div>
-        </div>
-        <BarcodeScanInput
-          onScan={v => setScanHighlight(v)}
-          placeholder="Scan container no or EDO number…"
-          style={{ flex: 1 }}
-        />
-        {scanHighlight && (
-          <button onClick={() => setScanHighlight(null)} style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--gecko-text-secondary)', fontSize: 12, fontFamily: 'inherit' }}>
-            Clear ×
-          </button>
-        )}
-      </div>
-
-      {/* 2. Vertically Stacked Container HUD */}
-      <div style={{ flex: 1, overflowY: 'auto', display: 'flex', flexDirection: 'column', gap: 14 }}>
-        {containers.map((c, i) => (
-          <div key={c.id} style={{
-            background: scanHighlight && (c.unit.replace(/\s/g,'').toLowerCase().includes(scanHighlight.toLowerCase()) || c.edo.toLowerCase().includes(scanHighlight.toLowerCase())) ? 'var(--gecko-primary-50)' : 'var(--gecko-bg-surface)',
-            border: scanHighlight && (c.unit.replace(/\s/g,'').toLowerCase().includes(scanHighlight.toLowerCase()) || c.edo.toLowerCase().includes(scanHighlight.toLowerCase())) ? '2px solid var(--gecko-primary-500)' : `2px solid ${c.ready ? 'var(--gecko-success-500)' : 'var(--gecko-warning-500)'}`,
-            borderRadius: 10, overflow: 'hidden', boxShadow: 'var(--gecko-shadow-sm)'
-          }}>
-            {/* Header row for container */}
-            <div style={{ 
-              display: 'flex', alignItems: 'center', padding: '12px 16px', 
-              background: c.ready ? 'var(--gecko-success-50)' : 'var(--gecko-warning-50)',
-              borderBottom: '1px solid var(--gecko-border)'
-            }}>
-              <div style={{ width: 24, height: 24, borderRadius: 6, background: c.ready ? 'var(--gecko-success-600)' : 'var(--gecko-warning-600)', color: '#fff', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 12, fontWeight: 700, marginRight: 12 }}>{i + 1}</div>
-              
-              <div style={{ position: 'relative', marginRight: 24 }}>
-                <div style={{ fontSize: 10, fontWeight: 700, color: 'var(--gecko-text-secondary)', textTransform: 'uppercase', marginBottom: 2 }}>Unit OCR</div>
-                <input 
-                  className="gecko-input" 
-                  value={c.unit}
-                  onChange={(e) => updateContainer(c.id, 'unit', e.target.value)}
-                  style={{ fontFamily: 'var(--gecko-font-mono)', fontSize: 18, fontWeight: 800, padding: '4px 8px', height: 36, width: 200, background: '#fff', borderColor: 'var(--gecko-border-strong)' }} 
-                />
-              </div>
-
-              <div style={{ display: 'flex', gap: 24, flex: 1 }}>
-                <div><div style={{ fontSize: 10, fontWeight: 700, color: 'var(--gecko-text-secondary)' }}>ISO / SIZE</div><div style={{ fontSize: 14, fontWeight: 600 }}>{c.iso}</div></div>
-                <div><div style={{ fontSize: 10, fontWeight: 700, color: 'var(--gecko-text-secondary)' }}>LINE</div><div style={{ fontSize: 14, fontWeight: 600 }}>{c.line}</div></div>
-                <div><div style={{ fontSize: 10, fontWeight: 700, color: 'var(--gecko-text-secondary)' }}>STATUS</div><div style={{ fontSize: 14, fontWeight: 600 }}>{c.laden === 'F' ? 'Laden Import' : 'Empty'}</div></div>
-                <div><div style={{ fontSize: 10, fontWeight: 700, color: 'var(--gecko-text-secondary)' }}>YARD POSITION</div><div style={{ fontSize: 14, fontWeight: 600, color: 'var(--gecko-primary-700)' }}>{c.location}</div></div>
-                {(c.holdCustoms || c.holdLine) && (
-                  <div style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '4px 10px', background: 'var(--gecko-error-100)', color: 'var(--gecko-error-700)', borderRadius: 6, fontWeight: 700, fontSize: 12 }}>
-                    <Icon name="lock" size={14} /> ACTIVE HOLD
-                  </div>
-                )}
-              </div>
-
-              <button
-                onClick={() => toggleReady(c.id)}
-                aria-label={`Mark container ${c.unit} as ${c.ready ? 'pending' : 'ready'}`}
-                aria-pressed={c.ready}
-                style={{
-                  padding: '8px 16px', background: c.ready ? 'var(--gecko-success-100)' : 'var(--gecko-warning-100)', 
-                  border: `1px solid ${c.ready ? 'var(--gecko-success-300)' : 'var(--gecko-warning-300)'}`, 
-                  borderRadius: 6, color: c.ready ? 'var(--gecko-success-800)' : 'var(--gecko-warning-800)', 
-                  fontSize: 12, fontWeight: 700, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 6 
-                }}
-              >
-                {c.ready ? <><Icon name="check" size={14} /> READY</> : <><Icon name="alertTriangle" size={14} /> PENDING</>}
-              </button>
-            </div>
-
-            {/* Unit barcode */}
-            <div style={{ padding: '4px 16px 8px' }}>
-              <BarcodeDisplay value={c.unit.replace(/\s/g,'')} variant="code128" showValue={false} />
-            </div>
-
-            {/* Inputs row */}
-            <div style={{ padding: '16px', display: 'flex', gap: 32 }}>
-              
-              {/* Outbound Seal Verification */}
-              <div style={{ flex: 1.5 }}>
-                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 8 }}>
-                  <div style={{ fontSize: 11, fontWeight: 700, color: 'var(--gecko-text-secondary)', textTransform: 'uppercase' }}>Verify Seal</div>
-                  <div style={{ fontSize: 10, color: 'var(--gecko-text-disabled)' }}>Recorded: {c.recordedSeal}</div>
-                </div>
-                <div style={{ position: 'relative' }}>
-                  <input
-                    className="gecko-input"
-                    value={c.checkedSeal}
-                    placeholder="Scan or enter seal..."
-                    onChange={(e) => updateContainer(c.id, 'checkedSeal', e.target.value)}
-                    aria-label={`Seal verification for ${c.unit}`}
-                    style={{
-                      fontFamily: 'var(--gecko-font-mono)', fontSize: 16, fontWeight: 600, paddingLeft: 36, 
-                      background: c.sealMatch ? '#fff' : 'var(--gecko-warning-50)',
-                      borderColor: c.sealMatch ? 'var(--gecko-success-400)' : 'var(--gecko-warning-400)'
-                    }}
-                  />
-                  <Icon name="lock" size={16} style={{ position: 'absolute', left: 12, top: 12, color: 'var(--gecko-text-disabled)' }} />
-                  {c.sealMatch && <Icon name="checkCircle" size={18} style={{ position: 'absolute', right: 12, top: 11, color: 'var(--gecko-success-500)' }} />}
-                  {!c.sealMatch && c.checkedSeal.length > 0 && <Icon name="xCircle" size={18} style={{ position: 'absolute', right: 12, top: 11, color: 'var(--gecko-error-500)' }} />}
-                </div>
-              </div>
-
-              {/* Delivery Condition */}
-              <div style={{ flex: 1.5, background: 'var(--gecko-bg-subtle)', padding: '12px 16px', borderRadius: 8, border: '1px solid var(--gecko-border)' }}>
-                <div style={{ fontSize: 11, fontWeight: 700, color: 'var(--gecko-text-secondary)', textTransform: 'uppercase', marginBottom: 10 }}>Outbound Condition</div>
-                <div style={{ display: 'flex', gap: 16 }}>
-                  <label style={{ display: 'flex', alignItems: 'center', gap: 8, cursor: 'pointer', fontSize: 13, fontWeight: 500 }}>
-                    <input type="checkbox" checked={c.damageMinor} onChange={(e) => updateContainer(c.id, 'damageMinor', e.target.checked)} aria-label="Minor damage noted" style={{ width: 18, height: 18 }} />
-                    Minor Damage
-                  </label>
-                  <label style={{ display: 'flex', alignItems: 'center', gap: 8, cursor: 'pointer', fontSize: 13, fontWeight: 500 }}>
-                    <input type="checkbox" checked={c.damageMajor} onChange={(e) => updateContainer(c.id, 'damageMajor', e.target.checked)} aria-label="Major damage noted" style={{ width: 18, height: 18, accentColor: 'var(--gecko-error-500)' }} />
-                    <span style={{ color: c.damageMajor ? 'var(--gecko-error-700)' : 'inherit' }}>Major Damage</span>
-                  </label>
-                </div>
-              </div>
-
-              {/* Delivery Receipt */}
-              <div style={{ flex: 1, display: 'flex', flexDirection: 'column', justifyContent: 'center' }}>
-                <button className="gecko-btn gecko-btn-outline" style={{ width: '100%', height: 42 }}>
-                  <Icon name="printer" size={16} /> Print EIR Ticket
-                </button>
-              </div>
-
+              <div style={{ fontSize: 20, fontWeight: 700, fontFamily: 'var(--gecko-font-mono)', lineHeight: 1, color: `var(--gecko-${k.tone}-700)` }}>{k.value}</div>
+              <div style={{ fontSize: 11, color: 'var(--gecko-text-secondary)', marginTop: 3 }}>{k.label}</div>
+              <div style={{ fontSize: 10, color: 'var(--gecko-text-disabled)', marginTop: 1 }}>{k.sub}</div>
             </div>
           </div>
         ))}
       </div>
 
-      {/* 3. Sticky Action Footer */}
-      <div style={{ 
-        marginTop: 'auto', display: 'flex', alignItems: 'center', justifyContent: 'space-between',
-        padding: '16px 20px', background: 'var(--gecko-bg-surface)', borderTop: '1px solid var(--gecko-border)',
-        boxShadow: '0 -4px 10px rgba(0,0,0,0.03)'
-      }}>
-        <div style={{ display: 'flex', gap: 20 }}>
-          <div>
-            <div style={{ fontSize: 11, color: 'var(--gecko-text-secondary)', fontWeight: 600, textTransform: 'uppercase' }}>Gate Charges</div>
-            <div style={{ fontSize: 18, fontWeight: 800, fontFamily: 'var(--gecko-font-mono)' }}>฿0.00</div>
+      {/* Table card */}
+      <div className="gecko-card" style={{ padding: 0, overflow: 'hidden' }}>
+        {/* Toolbar */}
+        <div style={{ padding: '12px 16px', borderBottom: '1px solid var(--gecko-border)', display: 'flex', alignItems: 'center', gap: 10, flexWrap: 'wrap' }}>
+          <div style={{ position: 'relative', flex: '1 1 260px', maxWidth: 360 }}>
+            <Icon name="search" size={13} style={{ position: 'absolute', left: 10, top: '50%', transform: 'translateY(-50%)', color: 'var(--gecko-text-disabled)' }} />
+            <input
+              className="gecko-input gecko-input-sm"
+              placeholder="Search plate, driver, haulier, EDO, or container…"
+              value={query}
+              onChange={e => setQuery(e.target.value)}
+              style={{ paddingLeft: 32 }}
+            />
           </div>
-          <div style={{ width: 1, height: 32, background: 'var(--gecko-border)' }} />
-          <div style={{ display: 'flex', flexDirection: 'column', justifyContent: 'center' }}>
-             {!allReady && <span style={{ color: 'var(--gecko-error-600)', fontSize: 13, fontWeight: 600, display: 'flex', alignItems: 'center', gap: 6 }}><Icon name="alertTriangle" size={14} /> Missing required Seal verification</span>}
-             {allReady && <span style={{ color: 'var(--gecko-success-600)', fontSize: 13, fontWeight: 600, display: 'flex', alignItems: 'center', gap: 6 }}><Icon name="checkCircle" size={14} /> Outbound checks passed. Ready for gate-out.</span>}
+
+          <select className="gecko-input gecko-input-sm" value={filterStatus} onChange={e => setFilterStatus(e.target.value)} style={{ width: 160 }}>
+            <option value="all">All statuses</option>
+            <option value="waiting">On time only</option>
+            <option value="overdue">Overdue only</option>
+          </select>
+
+          <select className="gecko-input gecko-input-sm" value={filterLane} onChange={e => setFilterLane(e.target.value)} style={{ width: 120 }}>
+            <option value="all">All lanes</option>
+            {lanes.map(l => <option key={l} value={l}>{l}</option>)}
+          </select>
+
+          <div style={{ marginLeft: 'auto', fontSize: 11, color: 'var(--gecko-text-secondary)', flexShrink: 0 }}>
+            {filtered.length} of {QUEUE.length} trucks
           </div>
         </div>
 
-        <button 
-          disabled={!allReady}
-          style={{ 
-            padding: '14px 40px', background: allReady ? 'var(--gecko-primary-600)' : 'var(--gecko-gray-300)', 
-            color: '#fff', fontSize: 16, fontWeight: 700, borderRadius: 8, cursor: allReady ? 'pointer' : 'not-allowed',
-            display: 'flex', alignItems: 'center', gap: 10, border: 'none', transition: 'background 150ms'
-          }}
-        >
-          <Icon name="check" size={20} />
-          COMMIT DEPARTURE <kbd className="gecko-kbd" style={{ marginLeft: 8, fontSize: 11 }}>F12</kbd>
-        </button>
-      </div>
+        {/* Overdue callout */}
+        {overdueCount > 0 && (
+          <div style={{ padding: '8px 16px', background: 'var(--gecko-error-50)', borderBottom: '1px solid var(--gecko-error-200)', display: 'flex', alignItems: 'center', gap: 8, fontSize: 12 }}>
+            <Icon name="warning" size={14} style={{ color: 'var(--gecko-error-600)', flexShrink: 0 }} />
+            <span style={{ color: 'var(--gecko-error-700)', fontWeight: 600 }}>{overdueCount} truck{overdueCount > 1 ? 's' : ''} waiting over 30 minutes</span>
+            <span style={{ color: 'var(--gecko-error-600)' }}>— rows highlighted in red. Process these first.</span>
+          </div>
+        )}
 
+        {/* Table */}
+        <div style={{ overflowX: 'auto' }}>
+          <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 12 }}>
+            <thead>
+              <tr style={{ background: 'var(--gecko-bg-subtle)', borderBottom: '1px solid var(--gecko-border)' }}>
+                {['GIN Ref', 'Truck · Driver', 'Haulier', 'Containers', 'Lane', 'Arrived', 'Waiting', 'Status', ''].map(h => (
+                  <th key={h} style={{ padding: '10px 14px', textAlign: 'left', fontSize: 11, fontWeight: 700, color: 'var(--gecko-text-secondary)', letterSpacing: '0.06em', textTransform: 'uppercase', whiteSpace: 'nowrap' }}>{h}</th>
+                ))}
+              </tr>
+            </thead>
+            <tbody>
+              {pageItems.length === 0 ? (
+                <tr>
+                  <td colSpan={9} style={{ padding: '40px 16px', textAlign: 'center', color: 'var(--gecko-text-secondary)', fontSize: 13 }}>
+                    No trucks match the current filter
+                  </td>
+                </tr>
+              ) : pageItems.map((r, idx) => {
+                const overdue = r.arrivedMinsAgo > 30;
+                const rowBg   = overdue
+                  ? idx % 2 === 0 ? 'var(--gecko-error-50)' : '#fff1f1'
+                  : idx % 2 === 0 ? '#fff' : 'var(--gecko-bg-subtle)';
+                const rowBorder = overdue ? '1px solid var(--gecko-error-200)' : undefined;
+
+                return (
+                  <tr
+                    key={r.id}
+                    style={{
+                      background: rowBg,
+                      borderBottom: rowBorder ?? '1px solid var(--gecko-border)',
+                      borderLeft: overdue ? '3px solid var(--gecko-error-500)' : '3px solid transparent',
+                    }}
+                  >
+                    {/* GIN Ref */}
+                    <td style={{ padding: '12px 14px', whiteSpace: 'nowrap' }}>
+                      <span style={{ fontFamily: 'var(--gecko-font-mono)', fontSize: 11, fontWeight: 700, color: overdue ? 'var(--gecko-error-700)' : 'var(--gecko-text-primary)' }}>{r.id}</span>
+                    </td>
+
+                    {/* Truck · Driver */}
+                    <td style={{ padding: '12px 14px' }}>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                        <div style={{ width: 30, height: 30, borderRadius: 7, background: overdue ? 'var(--gecko-error-100)' : 'var(--gecko-primary-50)', color: overdue ? 'var(--gecko-error-600)' : 'var(--gecko-primary-600)', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+                          <Icon name="truck" size={14} />
+                        </div>
+                        <div>
+                          <div style={{ fontFamily: 'var(--gecko-font-mono)', fontWeight: 700, fontSize: 13, color: overdue ? 'var(--gecko-error-700)' : 'var(--gecko-text-primary)' }}>{r.plate}</div>
+                          <div style={{ fontSize: 11, color: 'var(--gecko-text-secondary)', marginTop: 1 }}>{r.driver}</div>
+                        </div>
+                      </div>
+                    </td>
+
+                    {/* Haulier */}
+                    <td style={{ padding: '12px 14px' }}>
+                      <div style={{ fontSize: 12, color: 'var(--gecko-text-primary)', whiteSpace: 'nowrap' }}>{r.haulier}</div>
+                      <div style={{ fontSize: 10, color: 'var(--gecko-text-disabled)', fontFamily: 'var(--gecko-font-mono)', marginTop: 1 }}>
+                        {r.appt.startsWith('APT') ? r.appt : <span style={{ color: 'var(--gecko-warning-600)', fontWeight: 600 }}>Walk-in</span>}
+                      </div>
+                    </td>
+
+                    {/* Containers */}
+                    <td style={{ padding: '12px 14px', minWidth: 220 }}>
+                      <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
+                        {r.containers.map(c => (
+                          <div key={c.edo} style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+                            <span style={{ fontFamily: 'var(--gecko-font-mono)', fontSize: 11, fontWeight: 700, color: 'var(--gecko-text-primary)' }}>{c.ctr}</span>
+                            <span style={{ fontFamily: 'var(--gecko-font-mono)', fontSize: 10, padding: '1px 5px', background: 'var(--gecko-bg-subtle)', border: '1px solid var(--gecko-border)', borderRadius: 3, color: 'var(--gecko-text-secondary)' }}>{c.iso}</span>
+                            <span style={{ fontSize: 10, color: 'var(--gecko-text-disabled)' }}>{c.edo} · {c.line}</span>
+                          </div>
+                        ))}
+                      </div>
+                    </td>
+
+                    {/* Lane */}
+                    <td style={{ padding: '12px 14px', whiteSpace: 'nowrap' }}>
+                      <span style={{ fontSize: 11, fontWeight: 600, padding: '2px 8px', background: 'var(--gecko-primary-50)', color: 'var(--gecko-primary-700)', borderRadius: 4, fontFamily: 'var(--gecko-font-mono)' }}>{r.lane}</span>
+                    </td>
+
+                    {/* Arrived */}
+                    <td style={{ padding: '12px 14px', whiteSpace: 'nowrap' }}>
+                      <span style={{ fontFamily: 'var(--gecko-font-mono)', fontSize: 12, fontWeight: 600, color: overdue ? 'var(--gecko-error-700)' : 'var(--gecko-text-primary)' }}>{r.arrivedAt}</span>
+                    </td>
+
+                    {/* Waiting */}
+                    <td style={{ padding: '12px 14px', whiteSpace: 'nowrap' }}>
+                      <WaitBadge mins={r.arrivedMinsAgo} />
+                    </td>
+
+                    {/* Status */}
+                    <td style={{ padding: '12px 14px', whiteSpace: 'nowrap' }}>
+                      {overdue
+                        ? <span className="gecko-badge gecko-badge-error" style={{ fontSize: 10 }}>Overdue</span>
+                        : r.arrivedMinsAgo <= 5
+                          ? <span className="gecko-badge gecko-badge-info" style={{ fontSize: 10 }}>Just arrived</span>
+                          : <span className="gecko-badge gecko-badge-success" style={{ fontSize: 10 }}>Waiting</span>
+                      }
+                    </td>
+
+                    {/* Action */}
+                    <td style={{ padding: '12px 14px', whiteSpace: 'nowrap' }}>
+                      <Link
+                        href={`/gate/eir-out/${r.id}`}
+                        className="gecko-btn gecko-btn-sm"
+                        style={{
+                          textDecoration: 'none', display: 'inline-flex', alignItems: 'center', gap: 6,
+                          background: overdue ? 'var(--gecko-error-600)' : 'var(--gecko-primary-600)',
+                          color: '#fff', border: 'none', fontSize: 12, fontWeight: 700, padding: '6px 14px', borderRadius: 6,
+                        }}
+                      >
+                        <Icon name="arrowRight" size={13} />Open EIR-Out
+                      </Link>
+                    </td>
+                  </tr>
+                );
+              })}
+            </tbody>
+          </table>
+        </div>
+
+        <TablePagination
+          page={page} pageSize={pageSize} totalItems={totalItems}
+          totalPages={totalPages} startRow={startRow} endRow={endRow}
+          onPageChange={setPage} onPageSizeChange={setPageSize}
+          noun="trucks"
+        />
+      </div>
     </div>
   );
 }

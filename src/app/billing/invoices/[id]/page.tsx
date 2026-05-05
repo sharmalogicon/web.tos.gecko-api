@@ -43,7 +43,7 @@ export default function InvoiceDetailPage({ params }: { params: { id: string } }
           </div>
 
           <div style={{ textAlign: 'right', fontSize: 13, color: 'var(--gecko-text-secondary)', lineHeight: 1.6 }}>
-            <div style={{ fontWeight: 700, color: 'var(--gecko-text-primary)', fontSize: 14 }}>LOGICON Group</div>
+            <div style={{ fontWeight: 700, color: 'var(--gecko-text-primary)', fontSize: 14 }}>GECKO</div>
             <div>Laem Chabang ICD - Import Yard</div>
             <div>Thung Sukhla, Si Racha</div>
             <div>Chon Buri 20230, Thailand</div>
@@ -165,7 +165,7 @@ export default function InvoiceDetailPage({ params }: { params: { id: string } }
 
         {/* Footer Notes */}
         <div style={{ borderTop: '1px solid var(--gecko-border)', paddingTop: 24, fontSize: 12, color: 'var(--gecko-text-disabled)', lineHeight: 1.6 }}>
-          Payment is due within 30 days. Please make checks payable to LOGICON Group.<br/>
+          Payment is due within 30 days. Please make checks payable to GECKO.<br/>
           For wire transfers: Kasikornbank PCL, Account: 012-3-45678-9, SWIFT: KASITHBK.
         </div>
       </div>

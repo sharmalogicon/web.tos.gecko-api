@@ -74,7 +74,7 @@ export default function VesselsPage() {
             sortValue={sortBy}
             onSortChange={setSortBy}
           />
-          <button className="gecko-btn gecko-btn-primary gecko-btn-sm"><Icon name="plus" size={16} /> New Vessel</button>
+          <Link href="/masters/vessels/new" className="gecko-btn gecko-btn-primary gecko-btn-sm"><Icon name="plus" size={16} /> New Vessel</Link>
         </div>
       </div>
 
