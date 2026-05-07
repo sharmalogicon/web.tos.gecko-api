@@ -277,30 +277,12 @@ function PortModal({
 
   return (
     <div
-      style={{
-        position: 'fixed',
-        inset: 0,
-        zIndex: 9000,
-        background: 'rgba(0,0,0,0.45)',
-        display: 'flex',
-        alignItems: 'center',
-        justifyContent: 'center',
-        padding: 16,
-      }}
+      className="gecko-overlay"
       onMouseDown={(e) => { if (e.target === e.currentTarget) onClose(); }}
     >
       <div
-        style={{
-          background: 'var(--gecko-bg-surface)',
-          borderRadius: 12,
-          width: '100%',
-          maxWidth: 680,
-          maxHeight: '92vh',
-          overflowY: 'auto',
-          boxShadow: 'var(--gecko-shadow-xl, 0 20px 60px rgba(0,0,0,0.25))',
-          display: 'flex',
-          flexDirection: 'column',
-        }}
+        className="gecko-modal gecko-modal-lg"
+        style={{ display: 'flex', flexDirection: 'column' }}
       >
         {/* Modal header */}
         <div style={{

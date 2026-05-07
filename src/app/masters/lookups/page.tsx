@@ -248,10 +248,10 @@ function EntryModal({ entry, isNew, catMeta, groupColor, groupBg, onClose }: Ent
 
   return (
     <div
-      style={{ position: 'fixed', inset: 0, zIndex: 9000, background: 'rgba(0,0,0,0.52)', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '24px 16px' }}
+      className="gecko-overlay"
       onClick={e => { if (e.target === e.currentTarget) onClose(); }}
     >
-      <div style={{ background: 'var(--gecko-bg-surface)', borderRadius: 12, width: '100%', maxWidth: 660, maxHeight: '92vh', display: 'flex', flexDirection: 'column', boxShadow: '0 24px 80px rgba(0,0,0,0.3)' }}>
+      <div className="gecko-modal gecko-modal-lg" style={{ display: 'flex', flexDirection: 'column' }}>
 
         {/* ── Modal Header ── */}
         <div style={{ padding: '18px 24px', borderBottom: '1px solid var(--gecko-border)', background: groupBg, borderRadius: '12px 12px 0 0', flexShrink: 0, display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: 16 }}>

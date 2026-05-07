@@ -114,20 +114,10 @@ function NewLocationModal({ onClose }: { onClose: () => void }) {
 
   return (
     <div
-      style={{
-        position: 'fixed', inset: 0, zIndex: 9000,
-        background: 'rgba(0,0,0,0.52)',
-        display: 'flex', alignItems: 'center', justifyContent: 'center',
-        padding: '24px 16px',
-      }}
+      className="gecko-overlay"
       onClick={e => { if (e.target === e.currentTarget) onClose(); }}
     >
-      <div style={{
-        background: 'var(--gecko-bg-surface)', borderRadius: 12,
-        width: '100%', maxWidth: 560, maxHeight: '92vh',
-        display: 'flex', flexDirection: 'column',
-        boxShadow: '0 24px 80px rgba(0,0,0,0.3)',
-      }}>
+      <div className="gecko-modal gecko-modal-lg" style={{ display: 'flex', flexDirection: 'column' }}>
 
         {/* Header */}
         <div style={{
