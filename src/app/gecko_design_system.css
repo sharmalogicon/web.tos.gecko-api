@@ -1,0 +1,135 @@
+/* ============================================================
+   GECKO DESIGN SYSTEM v1.0
+   ============================================================
+   Master entry point.
+
+   This file is what your app imports (typically in
+   `src/app/layout.tsx`). It pulls in:
+
+     1. Tailwind v4 (must be at the top)
+     2. @theme inline — maps gecko tokens to Tailwind utilities
+        so you can use className="text-primary-600" etc.
+     3. Modular gecko CSS files:
+          - gecko_design_system_tokens.css      (CSS custom properties)
+          - gecko_design_system_base.css        (resets, body, headings)
+          - gecko_design_system_components.css  (buttons, modals, toasts, …)
+          - gecko_design_system_layout.css      (app shell, responsive grid)
+
+   ------------------------------------------------------------
+   PORTING TO ANOTHER GECKO PROJECT
+   ------------------------------------------------------------
+   • Tailwind v4 project: copy this file + the four split files,
+     update relative paths if needed.
+   • Non-Tailwind project: skip this file. Import the four split
+     files directly (they have no Tailwind dependency).
+   ------------------------------------------------------------
+
+   Authoring rules (please read before editing):
+     1. Always use var(--gecko-*) tokens. NO hex literals.
+     2. Document each new class with a one-line comment.
+     3. Group related classes; keep section markers updated.
+     4. Dark-mode variants live next to their light counterparts.
+   ============================================================ */
+
+/* ============================================================
+   SECTION 2: TAILWIND V4 BRIDGE
+   Only active when Tailwind processes this file.
+   Maps gecko tokens into Tailwind utility classes so you can
+   use className="text-primary-600 bg-surface" etc.
+   ============================================================ */
+
+@import "tailwindcss";
+
+@theme inline {
+  /* Fonts */
+  --font-sans: var(--gecko-font-sans);
+  --font-mono: var(--gecko-font-mono);
+
+  /* Primary */
+  --color-primary-50:  var(--gecko-primary-50);
+  --color-primary-100: var(--gecko-primary-100);
+  --color-primary-200: var(--gecko-primary-200);
+  --color-primary-300: var(--gecko-primary-300);
+  --color-primary-400: var(--gecko-primary-400);
+  --color-primary-500: var(--gecko-primary-500);
+  --color-primary-600: var(--gecko-primary-600);
+  --color-primary-700: var(--gecko-primary-700);
+  --color-primary-800: var(--gecko-primary-800);
+  --color-primary-900: var(--gecko-primary-900);
+
+  /* Accent */
+  --color-accent-50:  var(--gecko-accent-50);
+  --color-accent-100: var(--gecko-accent-100);
+  --color-accent-200: var(--gecko-accent-200);
+  --color-accent-300: var(--gecko-accent-300);
+  --color-accent-400: var(--gecko-accent-400);
+  --color-accent-500: var(--gecko-accent-500);
+  --color-accent-600: var(--gecko-accent-600);
+  --color-accent-700: var(--gecko-accent-700);
+  --color-accent-800: var(--gecko-accent-800);
+  --color-accent-900: var(--gecko-accent-900);
+
+  /* Success */
+  --color-success-50:  var(--gecko-success-50);
+  --color-success-100: var(--gecko-success-100);
+  --color-success-200: var(--gecko-success-200);
+  --color-success-300: var(--gecko-success-300);
+  --color-success-400: var(--gecko-success-400);
+  --color-success-500: var(--gecko-success-500);
+  --color-success-600: var(--gecko-success-600);
+  --color-success-700: var(--gecko-success-700);
+  --color-success-800: var(--gecko-success-800);
+  --color-success-900: var(--gecko-success-900);
+
+  /* Warning */
+  --color-warning-50:  var(--gecko-warning-50);
+  --color-warning-100: var(--gecko-warning-100);
+  --color-warning-200: var(--gecko-warning-200);
+  --color-warning-300: var(--gecko-warning-300);
+  --color-warning-400: var(--gecko-warning-400);
+  --color-warning-500: var(--gecko-warning-500);
+  --color-warning-600: var(--gecko-warning-600);
+  --color-warning-700: var(--gecko-warning-700);
+  --color-warning-800: var(--gecko-warning-800);
+  --color-warning-900: var(--gecko-warning-900);
+
+  /* Error */
+  --color-error-50:  var(--gecko-error-50);
+  --color-error-100: var(--gecko-error-100);
+  --color-error-200: var(--gecko-error-200);
+  --color-error-300: var(--gecko-error-300);
+  --color-error-400: var(--gecko-error-400);
+  --color-error-500: var(--gecko-error-500);
+  --color-error-600: var(--gecko-error-600);
+  --color-error-700: var(--gecko-error-700);
+  --color-error-800: var(--gecko-error-800);
+  --color-error-900: var(--gecko-error-900);
+
+  /* Info */
+  --color-info-50:  var(--gecko-info-50);
+  --color-info-100: var(--gecko-info-100);
+  --color-info-200: var(--gecko-info-200);
+  --color-info-300: var(--gecko-info-300);
+  --color-info-400: var(--gecko-info-400);
+  --color-info-500: var(--gecko-info-500);
+  --color-info-600: var(--gecko-info-600);
+  --color-info-700: var(--gecko-info-700);
+  --color-info-800: var(--gecko-info-800);
+  --color-info-900: var(--gecko-info-900);
+
+  /* Semantic surface colors */
+  --color-background: var(--gecko-bg-base);
+  --color-surface:    var(--gecko-bg-surface);
+  --color-foreground: var(--gecko-text-primary);
+}
+
+
+
+/* ============================================================
+   MODULAR GECKO STYLESHEETS
+   ============================================================ */
+
+@import "./gecko_design_system_tokens.css";
+@import "./gecko_design_system_base.css";
+@import "./gecko_design_system_components.css";
+@import "./gecko_design_system_layout.css";

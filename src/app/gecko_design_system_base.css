@@ -1,0 +1,141 @@
+/* ============================================================
+   GECKO DESIGN SYSTEM — BASE
+   ------------------------------------------------------------
+   File:    gecko_design_system_base.css
+   Purpose: Global resets, body/html defaults, headings,
+            focus styles, scrollbar, text selection.
+   Portable: Yes — depends only on tokens.
+   ============================================================ */
+
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+  border-color: var(--gecko-border);
+}
+
+html {
+  scroll-behavior: smooth;
+  -webkit-text-size-adjust: 100%;
+  text-size-adjust: 100%;
+}
+
+body {
+  background-color: var(--gecko-bg-subtle);
+  color: var(--gecko-text-primary);
+  font-family: var(--gecko-font-sans);
+  font-size: var(--gecko-text-base);
+  line-height: var(--gecko-leading-normal);
+  font-weight: var(--gecko-font-weight-normal);
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+/* Headings */
+h1, h2, h3, h4, h5, h6 {
+  color: var(--gecko-text-primary);
+  font-weight: var(--gecko-font-weight-bold);
+  line-height: var(--gecko-leading-tight);
+  letter-spacing: var(--gecko-tracking-tight);
+}
+h1 { font-size: var(--gecko-text-4xl); }
+h2 { font-size: var(--gecko-text-3xl); }
+h3 { font-size: var(--gecko-text-2xl); }
+h4 { font-size: var(--gecko-text-xl); }
+h5 { font-size: var(--gecko-text-lg); }
+h6 { font-size: var(--gecko-text-base); }
+
+p {
+  color: var(--gecko-text-secondary);
+  line-height: var(--gecko-leading-relaxed);
+}
+
+a {
+  color: var(--gecko-text-link);
+  text-decoration: none;
+  transition: opacity var(--gecko-transition-fast);
+}
+a:hover { opacity: 0.8; text-decoration: underline; }
+
+code, kbd, samp, pre {
+  font-family: var(--gecko-font-mono);
+  font-size: 0.9em;
+}
+
+code {
+  background-color: var(--gecko-bg-surface);
+  border: 1px solid var(--gecko-border);
+  border-radius: var(--gecko-radius-sm);
+  padding: 0.1em 0.4em;
+  color: var(--gecko-accent-600);
+}
+
+[data-theme="dark"] code {
+  color: var(--gecko-accent-400);
+}
+
+@media (prefers-color-scheme: dark) {
+  code { color: var(--gecko-accent-400); }
+}
+
+pre {
+  background-color: var(--gecko-bg-surface);
+  border: 1px solid var(--gecko-border);
+  border-radius: var(--gecko-radius-lg);
+  padding: var(--gecko-space-4);
+  overflow-x: auto;
+}
+
+hr {
+  border: none;
+  border-top: 1px solid var(--gecko-border);
+  margin: var(--gecko-space-6) 0;
+}
+
+/* Focus styles */
+:focus-visible {
+  outline: 2px solid var(--gecko-focus-ring);
+  outline-offset: var(--gecko-focus-ring-offset);
+}
+
+/* Custom scrollbar */
+::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+::-webkit-scrollbar-thumb {
+  background-color: var(--gecko-gray-300);
+  border-radius: var(--gecko-radius-full);
+}
+::-webkit-scrollbar-thumb:hover {
+  background-color: var(--gecko-gray-400);
+}
+[data-theme="dark"] ::-webkit-scrollbar-thumb { background-color: var(--gecko-gray-600); }
+[data-theme="dark"] ::-webkit-scrollbar-thumb:hover { background-color: var(--gecko-gray-500); }
+
+@media (prefers-color-scheme: dark) {
+  ::-webkit-scrollbar-thumb { background-color: var(--gecko-gray-600); }
+  ::-webkit-scrollbar-thumb:hover { background-color: var(--gecko-gray-500); }
+}
+
+/* Scrollbar utilities */
+.gecko-scrollbar-thin::-webkit-scrollbar { width: 6px; height: 6px; }
+.gecko-scrollbar-hide { -ms-overflow-style: none; scrollbar-width: none; }
+.gecko-scrollbar-hide::-webkit-scrollbar { display: none; }
+
+/* Selection */
+::selection {
+  background-color: var(--gecko-primary-100);
+  color: var(--gecko-primary-900);
+}
+[data-theme="dark"] ::selection {
+  background-color: var(--gecko-primary-800);
+  color: var(--gecko-primary-100);
+}
+
+
