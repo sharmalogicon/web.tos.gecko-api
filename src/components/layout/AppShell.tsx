@@ -4,6 +4,7 @@ import React, { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { Icon } from '../ui/Icon';
+import { ToastProvider } from '../ui/Toast';
 
 const NAV = [
   { id: 'dashboard', icon: 'home', label: 'Dashboard',
@@ -13,7 +14,6 @@ const NAV = [
       { id: 'gate-traffic',   label: 'Gate & Traffic',         path: '/dashboard/gate-traffic' },
       { id: 'voyage-dash',    label: 'Voyage & Vessel',        path: '/dashboard/voyage' },
       { id: 'dwell-time',     label: 'Container Dwell Time',   path: '/dashboard/dwell-time' },
-      { id: 'dd-accrual',     label: 'D&D Accrual',            path: '/dashboard/dd-accrual' },
       { id: 'accounts-dash',  label: 'Accounts & Revenue',     path: '/dashboard/accounts' },
       { id: 'billing-health', label: 'Billing Health',         path: '/dashboard/billing-health' },
       { id: 'edi-dash',       label: 'EDI & Partners',         path: '/dashboard/edi' },
@@ -51,16 +51,15 @@ const NAV = [
     children: [
       { id: 'unit-inquiry', label: 'Unit Inquiry', path: '/units/unit-inquiry' },
       { id: 'equipment-pool', label: 'Equipment Pool', path: '/units/equipment-pool' },
-      { id: 'dwell', label: 'Detention & Demurrage', path: '/units/dwell' },
       { id: 'edi-inquiry', label: 'EDI Event Inquiry', path: '/units/edi-inquiry' },
     ]
   },
   { id: 'billing', icon: 'invoice', label: 'Billing & Invoicing',
     children: [
       { id: 'service-orders', label: 'Service Orders', path: '/billing/service-orders' },
-      { id: 'invoices', label: 'Invoices', path: '/billing/invoices' },
+      { id: 'billing-statement', label: 'Billing Statement', path: '/billing/statement' },
+      { id: 'invoices',       label: 'Invoices',       path: '/billing/invoices'       },
       { id: 'credit-notes', label: 'Credit Notes', path: '/billing/credit-notes' },
-      { id: 'statements', label: 'Statements', path: '/billing/statements' },
       { id: 'unbilled', label: 'Unbilled Services', path: '/billing/unbilled' },
     ]
   },
@@ -283,25 +282,27 @@ export function AppShell({ children }: { children: React.ReactNode }) {
   const [collapsed, setCollapsed] = useState(false);
   
   return (
-    <div className="gecko-app" style={{ position: 'relative', minHeight: '100vh', background: 'var(--gecko-bg-subtle)' }}>
-      <Sidebar
-        collapsed={collapsed}
-        onToggle={() => setCollapsed(c => !c)}
-      />
-      <div className={`gecko-main ${collapsed ? 'gecko-main-collapsed' : ''}`} style={{ 
-        marginLeft: collapsed ? 'var(--gecko-sidebar-width-collapsed)' : 'var(--gecko-sidebar-width)',
-        minHeight: '100vh',
-        display: 'flex',
-        flexDirection: 'column'
-      }}>
-        <Header
+    <ToastProvider>
+      <div className="gecko-app" style={{ position: 'relative', minHeight: '100vh', background: 'var(--gecko-bg-subtle)' }}>
+        <Sidebar
           collapsed={collapsed}
-          onToggleSidebar={() => setCollapsed(c => !c)}
+          onToggle={() => setCollapsed(c => !c)}
         />
-        <main className="gecko-content" style={{ flex: 1, padding: 'var(--gecko-space-6)', overflowX: 'auto' }}>
-          {children}
-        </main>
+        <div className={`gecko-main ${collapsed ? 'gecko-main-collapsed' : ''}`} style={{
+          marginLeft: collapsed ? 'var(--gecko-sidebar-width-collapsed)' : 'var(--gecko-sidebar-width)',
+          minHeight: '100vh',
+          display: 'flex',
+          flexDirection: 'column'
+        }}>
+          <Header
+            collapsed={collapsed}
+            onToggleSidebar={() => setCollapsed(c => !c)}
+          />
+          <main className="gecko-content" style={{ flex: 1, padding: 'var(--gecko-space-6)', overflowX: 'auto' }}>
+            {children}
+          </main>
+        </div>
       </div>
-    </div>
+    </ToastProvider>
   );
 }

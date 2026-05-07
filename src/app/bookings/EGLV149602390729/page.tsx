@@ -5,6 +5,8 @@ import { Icon } from '@/components/ui/Icon';
 import { EntitySearch, type EntityOption } from '@/components/ui/EntitySearch';
 import { BarcodeDisplay } from '@/components/ui/BarcodeDisplay';
 import { DateField } from '@/components/ui/DateField';
+import { DeleteConfirmModal } from '@/components/ui/DeleteConfirmModal';
+import { useToast } from '@/components/ui/Toast';
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -736,6 +738,8 @@ export default function BookingDetailPage() {
   const [activeTab, setActiveTab] = useState<'voyage' | 'containers' | 'cargo' | 'audit'>('containers');
   const [drawerContainer, setDrawerContainer] = useState<Container | null>(null);
   const [moreOpen, setMoreOpen] = useState(false);
+  const [showDeleteModal, setShowDeleteModal] = useState(false);
+  const { toast } = useToast();
 
   const b = BOOKING;
   const cutoffDays = daysUntil(b.cutoffs.cyDry);
@@ -787,7 +791,7 @@ export default function BookingDetailPage() {
 
           {/* Actions */}
           <button className="gecko-btn gecko-btn-ghost gecko-btn-sm"><Icon name="print" size={13} /> Print</button>
-          <button className="gecko-btn gecko-btn-ghost gecko-btn-sm" style={{ color: 'var(--gecko-info-600)' }}><Icon name="fileText" size={13} /> Cost Sheet</button>
+          <button className="gecko-btn gecko-btn-ghost gecko-btn-sm" style={{ color: 'var(--gecko-info-600)' }}><Icon name="fileText" size={13} /> Billing Statement</button>
           <button className="gecko-btn gecko-btn-outline gecko-btn-sm"><Icon name="copy" size={13} /> Clone</button>
 
           {/* More menu */}
@@ -805,7 +809,7 @@ export default function BookingDetailPage() {
                     { icon: 'edit',      label: 'Change Order Type',           color: 'var(--gecko-text-primary)'   },
                     { icon: 'trash',     label: 'Delete Booking',              color: 'var(--gecko-danger-600)'     },
                   ].map(item => (
-                    <button key={item.label} onClick={() => setMoreOpen(false)} style={{ width: '100%', display: 'flex', alignItems: 'center', gap: 10, padding: '11px 16px', background: 'none', border: 'none', cursor: 'pointer', color: item.color, fontSize: 13, fontFamily: 'inherit', textAlign: 'left' }}>
+                    <button key={item.label} onClick={() => { setMoreOpen(false); if (item.label === 'Delete Booking') setShowDeleteModal(true); }} style={{ width: '100%', display: 'flex', alignItems: 'center', gap: 10, padding: '11px 16px', background: 'none', border: 'none', cursor: 'pointer', color: item.color, fontSize: 13, fontFamily: 'inherit', textAlign: 'left' }}>
                       <Icon name={item.icon} size={14} style={{ color: item.color }} /> {item.label}
                     </button>
                   ))}
@@ -949,7 +953,7 @@ export default function BookingDetailPage() {
                 { icon: 'plus',       label: 'Add Container',           action: () => setActiveTab('containers') },
                 { icon: 'transferH',  label: 'Transfer Containers',      action: () => {} },
                 { icon: 'edit',       label: 'Change Order Type',        action: () => {} },
-                { icon: 'fileText',   label: 'View Cost Sheet',          action: () => {} },
+                { icon: 'fileText',   label: 'View Billing Statement',   action: () => {} },
                 { icon: 'print',      label: 'Print Booking Advice',     action: () => {} },
               ].map(qa => (
                 <button key={qa.label} onClick={qa.action} style={{ display: 'flex', alignItems: 'center', gap: 9, padding: '8px 10px', background: 'var(--gecko-bg-surface)', border: '1px solid var(--gecko-border)', borderRadius: 7, cursor: 'pointer', fontFamily: 'inherit', color: 'var(--gecko-text-primary)', fontSize: 12, fontWeight: 500, textAlign: 'left' }}>
@@ -1002,6 +1006,25 @@ export default function BookingDetailPage() {
           onClose={() => setDrawerContainer(null)}
           onDuplicate={() => setDrawerContainer(null)}
           onDelete={() => setDrawerContainer(null)}
+        />
+      )}
+
+      {/* ── Delete Booking Modal ── */}
+      {showDeleteModal && (
+        <DeleteConfirmModal
+          resourceType="Booking"
+          resourceName={b.bookingNo}
+          consequences={[
+            `${CONTAINERS.length} containers and all gate-in / EIR records`,
+            'Billing statement and all associated charges',
+            'EDI message history and audit log',
+            'Vessel stow slot assignment',
+          ]}
+          onClose={() => setShowDeleteModal(false)}
+          onConfirm={remarks => {
+            setShowDeleteModal(false);
+            toast({ variant: 'danger', title: 'Booking deleted', message: `${b.bookingNo} has been permanently removed.` });
+          }}
         />
       )}
     </div>

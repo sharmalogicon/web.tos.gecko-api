@@ -3661,7 +3661,7 @@ input[type="checkbox"].gecko-toggle.gecko-toggle-sm:checked::after { transform: 
   height: 42px;
   border-radius: 8px;
   font-size: 14px;
-  font-weight: 700;
+  font-weight: 500;
   color: var(--gecko-text-secondary);
   cursor: pointer;
   text-decoration: none;

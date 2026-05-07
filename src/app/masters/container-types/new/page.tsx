@@ -1,79 +1,253 @@
-"use client";
+'use client';
 import React, { useState } from 'react';
 import Link from 'next/link';
 import { Icon } from '@/components/ui/Icon';
 
+// ─── Types ─────────────────────────────────────────────────────────────────────
+
+type Category = 'GP' | 'RF' | 'OT' | 'FR' | 'TK' | 'BK' | '';
+
 interface FormState {
-  isoCode: string;
-  typeName: string;
-  category: string;
-  typeCode: string;
-  length: string;
-  height: string;
-  externalLoa: string;
-  internalLength: string;
-  internalWidth: string;
-  internalHeight: string;
-  payload: string;
-  tare: string;
-  cubicCapacity: string;
-  doorWidth: string;
-  doorHeight: string;
-  features: string[];
-  defaultTariffRow: string;
-  yardSlotSize: string;
-  stackHeightLimit: string;
-  status: string;
+  isoTypeCode: string;
+  category: Category;
+  commonName: string;
+  nominalLength: string;
+  nominalHeight: string;
+  internalCube: string;
+  maxPayload: string;
+  tareWeight: string;
+  slotsPerTEU: string;
+  requiresReeferPlug: boolean;
+  oogSpecialHandling: boolean;
+  active: boolean;
 }
 
-const INITIAL_FORM: FormState = {
-  isoCode: '',
-  typeName: '',
+const INITIAL: FormState = {
+  isoTypeCode: '',
   category: '',
-  typeCode: '',
-  length: '',
-  height: '',
-  externalLoa: '',
-  internalLength: '',
-  internalWidth: '',
-  internalHeight: '',
-  payload: '',
-  tare: '',
-  cubicCapacity: '',
-  doorWidth: '',
-  doorHeight: '',
-  features: [],
-  defaultTariffRow: '',
-  yardSlotSize: '1 TEU',
-  stackHeightLimit: '4',
-  status: 'Active',
+  commonName: '',
+  nominalLength: '',
+  nominalHeight: '',
+  internalCube: '',
+  maxPayload: '',
+  tareWeight: '',
+  slotsPerTEU: '',
+  requiresReeferPlug: false,
+  oogSpecialHandling: false,
+  active: true,
 };
 
-const ALL_FEATURES = [
-  { key: 'refrigeration', label: 'Refrigeration unit built-in' },
-  { key: 'reeferPlugs', label: 'Reefer plugs required' },
-  { key: 'openTop', label: 'Open top (no roof)' },
-  { key: 'flatRack', label: 'Flat rack (no walls/roof)' },
-  { key: 'tank', label: 'Tank container' },
-  { key: 'hazmat', label: 'Hazmat rated' },
-  { key: 'ventilated', label: 'Ventilated' },
-];
+// ─── Category config ────────────────────────────────────────────────────────────
 
-function SectionCard({ title, sub, children }: { title: string; sub?: string; children: React.ReactNode }) {
+const CAT_CONFIG: Record<string, { label: string; cat: string; color: string; bg: string }> = {
+  GP: { label: 'General Purpose', cat: 'GENERAL',  color: 'var(--gecko-primary-500)', bg: 'var(--gecko-primary-50)' },
+  RF: { label: 'Reefer',          cat: 'REEFER',   color: 'var(--gecko-info-500)',    bg: 'var(--gecko-info-50)'    },
+  OT: { label: 'Open Top',        cat: 'SPECIAL',  color: 'var(--gecko-warning-500)', bg: 'var(--gecko-warning-50)' },
+  FR: { label: 'Flat Rack',       cat: 'SPECIAL',  color: 'var(--gecko-warning-500)', bg: 'var(--gecko-warning-50)' },
+  TK: { label: 'Tank',            cat: 'SPECIAL',  color: 'var(--gecko-warning-500)', bg: 'var(--gecko-warning-50)' },
+  BK: { label: 'Bulk',            cat: 'SPECIAL',  color: 'var(--gecko-warning-500)', bg: 'var(--gecko-warning-50)' },
+};
+
+// ─── Helpers ────────────────────────────────────────────────────────────────────
+
+function fmtNum(val: string, suffix: string): string {
+  const n = parseFloat(val);
+  if (isNaN(n)) return '—';
+  return n.toLocaleString() + ' ' + suffix;
+}
+
+function dimsLabel(length: string, height: string): string {
+  const lenMap: Record<string, string> = {
+    "20ft": "20'", "40ft": "40'", "45ft": "45'", "48ft": "48'", "53ft": "53'",
+  };
+  const htMap: Record<string, string> = {
+    standard: "8'6\"",
+    highcube: "9'6\"",
+  };
+  const l = lenMap[length] || '';
+  const h = htMap[height] || '';
+  if (!l && !h) return '—';
+  if (l && h) return `${l} × ${h}`;
+  return l || h;
+}
+
+// ─── ContainerGraphic (mirrored from list page) ──────────────────────────────
+
+function ContainerGraphic({ width, height, color }: { width: number; height: number; color: string }) {
   return (
-    <div style={{ background: 'var(--gecko-bg-surface)', border: '1px solid var(--gecko-border)', borderRadius: 12, overflow: 'hidden', boxShadow: 'var(--gecko-shadow-sm)' }}>
-      <div style={{ padding: '18px 24px', borderBottom: '1px solid var(--gecko-border)', background: 'var(--gecko-bg-subtle)' }}>
-        <div style={{ fontSize: 14, fontWeight: 700, color: 'var(--gecko-text-primary)' }}>{title}</div>
-        {sub && <div style={{ fontSize: 12, color: 'var(--gecko-text-secondary)', marginTop: 3 }}>{sub}</div>}
-      </div>
-      <div style={{ padding: '24px' }}>
-        {children}
+    <div style={{ width: '100%', height: 100, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+      <div style={{
+        width, height, border: `2px solid ${color}`,
+        background: 'rgba(255,255,255,0.5)', position: 'relative',
+        display: 'flex', flexDirection: 'column', justifyContent: 'space-between', padding: '4px 0',
+      }}>
+        {[...Array(6)].map((_, i) => (
+          <div key={i} style={{ width: '100%', height: 1, background: color, opacity: 0.3 }} />
+        ))}
+        <div style={{ position: 'absolute', right: 4, top: '30%', width: 2, height: '40%', background: color }} />
+        <div style={{ position: 'absolute', top: -2,    left: -2,  width: 4, height: 4, background: color }} />
+        <div style={{ position: 'absolute', top: -2,    right: -2, width: 4, height: 4, background: color }} />
+        <div style={{ position: 'absolute', bottom: -2, left: -2,  width: 4, height: 4, background: color }} />
+        <div style={{ position: 'absolute', bottom: -2, right: -2, width: 4, height: 4, background: color }} />
       </div>
     </div>
   );
 }
 
-function Field({ label, required, hint, children, span }: { label: string; required?: boolean; hint?: string; children: React.ReactNode; span?: number }) {
+// ─── Preview Card ───────────────────────────────────────────────────────────────
+
+function PreviewCard({ form }: { form: FormState }) {
+  const cfg = form.category ? CAT_CONFIG[form.category] : null;
+  const color = cfg?.color ?? 'var(--gecko-gray-400)';
+  const bg    = cfg?.bg    ?? 'var(--gecko-bg-subtle)';
+  const cat   = cfg?.cat   ?? '—';
+
+  const isHighCube = form.nominalHeight === 'highcube';
+  const is40plus   = ['40ft', '45ft', '48ft', '53ft'].includes(form.nominalLength);
+  const gWidth  = is40plus ? 140 : 80;
+  const gHeight = isHighCube ? 50 : 40;
+
+  const dims = dimsLabel(form.nominalLength, form.nominalHeight);
+
+  return (
+    <div style={{
+      background: 'var(--gecko-bg-surface)',
+      border: '1px solid var(--gecko-border)',
+      borderRadius: 12,
+      overflow: 'hidden',
+      boxShadow: 'var(--gecko-shadow-sm)',
+      display: 'flex',
+      flexDirection: 'column',
+    }}>
+      {/* Graphic area */}
+      <div style={{ background: bg, padding: 16, borderBottom: '1px solid var(--gecko-border)' }}>
+        <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 12 }}>
+          <span style={{ fontSize: 10, fontWeight: 700, color, letterSpacing: '0.05em' }}>{cat}</span>
+          <span style={{ fontSize: 12, fontWeight: 700, color: 'var(--gecko-text-primary)', fontFamily: 'var(--gecko-font-mono)' }}>
+            {form.isoTypeCode || '????'}
+          </span>
+        </div>
+        <ContainerGraphic width={gWidth} height={gHeight} color={color} />
+      </div>
+
+      {/* Info area */}
+      <div style={{ padding: 16, flex: 1 }}>
+        <h3 style={{ fontSize: 16, fontWeight: 700, margin: '0 0 4px 0', color: 'var(--gecko-text-primary)' }}>
+          {form.commonName || <span style={{ color: 'var(--gecko-text-disabled)' }}>Common Name</span>}
+        </h3>
+        <div style={{ fontSize: 12, color: 'var(--gecko-text-secondary)', marginBottom: 16 }}>
+          {dims} {form.category ? `· ${form.category}` : ''}
+        </div>
+
+        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16 }}>
+          <div>
+            <div style={{ fontSize: 10, fontWeight: 700, color: 'var(--gecko-text-disabled)', textTransform: 'uppercase' }}>Payload</div>
+            <div style={{ fontSize: 13, fontWeight: 600, fontFamily: 'var(--gecko-font-mono)' }}>
+              {form.maxPayload ? fmtNum(form.maxPayload, 'kg') : '—'}
+            </div>
+          </div>
+          <div>
+            <div style={{ fontSize: 10, fontWeight: 700, color: 'var(--gecko-text-disabled)', textTransform: 'uppercase' }}>Tare</div>
+            <div style={{ fontSize: 13, fontWeight: 600, fontFamily: 'var(--gecko-font-mono)' }}>
+              {form.tareWeight ? fmtNum(form.tareWeight, 'kg') : '—'}
+            </div>
+          </div>
+          <div>
+            <div style={{ fontSize: 10, fontWeight: 700, color: 'var(--gecko-text-disabled)', textTransform: 'uppercase' }}>Cube</div>
+            <div style={{ fontSize: 13, fontWeight: 600, fontFamily: 'var(--gecko-font-mono)' }}>
+              {form.internalCube ? `${form.internalCube} m³` : '—'}
+            </div>
+          </div>
+          <div>
+            <div style={{ fontSize: 10, fontWeight: 700, color: 'var(--gecko-text-disabled)', textTransform: 'uppercase' }}>TEU</div>
+            <div style={{ fontSize: 13, fontWeight: 600, fontFamily: 'var(--gecko-font-mono)' }}>
+              {form.slotsPerTEU === '1teu' ? '1 TEU' : form.slotsPerTEU === '2teu' ? '2 TEU' : '—'}
+            </div>
+          </div>
+        </div>
+      </div>
+
+      {/* Flags row */}
+      <div style={{ padding: '10px 16px', borderTop: '1px solid var(--gecko-border)', background: 'var(--gecko-bg-subtle)', display: 'flex', gap: 8, flexWrap: 'wrap' }}>
+        <span style={{
+          fontSize: 11, fontWeight: 600, padding: '2px 8px', borderRadius: 10,
+          background: form.active ? 'var(--gecko-success-100)' : 'var(--gecko-gray-100)',
+          color: form.active ? 'var(--gecko-success-700)' : 'var(--gecko-text-disabled)',
+        }}>
+          {form.active ? 'Active' : 'Inactive'}
+        </span>
+        {form.requiresReeferPlug && (
+          <span style={{ fontSize: 11, fontWeight: 600, padding: '2px 8px', borderRadius: 10, background: 'var(--gecko-info-100)', color: 'var(--gecko-info-700)' }}>
+            Reefer Plug
+          </span>
+        )}
+        {form.oogSpecialHandling && (
+          <span style={{ fontSize: 11, fontWeight: 600, padding: '2px 8px', borderRadius: 10, background: 'var(--gecko-warning-100)', color: 'var(--gecko-warning-700)' }}>
+            OOG / Special
+          </span>
+        )}
+      </div>
+    </div>
+  );
+}
+
+// ─── Toggle component ───────────────────────────────────────────────────────────
+
+function Toggle({
+  value, onChange, activeColor = 'var(--gecko-success-600)',
+}: {
+  value: boolean;
+  onChange: (v: boolean) => void;
+  activeColor?: string;
+}) {
+  return (
+    <button
+      type="button"
+      role="switch"
+      aria-checked={value}
+      onClick={() => onChange(!value)}
+      style={{
+        width: 40, height: 22, borderRadius: 11, border: 'none', cursor: 'pointer',
+        background: value ? activeColor : 'var(--gecko-gray-300)',
+        position: 'relative', flexShrink: 0, transition: 'background 0.18s',
+      }}
+    >
+      <span style={{
+        position: 'absolute', top: 3, left: value ? 21 : 3,
+        width: 16, height: 16, borderRadius: '50%', background: '#fff',
+        transition: 'left 0.18s', display: 'block',
+        boxShadow: '0 1px 3px rgba(0,0,0,0.18)',
+      }} />
+    </button>
+  );
+}
+
+// ─── Section header ─────────────────────────────────────────────────────────────
+
+function SectionHead({ children }: { children: React.ReactNode }) {
+  return (
+    <div style={{
+      fontSize: 10.5, fontWeight: 800, textTransform: 'uppercase',
+      letterSpacing: '0.09em', color: 'var(--gecko-primary-600)',
+      marginBottom: 16, paddingBottom: 8,
+      borderBottom: '2px solid rgba(var(--gecko-primary-rgb,37,99,235),0.12)',
+    }}>
+      {children}
+    </div>
+  );
+}
+
+// ─── Field wrapper ──────────────────────────────────────────────────────────────
+
+function Field({
+  label, required, hint, children, span,
+}: {
+  label: string;
+  required?: boolean;
+  hint?: string;
+  children: React.ReactNode;
+  span?: number;
+}) {
   return (
     <div className="gecko-form-group" style={{ gridColumn: span ? `span ${span}` : undefined }}>
       <label className={`gecko-label${required ? ' gecko-label-required' : ''}`}>{label}</label>
@@ -83,24 +257,76 @@ function Field({ label, required, hint, children, span }: { label: string; requi
   );
 }
 
+// ─── Suffixed number input ──────────────────────────────────────────────────────
+
+function NumInput({
+  placeholder, value, onChange, suffix,
+}: {
+  placeholder: string;
+  value: string;
+  onChange: (v: string) => void;
+  suffix: string;
+}) {
+  return (
+    <div style={{ position: 'relative' }}>
+      <input
+        type="number"
+        min={0}
+        className="gecko-input"
+        placeholder={placeholder}
+        value={value}
+        onChange={e => onChange(e.target.value)}
+        style={{ fontFamily: 'var(--gecko-font-mono)', paddingRight: 36 }}
+      />
+      <span style={{
+        position: 'absolute', right: 10, top: '50%', transform: 'translateY(-50%)',
+        fontSize: 11, color: 'var(--gecko-text-secondary)', fontWeight: 600, pointerEvents: 'none',
+      }}>
+        {suffix}
+      </span>
+    </div>
+  );
+}
+
+// ─── Toggle row ─────────────────────────────────────────────────────────────────
+
+function ToggleRow({
+  label, desc, value, onChange, activeColor,
+}: {
+  label: string;
+  desc: string;
+  value: boolean;
+  onChange: (v: boolean) => void;
+  activeColor?: string;
+}) {
+  return (
+    <div style={{
+      display: 'flex', alignItems: 'flex-start', gap: 14,
+      padding: '12px 14px', borderRadius: 8,
+      border: `1px solid ${value ? 'var(--gecko-success-200)' : 'var(--gecko-border)'}`,
+      background: value ? 'var(--gecko-success-50)' : 'var(--gecko-bg-surface)',
+    }}>
+      <Toggle value={value} onChange={onChange} activeColor={activeColor} />
+      <div>
+        <div style={{ fontSize: 13, fontWeight: 700, color: value ? 'var(--gecko-success-700)' : 'var(--gecko-text-primary)' }}>
+          {label}
+        </div>
+        <div style={{ fontSize: 11, color: 'var(--gecko-text-secondary)', marginTop: 2 }}>{desc}</div>
+      </div>
+    </div>
+  );
+}
+
+// ─── Page ────────────────────────────────────────────────────────────────────────
+
 export default function NewContainerTypePage() {
-  const [form, setFormRaw] = useState<FormState>(INITIAL_FORM);
+  const [form, setFormRaw] = useState<FormState>(INITIAL);
   const set = (partial: Partial<FormState>) => setFormRaw(prev => ({ ...prev, ...partial }));
 
-  const payloadNum = parseFloat(form.payload.replace(/,/g, '')) || 0;
-  const tareNum = parseFloat(form.tare.replace(/,/g, '')) || 0;
-  const maxGross = payloadNum + tareNum;
-
-  function toggleFeature(key: string) {
-    set({
-      features: form.features.includes(key)
-        ? form.features.filter(f => f !== key)
-        : [...form.features, key],
-    });
-  }
+  const canSave = form.isoTypeCode.trim().length === 4 && form.category !== '' && form.commonName.trim() !== '';
 
   return (
-    <div style={{ maxWidth: 860, margin: '0 auto', display: 'flex', flexDirection: 'column', gap: 28, paddingBottom: 80 }}>
+    <div style={{ maxWidth: 'var(--gecko-container-max)', margin: '0 auto', display: 'flex', flexDirection: 'column', gap: 24, paddingBottom: 80 }}>
 
       {/* Breadcrumb */}
       <nav className="gecko-breadcrumb" aria-label="Breadcrumb">
@@ -111,332 +337,263 @@ export default function NewContainerTypePage() {
         <span className="gecko-breadcrumb-current">New Type</span>
       </nav>
 
-      {/* Title */}
+      {/* Page header */}
       <div style={{ paddingBottom: 20, borderBottom: '1px solid var(--gecko-border)' }}>
-        <h1 style={{ fontSize: 22, fontWeight: 700, margin: 0, color: 'var(--gecko-text-primary)' }}>New ISO Container Type</h1>
-        <div style={{ fontSize: 13, color: 'var(--gecko-text-secondary)', marginTop: 6 }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 6 }}>
+          <Link
+            href="/masters/container-types"
+            style={{ display: 'inline-flex', alignItems: 'center', justifyContent: 'center', width: 32, height: 32, borderRadius: 8, border: '1px solid var(--gecko-border)', background: 'var(--gecko-bg-surface)', color: 'var(--gecko-text-secondary)', textDecoration: 'none' }}
+          >
+            <Icon name="arrowLeft" size={15} />
+          </Link>
+          <h1 style={{ fontSize: 22, fontWeight: 700, margin: 0, color: 'var(--gecko-text-primary)' }}>New ISO Container Type</h1>
+        </div>
+        <div style={{ fontSize: 13, color: 'var(--gecko-text-secondary)', paddingLeft: 42 }}>
           Define a new ISO 6346 container type. It will become available in the rate matrix, yard slot dimensions, and vessel stow planning.
         </div>
       </div>
 
-      {/* Section: ISO Identity */}
-      <SectionCard
-        title="ISO Identity"
-        sub="Core code reference used across all modules — tariff, EIR, and vessel stow."
-      >
-        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 18 }}>
-          <Field label="ISO Code" required hint="4-character ISO 6346 type code">
-            <input
-              className="gecko-input"
-              placeholder="e.g. 22G1"
-              maxLength={4}
-              value={form.isoCode}
-              onChange={e => set({ isoCode: e.target.value.toUpperCase() })}
-              style={{ fontFamily: 'var(--gecko-font-mono)', textTransform: 'uppercase', letterSpacing: '0.12em', fontSize: 16, fontWeight: 700 }}
-            />
-          </Field>
-          <Field label="Type Name" required>
-            <input
-              className="gecko-input"
-              placeholder="e.g. 20' Standard Dry"
-              value={form.typeName}
-              onChange={e => set({ typeName: e.target.value })}
-            />
-          </Field>
-          <Field label="Category" required>
-            <select className="gecko-input" value={form.category} onChange={e => set({ category: e.target.value })}>
-              <option value="">— select —</option>
-              <option value="GENERAL">GENERAL</option>
-              <option value="REEFER">REEFER</option>
-              <option value="SPECIAL">SPECIAL</option>
-              <option value="HAZMAT">HAZMAT</option>
-              <option value="FLAT RACK">FLAT RACK</option>
-              <option value="TANK">TANK</option>
-              <option value="PLATFORM">PLATFORM</option>
-            </select>
-          </Field>
-          <Field label="Type Code" required>
-            <select className="gecko-input" value={form.typeCode} onChange={e => set({ typeCode: e.target.value })}>
-              <option value="">— select —</option>
-              <option value="GP">GP — General Purpose</option>
-              <option value="RF">RF — Reefer</option>
-              <option value="OT">OT — Open Top</option>
-              <option value="HZ">HZ — Hazmat</option>
-              <option value="FT">FT — Flat Rack</option>
-              <option value="TK">TK — Tank</option>
-              <option value="PL">PL — Platform</option>
-            </select>
-          </Field>
-        </div>
-      </SectionCard>
+      {/* Two-column body */}
+      <div style={{ display: 'grid', gridTemplateColumns: '1fr 320px', gap: 28, alignItems: 'start' }}>
 
-      {/* Section: Physical Dimensions */}
-      <SectionCard
-        title="Physical Dimensions"
-        sub={"External size class and internal usable space. Width is fixed at 8’0 per ISO standard."}
-      >
-        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 18 }}>
-          <Field label="Length" required>
-            <select className="gecko-input" value={form.length} onChange={e => set({ length: e.target.value })}>
-              <option value="">— select —</option>
-              <option value="20ft">20 ft</option>
-              <option value="40ft">40 ft</option>
-              <option value="45ft">45 ft</option>
-              <option value="48ft">48 ft</option>
-              <option value="53ft">53 ft</option>
-            </select>
-          </Field>
-          <Field label="Height" required>
-            <select className="gecko-input" value={form.height} onChange={e => set({ height: e.target.value })}>
-              <option value="">— select —</option>
-              <option value="standard">Standard 8&apos;6&quot;</option>
-              <option value="highcube">High-Cube 9&apos;6&quot;</option>
-              <option value="lowcube">Low-Cube 8&apos;0&quot;</option>
-              <option value="doublestack">Double Stack</option>
-            </select>
-          </Field>
-          <Field label="Width" hint="Locked — ISO standard">
-            <input
-              className="gecko-input"
-              value={"8'0 (2,438 mm)"}
-              readOnly
-              style={{ background: 'var(--gecko-bg-subtle)', color: 'var(--gecko-text-secondary)', cursor: 'not-allowed' }}
-            />
-          </Field>
-          <Field label="External LOA (m)" hint="Overall length in metres">
-            <input
-              className="gecko-input"
-              placeholder="e.g. 6.058"
-              value={form.externalLoa}
-              onChange={e => set({ externalLoa: e.target.value })}
-              style={{ fontFamily: 'var(--gecko-font-mono)' }}
-            />
-          </Field>
-          <Field label="Internal Length (m)">
-            <input
-              className="gecko-input"
-              placeholder="e.g. 5.898"
-              value={form.internalLength}
-              onChange={e => set({ internalLength: e.target.value })}
-              style={{ fontFamily: 'var(--gecko-font-mono)' }}
-            />
-          </Field>
-          <Field label="Internal Width (m)">
-            <input
-              className="gecko-input"
-              placeholder="e.g. 2.352"
-              value={form.internalWidth}
-              onChange={e => set({ internalWidth: e.target.value })}
-              style={{ fontFamily: 'var(--gecko-font-mono)' }}
-            />
-          </Field>
-          <Field label="Internal Height (m)">
-            <input
-              className="gecko-input"
-              placeholder="e.g. 2.393"
-              value={form.internalHeight}
-              onChange={e => set({ internalHeight: e.target.value })}
-              style={{ fontFamily: 'var(--gecko-font-mono)' }}
-            />
-          </Field>
-        </div>
-      </SectionCard>
+        {/* ── LEFT: form ── */}
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 28 }}>
 
-      {/* Section: Weight & Capacity */}
-      <SectionCard
-        title="Weight &amp; Capacity"
-        sub="Payload and tare drive weight checks at gate-in and vessel load planning."
-      >
-        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 18 }}>
-          <Field label="Payload / Max Cargo (kg)" required>
-            <div style={{ position: 'relative' }}>
-              <input
-                className="gecko-input"
-                placeholder="e.g. 28230"
-                value={form.payload}
-                onChange={e => set({ payload: e.target.value })}
-                style={{ fontFamily: 'var(--gecko-font-mono)', paddingRight: 32 }}
-              />
-              <span style={{ position: 'absolute', right: 10, top: '50%', transform: 'translateY(-50%)', fontSize: 11, color: 'var(--gecko-text-secondary)', fontWeight: 600 }}>kg</span>
-            </div>
-          </Field>
-          <Field label="Tare Weight (kg)" required>
-            <div style={{ position: 'relative' }}>
-              <input
-                className="gecko-input"
-                placeholder="e.g. 2300"
-                value={form.tare}
-                onChange={e => set({ tare: e.target.value })}
-                style={{ fontFamily: 'var(--gecko-font-mono)', paddingRight: 32 }}
-              />
-              <span style={{ position: 'absolute', right: 10, top: '50%', transform: 'translateY(-50%)', fontSize: 11, color: 'var(--gecko-text-secondary)', fontWeight: 600 }}>kg</span>
-            </div>
-          </Field>
-          <Field label="Max Gross Weight (kg)" hint="Auto-computed: Payload + Tare">
-            <div style={{ position: 'relative' }}>
-              <input
-                className="gecko-input"
-                value={maxGross > 0 ? maxGross.toLocaleString() : ''}
-                readOnly
-                placeholder="= Payload + Tare"
-                style={{ background: 'var(--gecko-bg-subtle)', color: maxGross > 0 ? 'var(--gecko-text-primary)' : 'var(--gecko-text-disabled)', fontFamily: 'var(--gecko-font-mono)', paddingRight: 32, cursor: 'not-allowed' }}
-              />
-              <span style={{ position: 'absolute', right: 10, top: '50%', transform: 'translateY(-50%)', fontSize: 11, color: 'var(--gecko-text-secondary)', fontWeight: 600 }}>kg</span>
-            </div>
-          </Field>
-          <Field label="Cubic Capacity (m³)">
-            <div style={{ position: 'relative' }}>
-              <input
-                className="gecko-input"
-                placeholder="e.g. 33.2"
-                value={form.cubicCapacity}
-                onChange={e => set({ cubicCapacity: e.target.value })}
-                style={{ fontFamily: 'var(--gecko-font-mono)', paddingRight: 28 }}
-              />
-              <span style={{ position: 'absolute', right: 10, top: '50%', transform: 'translateY(-50%)', fontSize: 11, color: 'var(--gecko-text-secondary)', fontWeight: 600 }}>m³</span>
-            </div>
-          </Field>
-          <Field label="Door Opening Width (mm)">
-            <div style={{ position: 'relative' }}>
-              <input
-                className="gecko-input"
-                placeholder="e.g. 2286"
-                value={form.doorWidth}
-                onChange={e => set({ doorWidth: e.target.value })}
-                style={{ fontFamily: 'var(--gecko-font-mono)', paddingRight: 36 }}
-              />
-              <span style={{ position: 'absolute', right: 10, top: '50%', transform: 'translateY(-50%)', fontSize: 11, color: 'var(--gecko-text-secondary)', fontWeight: 600 }}>mm</span>
-            </div>
-          </Field>
-          <Field label="Door Opening Height (mm)">
-            <div style={{ position: 'relative' }}>
-              <input
-                className="gecko-input"
-                placeholder="e.g. 2261"
-                value={form.doorHeight}
-                onChange={e => set({ doorHeight: e.target.value })}
-                style={{ fontFamily: 'var(--gecko-font-mono)', paddingRight: 36 }}
-              />
-              <span style={{ position: 'absolute', right: 10, top: '50%', transform: 'translateY(-50%)', fontSize: 11, color: 'var(--gecko-text-secondary)', fontWeight: 600 }}>mm</span>
-            </div>
-          </Field>
-        </div>
-      </SectionCard>
+          {/* Section: ISO Identity */}
+          <div style={{ background: 'var(--gecko-bg-surface)', border: '1px solid var(--gecko-border)', borderRadius: 12, padding: '22px 24px', boxShadow: 'var(--gecko-shadow-sm)' }}>
+            <SectionHead>ISO Identity</SectionHead>
+            <div style={{ display: 'grid', gridTemplateColumns: '160px 1fr 1fr', gap: 16 }}>
 
-      {/* Section: Special Features */}
-      <SectionCard
-        title="Special Features"
-        sub="Check all features that apply to this container type. These control yard zoning, plug assignments, and DG segregation rules."
-      >
-        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
-          {ALL_FEATURES.map(feat => {
-            const checked = form.features.includes(feat.key);
-            return (
-              <label
-                key={feat.key}
-                style={{
-                  display: 'flex',
-                  alignItems: 'center',
-                  gap: 12,
-                  padding: '12px 16px',
-                  borderRadius: 10,
-                  border: `1px solid ${checked ? 'var(--gecko-primary-300)' : 'var(--gecko-border)'}`,
-                  background: checked ? 'var(--gecko-primary-50)' : 'var(--gecko-bg-surface)',
-                  cursor: 'pointer',
-                  userSelect: 'none',
-                }}
+              <Field
+                label="ISO Type Code"
+                required
+                hint="ISO 6346 format: length + width/height group + type + variant"
               >
                 <input
-                  type="checkbox"
-                  className="gecko-checkbox"
-                  checked={checked}
-                  onChange={() => toggleFeature(feat.key)}
+                  className="gecko-input gecko-text-mono"
+                  placeholder="22G1"
+                  maxLength={4}
+                  value={form.isoTypeCode}
+                  onChange={e => set({ isoTypeCode: e.target.value.toUpperCase().replace(/[^A-Z0-9]/g, '') })}
+                  style={{ fontFamily: 'var(--gecko-font-mono)', textTransform: 'uppercase', letterSpacing: '0.14em', fontSize: 16, fontWeight: 700 }}
                 />
-                <span style={{ fontSize: 13, fontWeight: checked ? 600 : 500, color: checked ? 'var(--gecko-primary-800)' : 'var(--gecko-text-secondary)' }}>
-                  {feat.label}
-                </span>
-              </label>
-            );
-          })}
-        </div>
-      </SectionCard>
+              </Field>
 
-      {/* Section: Tariff & Operations */}
-      <SectionCard
-        title="Tariff &amp; Operations"
-        sub="Operational defaults applied when this container type is used in yard planning and billing."
-      >
-        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 18 }}>
-          <Field label="Default Tariff Row" hint="Tariff line code applied when no override exists">
-            <input
-              className="gecko-input"
-              placeholder="e.g. STOR-20GP"
-              value={form.defaultTariffRow}
-              onChange={e => set({ defaultTariffRow: e.target.value.toUpperCase() })}
-              style={{ fontFamily: 'var(--gecko-font-mono)' }}
-            />
-          </Field>
-          <Field label="Yard Slot Size">
-            <select className="gecko-input" value={form.yardSlotSize} onChange={e => set({ yardSlotSize: e.target.value })}>
-              <option value="1 TEU">1 TEU</option>
-              <option value="2 TEU">2 TEU</option>
-              <option value="0.5 TEU">0.5 TEU</option>
-            </select>
-          </Field>
-          <Field label="Stack Height Limit" hint="Maximum stacking height in yard">
-            <input
-              className="gecko-input"
-              type="number"
-              min={1}
-              max={10}
-              value={form.stackHeightLimit}
-              onChange={e => set({ stackHeightLimit: e.target.value })}
-              style={{ fontFamily: 'var(--gecko-font-mono)' }}
-            />
-          </Field>
-          <Field label="Status">
-            <div style={{ display: 'flex', gap: 20, alignItems: 'center', marginTop: 6 }}>
-              {['Active', 'Inactive'].map(opt => (
-                <label key={opt} style={{ display: 'flex', alignItems: 'center', gap: 8, cursor: 'pointer', fontSize: 13, fontWeight: 500 }}>
-                  <input
-                    type="radio"
-                    name="status"
-                    value={opt}
-                    checked={form.status === opt}
-                    onChange={() => set({ status: opt })}
-                    style={{ accentColor: 'var(--gecko-primary-600)', width: 16, height: 16 }}
-                  />
-                  <span style={{ color: form.status === opt ? 'var(--gecko-primary-700)' : 'var(--gecko-text-secondary)', fontWeight: form.status === opt ? 700 : 500 }}>
-                    {opt}
-                  </span>
-                </label>
-              ))}
+              <Field label="Category" required>
+                <select
+                  className="gecko-input"
+                  value={form.category}
+                  onChange={e => {
+                    const cat = e.target.value as Category;
+                    set({ category: cat, requiresReeferPlug: cat === 'RF' ? form.requiresReeferPlug : false });
+                  }}
+                >
+                  <option value="">— select —</option>
+                  <option value="GP">General Purpose (GP)</option>
+                  <option value="RF">Reefer (RF)</option>
+                  <option value="OT">Special / Open Top (OT)</option>
+                  <option value="FR">Flat Rack (FR)</option>
+                  <option value="TK">Tank (TK)</option>
+                  <option value="BK">Bulk (BK)</option>
+                </select>
+              </Field>
+
+              <Field label="Common Name" required>
+                <input
+                  className="gecko-input"
+                  placeholder="e.g. 20' Standard"
+                  value={form.commonName}
+                  onChange={e => set({ commonName: e.target.value })}
+                />
+              </Field>
+
             </div>
-          </Field>
-        </div>
-      </SectionCard>
+          </div>
 
-      {/* Sticky bottom bar */}
+          {/* Section: Dimensions */}
+          <div style={{ background: 'var(--gecko-bg-surface)', border: '1px solid var(--gecko-border)', borderRadius: 12, padding: '22px 24px', boxShadow: 'var(--gecko-shadow-sm)' }}>
+            <SectionHead>Dimensions</SectionHead>
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 16 }}>
+
+              <Field label="Nominal Length">
+                <select className="gecko-input" value={form.nominalLength} onChange={e => set({ nominalLength: e.target.value })}>
+                  <option value="">— select —</option>
+                  <option value="20ft">20&apos;</option>
+                  <option value="40ft">40&apos;</option>
+                  <option value="45ft">45&apos;</option>
+                  <option value="48ft">48&apos;</option>
+                  <option value="53ft">53&apos;</option>
+                </select>
+              </Field>
+
+              <Field label="Nominal Height">
+                <select className="gecko-input" value={form.nominalHeight} onChange={e => set({ nominalHeight: e.target.value })}>
+                  <option value="">— select —</option>
+                  <option value="standard">8&apos;6&quot; Standard</option>
+                  <option value="highcube">9&apos;6&quot; High-Cube</option>
+                </select>
+              </Field>
+
+              <Field label="Internal Cube">
+                <NumInput
+                  placeholder="e.g. 33.2"
+                  value={form.internalCube}
+                  onChange={v => set({ internalCube: v })}
+                  suffix="m³"
+                />
+              </Field>
+
+            </div>
+          </div>
+
+          {/* Section: Weights */}
+          <div style={{ background: 'var(--gecko-bg-surface)', border: '1px solid var(--gecko-border)', borderRadius: 12, padding: '22px 24px', boxShadow: 'var(--gecko-shadow-sm)' }}>
+            <SectionHead>Weights</SectionHead>
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16 }}>
+
+              <Field label="Max Payload">
+                <NumInput
+                  placeholder="e.g. 28230"
+                  value={form.maxPayload}
+                  onChange={v => set({ maxPayload: v })}
+                  suffix="kg"
+                />
+              </Field>
+
+              <Field label="Tare Weight">
+                <NumInput
+                  placeholder="e.g. 2300"
+                  value={form.tareWeight}
+                  onChange={v => set({ tareWeight: v })}
+                  suffix="kg"
+                />
+              </Field>
+
+            </div>
+          </div>
+
+          {/* Section: Operational */}
+          <div style={{ background: 'var(--gecko-bg-surface)', border: '1px solid var(--gecko-border)', borderRadius: 12, padding: '22px 24px', boxShadow: 'var(--gecko-shadow-sm)' }}>
+            <SectionHead>Operational</SectionHead>
+
+            <div style={{ marginBottom: 20 }}>
+              <Field label="Slots per TEU">
+                <select className="gecko-input" value={form.slotsPerTEU} onChange={e => set({ slotsPerTEU: e.target.value })} style={{ maxWidth: 280 }}>
+                  <option value="">— select —</option>
+                  <option value="1teu">1 TEU (20&apos;)</option>
+                  <option value="2teu">2 TEU (40&apos;/45&apos;)</option>
+                </select>
+              </Field>
+            </div>
+
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
+
+              {form.category === 'RF' && (
+                <div style={{
+                  display: 'flex', alignItems: 'flex-start', gap: 14,
+                  padding: '12px 14px', borderRadius: 8,
+                  border: `1px solid ${form.requiresReeferPlug ? 'var(--gecko-info-300)' : 'var(--gecko-border)'}`,
+                  background: form.requiresReeferPlug ? 'var(--gecko-info-50)' : 'var(--gecko-bg-surface)',
+                }}>
+                  <Toggle
+                    value={form.requiresReeferPlug}
+                    onChange={v => set({ requiresReeferPlug: v })}
+                    activeColor="var(--gecko-info-600)"
+                  />
+                  <div>
+                    <div style={{ fontSize: 13, fontWeight: 700, color: form.requiresReeferPlug ? 'var(--gecko-info-700)' : 'var(--gecko-text-primary)' }}>
+                      Requires Reefer Plug
+                    </div>
+                    <div style={{ fontSize: 11, color: 'var(--gecko-text-secondary)', marginTop: 2 }}>
+                      Container must be assigned an active reefer plug point in the yard
+                    </div>
+                  </div>
+                </div>
+              )}
+
+              <div style={{
+                display: 'flex', alignItems: 'flex-start', gap: 14,
+                padding: '12px 14px', borderRadius: 8,
+                border: `1px solid ${form.oogSpecialHandling ? 'var(--gecko-warning-300)' : 'var(--gecko-border)'}`,
+                background: form.oogSpecialHandling ? 'var(--gecko-warning-50)' : 'var(--gecko-bg-surface)',
+              }}>
+                <Toggle
+                  value={form.oogSpecialHandling}
+                  onChange={v => set({ oogSpecialHandling: v })}
+                  activeColor="var(--gecko-warning-600)"
+                />
+                <div>
+                  <div style={{ fontSize: 13, fontWeight: 700, color: form.oogSpecialHandling ? 'var(--gecko-warning-700)' : 'var(--gecko-text-primary)' }}>
+                    OOG / Special Handling
+                  </div>
+                  <div style={{ fontSize: 11, color: 'var(--gecko-text-secondary)', marginTop: 2 }}>
+                    Out-of-gauge or non-standard cargo; requires stowage plan before vessel load
+                  </div>
+                </div>
+              </div>
+
+              <div style={{
+                display: 'flex', alignItems: 'flex-start', gap: 14,
+                padding: '12px 14px', borderRadius: 8,
+                border: `1px solid ${form.active ? 'var(--gecko-success-200)' : 'var(--gecko-border)'}`,
+                background: form.active ? 'var(--gecko-success-50)' : 'var(--gecko-bg-surface)',
+              }}>
+                <Toggle value={form.active} onChange={v => set({ active: v })} />
+                <div>
+                  <div style={{ fontSize: 13, fontWeight: 700, color: form.active ? 'var(--gecko-success-700)' : 'var(--gecko-text-secondary)' }}>
+                    {form.active ? 'Active' : 'Inactive'}
+                  </div>
+                  <div style={{ fontSize: 11, color: 'var(--gecko-text-secondary)', marginTop: 2 }}>
+                    {form.active
+                      ? 'This type is live and will appear in rate matrix, EIR, and yard operations'
+                      : 'Disabled — type will not appear in operational selectors'}
+                  </div>
+                </div>
+              </div>
+
+            </div>
+          </div>
+
+        </div>
+
+        {/* ── RIGHT: live preview ── */}
+        <div style={{ position: 'sticky', top: 24, display: 'flex', flexDirection: 'column', gap: 12 }}>
+          <div style={{ fontSize: 11, fontWeight: 700, color: 'var(--gecko-text-disabled)', textTransform: 'uppercase', letterSpacing: '0.07em' }}>
+            Live Preview
+          </div>
+          <PreviewCard form={form} />
+          <div style={{ fontSize: 11, color: 'var(--gecko-text-disabled)', textAlign: 'center' }}>
+            Preview updates as you fill in the form
+          </div>
+        </div>
+
+      </div>
+
+      {/* ── Sticky footer ── */}
       <div style={{
-        position: 'fixed',
-        bottom: 0,
-        left: 0,
-        right: 0,
+        position: 'fixed', bottom: 0, left: 0, right: 0,
         background: 'var(--gecko-bg-surface)',
         borderTop: '1px solid var(--gecko-border)',
         padding: '14px 32px',
-        display: 'flex',
-        justifyContent: 'flex-end',
-        gap: 12,
+        display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 12,
         zIndex: 100,
         boxShadow: '0 -2px 12px rgba(0,0,0,0.06)',
       }}>
-        <Link href="/masters/container-types" className="gecko-btn gecko-btn-ghost gecko-btn-sm">
-          Cancel
-        </Link>
-        <button className="gecko-btn gecko-btn-primary gecko-btn-sm">
-          <Icon name="save" size={15} /> Save Type
-        </button>
+        <div style={{ fontSize: 12, color: 'var(--gecko-text-disabled)' }}>
+          * ISO Type Code, Category, and Common Name are required
+        </div>
+        <div style={{ display: 'flex', gap: 10 }}>
+          <Link href="/masters/container-types" className="gecko-btn gecko-btn-outline gecko-btn-sm">
+            Cancel
+          </Link>
+          <button
+            className="gecko-btn gecko-btn-primary gecko-btn-sm"
+            disabled={!canSave}
+            style={!canSave ? { opacity: 0.45, cursor: 'not-allowed' } : {}}
+          >
+            <Icon name="save" size={15} /> Save Type
+          </button>
+        </div>
       </div>
 
     </div>

@@ -811,19 +811,19 @@ export default function HoldsPage() {
 
       {/* Table */}
       <div style={{ background: 'var(--gecko-bg-surface)', border: '1px solid var(--gecko-border)', borderRadius: 12, overflow: 'hidden', boxShadow: 'var(--gecko-shadow-sm)' }}>
-        <table className="gecko-table gecko-table-comfortable" style={{ fontSize: 12.5 }}>
+        <table className="gecko-table gecko-table-comfortable" style={{ fontSize: 12.5, tableLayout: 'fixed', width: '100%' }}>
           <thead>
             <tr>
-              <th style={{ width: 130 }}>Hold Code</th>
+              <th style={{ width: 120 }}>Hold Code</th>
               <th>Hold Name</th>
-              <th style={{ width: 130 }}>Type</th>
-              <th style={{ width: 160 }}>Blocking Scope</th>
-              <th style={{ width: 140 }}>Release Auth.</th>
-              <th style={{ width: 100 }}>Priority</th>
-              <th style={{ width: 68, textAlign: 'center' }}>Auto</th>
-              <th style={{ width: 68, textAlign: 'center' }}>Notify</th>
-              <th style={{ width: 80 }}>Status</th>
-              <th style={{ width: 44 }}></th>
+              <th style={{ width: 120 }}>Type</th>
+              <th style={{ width: 145 }}>Blocking Scope</th>
+              <th style={{ width: 120 }}>Release Auth.</th>
+              <th style={{ width: 90 }}>Priority</th>
+              <th style={{ width: 56, textAlign: 'center' }}>Auto</th>
+              <th style={{ width: 56, textAlign: 'center' }}>Notify</th>
+              <th style={{ width: 76 }}>Status</th>
+              <th style={{ width: 40 }}></th>
             </tr>
           </thead>
           <tbody>
@@ -853,7 +853,7 @@ export default function HoldsPage() {
                 <td>
                   <div style={{ fontWeight: 600, color: 'var(--gecko-text-primary)', fontSize: 13 }}>{h.name}</div>
                   {h.description && (
-                    <div style={{ fontSize: 11, color: 'var(--gecko-text-disabled)', marginTop: 2, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', maxWidth: 340 }} title={h.description}>
+                    <div style={{ fontSize: 11, color: 'var(--gecko-text-disabled)', marginTop: 2, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', maxWidth: '100%' }} title={h.description}>
                       {h.description}
                     </div>
                   )}

@@ -41,11 +41,378 @@ function RoleBadge({ role }: { role: string }) {
   return null;
 }
 
+// ─── New Customer Modal ───────────────────────────────────────────────────────
+
+type CustomerRole = 'Bill-to' | 'Consignee' | 'Shipper';
+
+interface NewCustomerForm {
+  code: string;
+  name: string;
+  country: string;
+  roles: CustomerRole[];
+  tier: string;
+  tariff: string;
+  creditLimit: string;
+  taxId: string;
+  website: string;
+  active: boolean;
+  notes: string;
+}
+
+const EMPTY_CUSTOMER: NewCustomerForm = {
+  code: '',
+  name: '',
+  country: 'TH',
+  roles: [],
+  tier: 'Standard',
+  tariff: 'Standard LCB-2026',
+  creditLimit: '',
+  taxId: '',
+  website: '',
+  active: true,
+  notes: '',
+};
+
+const ROLE_STYLE: Record<CustomerRole, { selected: { bg: string; color: string; border: string }; unselected: { bg: string; color: string; border: string } }> = {
+  'Bill-to': {
+    selected:   { bg: 'var(--gecko-primary-600)', color: '#fff',                          border: 'var(--gecko-primary-600)' },
+    unselected: { bg: 'transparent',              color: 'var(--gecko-primary-600)',      border: 'var(--gecko-primary-300)' },
+  },
+  'Consignee': {
+    selected:   { bg: 'var(--gecko-info-600)',    color: '#fff',                          border: 'var(--gecko-info-600)'    },
+    unselected: { bg: 'transparent',              color: 'var(--gecko-info-600)',         border: 'var(--gecko-info-300)'    },
+  },
+  'Shipper': {
+    selected:   { bg: 'var(--gecko-warning-500)', color: '#fff',                          border: 'var(--gecko-warning-500)' },
+    unselected: { bg: 'transparent',              color: 'var(--gecko-warning-600)',      border: 'var(--gecko-warning-300)' },
+  },
+};
+
+interface NewCustomerModalProps {
+  onClose: () => void;
+}
+
+function NewCustomerModal({ onClose }: NewCustomerModalProps) {
+  const [form, setForm] = useState<NewCustomerForm>({ ...EMPTY_CUSTOMER });
+  const [touched, setTouched] = useState(false);
+
+  const set = (partial: Partial<NewCustomerForm>) => setForm(prev => ({ ...prev, ...partial }));
+
+  const toggleRole = (role: CustomerRole) => {
+    set({
+      roles: form.roles.includes(role)
+        ? form.roles.filter(r => r !== role)
+        : [...form.roles, role],
+    });
+  };
+
+  const codeError   = touched && form.code.trim() === '';
+  const nameError   = touched && form.name.trim() === '';
+  const rolesError  = touched && form.roles.length === 0;
+  const canSave     = form.code.trim() !== '' && form.name.trim() !== '' && form.roles.length > 0;
+
+  const handleSave = () => {
+    setTouched(true);
+    if (!canSave) return;
+    // TODO: persist new customer
+    onClose();
+  };
+
+  const sectionHead = (title: string) => (
+    <div style={{
+      fontSize: 10.5, fontWeight: 800, textTransform: 'uppercase' as const,
+      letterSpacing: '0.09em', color: 'var(--gecko-success-700)',
+      marginBottom: 14, paddingBottom: 7,
+      borderBottom: '2px solid rgba(0,128,80,0.12)',
+    }}>
+      {title}
+    </div>
+  );
+
+  const Field = ({
+    label, required, hint, error, children, span,
+  }: { label: string; required?: boolean; hint?: string; error?: boolean; children: React.ReactNode; span?: number }) => (
+    <div className="gecko-form-group" style={{ gridColumn: span ? `span ${span}` : undefined }}>
+      <label className={`gecko-label${required ? ' gecko-label-required' : ''}`}
+        style={error ? { color: 'var(--gecko-danger-600)' } : undefined}>
+        {label}
+      </label>
+      {children}
+      {hint && !error && <div style={{ fontSize: 11, color: 'var(--gecko-text-secondary)', marginTop: 3 }}>{hint}</div>}
+      {error && <div style={{ fontSize: 11, color: 'var(--gecko-danger-600)', marginTop: 3 }}>This field is required</div>}
+    </div>
+  );
+
+  return (
+    <div
+      style={{ position: 'fixed', inset: 0, zIndex: 9000, background: 'rgba(0,0,0,0.52)', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '24px 16px' }}
+      onClick={e => { if (e.target === e.currentTarget) onClose(); }}
+    >
+      <div style={{ background: 'var(--gecko-bg-surface)', borderRadius: 12, width: '100%', maxWidth: 620, maxHeight: '92vh', display: 'flex', flexDirection: 'column', boxShadow: '0 24px 80px rgba(0,0,0,0.3)' }}>
+
+        {/* Header */}
+        <div style={{ padding: '18px 24px', borderBottom: '1px solid var(--gecko-border)', background: 'var(--gecko-success-50)', borderRadius: '12px 12px 0 0', flexShrink: 0, display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: 16 }}>
+          <div>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+              <Icon name="users" size={16} style={{ color: 'var(--gecko-success-600)' }} />
+              <span style={{ fontSize: 16, fontWeight: 800, color: 'var(--gecko-text-primary)' }}>
+                New Customer
+              </span>
+            </div>
+            <div style={{ fontSize: 12, color: 'var(--gecko-text-secondary)', marginTop: 3 }}>
+              Create a new party record. One record can hold multiple roles — bill-to, consignee, or shipper.
+            </div>
+          </div>
+          <button
+            onClick={onClose}
+            style={{ width: 32, height: 32, border: '1px solid var(--gecko-border)', borderRadius: 7, background: 'var(--gecko-bg-surface)', color: 'var(--gecko-text-secondary)', fontSize: 17, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', fontFamily: 'inherit', flexShrink: 0 }}
+          >
+            ×
+          </button>
+        </div>
+
+        {/* Form Body */}
+        <div style={{ padding: '22px 24px', flex: 1, overflowY: 'auto', display: 'flex', flexDirection: 'column', gap: 24 }}>
+
+          {/* Section 1: Identity */}
+          <div>
+            {sectionHead('Identity')}
+            <div style={{ display: 'grid', gridTemplateColumns: '160px 1fr', gap: 16, marginBottom: 16 }}>
+              <Field label="Customer Code" required error={codeError} hint="User-defined or auto-suggested">
+                <input
+                  className={`gecko-input gecko-text-mono${codeError ? ' gecko-input-error' : ''}`}
+                  placeholder="C-0XXXX"
+                  value={form.code}
+                  onChange={e => set({ code: e.target.value })}
+                  style={codeError ? { borderColor: 'var(--gecko-danger-400)' } : undefined}
+                />
+              </Field>
+              <Field label="Full Legal Name" required error={nameError}>
+                <input
+                  className={`gecko-input${nameError ? ' gecko-input-error' : ''}`}
+                  placeholder="e.g. Thai Union Group PCL"
+                  value={form.name}
+                  onChange={e => set({ name: e.target.value })}
+                  style={nameError ? { borderColor: 'var(--gecko-danger-400)' } : undefined}
+                />
+              </Field>
+            </div>
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr', gap: 16 }}>
+              <Field label="Country" required>
+                <select className="gecko-input" value={form.country} onChange={e => set({ country: e.target.value })} style={{ maxWidth: 280 }}>
+                  <option value="TH">Thailand (TH)</option>
+                  <option value="SG">Singapore (SG)</option>
+                  <option value="MY">Malaysia (MY)</option>
+                  <option value="ID">Indonesia (ID)</option>
+                  <option value="VN">Vietnam (VN)</option>
+                  <option value="OTHER">Other</option>
+                </select>
+              </Field>
+            </div>
+          </div>
+
+          {/* Section 2: Roles */}
+          <div>
+            {sectionHead('Roles')}
+            <div style={{ marginBottom: 6 }}>
+              <label className="gecko-label gecko-label-required"
+                style={rolesError ? { color: 'var(--gecko-danger-600)' } : undefined}>
+                Assign Roles
+              </label>
+            </div>
+            <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap', marginBottom: 6 }}>
+              {(['Bill-to', 'Consignee', 'Shipper'] as CustomerRole[]).map(role => {
+                const selected = form.roles.includes(role);
+                const s = selected ? ROLE_STYLE[role].selected : ROLE_STYLE[role].unselected;
+                return (
+                  <button
+                    key={role}
+                    type="button"
+                    onClick={() => toggleRole(role)}
+                    style={{
+                      padding: '6px 16px',
+                      borderRadius: 20,
+                      border: `1.5px solid ${s.border}`,
+                      background: s.bg,
+                      color: s.color,
+                      fontSize: 12.5,
+                      fontWeight: 700,
+                      cursor: 'pointer',
+                      transition: 'all 0.15s',
+                      display: 'inline-flex',
+                      alignItems: 'center',
+                      gap: 6,
+                    }}
+                  >
+                    {selected && (
+                      <span style={{ fontSize: 11, lineHeight: 1 }}>✓</span>
+                    )}
+                    {role}
+                  </button>
+                );
+              })}
+            </div>
+            {rolesError && (
+              <div style={{ fontSize: 11, color: 'var(--gecko-danger-600)', marginTop: 4 }}>At least one role must be selected</div>
+            )}
+            {!rolesError && (
+              <div style={{ fontSize: 11, color: 'var(--gecko-text-secondary)' }}>Select at least one role. A single party record can hold multiple roles.</div>
+            )}
+          </div>
+
+          {/* Section 3: Commercial */}
+          <div>
+            {sectionHead('Commercial')}
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16, marginBottom: 16 }}>
+              <Field label="Customer Tier">
+                <select className="gecko-input" value={form.tier} onChange={e => set({ tier: e.target.value })}>
+                  <option value="Key Account">Key Account</option>
+                  <option value="Standard">Standard</option>
+                </select>
+              </Field>
+              <Field label="Assigned Tariff" hint={form.tariff === 'Custom' ? 'Custom tariff assigned after approval' : undefined}>
+                <select className="gecko-input" value={form.tariff} onChange={e => set({ tariff: e.target.value })}>
+                  <option value="Standard LCB-2026">Standard LCB-2026</option>
+                  <option value="Custom">Custom</option>
+                </select>
+              </Field>
+            </div>
+            <div style={{ display: 'grid', gridTemplateColumns: '200px 1fr', gap: 16 }}>
+              <Field label="Credit Limit" hint="0 = no credit">
+                <div style={{ display: 'flex', alignItems: 'center' }}>
+                  <span style={{
+                    display: 'inline-flex', alignItems: 'center', justifyContent: 'center',
+                    padding: '0 10px', height: 34, background: 'var(--gecko-bg-subtle)',
+                    border: '1px solid var(--gecko-border)', borderRight: 'none',
+                    borderRadius: '6px 0 0 6px', fontSize: 13, fontWeight: 700,
+                    color: 'var(--gecko-text-secondary)', flexShrink: 0,
+                  }}>
+                    ฿
+                  </span>
+                  <input
+                    className="gecko-input gecko-text-mono"
+                    type="number"
+                    min="0"
+                    placeholder="0"
+                    value={form.creditLimit}
+                    onChange={e => set({ creditLimit: e.target.value })}
+                    style={{ borderRadius: '0 6px 6px 0', borderLeft: 'none' }}
+                  />
+                </div>
+              </Field>
+            </div>
+          </div>
+
+          {/* Section 4: Contact */}
+          <div>
+            {sectionHead('Contact')}
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16 }}>
+              <Field label="Tax ID / VAT Number">
+                <input
+                  className="gecko-input gecko-text-mono"
+                  placeholder="0107537000000"
+                  value={form.taxId}
+                  onChange={e => set({ taxId: e.target.value })}
+                />
+              </Field>
+              <Field label="Website">
+                <input
+                  className="gecko-input"
+                  placeholder="company.com"
+                  value={form.website}
+                  onChange={e => set({ website: e.target.value })}
+                />
+              </Field>
+            </div>
+          </div>
+
+          {/* Section 5: Status */}
+          <div>
+            {sectionHead('Status')}
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
+
+              {/* Active toggle */}
+              <div style={{
+                display: 'flex', alignItems: 'flex-start', gap: 12, padding: '12px 14px',
+                border: `1px solid ${form.active ? 'var(--gecko-success-200)' : 'var(--gecko-border)'}`,
+                borderRadius: 8, background: form.active ? 'var(--gecko-success-50)' : 'var(--gecko-bg-subtle)',
+                maxWidth: 340,
+              }}>
+                <button
+                  type="button"
+                  onClick={() => set({ active: !form.active })}
+                  style={{
+                    width: 36, height: 20, borderRadius: 10, border: 'none', cursor: 'pointer', flexShrink: 0, marginTop: 2,
+                    background: form.active ? 'var(--gecko-success-600)' : 'var(--gecko-gray-300)',
+                    position: 'relative', transition: 'background 0.2s',
+                  }}
+                  role="switch"
+                  aria-checked={form.active}
+                >
+                  <span style={{
+                    position: 'absolute', top: 2, left: form.active ? 18 : 2,
+                    width: 16, height: 16, borderRadius: '50%', background: '#fff',
+                    transition: 'left 0.2s', display: 'block',
+                  }} />
+                </button>
+                <div>
+                  <div style={{ fontSize: 12.5, fontWeight: 700, color: form.active ? 'var(--gecko-success-700)' : 'var(--gecko-text-secondary)' }}>
+                    {form.active ? 'Active' : 'Inactive'}
+                  </div>
+                  <div style={{ fontSize: 11, color: 'var(--gecko-text-secondary)', marginTop: 2 }}>
+                    {form.active ? 'Customer is live and can be used in bookings' : 'Customer is disabled and will not appear in party lookups'}
+                  </div>
+                </div>
+              </div>
+
+              {/* Notes */}
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
+                <label className="gecko-label">Notes <span style={{ fontWeight: 400, color: 'var(--gecko-text-disabled)' }}>(optional)</span></label>
+                <textarea
+                  className="gecko-input"
+                  placeholder="Internal notes, credit approval details, account manager comments…"
+                  value={form.notes}
+                  onChange={e => set({ notes: e.target.value })}
+                  rows={3}
+                  style={{ resize: 'vertical', lineHeight: 1.55 }}
+                />
+              </div>
+
+            </div>
+          </div>
+        </div>
+
+        {/* Footer */}
+        <div style={{ padding: '14px 24px', borderTop: '1px solid var(--gecko-border)', background: 'var(--gecko-bg-surface)', borderRadius: '0 0 12px 12px', flexShrink: 0, display: 'flex', alignItems: 'center', gap: 10 }}>
+          <div style={{ flex: 1, fontSize: 11, color: 'var(--gecko-text-disabled)' }}>
+            * Code, Name, and at least one Role are required
+          </div>
+          <div style={{ display: 'flex', gap: 8 }}>
+            <button className="gecko-btn gecko-btn-outline gecko-btn-sm" onClick={onClose}>Cancel</button>
+            <button
+              className="gecko-btn gecko-btn-primary gecko-btn-sm"
+              onClick={handleSave}
+              disabled={touched && !canSave}
+              style={touched && !canSave ? { opacity: 0.45, cursor: 'not-allowed' } : {}}
+            >
+              <Icon name="save" size={14} /> Save Customer
+            </button>
+          </div>
+        </div>
+
+      </div>
+    </div>
+  );
+}
+
+// ─── Main Page ────────────────────────────────────────────────────────────────
+
 export default function CustomersListPage() {
   const [filters, setFilters] = useState<Record<string, string>>({
     query: '', role: '', tier: '', tariff: '', status: 'active', country: 'TH',
   });
   const [sortBy, setSortBy] = useState('activity');
+  const [showModal, setShowModal] = useState(false);
 
   const filtered = useMemo(() => {
     return CUSTOMERS.filter((c) => {
@@ -88,7 +455,9 @@ export default function CustomersListPage() {
             sortValue={sortBy}
             onSortChange={setSortBy}
           />
-          <button className="gecko-btn gecko-btn-primary gecko-btn-sm"><Icon name="plus" size={16} /> New Customer</button>
+          <button className="gecko-btn gecko-btn-primary gecko-btn-sm" onClick={() => setShowModal(true)}>
+            <Icon name="plus" size={16} /> New Customer
+          </button>
         </div>
       </div>
 
@@ -155,6 +524,11 @@ export default function CustomersListPage() {
           noun="customers"
         />
       </div>
+
+      {/* New Customer Modal */}
+      {showModal && (
+        <NewCustomerModal onClose={() => setShowModal(false)} />
+      )}
 
     </div>
   );

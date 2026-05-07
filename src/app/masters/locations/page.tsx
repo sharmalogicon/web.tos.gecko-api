@@ -2,8 +2,381 @@
 import React, { useState } from 'react';
 import { Icon } from '@/components/ui/Icon';
 
+// ─── Types ────────────────────────────────────────────────────────────────────
+
+type LocationType = 'Facility' | 'Yard Area' | 'Block' | 'Row' | 'Bay' | 'Slot';
+
+interface NewLocationForm {
+  locationType: LocationType;
+  parentLocation: string;
+  locationCode: string;
+  locationName: string;
+  rows: string;
+  bays: string;
+  tiers: string;
+  description: string;
+  active: boolean;
+}
+
+// ─── Parent Location Options ──────────────────────────────────────────────────
+
+const PARENT_OPTIONS: Record<LocationType, { value: string; label: string }[]> = {
+  Facility: [
+    { value: '', label: '— None (top-level) —' },
+  ],
+  'Yard Area': [
+    { value: '', label: '— Select Facility —' },
+    { value: 'LCB', label: 'Laem Chabang Terminal' },
+    { value: 'BKK', label: 'Bangkok ICD' },
+    { value: 'LST', label: 'Laem Sadet Terminal' },
+  ],
+  Block: [
+    { value: '', label: '— Select Yard Area —' },
+    { value: 'LCB-YARD-A', label: 'Laem Chabang Terminal › Yard A — Import' },
+    { value: 'LCB-YARD-B', label: 'Laem Chabang Terminal › Yard B — Export' },
+    { value: 'LCB-YARD-C', label: 'Laem Chabang Terminal › Yard C — Empty' },
+    { value: 'BKK-YARD-1', label: 'Bangkok ICD › Yard 1 — Import/Export' },
+  ],
+  Row: [
+    { value: '', label: '— Select Block —' },
+    { value: 'LCB-A01', label: 'Laem Chabang Terminal › Yard A — Import › Block A-01' },
+    { value: 'LCB-A02', label: 'Laem Chabang Terminal › Yard A — Import › Block A-02' },
+    { value: 'LCB-A03', label: 'Laem Chabang Terminal › Yard A — Import › Block A-03' },
+    { value: 'LCB-B01', label: 'Laem Chabang Terminal › Yard B — Export › Block B-01' },
+  ],
+  Bay: [
+    { value: '', label: '— Select Block —' },
+    { value: 'LCB-A01', label: 'Laem Chabang Terminal › Yard A — Import › Block A-01' },
+    { value: 'LCB-A02', label: 'Laem Chabang Terminal › Yard A — Import › Block A-02' },
+    { value: 'LCB-B01', label: 'Laem Chabang Terminal › Yard B — Export › Block B-01' },
+  ],
+  Slot: [
+    { value: '', label: '— Select Row / Bay —' },
+    { value: 'LCB-A01-A', label: 'Laem Chabang Terminal › Yard A — Import › Block A-01 › Row A' },
+    { value: 'LCB-A01-B', label: 'Laem Chabang Terminal › Yard A — Import › Block A-01 › Row B' },
+    { value: 'LCB-A01-01', label: 'Laem Chabang Terminal › Yard A — Import › Block A-01 › Bay 01' },
+  ],
+};
+
+const EMPTY_FORM: NewLocationForm = {
+  locationType: 'Block',
+  parentLocation: '',
+  locationCode: '',
+  locationName: '',
+  rows: '',
+  bays: '',
+  tiers: '',
+  description: '',
+  active: true,
+};
+
+// ─── New Location Modal ───────────────────────────────────────────────────────
+
+function NewLocationModal({ onClose }: { onClose: () => void }) {
+  const [form, setForm] = useState<NewLocationForm>({ ...EMPTY_FORM });
+  const set = (partial: Partial<NewLocationForm>) =>
+    setForm(prev => ({ ...prev, ...partial }));
+
+  const canSave =
+    form.locationCode.trim() !== '' && form.locationName.trim() !== '';
+
+  const showRows  = form.locationType === 'Block';
+  const showBays  = form.locationType === 'Block';
+  const showTiers = form.locationType === 'Block' || form.locationType === 'Slot';
+
+  const sectionHead = (title: string) => (
+    <div style={{
+      fontSize: 10.5, fontWeight: 800, textTransform: 'uppercase' as const,
+      letterSpacing: '0.09em', color: 'var(--gecko-primary-600)',
+      marginBottom: 14, paddingBottom: 7,
+      borderBottom: '2px solid rgba(var(--gecko-primary-rgb, 37,99,235), 0.12)',
+    }}>
+      {title}
+    </div>
+  );
+
+  const Field = ({
+    label, required, hint, children, span,
+  }: {
+    label: string; required?: boolean; hint?: string;
+    children: React.ReactNode; span?: number;
+  }) => (
+    <div className="gecko-form-group" style={{ gridColumn: span ? `span ${span}` : undefined }}>
+      <label className={`gecko-label${required ? ' gecko-label-required' : ''}`}>{label}</label>
+      {children}
+      {hint && (
+        <div style={{ fontSize: 11, color: 'var(--gecko-text-secondary)', marginTop: 3 }}>
+          {hint}
+        </div>
+      )}
+    </div>
+  );
+
+  return (
+    <div
+      style={{
+        position: 'fixed', inset: 0, zIndex: 9000,
+        background: 'rgba(0,0,0,0.52)',
+        display: 'flex', alignItems: 'center', justifyContent: 'center',
+        padding: '24px 16px',
+      }}
+      onClick={e => { if (e.target === e.currentTarget) onClose(); }}
+    >
+      <div style={{
+        background: 'var(--gecko-bg-surface)', borderRadius: 12,
+        width: '100%', maxWidth: 560, maxHeight: '92vh',
+        display: 'flex', flexDirection: 'column',
+        boxShadow: '0 24px 80px rgba(0,0,0,0.3)',
+      }}>
+
+        {/* Header */}
+        <div style={{
+          padding: '18px 24px', borderBottom: '1px solid var(--gecko-border)',
+          background: 'var(--gecko-info-50)', borderRadius: '12px 12px 0 0',
+          flexShrink: 0, display: 'flex', alignItems: 'flex-start',
+          justifyContent: 'space-between', gap: 16,
+        }}>
+          <div>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+              <Icon name="mapPin" size={16} style={{ color: 'var(--gecko-info-600)' }} />
+              <span style={{ fontSize: 16, fontWeight: 800, color: 'var(--gecko-text-primary)' }}>
+                New Location
+              </span>
+            </div>
+            <div style={{ fontSize: 12, color: 'var(--gecko-text-secondary)', marginTop: 3 }}>
+              Add a node to the spatial hierarchy — from facility level down to individual slots.
+            </div>
+          </div>
+          <button
+            onClick={onClose}
+            style={{
+              width: 32, height: 32, border: '1px solid var(--gecko-border)',
+              borderRadius: 7, background: 'var(--gecko-bg-surface)',
+              color: 'var(--gecko-text-secondary)', fontSize: 17, cursor: 'pointer',
+              display: 'flex', alignItems: 'center', justifyContent: 'center',
+              fontFamily: 'inherit', flexShrink: 0,
+            }}
+          >
+            ×
+          </button>
+        </div>
+
+        {/* Form Body */}
+        <div style={{
+          padding: '22px 24px', flex: 1, overflowY: 'auto',
+          display: 'flex', flexDirection: 'column', gap: 24,
+        }}>
+
+          {/* Section 1: Classification */}
+          <div>
+            {sectionHead('Classification')}
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16 }}>
+              <Field label="Location Type" required>
+                <select
+                  className="gecko-input"
+                  value={form.locationType}
+                  onChange={e => set({ locationType: e.target.value as LocationType, parentLocation: '' })}
+                >
+                  <option value="Facility">Facility</option>
+                  <option value="Yard Area">Yard Area</option>
+                  <option value="Block">Block</option>
+                  <option value="Row">Row</option>
+                  <option value="Bay">Bay</option>
+                  <option value="Slot">Slot</option>
+                </select>
+              </Field>
+              <Field
+                label="Parent Location"
+                hint={form.locationType === 'Facility' ? 'Facilities have no parent' : undefined}
+              >
+                <select
+                  className="gecko-input"
+                  value={form.parentLocation}
+                  onChange={e => set({ parentLocation: e.target.value })}
+                  disabled={form.locationType === 'Facility'}
+                >
+                  {PARENT_OPTIONS[form.locationType].map(opt => (
+                    <option key={opt.value} value={opt.value}>{opt.label}</option>
+                  ))}
+                </select>
+              </Field>
+            </div>
+          </div>
+
+          {/* Section 2: Identity */}
+          <div>
+            {sectionHead('Identity')}
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16 }}>
+              <Field label="Location Code" required hint='Uppercase, e.g. "BLOCK-A-05"'>
+                <input
+                  className="gecko-input gecko-text-mono"
+                  placeholder="e.g. BLOCK-A-05"
+                  value={form.locationCode}
+                  onChange={e => set({ locationCode: e.target.value.toUpperCase() })}
+                  style={{ textTransform: 'uppercase' }}
+                />
+              </Field>
+              <Field label="Location Name" required>
+                <input
+                  className="gecko-input"
+                  placeholder='e.g. "Block A-05"'
+                  value={form.locationName}
+                  onChange={e => set({ locationName: e.target.value })}
+                />
+              </Field>
+            </div>
+          </div>
+
+          {/* Section 3: Spatial Dimensions (conditional) */}
+          {(showRows || showBays || showTiers) && (
+            <div>
+              {sectionHead('Spatial Dimensions')}
+              <div style={{
+                display: 'grid',
+                gridTemplateColumns: `repeat(${[showRows, showBays, showTiers].filter(Boolean).length}, 1fr)`,
+                gap: 16,
+              }}>
+                {showRows && (
+                  <Field label="Rows" hint="Number of rows in this block">
+                    <input
+                      className="gecko-input"
+                      type="number"
+                      min={1}
+                      placeholder="e.g. 6"
+                      value={form.rows}
+                      onChange={e => set({ rows: e.target.value })}
+                    />
+                  </Field>
+                )}
+                {showBays && (
+                  <Field label="Bays" hint="Number of bays per row">
+                    <input
+                      className="gecko-input"
+                      type="number"
+                      min={1}
+                      placeholder="e.g. 16"
+                      value={form.bays}
+                      onChange={e => set({ bays: e.target.value })}
+                    />
+                  </Field>
+                )}
+                {showTiers && (
+                  <Field label="Tiers (max stack)" hint="Maximum stacking height">
+                    <input
+                      className="gecko-input"
+                      type="number"
+                      min={1}
+                      placeholder="e.g. 4"
+                      value={form.tiers}
+                      onChange={e => set({ tiers: e.target.value })}
+                    />
+                  </Field>
+                )}
+              </div>
+            </div>
+          )}
+
+          {/* Section 4: Notes & Status */}
+          <div>
+            {sectionHead('Notes & Status')}
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
+                <label className="gecko-label">Description / Notes</label>
+                <textarea
+                  className="gecko-input"
+                  placeholder="Optional notes about this location, restrictions, or special handling…"
+                  value={form.description}
+                  onChange={e => set({ description: e.target.value })}
+                  rows={3}
+                  style={{ resize: 'vertical', lineHeight: 1.55 }}
+                />
+              </div>
+
+              <div style={{
+                display: 'flex', alignItems: 'flex-start', gap: 12,
+                padding: '12px 14px',
+                border: `1px solid ${form.active ? 'var(--gecko-success-200)' : 'var(--gecko-border)'}`,
+                borderRadius: 8,
+                background: form.active ? 'var(--gecko-success-50)' : 'var(--gecko-bg-subtle)',
+                maxWidth: 340,
+              }}>
+                <button
+                  onClick={() => set({ active: !form.active })}
+                  style={{
+                    width: 36, height: 20, borderRadius: 10, border: 'none',
+                    cursor: 'pointer', flexShrink: 0, marginTop: 2,
+                    background: form.active ? 'var(--gecko-success-600)' : 'var(--gecko-gray-300)',
+                    position: 'relative', transition: 'background 0.2s',
+                  }}
+                  role="switch"
+                  aria-checked={form.active}
+                  type="button"
+                >
+                  <span style={{
+                    position: 'absolute', top: 2,
+                    left: form.active ? 18 : 2,
+                    width: 16, height: 16, borderRadius: '50%', background: '#fff',
+                    transition: 'left 0.2s', display: 'block',
+                  }} />
+                </button>
+                <div>
+                  <div style={{
+                    fontSize: 12.5, fontWeight: 700,
+                    color: form.active ? 'var(--gecko-success-700)' : 'var(--gecko-text-secondary)',
+                  }}>
+                    {form.active ? 'Active' : 'Inactive'}
+                  </div>
+                  <div style={{ fontSize: 11, color: 'var(--gecko-text-secondary)', marginTop: 2 }}>
+                    {form.active
+                      ? 'Location is operational and available for container placement'
+                      : 'Location is disabled and will not appear in placement lists'}
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+        </div>
+
+        {/* Footer */}
+        <div style={{
+          padding: '14px 24px', borderTop: '1px solid var(--gecko-border)',
+          background: 'var(--gecko-bg-surface)', borderRadius: '0 0 12px 12px',
+          flexShrink: 0, display: 'flex', alignItems: 'center', gap: 10,
+        }}>
+          <div style={{ flex: 1, fontSize: 11, color: 'var(--gecko-text-disabled)' }}>
+            * Location Code and Location Name are required
+          </div>
+          <div style={{ display: 'flex', gap: 8 }}>
+            <button
+              className="gecko-btn gecko-btn-outline gecko-btn-sm"
+              onClick={onClose}
+              type="button"
+            >
+              Cancel
+            </button>
+            <button
+              className="gecko-btn gecko-btn-primary gecko-btn-sm"
+              onClick={onClose}
+              disabled={!canSave}
+              style={!canSave ? { opacity: 0.45, cursor: 'not-allowed' } : {}}
+              type="button"
+            >
+              <Icon name="save" size={14} /> Save Location
+            </button>
+          </div>
+        </div>
+
+      </div>
+    </div>
+  );
+}
+
+// ─── Page ─────────────────────────────────────────────────────────────────────
+
 export default function LocationsPage() {
   const [activeNode, setActiveNode] = useState('Block A-01');
+  const [showModal, setShowModal] = useState(false);
 
   // Simple grid simulation data for the yard view
   const bays = Array.from({ length: 16 }, (_, i) => String(i + 1).padStart(2, '0'));
@@ -53,7 +426,7 @@ export default function LocationsPage() {
         <div className="gecko-toolbar">
           <button className="gecko-btn gecko-btn-ghost gecko-btn-sm"><Icon name="download" size={16} /> Export tree</button>
           <button className="gecko-btn gecko-btn-outline gecko-btn-sm"><Icon name="map" size={16} /> Yard map view</button>
-          <button className="gecko-btn gecko-btn-primary gecko-btn-sm"><Icon name="plus" size={16} /> New Location</button>
+          <button className="gecko-btn gecko-btn-primary gecko-btn-sm" onClick={() => setShowModal(true)}><Icon name="plus" size={16} /> New Location</button>
         </div>
       </div>
 
@@ -262,6 +635,11 @@ export default function LocationsPage() {
         </div>
 
       </div>
+
+      {/* New Location Modal */}
+      {showModal && (
+        <NewLocationModal onClose={() => setShowModal(false)} />
+      )}
     </div>
   );
 }

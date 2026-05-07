@@ -252,7 +252,7 @@ export default function BookingRegisterPage() {
             border: '1px solid var(--gecko-border)', background: sortKey === k ? 'var(--gecko-primary-50)' : 'var(--gecko-bg-surface)',
             color: sortKey === k ? 'var(--gecko-primary-700)' : 'var(--gecko-text-secondary)', fontFamily: 'inherit', display: 'flex', alignItems: 'center',
           }}>
-            {k === 'etd' ? 'ETD' : k === 'cyCutoff' ? 'CY Cut-off' : 'Created'}<SortIcon col={k} />
+            {k === 'etd' ? 'ETD' : k === 'cyCutoff' ? 'CY Cut-off' : 'Booking Date'}<SortIcon col={k} />
           </button>
         ))}
       </div>
@@ -281,12 +281,9 @@ export default function BookingRegisterPage() {
             <col style={{ width: 100 }} />
             <col style={{ width: 72 }} />
             <col style={{ width: 80 }} />
-            <col style={{ width: 200 }} />
-            <col style={{ width: 130 }} />
+            <col style={{ width: 150 }} />
             <col style={{ width: 90 }} />
-            <col style={{ width: 90 }} />
-            <col style={{ width: 130 }} />
-            <col style={{ width: 100 }} />
+            <col style={{ width: 110 }} />
             <col style={{ width: 64 }} />
           </colgroup>
           <thead>
@@ -301,17 +298,12 @@ export default function BookingRegisterPage() {
               <th>Status</th>
               <th>Agent</th>
               <th>Vessel</th>
-              <th>Load → Discharge</th>
               <th style={{ cursor: 'pointer', userSelect: 'none' }} onClick={() => toggleSort('etd')}>
-                <span style={{ display: 'inline-flex', alignItems: 'center' }}>ETD <SortIcon col="etd" /></span>
-              </th>
-              <th style={{ cursor: 'pointer', userSelect: 'none' }} onClick={() => toggleSort('cyCutoff')}>
-                <span style={{ display: 'inline-flex', alignItems: 'center' }}>CY Cut-off <SortIcon col="cyCutoff" /></span>
+                <span style={{ display: 'inline-flex', alignItems: 'center' }}>ETD / CY Cut-off <SortIcon col="etd" /></span>
               </th>
               <th>Containers</th>
-              <th>Commodity</th>
               <th style={{ cursor: 'pointer', userSelect: 'none' }} onClick={() => toggleSort('createdOn')}>
-                <span style={{ display: 'inline-flex', alignItems: 'center' }}>Created <SortIcon col="createdOn" /></span>
+                <span style={{ display: 'inline-flex', alignItems: 'center' }}>Booking Date <SortIcon col="createdOn" /></span>
               </th>
               <th style={{ width: 64 }}></th>
             </tr>
@@ -319,7 +311,7 @@ export default function BookingRegisterPage() {
           <tbody>
             {filtered.length === 0 && (
               <tr>
-                <td colSpan={14}>
+                <td colSpan={11}>
                   <div style={{ padding: '48px 24px', textAlign: 'center', color: 'var(--gecko-text-secondary)' }}>
                     <Icon name="clipboardList" size={32} style={{ opacity: 0.25, marginBottom: 12, display: 'block', margin: '0 auto 12px' }} />
                     <div style={{ fontSize: 14, fontWeight: 600 }}>No bookings found</div>
@@ -339,13 +331,13 @@ export default function BookingRegisterPage() {
                     <input type="checkbox" checked={isSelected} onChange={() => toggleRow(b.id)}
                       style={{ width: 14, height: 14, cursor: 'pointer', accentColor: 'var(--gecko-primary-600)' }} />
                   </td>
-                  <td>
-                    <Link href={`/bookings/${b.bookingNo}`} style={{ textDecoration: 'none' }}>
+                  <td style={{ cursor: 'pointer' }}>
+                    <Link href={`/bookings/${b.bookingNo}`} style={{ textDecoration: 'none', display: 'block' }}>
                       <div style={{ fontSize: 12, fontWeight: 700, fontFamily: 'var(--gecko-font-mono)', color: 'var(--gecko-primary-600)', letterSpacing: '0.01em' }}>
                         {b.bookingNo}
                       </div>
+                      <div style={{ fontSize: 10.5, color: 'var(--gecko-text-secondary)', fontFamily: 'var(--gecko-font-mono)', marginTop: 1 }}>{b.orderNo}</div>
                     </Link>
-                    <div style={{ fontSize: 10.5, color: 'var(--gecko-text-secondary)', fontFamily: 'var(--gecko-font-mono)', marginTop: 1 }}>{b.orderNo}</div>
                   </td>
                   <td>
                     <div style={{ fontSize: 12, fontWeight: 600, color: 'var(--gecko-text-primary)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }} title={b.customer}>{b.customer}</div>
@@ -370,26 +362,14 @@ export default function BookingRegisterPage() {
                     <div style={{ fontSize: 10, color: 'var(--gecko-text-secondary)', fontFamily: 'var(--gecko-font-mono)', marginTop: 1 }}>{b.voyageNo}</div>
                   </td>
                   <td>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: 5, fontSize: 11 }}>
-                      <span style={{ fontFamily: 'var(--gecko-font-mono)', fontWeight: 600, color: 'var(--gecko-text-primary)' }}>{b.loadPort}</span>
-                      <Icon name="arrowRight" size={10} style={{ color: 'var(--gecko-text-disabled)', flexShrink: 0 }} />
-                      <span style={{ fontFamily: 'var(--gecko-font-mono)', fontWeight: 600, color: 'var(--gecko-text-primary)' }}>{b.dischargePort}</span>
-                    </div>
-                  </td>
-                  <td>
-                    <div style={{ fontSize: 11, fontFamily: 'var(--gecko-font-mono)', color: 'var(--gecko-text-primary)' }}>{formatDate(b.etd)}</div>
-                  </td>
-                  <td>
-                    <span style={{ fontSize: 10.5, fontWeight: 600, padding: '2px 7px', borderRadius: 5, background: cc.bg, color: cc.color, fontFamily: 'var(--gecko-font-mono)', display: 'inline-block' }}>
+                    <div style={{ fontSize: 11, fontFamily: 'var(--gecko-font-mono)', fontWeight: 600, color: 'var(--gecko-text-primary)' }}>{formatDate(b.etd)}</div>
+                    <span style={{ fontSize: 10.5, fontWeight: 600, padding: '2px 7px', borderRadius: 5, background: cc.bg, color: cc.color, fontFamily: 'var(--gecko-font-mono)', display: 'inline-block', marginTop: 3 }}>
                       {daysLeft < 0 ? 'EXPIRED' : daysLeft === 0 ? 'TODAY' : `${daysLeft}d`}
                     </span>
-                    <div style={{ fontSize: 9.5, color: 'var(--gecko-text-disabled)', marginTop: 2, fontFamily: 'var(--gecko-font-mono)' }}>{formatDate(b.cyCutoff)}</div>
+                    <div style={{ fontSize: 9.5, color: 'var(--gecko-text-disabled)', marginTop: 1, fontFamily: 'var(--gecko-font-mono)' }}>Cut: {formatDate(b.cyCutoff)}</div>
                   </td>
                   <td>
                     <ProgressPip total={b.totalCtrs} done={b.fullIn} label="Full In" />
-                  </td>
-                  <td>
-                    <div style={{ fontSize: 11, color: 'var(--gecko-text-secondary)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }} title={b.commodity}>{b.commodity}</div>
                   </td>
                   <td>
                     <div style={{ fontSize: 11, color: 'var(--gecko-text-secondary)', fontFamily: 'var(--gecko-font-mono)' }}>{formatDate(b.createdOn)}</div>
