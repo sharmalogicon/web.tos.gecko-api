@@ -1599,6 +1599,87 @@
   gap: 16px;
 }
 
+/* ------------------------------------------------------------
+   Modal header variants beyond danger.
+   Used by <ConfirmDialog variant="warning|info"> for reversible
+   actions like Cancel Booking, Void Invoice, Regenerate Statement.
+   ------------------------------------------------------------ */
+
+/* Warning variant — amber tint, for cautious-but-reversible actions */
+.gecko-modal-header-warning {
+  background-color: var(--gecko-warning-50);
+  border-bottom-color: var(--gecko-warning-100);
+  color: var(--gecko-warning-800);
+  border-radius: var(--gecko-radius-xl) var(--gecko-radius-xl) 0 0;
+  align-items: flex-start;
+  gap: 14px;
+}
+
+.gecko-modal-header-warning .gecko-modal-icon {
+  background: var(--gecko-warning-50);
+  border-color: var(--gecko-warning-200);
+  color: var(--gecko-warning-700);
+}
+
+.gecko-modal-header-warning .gecko-modal-description strong {
+  color: var(--gecko-warning-700);
+}
+
+/* Info variant — blue tint, for confirmations that are purely informational */
+.gecko-modal-header-info {
+  background-color: var(--gecko-info-50);
+  border-bottom-color: var(--gecko-info-100);
+  color: var(--gecko-info-800);
+  border-radius: var(--gecko-radius-xl) var(--gecko-radius-xl) 0 0;
+  align-items: flex-start;
+  gap: 14px;
+}
+
+.gecko-modal-header-info .gecko-modal-icon {
+  background: var(--gecko-info-50);
+  border-color: var(--gecko-info-200);
+  color: var(--gecko-info-700);
+}
+
+.gecko-modal-header-info .gecko-modal-description strong {
+  color: var(--gecko-info-700);
+}
+
+
+/* ------------------------------------------------------------
+   FORM GRID — responsive form layout primitive
+   Usage:
+     <div class="gecko-form-grid gecko-form-grid-2">
+       <div class="gecko-form-group">…field…</div>
+       <div class="gecko-form-group">…field…</div>
+       <div class="gecko-form-group gecko-form-group-full">…wide field…</div>
+     </div>
+   Columns collapse to 1 on tablet (≤900px).
+   ------------------------------------------------------------ */
+
+.gecko-form-grid {
+  display: grid;
+  gap: var(--gecko-space-4) var(--gecko-space-5);
+  grid-template-columns: 1fr;
+}
+
+.gecko-form-grid-2 { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+.gecko-form-grid-3 { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+.gecko-form-grid-4 { grid-template-columns: repeat(4, minmax(0, 1fr)); }
+
+/* A field can opt to span the full row in any grid */
+.gecko-form-group-full   { grid-column: 1 / -1; }
+.gecko-form-group-span-2 { grid-column: span 2; }
+
+@media (max-width: 900px) {
+  .gecko-form-grid-2,
+  .gecko-form-grid-3,
+  .gecko-form-grid-4 {
+    grid-template-columns: 1fr;
+  }
+  .gecko-form-group-span-2 { grid-column: 1 / -1; }
+}
+
 
 /* ------------------------------------------------------------
    5.22 SPINNER / LOADING INDICATOR
