@@ -1429,6 +1429,176 @@
 [data-theme="dark"] .gecko-toast-info    { background: rgba(6,182,212,0.1);  border-color: rgba(6,182,212,0.25);  color: var(--gecko-info-300); }
 [data-theme="dark"] .gecko-toast-neutral { background: var(--gecko-bg-elevated); border-color: var(--gecko-border); }
 
+/* ------------------------------------------------------------
+   Toast inner elements — icon, content, title, message, close
+   Usage:
+     <div class="gecko-toast gecko-toast-success">
+       <span class="gecko-toast-icon">✓</span>
+       <div class="gecko-toast-content">
+         <div class="gecko-toast-title">Saved successfully</div>
+         <div class="gecko-toast-message">Booking EGLV1496… updated.</div>
+       </div>
+       <button class="gecko-toast-close">✕</button>
+       <div class="gecko-toast-progress">
+         <div class="gecko-toast-progress-bar"></div>
+       </div>
+     </div>
+   ------------------------------------------------------------ */
+
+/* Override base layout when inner elements are used: 4-column grid
+   so the progress bar can absorb the bottom row */
+.gecko-toast:has(.gecko-toast-progress) {
+  flex-direction: column;
+  align-items: stretch;
+  padding: 0;
+  gap: 0;
+}
+
+.gecko-toast-body {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  padding: 12px 14px;
+}
+
+.gecko-toast-icon {
+  margin-top: 1px;
+  flex-shrink: 0;
+  color: currentColor;
+  display: inline-flex;
+}
+
+.gecko-toast-content {
+  flex: 1;
+  min-width: 0;
+}
+
+.gecko-toast-title {
+  font-size: var(--gecko-text-sm);
+  font-weight: 700;
+  line-height: 1.3;
+  color: currentColor;
+}
+
+.gecko-toast-message {
+  font-size: var(--gecko-text-xs);
+  color: currentColor;
+  opacity: 0.78;
+  margin-top: 3px;
+  line-height: 1.45;
+}
+
+/* Auto-dismiss progress bar — sits at the bottom of the toast.
+   Width is animated inline by the React component (0%→100% inverse). */
+.gecko-toast-progress {
+  height: 3px;
+  background: color-mix(in srgb, currentColor 15%, transparent);
+}
+
+.gecko-toast-progress-bar {
+  height: 100%;
+  background: currentColor;
+  opacity: 0.7;
+  transition: width 30ms linear;
+}
+
+
+/* ------------------------------------------------------------
+   Modal inner elements — icon, title, description, consequence
+   list, action footer.
+   Usage (danger / delete confirm):
+     <div class="gecko-modal gecko-modal-sm">
+       <div class="gecko-modal-header gecko-modal-header-danger">
+         <span class="gecko-modal-icon"><Icon name="trash" /></span>
+         <div>
+           <div class="gecko-modal-title">Delete Booking</div>
+           <div class="gecko-modal-description">This action is permanent.</div>
+         </div>
+       </div>
+       <div class="gecko-modal-consequences">
+         <div class="gecko-modal-consequences-resource">EGLV1496…</div>
+         <ul class="gecko-modal-consequences-list">
+           <li>8 containers will be removed</li>
+         </ul>
+       </div>
+       <div class="gecko-modal-body">…form fields…</div>
+       <div class="gecko-modal-footer">…buttons…</div>
+     </div>
+   ------------------------------------------------------------ */
+
+/* Icon badge — square coloured tile in the header */
+.gecko-modal-icon {
+  width: 40px;
+  height: 40px;
+  border-radius: var(--gecko-radius-md);
+  background: var(--gecko-error-50);
+  border: 1px solid var(--gecko-error-200);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  color: var(--gecko-error-600);
+}
+
+.gecko-modal-title {
+  font-size: var(--gecko-text-base);
+  font-weight: 700;
+  color: var(--gecko-text-primary);
+  margin-bottom: 4px;
+}
+
+.gecko-modal-description {
+  font-size: var(--gecko-text-xs);
+  color: var(--gecko-text-secondary);
+  line-height: 1.5;
+}
+
+.gecko-modal-description strong {
+  color: var(--gecko-error-700);
+}
+
+/* Header layout when icon + title block are present */
+.gecko-modal-header-danger {
+  align-items: flex-start;
+  gap: 14px;
+}
+
+/* Consequences strip — red banner showing what will be lost */
+.gecko-modal-consequences {
+  padding: 14px 24px;
+  background: var(--gecko-error-50);
+  border-bottom: 1px solid var(--gecko-error-100);
+}
+
+.gecko-modal-consequences-resource {
+  font-size: var(--gecko-text-xs);
+  font-weight: 700;
+  font-family: var(--gecko-font-mono);
+  color: var(--gecko-error-700);
+  margin-bottom: 8px;
+}
+
+.gecko-modal-consequences-list {
+  margin: 0;
+  padding-left: 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.gecko-modal-consequences-list li {
+  font-size: var(--gecko-text-xs);
+  color: var(--gecko-error-700);
+  line-height: 1.5;
+}
+
+/* Modal body — used for form fields under the consequences strip */
+.gecko-modal-body-stack {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
 
 /* ------------------------------------------------------------
    5.22 SPINNER / LOADING INDICATOR
