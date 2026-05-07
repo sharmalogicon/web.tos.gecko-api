@@ -28,7 +28,7 @@ interface EmptyStateProps {
  *   />
  */
 export function EmptyState({
-  icon = 'inbox',
+  icon = 'clipboardList',
   title,
   description,
   action,
