@@ -4,6 +4,7 @@ import { usePagination, TablePagination } from '@/components/ui/TablePagination'
 import { Icon } from '@/components/ui/Icon';
 import { FilterPopover, FilterField, SortOption } from '@/components/ui/FilterPopover';
 import { useToast } from '@/components/ui/Toast';
+import { EmptyState } from '@/components/ui/EmptyState';
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -515,11 +516,11 @@ export default function CountriesPage() {
             {filtered.length === 0 ? (
               <tr>
                 <td colSpan={9}>
-                  <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', padding: '48px 20px', color: 'var(--gecko-text-secondary)' }}>
-                    <Icon name="globe" size={32} style={{ color: 'var(--gecko-text-disabled)', marginBottom: 10 }} />
-                    <div style={{ fontSize: 14, fontWeight: 600 }}>No countries match your filters</div>
-                    <div style={{ fontSize: 12, marginTop: 4 }}>Try adjusting the search or filter criteria.</div>
-                  </div>
+                  <EmptyState
+                    icon="globe"
+                    title="No countries match your filters"
+                    description="Try adjusting the search or region / status filters."
+                  />
                 </td>
               </tr>
             ) : (

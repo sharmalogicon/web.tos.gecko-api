@@ -4,6 +4,7 @@ import Link from 'next/link';
 import { Icon } from '@/components/ui/Icon';
 import { FilterPopover, FilterField, SortOption } from '@/components/ui/FilterPopover';
 import { useToast } from '@/components/ui/Toast';
+import { EmptyState } from '@/components/ui/EmptyState';
 import { usePagination, TablePagination } from '@/components/ui/TablePagination';
 
 const CUSTOMERS = [
@@ -482,6 +483,17 @@ export default function CustomersListPage() {
             </tr>
           </thead>
           <tbody>
+            {filtered.length === 0 && (
+              <tr>
+                <td colSpan={8}>
+                  <EmptyState
+                    icon="search"
+                    title="No customers match the current filters"
+                    description="Try clearing the search query or adjusting role / tier / status filters."
+                  />
+                </td>
+              </tr>
+            )}
             {pageItems.map((c) => (
               <tr key={c.id}>
                 <td>

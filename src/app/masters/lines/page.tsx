@@ -4,6 +4,7 @@ import Link from 'next/link';
 import { Icon } from '@/components/ui/Icon';
 import { FilterPopover, FilterField, SortOption } from '@/components/ui/FilterPopover';
 import { useToast } from '@/components/ui/Toast';
+import { EmptyState } from '@/components/ui/EmptyState';
 import { usePagination, TablePagination } from '@/components/ui/TablePagination';
 
 // ─── New Line Modal Types ──────────────────────────────────────────────────────
@@ -433,6 +434,17 @@ export default function ShippingLinesPage() {
             </tr>
           </thead>
           <tbody>
+            {filtered.length === 0 && (
+              <tr>
+                <td colSpan={10}>
+                  <EmptyState
+                    icon="search"
+                    title="No shipping lines match the current filters"
+                    description="Try clearing the search query or adjusting alliance / status filters."
+                  />
+                </td>
+              </tr>
+            )}
             {pageItems.map((line, i) => (
               <tr key={line.id}>
                 <td>

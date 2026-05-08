@@ -4,6 +4,7 @@ import { usePagination, TablePagination } from '@/components/ui/TablePagination'
 import { Icon } from '@/components/ui/Icon';
 import { FilterPopover, FilterField, SortOption } from '@/components/ui/FilterPopover';
 import { useToast } from '@/components/ui/Toast';
+import { EmptyState } from '@/components/ui/EmptyState';
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -837,10 +838,12 @@ export default function HoldsPage() {
           <tbody>
             {filtered.length === 0 && (
               <tr>
-                <td colSpan={10} style={{ textAlign: 'center', padding: '48px 24px', color: 'var(--gecko-text-secondary)' }}>
-                  <Icon name="filter" size={28} style={{ color: 'var(--gecko-text-disabled)', display: 'block', margin: '0 auto 10px' }} />
-                  <div style={{ fontWeight: 600, fontSize: 14 }}>No holds match the current filters</div>
-                  <div style={{ fontSize: 12, marginTop: 4 }}>Adjust the filters above to see results</div>
+                <td colSpan={10}>
+                  <EmptyState
+                    icon="search"
+                    title="No holds match the current filters"
+                    description="Try clearing the search query or adjusting hold-type / scope filters."
+                  />
                 </td>
               </tr>
             )}

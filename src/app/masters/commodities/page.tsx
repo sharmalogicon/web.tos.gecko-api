@@ -3,6 +3,7 @@ import React, { useState, useMemo } from 'react';
 import { usePagination, TablePagination } from '@/components/ui/TablePagination';
 import { Icon } from '@/components/ui/Icon';
 import { useToast } from '@/components/ui/Toast';
+import { EmptyState } from '@/components/ui/EmptyState';
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -629,10 +630,12 @@ export default function CommoditiesPage() {
           <tbody>
             {filtered.length === 0 ? (
               <tr>
-                <td colSpan={8} style={{ textAlign: 'center', padding: '48px 20px', color: 'var(--gecko-text-secondary)' }}>
-                  <Icon name="search" size={32} style={{ color: 'var(--gecko-text-disabled)', marginBottom: 10, display: 'block', margin: '0 auto 10px' }} />
-                  <div style={{ fontSize: 14, fontWeight: 600 }}>No codes match the current filters</div>
-                  <div style={{ fontSize: 12, marginTop: 4 }}>Try adjusting your search or filter criteria.</div>
+                <td colSpan={8}>
+                  <EmptyState
+                    icon="search"
+                    title="No codes match the current filters"
+                    description="Try adjusting your search or category filters."
+                  />
                 </td>
               </tr>
             ) : (

@@ -4,6 +4,7 @@ import { usePagination, TablePagination } from '@/components/ui/TablePagination'
 import { Icon } from '@/components/ui/Icon';
 import { FilterPopover, FilterField, SortOption } from '@/components/ui/FilterPopover';
 import { useToast } from '@/components/ui/Toast';
+import { EmptyState } from '@/components/ui/EmptyState';
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -658,8 +659,12 @@ export default function PortsListPage() {
             <tbody>
               {displayed.length === 0 && (
                 <tr>
-                  <td colSpan={9} style={{ textAlign: 'center', padding: 32, color: 'var(--gecko-text-disabled)' }}>
-                    No ports match the current filters.
+                  <td colSpan={9}>
+                    <EmptyState
+                      icon="search"
+                      title="No ports match the current filters"
+                      description="Try clearing the search query or adjusting country / type / trade-mode filters."
+                    />
                   </td>
                 </tr>
               )}
