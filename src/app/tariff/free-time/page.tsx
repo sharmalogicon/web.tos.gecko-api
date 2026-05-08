@@ -1,6 +1,7 @@
 "use client";
 import React, { useState } from 'react';
 import { Icon } from '@/components/ui/Icon';
+import { useToast } from '@/components/ui/Toast';
 
 const FREE_TIME_GROUPS = [
   { id: 'FT-IMP-STD', name: 'Standard Import Free Time', baseDays: 3, rules: [
@@ -19,6 +20,7 @@ const FREE_TIME_GROUPS = [
 export default function FreeTimePage() {
   const [selectedPlan, setSelectedPlan] = useState('Public Tariff 2026 (Standard)');
   const [activeGroup, setActiveGroup] = useState(FREE_TIME_GROUPS[0]);
+  const { toast } = useToast();
 
   return (
     <div style={{ maxWidth: 'var(--gecko-container-max)', margin: '0 auto', display: 'flex', flexDirection: 'column', gap: 24, paddingBottom: 40, height: 'calc(100vh - 100px)' }}>
@@ -33,8 +35,8 @@ export default function FreeTimePage() {
           <div style={{ fontSize: 13, color: 'var(--gecko-text-secondary)', marginTop: 4 }}>Define the base free days before storage charges apply, and conditional extensions.</div>
         </div>
         <div className="gecko-toolbar">
-          <button className="gecko-btn gecko-btn-outline gecko-btn-sm"><Icon name="copy" size={16} /> Copy Rules</button>
-          <button className="gecko-btn gecko-btn-primary gecko-btn-sm"><Icon name="save" size={16} /> Save Changes</button>
+          <button className="gecko-btn gecko-btn-outline gecko-btn-sm" onClick={() => toast({ variant: 'info', title: 'Copy Rules', message: 'Rule-copy workflow coming soon.' })}><Icon name="copy" size={16} /> Copy Rules</button>
+          <button className="gecko-btn gecko-btn-primary gecko-btn-sm" onClick={() => toast({ variant: 'success', title: 'Free-time rules saved', message: `${selectedPlan} updated.` })}><Icon name="save" size={16} /> Save Changes</button>
         </div>
       </div>
 
@@ -108,7 +110,7 @@ export default function FreeTimePage() {
 
             <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 16 }}>
               <h3 style={{ fontSize: 16, fontWeight: 700, margin: 0 }}>Conditional Adjustments</h3>
-              <button className="gecko-btn gecko-btn-outline gecko-btn-sm" style={{ background: '#fff' }}><Icon name="plus" size={14} /> Add Rule</button>
+              <button className="gecko-btn gecko-btn-outline gecko-btn-sm" style={{ background: '#fff' }} onClick={() => toast({ variant: 'info', title: 'Add Rule', message: 'Rule builder coming soon.' })}><Icon name="plus" size={14} /> Add Rule</button>
             </div>
 
             <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>

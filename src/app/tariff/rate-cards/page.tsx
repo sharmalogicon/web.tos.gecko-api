@@ -39,7 +39,7 @@ export default function RateCardsPage() {
         </div>
         <div className="gecko-toolbar">
           <button className="gecko-btn gecko-btn-outline gecko-btn-sm" onClick={() => toast({ variant: 'success', title: 'Plan duplicated', message: `Copy of "${selectedPlan}" created as a draft.` })}><Icon name="copy" size={16} /> Duplicate Plan</button>
-          <button className="gecko-btn gecko-btn-primary gecko-btn-sm"><Icon name="save" size={16} /> Save Changes</button>
+          <button className="gecko-btn gecko-btn-primary gecko-btn-sm" onClick={() => toast({ variant: 'success', title: 'Rate card saved', message: `${selectedPlan} updated.` })}><Icon name="save" size={16} /> Save Changes</button>
         </div>
       </div>
 

@@ -4,6 +4,7 @@ import Link from 'next/link';
 import { Icon } from '@/components/ui/Icon';
 import { FilterPopover, FilterField, SortOption } from '@/components/ui/FilterPopover';
 import { ExportButton } from '@/components/ui/ExportButton';
+import { useToast } from '@/components/ui/Toast';
 
 const TARIFF_PLANS = [
   { id: 'TP-2026-PUB', name: 'Public Tariff 2026 (Standard)', type: 'Public', customer: 'All Standard Customers', effective: 'Jan 01, 2026', expiry: 'Dec 31, 2026', status: 'Active' },
@@ -36,6 +37,7 @@ function StatusBadge({ status }: { status: string }) {
 export default function TariffPlansPage() {
   const [filters, setFilters] = useState<Record<string, string>>({ query: '', type: '', status: 'active' });
   const [sortBy, setSortBy] = useState('');
+  const { toast } = useToast();
 
   return (
     <div style={{ maxWidth: 'var(--gecko-container-max)', margin: '0 auto', display: 'flex', flexDirection: 'column', gap: 24, paddingBottom: 40 }}>
@@ -61,7 +63,7 @@ export default function TariffPlansPage() {
             sortValue={sortBy}
             onSortChange={setSortBy}
           />
-          <button className="gecko-btn gecko-btn-primary gecko-btn-sm"><Icon name="plus" size={16} /> New Tariff Schedule</button>
+          <button className="gecko-btn gecko-btn-primary gecko-btn-sm" onClick={() => toast({ variant: 'info', title: 'New Tariff Schedule', message: 'Schedule creation form coming soon.' })}><Icon name="plus" size={16} /> New Tariff Schedule</button>
         </div>
       </div>
 
