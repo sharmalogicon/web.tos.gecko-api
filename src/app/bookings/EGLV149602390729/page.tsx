@@ -66,6 +66,22 @@ const CONTAINERS: Container[] = [
     movements: [{ code: 'FULL IN', txNo: '', date: '', status: false, yard: '', truck: '' }, { code: 'LOAD', txNo: '', date: '', status: false, yard: '', truck: '' }], vas: [] },
 ];
 
+// Template for a brand-new container — opened when "Add Container" is clicked
+const BLANK_CONTAINER: Container = {
+  id: 0, containerNo: '', size: '40', type: 'HC', grade: 'NONE',
+  containerMode: 'CY', haulage: 'MERCHANT', pickupDate: '2026-04-23',
+  imoClass: null, unNo: '', cargoCategory: 'GENERAL',
+  weight: 0, volume: 0, sealAgent: '', sealCustomer: '',
+  temperature: null, temperatureMode: null,
+  vent: null, ventMode: null, humidity: null, preCool: '',
+  stowage: 0, remarks: '',
+  movements: [
+    { code: 'FULL IN', txNo: '', date: '', status: false, yard: '', truck: '' },
+    { code: 'LOAD',    txNo: '', date: '', status: false, yard: '', truck: '' },
+  ],
+  vas: [],
+};
+
 const AUDIT_LOG = [
   { by: 'SOMPORN',     on: '2026-04-23T11:46', action: 'Modified vessel details',         field: 'Voyage No → 0344-022B' },
   { by: 'SOMPORN',     on: '2026-04-23T11:30', action: 'Added container #15',             field: 'EITU9845677 · 40HC' },
@@ -523,7 +539,7 @@ function TabVoyage() {
   );
 }
 
-function TabContainers({ onSelectContainer }: { onSelectContainer: (c: Container) => void }) {
+function TabContainers({ onSelectContainer, onAddContainer }: { onSelectContainer: (c: Container) => void; onAddContainer: () => void }) {
   const [selected, setSelected] = useState<Set<number>>(new Set());
   const [search, setSearch] = useState('');
 
@@ -571,7 +587,7 @@ function TabContainers({ onSelectContainer }: { onSelectContainer: (c: Container
               <button className="gecko-btn gecko-btn-ghost gecko-btn-sm" style={{ padding: '2px 8px', fontSize: 11, color: 'var(--gecko-danger-600)' }}><Icon name="trash" size={12} /> Delete</button>
             </div>
           )}
-          <button className="gecko-btn gecko-btn-primary gecko-btn-sm"><Icon name="plus" size={13} /> Add Container</button>
+          <button className="gecko-btn gecko-btn-primary gecko-btn-sm" onClick={onAddContainer}><Icon name="plus" size={13} /> Add Container</button>
         </div>
       </div>
 
@@ -885,7 +901,12 @@ export default function BookingDetailPage() {
           {/* Tab content */}
           <div style={{ background: 'var(--gecko-bg-surface)' }}>
             {activeTab === 'voyage'     && <TabVoyage />}
-            {activeTab === 'containers' && <TabContainers onSelectContainer={c => setDrawerContainer(c)} />}
+            {activeTab === 'containers' && (
+              <TabContainers
+                onSelectContainer={c => setDrawerContainer(c)}
+                onAddContainer={() => setDrawerContainer({ ...BLANK_CONTAINER, id: Date.now() })}
+              />
+            )}
             {activeTab === 'cargo'      && <TabCargo />}
             {activeTab === 'audit'      && <TabAudit />}
           </div>
@@ -950,7 +971,7 @@ export default function BookingDetailPage() {
             <div style={{ fontSize: 10, fontWeight: 800, textTransform: 'uppercase', letterSpacing: '0.08em', color: 'var(--gecko-text-disabled)', marginBottom: 10 }}>Quick Actions</div>
             <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
               {[
-                { icon: 'plus',       label: 'Add Container',           action: () => setActiveTab('containers') },
+                { icon: 'plus',       label: 'Add Container',           action: () => { setActiveTab('containers'); setDrawerContainer({ ...BLANK_CONTAINER, id: Date.now() }); } },
                 { icon: 'transferH',  label: 'Transfer Containers',      action: () => {} },
                 { icon: 'edit',       label: 'Change Order Type',        action: () => {} },
                 { icon: 'fileText',   label: 'View Billing Statement',   action: () => {} },
