@@ -1,203 +1,348 @@
 # Gecko Platform — Architecture
 
-> Single source of truth for "how Gecko is built." Every backend decision should
-> reference this document. Update it when a decision changes — do **not** let
-> the codebase drift away from this doc.
+> Single source of truth. Update when decisions change — do not let the
+> codebase drift away from this doc.
 
 **Last updated:** 2026-05-08
-**Owner:** Sharma (founding engineer)
-**Status:** Locked for Phase 1 (Master Data). Re-review before Phase 2.
+**Owner:** Sharma (founding architect)
+**Status:** Locked for Phase 1 (Identity + Master Data). Re-review before Phase 2.
 
 ---
 
 ## 1. Mission
 
-Build a SaaS Terminal Operating System platform that competes with NAVIS N4,
-CargoWise One, and Envision — by being **modern, open, modular, and affordable
-for SMEs and mid-tier terminals**, without sacrificing the operational depth
-the giants are known for.
+SaaS Terminal Operating System platform competing with NAVIS N4, CargoWise One,
+and Envision — modern, open, modular, SME-affordable, **SEA-native** (Thailand,
+Malaysia, Singapore, Indonesia, Vietnam, Philippines), without sacrificing the
+operational depth the giants are known for.
+
+Target customer profile (Phase 1):
+- Inland Container Depots (ICDs): LCB ICD, Westports ICDs, Tanjung Priok hinterland
+- Off-dock terminals and CFS operators
+- Mid-tier 3PLs running depot + trucking + M&R combined
+- Forwarders subscribing to EDI-only
+- Container-trucking operators wanting integrated dispatch + fleet
 
 ---
 
 ## 2. Locked Stack Decisions
 
-| Layer | Choice | Why |
-|-------|--------|-----|
-| Frontend | **Next.js 16 (App Router) + TypeScript** | Already built. Modern, SSR-capable, great DX. |
-| API | **ASP.NET Core 9** | Strong typing, EF Core, best SQL Server integration, .NET ecosystem maturity. |
-| Background workers | **.NET Worker Service** | Hosted services + Service Bus consumers + scheduled jobs in one process. |
-| ORM | **EF Core 9** (default) + **Dapper** (hot read paths) | EF for command/write side, Dapper for query/read side. |
-| Database | **Azure SQL — Elastic Pool, DB-per-tenant per module** | Tenant isolation; pool keeps cost manageable. |
-| Cache | **Azure Cache for Redis** | Distributed cache, session store, rate limiting, pub/sub. |
-| Inter-module bus (in-process) | **MediatR** | Single deployable, fast, transactional. |
-| Inter-module bus (cross-process) | **Azure Service Bus** + **MassTransit** | Durable, DLQ, sessions, mature .NET SDK. |
-| Auth | **Azure AD B2C** | OIDC, SAML, MFA, enterprise SSO out of the box. |
-| Edge | **Azure Front Door (Standard)** | TLS, WAF, geo-routing. APIM added later for the developer portal. |
-| Hosting | **Azure Container Apps** (now) → **AKS** (later when complexity warrants) | Managed Kubernetes lite without cluster ops. |
-| Observability | **Application Insights** + **Log Analytics** | Single workspace across all modules. |
-| Object storage | **Azure Blob Storage** | EDI payloads, EIR scans, repair photos, generated PDFs. |
-| Search | **Azure AI Search** (Phase 3+) | Cross-module global search by container/booking. |
-| Functions | **Azure Functions** (sparingly) | Webhooks, scheduled jobs, file-drop EDI parsers only. |
-| CI/CD | **GitHub Actions** + Azure deploy tasks | One workflow per module; build once, deploy to all envs. |
+| Layer | Choice |
+|-------|--------|
+| Frontend | **Next.js 16 (App Router) + TypeScript** |
+| API | **ASP.NET Core 9** |
+| Background workers | **.NET Worker Service** |
+| ORM | **EF Core 9** (commands/writes) + **Dapper** (hot reads, reports) |
+| Database | **Azure SQL — Elastic Pools, DB-per-tenant per module** |
+| Cache | **Azure Cache for Redis** |
+| Inter-module bus, in-process | **MediatR** |
+| Inter-module bus, cross-process | **Azure Service Bus** + **MassTransit** |
+| Auth | **Azure AD B2C** (OIDC + SAML, MFA, custom policies) |
+| Edge | **Azure Front Door (Standard)** → APIM later for the developer portal |
+| Hosting | **Azure Container Apps** (now) → AKS only when warranted |
+| Observability | **Application Insights** + **Log Analytics**, OpenTelemetry traces |
+| Object storage | **Azure Blob Storage** |
+| Search | **Azure AI Search** (Phase 3+) |
+| Functions | **Azure Functions** — webhooks, scheduled jobs, file-drop EDI parsers |
+| CI/CD | **GitHub Actions** + Azure deploy tasks |
 
-### Decisions explicitly **not** chosen, and why
+### Decisions explicitly NOT chosen
 
 | Rejected | Reason |
 |----------|--------|
-| Microservices from day 1 | Operational overhead kills solo-dev velocity. Monolith first; extract later. |
-| Self-managed Kubernetes (AKS) immediately | Cluster ops = 200+ hours/year of work. Container Apps gives the same K8s without it. |
-| Self-managed Nginx for edge | Front Door is managed, cheaper than the labour. |
-| PostgreSQL | SQL Server muscle memory + existing data + ecosystem. Switching engine while doing SaaS migration = 3 changes at once = failure. |
-| Roll-your-own JWT auth | 4–6 weeks of dev + ongoing security tax. Azure AD B2C handles SSO/MFA/audit/compliance. |
-| Node.js for the API | Two languages for business logic = bug surface. C# wins for SQL Server-heavy workloads. |
-| GraphQL | OpenAPI/REST is enough; GraphQL adds complexity for a single-frontend app. Reconsider in Phase 4 if integrators demand it. |
+| Microservices from day 1 | Solo dev. Modular monolith with strict module boundaries first; extract later when scale demands. |
+| Self-managed AKS at the start | 200+ hours/year of cluster ops we don't need to pay yet. |
+| Self-managed Nginx | Front Door is cheaper than the labour. |
+| PostgreSQL | Switching engine + adding SaaS multi-tenancy + redesigning schema = three changes at once = failure pattern. |
+| Roll-your-own JWT | 4–6 weeks dev + ongoing security tax. AD B2C handles SSO/MFA/SAML/audit/compliance out of box. |
+| Node.js for the API | Two-language business logic = bug surface. EF Core + SQL Server = best in class with C#. |
+| GraphQL | OpenAPI/REST is enough for one frontend. Reconsider in Phase 4 if integrators demand it. |
 
 ---
 
 ## 3. Modules
 
+### Module taxonomy
+
+The platform has three tiers, **and the Master tier is its own bounded context** —
+not a sub-domain of TOS.
+
+```
+Tier 1 — PLATFORM (1 instance, shared globally across all tenants)
+├── Identity              — users, roles, MFA secrets, tenant memberships
+├── Subscription          — which modules each tenant has access to
+├── Audit Log             — every state change across all modules + tenants
+├── Notifications         — email / push / in-app
+├── Reference Data        — countries, currencies, FX rates, time zones,
+│                           UN/LOCODE catalog, ISO codes, holiday calendars
+└── File Storage          — Blob abstractions, signed URLs, retention policy
+
+Tier 2 — MASTER (per tenant, foundation for all operational modules)
+└── Master Data           — customers, lines, vessels, ports, container types,
+                            charge codes, commodities, locations, holds,
+                            order types, lookups (per-tenant business reference)
+
+Tier 3 — OPERATIONAL (per tenant, per module — only created if subscribed)
+├── TOS                   — bookings, movements, yard, gate, CFS, billing
+├── EDI Hub               — message inbox/outbox, partner configs, templates
+├── Trucking & Haulage    — dispatch, trips, drivers, fuel
+├── Fleet                 — vehicle registry, preventive maintenance
+└── Equipment M & R       — damage inspection, repair work orders, chargeback
+```
+
+### Module dependency graph
+
+```
+                 ┌────────────────────────┐
+                 │   PLATFORM (shared)     │
+                 │   Identity, Subs,       │
+                 │   Audit, RefData, ...   │
+                 └───────────┬─────────────┘
+                             │
+                             ▼
+                 ┌────────────────────────┐
+                 │   MASTER (per tenant)   │
+                 │   customers, lines,     │
+                 │   ports, vessels, ...   │
+                 └───────────┬─────────────┘
+                             │
+        ┌────────┬───────────┼───────────┬────────┐
+        ▼        ▼           ▼           ▼        ▼
+      [TOS]    [EDI]    [Trucking]    [Fleet]   [M&R]
+   (per ten)  (per ten) (per ten)    (per ten) (per ten)
+```
+
+**Operational modules read Master via API or replicated read-model.** They never
+join across DBs. Master is the source of truth for `customer.id`, `line.code`,
+`port.locode`, `vessel.imo`, `container_type.iso_code`, etc.
+
+### Module-specific extensions of master entities
+
+A `customer` in Master DB carries the **base record**: code, name, country,
+contact. Each operational module that consumes a customer has its own
+**extension table** in its own DB, joined by `customer_id`:
+
+```
+Master DB:
+  customers           (id, code, name, country, ...)
+
+TOS DB:
+  customer_extensions (customer_id, credit_limit, default_tariff_id,
+                       bill_to_role, consignee_role, ...)
+
+Trucking DB:
+  customer_extensions (customer_id, billing_rate_card_id,
+                       preferred_driver_id, payment_terms_days, ...)
+
+M&R DB:
+  customer_extensions (customer_id, damage_chargeback_rule,
+                       preferred_repair_grade, ...)
+```
+
+Same pattern for `vessels` (TOS extends with stowage params, EDI extends with
+partner mappings), `ports` (TOS extends with local lift charges, Trucking
+extends with trip-time defaults), and so on.
+
 ### Phase scope
-- **Phase 1 (now):** TOS — Master Data
-- **Phase 2:** TOS — Booking, Yard, Gate
-- **Phase 3:** TOS — Billing & Statement
-- **Phase 4:** EDI Hub
-- **Phase 5:** Trucking & Haulage
-- **Phase 6:** Equipment Maintenance & Repair (M&R)
-- **Phase 7:** Fleet
 
-### Modules at a glance
-
-```
-GECKO PLATFORM (one tenant fabric)
-├── PLATFORM SERVICES (cross-cutting, shared platform DB)
-│   ├── Identity & Auth        — users, roles, SSO
-│   ├── Subscription & Billing — which modules each tenant has
-│   ├── Audit Log              — every action across modules
-│   ├── Notifications          — email/push
-│   ├── Reference Data         — countries, currencies, time zones, FX
-│   └── File Storage proxy     — Azure Blob abstractions
-│
-├── TOS                          — master data, booking, yard, gate, CFS, billing
-├── EDI Hub                      — COPARN, CODECO, COARRI, BAPLIE, MOVINS, CUSCAR
-├── Trucking & Haulage           — dispatch, trips, drivers, fuel, billing
-├── Fleet                        — vehicle registry, preventive maintenance
-└── Equipment M & R              — damage inspection, repair work orders, chargeback
-```
-
-### Module ownership
-
-Each module:
-- Owns its database (per tenant — see Tenancy)
-- Owns its API surface (`/api/v1/{module}/...`)
-- Owns its events (publishes to topics it owns)
-- Subscribes to events from other modules via clear contracts
-- **Never** queries another module's database directly. Always via API or event.
+| Phase | Scope | Output |
+|-------|-------|--------|
+| 1 | Platform (Identity, Subs, RefData) + Master DB schema + tenant onboarding | Self-service tenant provisioning works |
+| 2 | TOS — booking, yard, gate, CFS | First operational tenant runs gate-in/out |
+| 3 | TOS — billing, statement, invoicing | Charges → invoices → receipts |
+| 4 | EDI Hub — COPARN, CODECO, COARRI, BAPLIE, IFTMIN, CUSCAR | Live partner connection |
+| 5 | Trucking & Haulage | Dispatch + trip lifecycle integrated with TOS |
+| 6 | Equipment M & R | Damage inspection → work order → chargeback |
+| 7 | Fleet | Vehicle registry + preventive maintenance |
 
 ---
 
-## 4. Tenancy Model
+## 4. Tenancy & Database Topology
 
-### Strategy: **DB-per-tenant per module**, pooled with Azure SQL Elastic Pools
+### The model
 
 ```
-Platform DB (1, shared, global)
-├── tenants
-├── users
-├── roles
-├── tenant_subscriptions    (which modules each tenant has access to)
-└── reference_data
+GLOBAL SHARED  (1 instance each, multi-region replicated)
+─────────────────────────────────────────────────────────
+gecko_platform     — tenants, tenant_subscriptions, modules,
+                     reference_data (countries, currencies, FX rates,
+                     UN/LOCODE, time zones, holidays)
+gecko_identity     — users, roles, role_permissions, tenant_users
+                     (junction — a user can belong to multiple tenants),
+                     mfa_secrets, password_history
+gecko_audit        — append-only event store of every action across
+                     all tenants + modules (write-only from apps,
+                     read by audit reports)
 
-Per-module, per-tenant DBs (N tenants × M modules)
-├── tos_lcb_icd
-├── tos_sct
-├── edi_lcb_icd
-├── edi_sct
-├── trucking_lcb_icd
-└── ...
+PER TENANT  (N tenants × M subscribed modules, in Azure SQL Elastic Pools)
+─────────────────────────────────────────────────────────
+master_<tenant>    — Always provisioned. Tenant's business reference data.
+                     customers, lines, vessels, ports, container_types,
+                     charge_codes, commodities, locations, holds,
+                     order_types, lookups.
+
+tos_<tenant>       — Provisioned if tenant subscribes to TOS.
+                     bookings, units, movements, yard slots, gate visits,
+                     cfs_operations, charges, invoices, statements.
+
+edi_<tenant>       — Provisioned if tenant subscribes to EDI.
+                     edi_messages (raw + parsed), partners, templates,
+                     transmission_log, dlq.
+
+trucking_<tenant>  — Provisioned if tenant subscribes to Trucking.
+                     trips, dispatch_plans, drivers, fuel_log.
+
+fleet_<tenant>     — Provisioned if tenant subscribes to Fleet.
+                     vehicles, maintenance_schedules, service_records.
+
+mnr_<tenant>       — Provisioned if tenant subscribes to M&R.
+                     work_orders, damage_records, parts_inventory,
+                     repair_estimates.
 ```
 
-### Why DB-per-tenant
-- **Hard isolation** — accidental cross-tenant leaks impossible at the DB layer
-- **Per-tenant scale** — noisy neighbour problem solved
-- **Per-tenant backup/restore** — compliance-friendly
-- **Per-tenant region** — Thai tenant DB in `southeastasia`, Singapore tenant in `singapore`
-- **Elastic pools** — many small DBs share resources, cost-effective at idle
+### Subscription bundles — what each tenant actually gets
 
-### Defense in depth
+| Bundle | Use case | DBs |
+|--------|----------|-----|
+| **EDI-only** | Forwarder integrating with carriers | gecko_platform + gecko_identity + gecko_audit + master + edi |
+| **Depot Lite** | Small ICD running depot ops | + tos |
+| **Depot + EDI** | Mid-tier ICD with carrier EDI | + tos + edi |
+| **Trucking-only** | Haulage operator with fleet | + trucking + fleet |
+| **Full Stack** | Full terminal (e.g., LCB ICD) | + tos + edi + trucking + fleet + mnr |
+
+### Why this topology
+
+| Concern | How it's addressed |
+|---------|-------------------|
+| Tenant isolation (legal & technical) | Hard isolation at DB level. Cross-tenant query is physically impossible. |
+| Per-tenant scale (noisy neighbour) | Each tenant's DTU is theirs. Heavy users don't impact others. |
+| Per-tenant region / data residency | Tenant DBs deployable in their preferred Azure region. PDPA / UU PDP / Cybersecurity Law compliant by construction. |
+| Per-tenant backup / restore | Native Azure SQL point-in-time per DB. Restore one tenant without touching others. |
+| Module subscription | A tenant without M&R subscription has no `mnr_<tenant>` DB. Zero cost, zero exposure. |
+| Schema migration N-fold cost | EF Migrations + automated rollout pipeline. New schema deployed across all tenant DBs in parallel via deploy job. |
+| Cross-tenant analytics (platform-level) | Audit DB + Reference Data DB are global. Platform-level dashboards (active tenants, revenue, support tickets) query these. Operational cross-tenant analytics not supported by design — that's a feature. |
+| Cross-tenant user (consultant, auditor) | `gecko_identity.tenant_users` junction. One sign-in, switch tenant in UI. |
+
+### Defense in depth — three layers of tenant isolation
+
 1. **EF Core global query filters** auto-inject `WHERE tenant_id = @currentTenant`
-   ```csharp
-   modelBuilder.Entity<Customer>().HasQueryFilter(c => c.TenantId == _tenantContext.Id);
-   ```
-2. **SQL Server Row-Level Security** as the second line — DB rejects cross-tenant queries even if EF filter is bypassed
-3. **Tenant context** comes from JWT claims — set by middleware before any controller code runs
+2. **SQL Server Row-Level Security policies** enforce the same at the DB layer
+3. **Tenant routing at connection level** — `IDbConnectionResolver` picks the
+   correct per-tenant DB connection string based on `JWT.tid` claim, before
+   any query runs
+
+If any of layers 1–3 is bypassed, the others still hold. Belt + suspenders +
+seatbelt.
 
 ### Tenant resolution flow
+
 ```
-Request → JWT validated → Claims read → Tenant resolved →
-  ITenantContext.SetCurrent(tenantId) → DbContext picks correct connection string
-  → All queries auto-filtered.
+Incoming HTTP request
+  ↓
+Front Door (TLS, WAF)
+  ↓
+Container App (Gecko.Api)
+  ↓
+Auth middleware:
+  - Validate JWT against AD B2C
+  - Extract claims: sub (user_id), tid (tenant_id), modules[], roles[]
+  ↓
+Tenancy middleware:
+  - ITenantContext.SetCurrent(tid)
+  - Verify tenant subscription includes the module being called
+    (return 403 if not — "Your subscription doesn't include EDI Hub")
+  ↓
+Connection resolver:
+  - Lookup connection string for `<module>_<tenant>` from secrets
+  - Cached for request scope
+  ↓
+DbContext factory:
+  - Returns ModuleDbContext bound to the resolved connection
+  - Global query filters auto-applied
+  ↓
+MediatR handler runs
 ```
+
+This entire flow is transparent to handler code. Handlers just inject
+`IXxxDbContext` and write business logic. The framework handles tenancy.
 
 ---
 
-## 5. Module Communication Patterns
+## 5. Inter-Module Communication
 
-### Pattern 1 — Domain Events (asynchronous, primary)
+Three patterns, used together:
 
-When state changes in a module, it **publishes an event**. Other modules subscribe.
+### 5.1 Domain Events (asynchronous, primary)
 
-| Source | Event | Subscribers |
-|--------|-------|-------------|
-| TOS | `container.gated_in` | EDI (CODECO), Billing (auto-charge Lift-In), M&R (queue inspection) |
-| TOS | `container.gated_out` | EDI (CODECO), Trucking (close trip), Billing (Lift-Out) |
-| TOS | `container.loaded` | EDI (COARRI), Billing (stop storage accrual) |
-| EDI | `coparn.received` | TOS (create booking), Trucking (pre-create dispatch) |
-| EDI | `baplie.received` | TOS (voyage stowage plan) |
-| Trucking | `trip.completed` | TOS (gate-out confirmation), Fleet (mileage), Billing (haulage charge) |
-| M&R | `repair.completed` | TOS (release container), Billing (cost recovery) |
-| Fleet | `vehicle.in_maintenance` | Trucking (dispatch availability update) |
+Source publishes, subscribers react. Cross-DB consistency is **eventual** —
+acceptable for everything except in-transaction atomicity.
 
-### Pattern 2 — REST APIs (synchronous queries)
+| Source → event | Subscribers |
+|---------------|-------------|
+| TOS → `container.gated_in` | EDI (CODECO), Billing (Lift-In auto-charge), M&R (queue inspection if customs hold), Audit |
+| TOS → `container.gated_out` | EDI (CODECO), Trucking (close trip), Billing (Lift-Out), Audit |
+| TOS → `container.loaded` | EDI (COARRI), Billing (stop storage accrual), Audit |
+| TOS → `booking.created` | EDI (draft COPARN), Trucking (pre-create dispatch slot), Audit |
+| EDI → `coparn.received` | TOS (create/update booking), Trucking (pre-create dispatch), Audit |
+| EDI → `baplie.received` | TOS (voyage stowage plan), Audit |
+| EDI → `cuscar.acked` | TOS (clear customs hold if successful), Audit |
+| Trucking → `trip.completed` | TOS (gate-out), Fleet (mileage), Billing (haulage charge), Audit |
+| M&R → `repair.completed` | TOS (release container), Billing (cost recovery to line), Audit |
+| Fleet → `vehicle.in_maintenance` | Trucking (dispatch availability), Audit |
+| Master → `customer.updated` | TOS (refresh extension cache), Trucking (refresh), Billing (refresh) |
 
-Each module exposes versioned APIs (`/api/v1/{module}/...`). OpenAPI/Swagger
-docs published per module. Authenticated via Azure AD B2C JWT.
+### 5.2 Synchronous REST queries
 
-```
-Trucking → GET /api/v1/tos/bookings/{no}     — current booking state
-Fleet    → GET /api/v1/trucking/vehicles      — truck registry
-TOS      → GET /api/v1/edi/messages?ref={no}  — EDI events for this booking
-Any      → GET /api/v1/identity/users/me      — current user info
-```
+When module A needs **current state** from module B:
 
-### Pattern 3 — Outbox (reliability)
+| Caller → Callee | Example |
+|-----------------|---------|
+| Trucking → TOS | `GET /api/v1/tos/bookings/{no}` — current booking state |
+| TOS → EDI | `GET /api/v1/edi/messages?reference={bookingNo}` — message history |
+| Any → Master | `GET /api/v1/master/customers/{id}` — customer lookup |
+| Any → Identity | `GET /api/v1/identity/users/{id}` — user info |
 
-State changes write to **outbox table in same DB transaction** as the
+Each module exposes versioned APIs (`/api/v1/`, `/api/v2/`). OpenAPI specs
+published per module.
+
+### 5.3 Read replicas / cached projections
+
+For read-hot data that doesn't need to be exactly current:
+- Each module caches Master Data lookups (charge codes, ports, container types)
+  in **Redis** with TTL of 5 min and pub/sub invalidation on `*.updated` events
+- TOS keeps a denormalized projection of relevant Master data via event
+  subscription — no synchronous Master API call on the hot booking path
+
+### 5.4 Outbox pattern (reliability)
+
+State changes write to an **`outbox` table in the same DB transaction** as the
 business write. A relay process polls the outbox and publishes to Service Bus,
 marking rows published. Solves the dual-write problem.
 
 ```sql
--- Per-module DB
 CREATE TABLE outbox (
-  id UNIQUEIDENTIFIER PRIMARY KEY DEFAULT NEWID(),
+  id UNIQUEIDENTIFIER PRIMARY KEY DEFAULT NEWSEQUENTIALID(),
   tenant_id UNIQUEIDENTIFIER NOT NULL,
   topic NVARCHAR(100) NOT NULL,
   event_type NVARCHAR(200) NOT NULL,
+  event_version INT NOT NULL,
   payload NVARCHAR(MAX) NOT NULL,
+  correlation_id UNIQUEIDENTIFIER NULL,
+  causation_id UNIQUEIDENTIFIER NULL,
   created_at DATETIMEOFFSET NOT NULL DEFAULT SYSDATETIMEOFFSET(),
   published_at DATETIMEOFFSET NULL,
   attempts INT NOT NULL DEFAULT 0,
+  last_error NVARCHAR(MAX) NULL,
   INDEX ix_outbox_unpublished (published_at) WHERE published_at IS NULL
 );
 ```
 
-The outbox publisher runs in `Gecko.Worker`, every 1–2 seconds, batched.
+### 5.5 Idempotency
 
-### Idempotency
-
-Every state-changing endpoint accepts an `Idempotency-Key` header.
-The handler stores the key + result; replays return the cached result.
-Critical for reliable event processing — consumers can retry without
-double-applying.
+Every state-changing endpoint accepts an `Idempotency-Key` header. The
+handler stores the key + result in a per-module `idempotency_log` table.
+Replays return the cached result. Critical for unreliable mobile networks
+(gate clerks on tablets in poor coverage).
 
 ---
 
@@ -207,16 +352,25 @@ double-applying.
 gecko-api/
 ├── src/
 │   ├── shared/
-│   │   ├── Gecko.SharedKernel              — DDD primitives (Entity, ValueObject, DomainEvent)
-│   │   ├── Gecko.SharedInfra                — EF Core base, Outbox, EventBus, Tenant resolver
-│   │   └── Gecko.SharedContracts            — DTOs + event contracts (referenced by all modules)
+│   │   ├── Gecko.SharedKernel              — DDD primitives (Entity, ValueObject,
+│   │   │                                     DomainEvent, Result<T>, etc.)
+│   │   ├── Gecko.SharedInfra                — EF base, Outbox, EventBus,
+│   │   │                                     Tenant resolver, Idempotency
+│   │   └── Gecko.SharedContracts            — DTOs + event contracts
+│   │                                          (referenced by every module)
 │   │
 │   ├── platform/
 │   │   ├── Gecko.Platform.Identity.{Domain,Application,Infrastructure}
 │   │   ├── Gecko.Platform.Subscription.{Domain,Application,Infrastructure}
 │   │   ├── Gecko.Platform.Audit.{Domain,Application,Infrastructure}
 │   │   ├── Gecko.Platform.Notifications.{Domain,Application,Infrastructure}
-│   │   └── Gecko.Platform.ReferenceData.{Domain,Application,Infrastructure}
+│   │   ├── Gecko.Platform.ReferenceData.{Domain,Application,Infrastructure}
+│   │   └── Gecko.Platform.FileStorage.{Domain,Application,Infrastructure}
+│   │
+│   ├── master/
+│   │   └── Gecko.Master.{Domain,Application,Infrastructure}
+│   │       — customers, lines, vessels, ports, container_types, charge_codes,
+│   │         commodities, locations, holds, order_types, lookups
 │   │
 │   ├── modules/
 │   │   ├── Gecko.Tos.{Domain,Application,Infrastructure}
@@ -226,48 +380,52 @@ gecko-api/
 │   │   └── Gecko.Mnr.{Domain,Application,Infrastructure}
 │   │
 │   ├── hosts/
-│   │   ├── Gecko.Api                        — ASP.NET Core host (HTTP)
+│   │   ├── Gecko.Api                        — ASP.NET Core HTTP host
 │   │   └── Gecko.Worker                     — Worker Service (background)
 │   │
 │   └── functions/
-│       └── Gecko.Functions.EdiInbound       — Webhook + file-drop EDI receivers
+│       ├── Gecko.Functions.EdiInbound       — Webhook + file-drop EDI receivers
+│       └── Gecko.Functions.CustomsInbound   — Customs SW callbacks
+│                                              (TradeNet, NSW, INSW, VNACCS)
 │
 ├── tests/
-│   ├── Gecko.Tos.Tests
-│   ├── Gecko.Edi.Tests
-│   └── ...
+│   ├── unit/                                — fast, no I/O
+│   ├── integration/                         — Testcontainers for SQL + Service Bus
+│   └── contract/                            — API contract tests per module
 │
 ├── deploy/
-│   ├── docker/                              — Dockerfile per host
-│   ├── azure/                               — Bicep / ARM templates
-│   └── github-actions/                      — CI/CD workflows
+│   ├── docker/
+│   ├── azure/                               — Bicep
+│   ├── github-actions/
+│   └── tenant-provisioning/                 — scripts to create new tenant DBs
 │
 ├── docs/
-│   ├── ARCHITECTURE.md                      — this doc
-│   ├── DOMAIN-MODEL.md                      — entity diagrams per module
-│   ├── API-CONVENTIONS.md                   — REST conventions, error shapes
-│   └── ADRS/                                — architecture decision records
+│   ├── ARCHITECTURE.md                      (this doc)
+│   ├── DOMAIN-MODEL.md                      (per-module entity diagrams)
+│   ├── API-CONVENTIONS.md
+│   ├── EDI-MESSAGE-CATALOG.md
+│   ├── CUSTOMS-INTEGRATION.md
+│   └── adrs/
 │
 └── gecko.sln
 ```
 
-### Per-module layering
+### Per-module layering (clean architecture)
 
 ```
 {Module}.Domain
-  └── Entities, value objects, domain events, repository interfaces.
-      Pure C#, no infrastructure references.
+  └── Pure C#. Entities, value objects, domain events, repository interfaces.
+      No infrastructure references. No EF. No HTTP.
 
 {Module}.Application
-  └── MediatR command/query handlers, business logic, validators.
-      Depends on Domain only.
+  └── MediatR command/query handlers, business logic, validators (FluentValidation),
+      domain event dispatch. Depends on Domain only.
 
 {Module}.Infrastructure
-  └── EF Core DbContext, repository implementations, external service
-      adapters. Depends on Application + Domain.
+  └── EF Core DbContext, repository implementations, external service adapters,
+      message bus consumers/producers. Depends on Application + Domain.
 
-Hosts (Gecko.Api, Gecko.Worker) wire all modules' Infrastructure
-into the runtime via IModuleStartup contract.
+Hosts (Gecko.Api, Gecko.Worker) wire everything via the IModuleStartup contract.
 ```
 
 ### IModuleStartup
@@ -275,66 +433,63 @@ into the runtime via IModuleStartup contract.
 ```csharp
 public interface IModuleStartup
 {
+    string Name { get; }
+    string ApiVersion { get; }
     void RegisterServices(IServiceCollection services, IConfiguration config);
     void MapEndpoints(IEndpointRouteBuilder endpoints);
     void RegisterEventConsumers(IBusRegistrationConfigurator bus);
 }
 ```
 
-Each module implements once. Adding a new module = create the projects + add
-one line to `Program.cs`. **No circular references between modules.**
+Adding a new module = add the projects + register `IModuleStartup` in
+`Program.cs`. **No circular references between modules.** Static analyzer
+enforced via NetArchTest in CI.
 
 ---
 
 ## 7. Identity & Auth
 
-### Provider: **Azure AD B2C**
+### Provider: Azure AD B2C with custom policies
 
-- OIDC + SAML for enterprise SSO
-- Built-in MFA, password reset, social login (if needed)
-- Custom policies for tenant-scoped sign-up
-- JWT access tokens (short-lived, 1 hour)
-- Refresh tokens managed by client SDK
+- OIDC + SAML for enterprise SSO (terminals integrating with their corporate AD)
+- MFA, password reset, social login (when relevant for SME tenants)
+- Custom policies for tenant-scoped sign-up and tenant-switching
+- JWT access tokens (1 hour TTL), refresh tokens managed by client SDK
+
+### Tenant membership model
+
+```sql
+-- gecko_identity.users          : the user identity (1 record per person)
+-- gecko_identity.tenants        : not duplicated; FK to gecko_platform.tenants
+-- gecko_identity.tenant_users   : many-to-many junction
+--   user_id, tenant_id, default_tenant (bool), created_at
+
+-- A user can belong to multiple tenants (consultants, auditors,
+-- multi-terminal operators). UI shows tenant switcher in header.
+```
 
 ### JWT claims contract
 
 ```json
 {
   "sub": "user-id-uuid",
-  "tid": "tenant-id-uuid",
-  "tnm": "Laem Chabang ICD",
-  "roles": ["dispatcher", "tos-operator"],
-  "modules": ["tos", "edi"],
+  "tid": "tenant-id-uuid",         // currently active tenant
+  "tnm": "LCB ICD",
+  "tids": ["...", "..."],          // all tenants the user can access
+  "modules": ["tos", "edi"],       // modules subscribed by current tenant
+  "roles": ["dispatcher"],         // roles within current tenant
+  "perms": ["booking.create",      // fine-grained permissions
+            "charge.waive"],
   "exp": 1234567890
 }
 ```
 
-### Authorization model
+### Authorization
 
-- **RBAC with module scoping**: `roles` × `modules` matrix
-- **Custom policies** in ASP.NET Core for each role
-- Every endpoint decorated: `[Authorize(Policy = "TosOperator")]`
-- Permissions checked at the handler level for fine-grained operations
-  (e.g., "can waive a charge" vs "can view a charge")
-
-### Tenant context middleware
-
-```csharp
-public class TenantMiddleware
-{
-    public async Task InvokeAsync(HttpContext ctx, ITenantContext tenant)
-    {
-        var tenantId = ctx.User.FindFirst("tid")?.Value;
-        if (string.IsNullOrEmpty(tenantId))
-            throw new UnauthorizedAccessException("Missing tenant claim.");
-        tenant.SetCurrent(Guid.Parse(tenantId));
-        await _next(ctx);
-    }
-}
-```
-
-`ITenantContext` is scoped (per-request). Injected into DbContext factory to
-choose the correct per-tenant connection string.
+- **RBAC + permissions**: roles map to permission sets, checked at handler level
+- ASP.NET Core policies: `[Authorize(Policy = "BookingCreate")]`
+- Module-scoped: a user with `tos.dispatcher` role gets nothing in `trucking`
+- Audit captures every authorization decision (allow + deny) at sensitive endpoints
 
 ---
 
@@ -343,89 +498,121 @@ choose the correct per-tenant connection string.
 ### Schema conventions
 - `snake_case` table and column names
 - Plural table names: `bookings`, not `booking`
-- PK is always `id` (UNIQUEIDENTIFIER, sequential GUID via NEWSEQUENTIALID)
+- PK is always `id` (UNIQUEIDENTIFIER, sequential GUID via `NEWSEQUENTIALID()`)
 - FK named `<entity>_id`: `booking_id`, not `booking`
-- Audit columns on every table:
-  - `tenant_id UNIQUEIDENTIFIER NOT NULL`
-  - `created_at DATETIMEOFFSET NOT NULL`
-  - `created_by UNIQUEIDENTIFIER NOT NULL` (user id)
+- Audit columns on every table (no exceptions):
+  - `tenant_id UNIQUEIDENTIFIER NOT NULL` (drives RLS)
+  - `created_at DATETIMEOFFSET NOT NULL DEFAULT SYSDATETIMEOFFSET()`
+  - `created_by UNIQUEIDENTIFIER NOT NULL`
   - `updated_at DATETIMEOFFSET NOT NULL`
   - `updated_by UNIQUEIDENTIFIER NOT NULL`
-  - `deleted_at DATETIMEOFFSET NULL` (soft delete on master tables only)
-- **Temporal tables** for history audit (free, built-in to SQL Server 2016+)
+  - `deleted_at DATETIMEOFFSET NULL` (soft delete on master + reference, NOT on transactional)
+  - `row_version ROWVERSION` (optimistic concurrency)
+- **SQL Server temporal tables** for history audit (free, indexed, queryable)
 
-### Data types
-- Currency: `DECIMAL(19,4)` + `currency_code CHAR(3)` — never `MONEY`, never `FLOAT`
-- Timestamps: `DATETIMEOFFSET` — UTC + offset stored, never naive `DATETIME`
-- Codes: `VARCHAR(N)` with explicit max length, never `NVARCHAR(MAX)`
-- Free text: `NVARCHAR(N)` for known max, `NVARCHAR(MAX)` only for true free-form
+### Money — multi-currency, SEA-aware
+
+```sql
+-- Two-column pattern, always together:
+amount       DECIMAL(19,4) NOT NULL,
+currency     CHAR(3)       NOT NULL,    -- ISO 4217: THB, SGD, MYR, IDR, VND, USD, ...
+amount_local DECIMAL(19,4) NULL,        -- in tenant's base currency (denormalized)
+fx_rate      DECIMAL(19,8) NULL,        -- locked at transaction time, not 'now'
+fx_rate_at   DATETIMEOFFSET NULL,
+```
+
+**Decimal precision per region:**
+- SGD, MYR, USD, EUR: 2 decimals — but stored as 4 to handle pro-rating without round-trip loss
+- THB: 2 decimals (the satang is real but rarely billed; stored as 4)
+- IDR: effectively no fractional unit (sen is dead). Stored DECIMAL(19,4) for consistency, displayed as integer
+- VND: same — no fractional unit in practice
+- PHP: 2 decimals (centavo)
+
+Display formatting is the UI's problem. Storage uses one consistent shape.
+
+### Time — timezone-aware everywhere
+
+- Every timestamp: `DATETIMEOFFSET` (UTC + offset stored)
+- Display layer converts to tenant timezone (`Asia/Bangkok`, `Asia/Singapore`,
+  `Asia/Jakarta`, `Asia/Ho_Chi_Minh`, `Asia/Manila`, `Asia/Kuala_Lumpur`)
+- **Never** use `DATETIME` without timezone. Old WinForms apps almost
+  always store local time without TZ — that's a migration trap.
+- Vessel ETD, gate cutoffs, customs windows: all UTC-stored, locally-displayed
+- Cron jobs (overnight billing, FX update) scheduled in **UTC**, with
+  per-tenant override possible
+
+### Codes & free text
+- `VARCHAR(N)` with explicit max for codes (`container_no VARCHAR(11)`,
+  `locode CHAR(5)`, `currency CHAR(3)`)
+- `NVARCHAR(N)` for human-readable names (international names need Unicode:
+  Thai นิตยสาร, Vietnamese tiếng Việt, Indonesian, Chinese for some shipper names)
+- `NVARCHAR(MAX)` only for truly free-form fields (notes, remarks, EDI payload)
+- Customer / vessel / commodity name often arrives in mixed scripts —
+  Unicode by default, no exceptions
 
 ### Migration tool
 - **EF Core Migrations** (code-first)
 - One migration per logical schema change, descriptive name
 - All migrations idempotent and rollback-safe
 - Production migrations applied via release pipeline, never manually
+- For tenant DB deploys: rolling fan-out — apply to one DB, verify, then
+  parallelise across the pool
 
 ### Read/write split
-- Default: EF Core
-- Hot read paths (booking lookup, charge code resolution, dashboards):
-  **Dapper + raw SQL** for performance
-- Reporting / analytics: read replica or dedicated reporting DB (Phase 5+)
+- Default: EF Core for write-side
+- Hot read paths: **Dapper** + raw SQL for performance (booking lookup,
+  charge code resolution, dashboard tiles, gate-clerk recall)
+- Reporting / analytics: read replica + dedicated reporting DB (Phase 5+),
+  populated via change data capture from operational DBs
 
 ---
 
 ## 9. Background Work & Events
 
-### `Gecko.Worker` host runs:
-1. **Outbox publisher** — polls per-module outbox tables, publishes to Service Bus
-2. **Service Bus consumers** — subscribe to topics, dispatch to MediatR handlers
-3. **Scheduled jobs** — Quartz.NET for cron-like scheduling
-4. **Long-running processes** — anything that doesn't fit in an HTTP request
-
 ### Service Bus topology
 
 ```
+Topic: master-events
+  Subscriptions: tos-master-listener, edi-master-listener,
+                 trucking-master-listener, audit-all
+
 Topic: tos-events
-  Subscription: edi-tos-listener   (filter: container.* + booking.*)
-  Subscription: billing-tos-listener (filter: container.gated_*)
-  Subscription: mnr-tos-listener    (filter: container.gated_in)
-  Subscription: audit-all           (filter: *)
+  Subscriptions: edi-tos-listener, billing-tos-listener,
+                 mnr-tos-listener, trucking-tos-listener, audit-all
 
 Topic: edi-events
-  Subscription: tos-edi-listener    (filter: coparn.* + baplie.*)
-  ...
+  Subscriptions: tos-edi-listener, audit-all
 
 Topic: trucking-events, fleet-events, mnr-events — same pattern
+
+Topic: customs-events  (events from CUSCAR/CUSREP processing)
+  Subscriptions: tos-customs-listener, audit-all
 ```
 
-### Event contract
+### Event versioning
 
 ```csharp
 public abstract record DomainEvent(
-    Guid EventId,
-    Guid TenantId,
-    DateTimeOffset OccurredAt,
+    Guid EventId, Guid TenantId, DateTimeOffset OccurredAt,
     string EventType,    // "container.gated_in"
-    int Version          // for schema evolution
+    int Version,         // schema version
+    Guid? CorrelationId,
+    Guid? CausationId
 );
-
-public record ContainerGatedIn(
-    Guid EventId, Guid TenantId, DateTimeOffset OccurredAt, string EventType, int Version,
-    string ContainerNo,
-    string BookingNo,
-    DateTimeOffset GatedInAt,
-    string YardLocation
-) : DomainEvent(EventId, TenantId, OccurredAt, EventType, Version);
 ```
 
-Events are **immutable** and **versioned**. Consumers tolerate unknown fields
-forward; producers never remove fields without deprecation.
+- Events are immutable. Add fields only by bumping `Version`.
+- Consumers tolerate unknown fields (forward-compat).
+- Removing or renaming a field = new version + dual publish for grace period.
+- Schema registry: per-event JSON schema in `Gecko.SharedContracts/Events/`.
 
 ### Retry & DLQ
-- MassTransit retry: 3 immediate, then exponential backoff up to 5 attempts
-- After max attempts → message moves to subscription DLQ
-- DLQ monitored by Application Insights alerts
+- MassTransit: 3 immediate retries, then exponential backoff up to 5 attempts
+- After max attempts → subscription DLQ
+- DLQ depth alert in App Insights at > 10
 - Manual replay tooling in admin UI (Phase 4+)
+- **Poison message handler**: messages that fail validation (not transient
+  errors) go straight to DLQ with diagnostic payload
 
 ---
 
@@ -434,106 +621,131 @@ forward; producers never remove fields without deprecation.
 ### Production
 
 ```
-                                [Custom domain]
-                                       │
-                            [Azure Front Door]
-                                       │
-              ┌────────────────────────┴────────────────────────┐
-              │                                                  │
-       [Vercel: Next.js]                          [Azure Container Apps]
-       (renders UI, calls API)                   (one environment)
-                                       ┌──────────┼──────────┐
-                                       │          │          │
+                            [Custom domain]
+                                  │
+                       [Azure Front Door]  ─── WAF, TLS, geo-routing
+                                  │
+              ┌───────────────────┴───────────────────┐
+              │                                        │
+       [Vercel — Next.js]                  [Azure Container Apps env]
+        (UI render, BFF route)         ┌───────────┼───────────┐
+                                       │           │           │
                                   [Gecko.Api]  [Gecko.Worker] [Functions]
                                   (n replicas) (n replicas)   (event-driven)
-                                       │          │
-                                       └────┬─────┘
-                                            │
-        ┌──────────────┬─────────────┬─────┼─────┬──────────┬───────────┐
-        ▼              ▼             ▼     ▼     ▼          ▼           ▼
-  [Azure SQL    [Azure SQL    [Azure SQL  [SB]  [Redis]   [Blob       [App
-   Platform DB] Tenant Pool — Tenant Pool —              Storage]    Insights]
-                TOS]          EDI]
-                                                                      ▲
-                                                                      │
-                                                              [All components
-                                                               send telemetry]
-        ▲
-        │
-  [Azure AD B2C]
+                                       │           │
+                                       └─────┬─────┘
+                                             │
+   ┌──────────┬──────────┬──────────┬─────┐  │  ┌──────┬──────┬──────────┐
+   ▼          ▼          ▼          ▼     ▼  ▼  ▼      ▼      ▼          ▼
+[Platform] [Identity] [Audit]   [Master  Pool — Per-tenant] [Service [Redis]
+ DB]        DB         DB]         tos / edi / trucking /   Bus]
+                                   fleet / mnr DBs
+                                                                 │
+                                                                 ▼
+                                                          [Blob Storage]
+                                                                 │
+                                                                 ▼
+                                                  [App Insights + Log Analytics]
+                          ▲
+                          │
+                  [Azure AD B2C]
+                  (auth)
 ```
 
+### Multi-region (Phase 5+)
+
+- Tenants in **Thailand / Indonesia / Vietnam** require in-region data
+  residency (UU PDP, Cybersecurity Law). Tenant DBs deployed in:
+  - `southeastasia` (Singapore region) — default for SG/MY/PH
+  - Future: `indonesia-central` (Jakarta) when Azure GA — for ID tenants
+  - Future: in-region for VN when local Azure region opens; meanwhile
+    Singapore region may meet the Personal Data Protection Decree if
+    DPO + cross-border transfer agreement is in place
+- Platform DB + Identity DB: geo-replicated (read replicas in each region)
+- Service Bus: per-region with cross-region forwarding for
+  tenant→platform events only
+
 ### Environments
-- **dev** — single shared resource group, smallest tier of everything
-- **staging** — production-shape, smaller scale
-- **prod** — full scale, multi-region (Phase 5+)
+- **dev** — single shared resource group, smallest tier
+- **staging** — production-shape, smaller scale, real partner sandboxes
+  (TradeNet sandbox, e-Customs UAT)
+- **prod** — full scale, multi-region from Phase 5
 
 ### CI/CD
-- One GitHub Actions workflow per host (`api`, `worker`, `functions`)
-- Build → unit test → integration test (Testcontainers) → push image to ACR
+- One GitHub Actions workflow per host
+- Build → unit test → integration test (Testcontainers SQL + Service Bus
+  emulator) → push image to ACR
 - Deploy: dev auto, staging on PR merge, prod on tag
-- DB migrations applied as part of deploy step (idempotent EF migrations)
+- DB migrations applied as part of deploy step (EF Migrations are idempotent)
 
 ---
 
 ## 11. Naming Conventions
 
 ### Code
-- **C# classes / methods:** `PascalCase`
-- **C# private fields:** `_camelCase`
-- **C# constants:** `PascalCase` (not SCREAMING_CASE)
-- **TypeScript:** `camelCase` for variables, `PascalCase` for types/components
-- **File names:** match the primary type name
+- C# classes / methods: `PascalCase`
+- C# private fields: `_camelCase`
+- C# constants: `PascalCase`
+- TypeScript: `camelCase` for variables, `PascalCase` for types/components
+- File names match the primary type
 
 ### URLs / API
-- **Path segments:** `kebab-case` (`/api/v1/tos/charge-codes`)
-- **Query parameters:** `camelCase` (`?customerId=...`)
-- **JSON properties:** `camelCase` (auto-converted by `System.Text.Json`)
+- Path segments: `kebab-case` — `/api/v1/tos/charge-codes`
+- Query params: `camelCase` — `?customerId=...`
+- JSON: `camelCase` (auto via `System.Text.Json`)
+- Resource paths: plural, hierarchical
+  - `GET /api/v1/master/customers`
+  - `GET /api/v1/tos/bookings/{bookingNo}/units`
 
 ### Database
-- **Tables:** `snake_case`, plural (`charge_codes`, `bookings`)
-- **Columns:** `snake_case` (`created_at`, `customer_id`)
-- **Indexes:** `ix_<table>_<columns>` (`ix_bookings_tenant_id_etd`)
-- **FKs:** `fk_<from_table>_<to_table>` (`fk_bookings_customers`)
+- Tables: `snake_case`, plural
+- Columns: `snake_case`
+- Indexes: `ix_<table>_<columns>` — `ix_bookings_tenant_id_etd`
+- FKs: `fk_<from>_<to>` — `fk_bookings_customers`
+- Check constraints: `ck_<table>_<rule>`
+- Stored procedures (rare): `usp_<verb>_<noun>` — `usp_recalc_storage_charges`
 
 ### Events
-- **Event types:** `domain.action_past_tense` (`container.gated_in`, `booking.created`)
-- **Topics:** `<module>-events` (`tos-events`, `edi-events`)
-- **Subscriptions:** `<consumer>-<source>-listener` (`edi-tos-listener`)
+- Type: `domain.action_past_tense` — `container.gated_in`, `booking.created`
+- Topic: `<module>-events` — `tos-events`
+- Subscription: `<consumer>-<source>-listener` — `edi-tos-listener`
 
 ### Git
-- **Branches:** `feat/`, `fix/`, `chore/`, `refactor/` prefix
-- **Commits:** Conventional Commits (`feat:`, `fix:`, `refactor:`, `docs:`, `test:`)
+- Branches: `feat/`, `fix/`, `chore/`, `refactor/`
+- Commits: Conventional Commits
 
 ---
 
 ## 12. Observability
 
 ### Logging
-- **Structured** logging via `Microsoft.Extensions.Logging` + Serilog sink
-- Every log has: `tenantId`, `userId`, `traceId`, `module`
+- Structured via Serilog (sink → App Insights + Log Analytics)
+- Every log: `tenantId`, `userId`, `traceId`, `module`, `correlationId`
 - Log levels:
-  - `Trace`: dev only
-  - `Debug`: dev + staging
-  - `Information`: business-meaningful events ("booking.created")
-  - `Warning`: recoverable issues
-  - `Error`: bug or external failure
-  - `Critical`: needs paging
+  - `Information`: business events (`booking.created`, `charge.waived`)
+  - `Warning`: recoverable (`fx_rate_stale`, `partner_endpoint_slow`)
+  - `Error`: handled bug or external failure
+  - `Critical`: pages someone
 
 ### Tracing
 - **OpenTelemetry** auto-instrumentation
-- W3C trace context propagated through HTTP + Service Bus
+- W3C trace context propagated through HTTP + Service Bus headers
 - One trace = full lifecycle of a user action across modules
 
 ### Metrics
-- **Custom counters** for business KPIs (bookings/hour, charges/day, EDI errors)
-- **Standard ASP.NET Core metrics** for ops (request rate, latency, error rate)
+- Custom counters: `bookings_created_total`, `edi_messages_dlq_total`,
+  `charges_waived_amount_total`, `tenant_dtu_pct`
+- Standard ASP.NET metrics for ops
+- Per-tenant slicing on every metric — drill from "errors are up" to
+  "errors are up *for tenant X*"
 
-### Alerts (Application Insights)
+### Alerts
 - 5xx rate > 1% over 5 min → page
 - Service Bus DLQ depth > 10 → page
 - Outbox publish lag > 30s → warn
-- DTU > 80% sustained 5 min on tenant DB → warn
+- Tenant DTU > 80% sustained 5 min → warn (suggests DB tier bump)
+- EDI partner endpoint failure rate > 5% over 15 min → warn
+- Customs single-window submission failure > 0 → page (regulatory)
 
 ---
 
@@ -541,90 +753,211 @@ forward; producers never remove fields without deprecation.
 
 | Concern | Solution |
 |---------|----------|
-| **Validation** | FluentValidation in Application layer. Returns RFC 7807 problem details. |
-| **Mapping** | Mapster (faster than AutoMapper, simpler). |
-| **Time** | `IClock` abstraction injected everywhere. No `DateTimeOffset.UtcNow` directly in handlers. |
-| **Currency conversion** | Platform.ReferenceData provides FX rates. Stored at transaction time. |
-| **PII** | Encrypted at rest (Azure SQL TDE) + in transit (TLS 1.3). PII columns documented in `DOMAIN-MODEL.md`. |
-| **GDPR / data retention** | 7-year operational retention, then archive DB. Right-to-erasure handled via tombstone (preserve referential integrity, drop personal fields). |
-| **Feature flags** | `Microsoft.FeatureManagement` + Azure App Configuration. |
-| **Localization** | Resource files per supported language. Initial: English. Phase 4: Thai, Vietnamese, Bahasa. |
+| Validation | FluentValidation in Application layer. RFC 7807 problem details on errors. |
+| Mapping | Mapster (faster than AutoMapper, simpler). |
+| Time | `IClock` injected. No `DateTimeOffset.UtcNow` direct in handlers. |
+| Currency conversion | Platform.ReferenceData provides FX. Locked at transaction time. |
+| PII | TDE at rest + TLS 1.3 in transit. PII columns documented. |
+| Feature flags | Microsoft.FeatureManagement + Azure App Configuration. Per-tenant overrides. |
+| Localization | Resource files. Phase 1: English. Phase 4: Thai, Bahasa Malaysia, Bahasa Indonesia, Vietnamese. |
 
 ---
 
-## 14. Scaling Strategy
+## 14. SEA Regional Concerns
+
+This is not generic SaaS. Specific compliance and integration requirements
+that shape the architecture:
+
+### 14.1 Data residency & privacy
+
+| Country | Law | Implication for Gecko |
+|---------|-----|----------------------|
+| **Thailand** | PDPA 2019 (effective 2022) | Personal data of Thai data subjects requires DPO, lawful basis, breach notification within 72h. **Region:** Singapore region acceptable with cross-border transfer agreement; in-Thailand region not yet on Azure but acceptable on AWS Bangkok. |
+| **Singapore** | PDPA 2012 + amendments | Less strict residency, but Cybersecurity Act + sectoral rules apply for terminal operators (CII designation possible for major ports). |
+| **Malaysia** | PDPA 2010 (amended 2024) | Localization not strict; consent + DPO requirements. Cross-border to "white-listed" jurisdictions (Singapore included). |
+| **Indonesia** | UU PDP 2022 (effective 2024) | **Strict.** Indonesian personal data must be processable from Indonesia. Azure does not yet have an Indonesia region with full feature parity — Phase 5+ migration when `indonesia-central` is GA. Until then: Singapore region with documented transfer mechanism + DPO. |
+| **Vietnam** | Cybersecurity Law 2018, Decree 53/2022 | Local data storage required for "Vietnamese citizen data" by foreign service providers. Practical compliance: Singapore region + Vietnamese local copy via replication is the common pattern. |
+| **Philippines** | Data Privacy Act 2012 | DPO required, breach notification, NPC registration. Cross-border permitted with adequacy. |
+
+**Architectural answer:** Per-tenant DB region selection at provisioning time.
+Platform DB and Identity DB geo-replicated. The DB-per-tenant model makes
+this trivial — assign tenant to the region they need.
+
+### 14.2 Customs single-window integration
+
+Each country has its own NSW. EDI Hub must speak each:
+
+| Country | System | EDI dialect | Phase |
+|---------|--------|-------------|-------|
+| Thailand | NSW (Thai e-Customs) | EDIFACT D.96B + local extensions, XML for newer | Phase 4 |
+| Malaysia | uCustoms (post-SMK) | SMK-EDI gradually migrated to JSON/REST | Phase 4 |
+| Singapore | TradeNet | EDIFACT, mature, well-documented | Phase 4 |
+| Indonesia | INSW + CEISA 4.0 | XML-based, regional | Phase 5 |
+| Vietnam | VNACCS / VCIS | XML-based | Phase 5 |
+| Philippines | E2M / TRS | EDIFACT + XML | Phase 5+ |
+
+EDI Hub module abstracts these behind a common `ICustomsAdapter` interface.
+Per-tenant configuration selects the correct adapter based on
+`tenant.country`. Adapter-specific message generation lives in
+`Gecko.Edi.Infrastructure.Customs.{Country}`.
+
+### 14.3 Carrier EDI partners — SEA-specific quirks
+
+- **PSA Singapore** (PortNet): EDIFACT, mature, real-time
+- **Westports / NPC (Klang)**: file-drop SFTP with EDIFACT, slower turnaround
+- **PTP**: API-based, modern
+- **LCB ICD operators**: mix — some EDIFACT, some flat files
+- **Tanjung Priok (Indonesia)**: INAPORT system, partial EDIFACT
+- **Cat Lai / Hai Phong**: Vietnamese local + EDIFACT mix
+
+Adapter pattern in EDI Hub. Each partner gets its own adapter class with
+its own quirks documented.
+
+### 14.4 Currencies in active circulation
+- **THB** (Thai Baht), **SGD** (Singapore Dollar), **MYR** (Malaysian Ringgit),
+  **IDR** (Indonesian Rupiah), **VND** (Vietnamese Dong), **PHP** (Philippine
+  Peso), **USD** (cross-border invoicing), occasionally **JPY**, **EUR**, **CNY**
+- FX rate source: Platform.ReferenceData syncs daily from a published source
+  (Bank of Thailand, MAS, Bank Negara — whichever the tenant prefers as
+  authority). Stored with rate timestamp; transaction FX locked at time of
+  charge generation.
+
+### 14.5 Time zones & regional ops
+
+- **ICT (UTC+7)**: Thailand, Vietnam, parts of Indonesia (WIB)
+- **MYT / SGT (UTC+8)**: Malaysia, Singapore, Brunei, Philippines, parts of
+  Indonesia (WITA)
+- **WIT (UTC+9)**: Eastern Indonesia
+- Vessel ETD, gate cutoffs, customs windows: stored UTC, displayed in tenant TZ
+- Holiday calendars per country (Lunar New Year, Hari Raya, Songkran, etc.)
+  affect cutoff windows — Platform.ReferenceData carries them
+- Operational shifts in SEA terminals: typically 24/7 with shift breaks at
+  06:00, 14:00, 22:00 local — affects "effective hours" for D&D calculation
+
+### 14.6 Localization
+
+Phase 1 launches English-only. Phase 4 adds:
+- **Thai** (UTF-8, Thai script)
+- **Bahasa Malaysia** (Latin script + some Jawi for older docs)
+- **Bahasa Indonesia** (Latin)
+- **Vietnamese** (Latin with diacritics, normalisation matters)
+- **Tagalog / Filipino** (Latin)
+- **Simplified Chinese** for some shipper names (Unicode)
+
+Resource files per language. UI components already use design tokens —
+swapping language is content-only, layout already handles RTL/long-string
+expansion (gate-clerk dropdowns must not break in Thai which is ~20% longer
+than English on average).
+
+### 14.7 SME operational realities (informs UX & architecture)
+
+- Many depot operators still rely on Excel + WhatsApp for daily ops.
+  Migration tooling needs CSV import for first-day usability.
+- Internet reliability variable, especially Indonesian outer islands and
+  rural Vietnam. Mobile-first, offline-tolerant where possible (gate
+  clerk records movement, syncs when online).
+- ERP integrations: SAP B1 (mid-tier), Tally (accounting in India/SEA),
+  Oracle EBS at larger players. EDI Hub must be able to push invoice
+  data via flat files for the SAP-less middle tier.
+- Cash payments still common at gate (small operators). Receipt-printing
+  via thermal printer is a real Phase 3 requirement.
+- Multi-language operators: Thai gate clerk + English ops manager + Chinese
+  shipper name on the bill. UI must handle gracefully without it being a
+  feature flag.
+
+---
+
+## 15. Scaling Strategy
 
 ### Vertical (within a tenant DB)
 1. Indexes from query analysis (Phase 1+)
-2. Partitioning of high-volume tables (`unit_movements`, `edi_events`) by month — Phase 4+
-3. Move tenant to higher Elastic Pool tier or dedicated DB if DTU consistently > 70%
+2. Partitioning of high-volume tables (`unit_movements`, `edi_messages`,
+   `audit_events`) by month — Phase 4+
+3. Move tenant to higher Elastic Pool tier or dedicated DB if DTU > 70% sustained
 
 ### Horizontal (across tenants)
 1. Multiple Container Apps replicas (auto-scale on CPU + queue depth)
 2. Multi-region deployment for tenants close to their region (Phase 5+)
 3. Read replicas for reporting workloads (Phase 5+)
+4. Archive DB per tenant (operational ≤ 1 yr, archive 1–7 yr) on cheaper tier
 
 ### Module extraction (when monolith hurts)
 Triggers to extract a module to its own service:
-- Module's deploy cadence diverges (different team / release schedule)
+- Module's deploy cadence diverges (different release schedule)
 - Module's scale profile diverges (e.g., EDI peaks at vessel cutoffs)
 - Module needs different SLA / region
+- Compliance requires module isolation (rare)
 
 Extraction steps:
 1. Module already has its own DB → no DB change
-2. Move module projects to new solution
+2. Move module projects to separate solution, build as separate container
 3. Replace in-process MediatR calls with HTTP/event calls
 4. Deploy as independent Container App revision
 5. Update Front Door routing
 
-This is the **escape hatch** the modular monolith preserves. We don't pay
-microservice costs unless we benefit from them.
+This is the **escape hatch** the modular monolith preserves.
 
 ---
 
-## 15. The Big Decisions, Recorded
+## 16. Architecture Decision Records
 
 ### ADR-001: Modular Monolith over Microservices (2026-05-08)
-**Decision:** Build as one .NET solution with strict module boundaries.
-**Why:** Solo dev, 24-month roadmap, 5 modules. Microservice ops cost would
-swamp feature velocity. Module boundaries kept clean enough that extraction
-later is a 1-week effort, not a rewrite.
-**Tradeoff accepted:** All modules deploy together. If TOS needs to scale
-independently, that's the trigger to extract.
+**Decision:** Build as one .NET solution with strict module boundaries, single
+deployable unit until extraction is justified.
+**Why:** Solo dev. Microservice ops cost would swamp feature velocity.
+Boundaries kept clean enough that extraction later is a 1-week effort.
 
 ### ADR-002: DB-per-tenant per module (2026-05-08)
-**Decision:** Each tenant has its own DB per module, in Azure SQL Elastic Pools.
-**Why:** Hard isolation, per-tenant scale, regulatory simplicity. Pools
-keep cost manageable.
-**Tradeoff accepted:** Schema migrations are N-fold. Mitigated by
-EF Migrations + automated rollout pipeline.
+**Decision:** Each tenant has its own DB per module; pooled via Elastic Pools.
+**Why:** Hard isolation, per-tenant scale, regulatory simplicity for SEA
+data residency.
 
 ### ADR-003: Azure AD B2C for identity (2026-05-08)
-**Decision:** Use Azure AD B2C, not custom JWT, not Auth0.
-**Why:** Native Azure integration, enterprise SSO out of the box, lower ongoing
-security burden than rolling our own.
-**Tradeoff accepted:** UI customisation is more limited than Auth0; custom
-policies are a learning curve.
+**Decision:** Use AD B2C, not custom JWT, not Auth0.
+**Why:** Native Azure integration, enterprise SSO/SAML out of box, ongoing
+security burden owned by Microsoft.
 
 ### ADR-004: ASP.NET Core 9 over Node.js (2026-05-08)
 **Decision:** API and Worker in C# .NET. UI stays Next.js.
-**Why:** Tariff and stowage logic benefit from .NET performance. EF Core +
+**Why:** Tariff/stowage logic benefits from .NET performance. EF Core +
 SQL Server is best-in-class. Avoids two-language business logic.
-**Tradeoff accepted:** Two languages overall (TS + C#). Acceptable because
-the boundary is clean (UI vs. backend).
+
+### ADR-005: Master Data as its own bounded context, not part of TOS (2026-05-08)
+**Decision:** `Gecko.Master.*` is a top-level module with its own
+per-tenant `master_<tenant>` DB. Operational modules (TOS, EDI, Trucking,
+Fleet, M&R) consume Master via API or replicated read-model with extension
+tables.
+**Why:** EDI-only and Trucking-only tenants need master data without
+provisioning a TOS DB. Master is a bounded context in its own right —
+its lifecycle, ownership, and audit needs differ from operational data.
+**Consequence:** Master is provisioned for every tenant at onboarding,
+regardless of which operational modules they subscribe to. Slight cost
+overhead per tenant, justified by clean separation.
+
+### ADR-006: Multi-region per-tenant for SEA data residency (2026-05-08)
+**Decision:** Per-tenant DB region selectable at provisioning. Platform DB
+and Identity DB geo-replicated. Indonesia tenants will migrate to
+`indonesia-central` when Azure GA's it.
+**Why:** UU PDP (Indonesia), Cybersecurity Law (Vietnam), and PDPA
+sectoral rules (Thailand) require region awareness. DB-per-tenant model
+makes this near-zero-cost to implement.
 
 ---
 
-## 16. Open Questions
+## 17. Open Questions
 
 These need decisions before Phase 2:
-- [ ] **EF Core vs Dapper split** — define exact rules for which queries go
-      where (currently "hot reads use Dapper" is too vague).
-- [ ] **Migration tool for legacy data** — direct ETL via SQL scripts, or
-      Azure Data Factory? Lean SQL scripts.
-- [ ] **Tenant onboarding automation** — provisioning a new tenant DB +
+- [ ] **Reporting DB design** — CDC from operational DBs into a dedicated
+      reporting DB (Phase 5+)? Or read replicas of operational DBs?
+- [ ] **Tenant onboarding automation** — provisioning a new tenant's
+      Platform/Identity entries + Master DB + selected module DBs +
       running migrations + seeding reference data. Will need an admin UI.
-- [ ] **Pricing model** — per-module, per-user, per-tenant flat? Affects
-      subscription service design.
-- [ ] **Multi-region timing** — Thailand-only at launch, multi-region from
-      Phase 5? Or build region-aware now?
+- [ ] **Pricing model** — per-module flat per-tenant? Tiered by transaction
+      volume? Affects subscription service design.
+- [ ] **Holiday & cutoff calendar** — central source per country, or
+      per-tenant override? My lean: central with per-tenant override
+      capability.
+- [ ] **Customs adapter strategy for Phase 4** — build all 6 country
+      adapters at once or sequence by tenant demand?
+- [ ] **EF Core vs Dapper split rules** — tighter rule than "hot reads use
+      Dapper". Document specific patterns in `API-CONVENTIONS.md`.
