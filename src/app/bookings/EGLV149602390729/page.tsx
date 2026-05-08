@@ -7,6 +7,7 @@ import { BarcodeDisplay } from '@/components/ui/BarcodeDisplay';
 import { DateField } from '@/components/ui/DateField';
 import { DeleteConfirmModal } from '@/components/ui/DeleteConfirmModal';
 import { useToast } from '@/components/ui/Toast';
+import { useRouter } from 'next/navigation';
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -756,6 +757,7 @@ export default function BookingDetailPage() {
   const [moreOpen, setMoreOpen] = useState(false);
   const [showDeleteModal, setShowDeleteModal] = useState(false);
   const { toast } = useToast();
+  const router = useRouter();
 
   const b = BOOKING;
   const cutoffDays = daysUntil(b.cutoffs.cyDry);
@@ -806,9 +808,9 @@ export default function BookingDetailPage() {
           <div style={{ flex: 1 }} />
 
           {/* Actions */}
-          <button className="gecko-btn gecko-btn-ghost gecko-btn-sm"><Icon name="print" size={13} /> Print</button>
-          <button className="gecko-btn gecko-btn-ghost gecko-btn-sm" style={{ color: 'var(--gecko-info-600)' }}><Icon name="fileText" size={13} /> Billing Statement</button>
-          <button className="gecko-btn gecko-btn-outline gecko-btn-sm"><Icon name="copy" size={13} /> Clone</button>
+          <button className="gecko-btn gecko-btn-ghost gecko-btn-sm" onClick={() => window.print()}><Icon name="print" size={13} /> Print</button>
+          <Link href="/billing/statement" className="gecko-btn gecko-btn-ghost gecko-btn-sm" style={{ color: 'var(--gecko-info-600)', textDecoration: 'none' }}><Icon name="fileText" size={13} /> Billing Statement</Link>
+          <button className="gecko-btn gecko-btn-outline gecko-btn-sm" onClick={() => toast({ variant: 'info', title: 'Booking cloned', message: `${b.bookingNo} duplicated as a draft.` })}><Icon name="copy" size={13} /> Clone</button>
 
           {/* More menu */}
           <div style={{ position: 'relative' }}>
@@ -825,7 +827,14 @@ export default function BookingDetailPage() {
                     { icon: 'edit',      label: 'Change Order Type',           color: 'var(--gecko-text-primary)'   },
                     { icon: 'trash',     label: 'Delete Booking',              color: 'var(--gecko-danger-600)'     },
                   ].map(item => (
-                    <button key={item.label} onClick={() => { setMoreOpen(false); if (item.label === 'Delete Booking') setShowDeleteModal(true); }} style={{ width: '100%', display: 'flex', alignItems: 'center', gap: 10, padding: '11px 16px', background: 'none', border: 'none', cursor: 'pointer', color: item.color, fontSize: 13, fontFamily: 'inherit', textAlign: 'left' }}>
+                    <button key={item.label} onClick={() => {
+                      setMoreOpen(false);
+                      if (item.label === 'Delete Booking') {
+                        setShowDeleteModal(true);
+                      } else {
+                        toast({ variant: 'info', title: item.label, message: 'Coming soon — workflow under construction.' });
+                      }
+                    }} style={{ width: '100%', display: 'flex', alignItems: 'center', gap: 10, padding: '11px 16px', background: 'none', border: 'none', cursor: 'pointer', color: item.color, fontSize: 13, fontFamily: 'inherit', textAlign: 'left' }}>
                       <Icon name={item.icon} size={14} style={{ color: item.color }} /> {item.label}
                     </button>
                   ))}
@@ -972,10 +981,10 @@ export default function BookingDetailPage() {
             <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
               {[
                 { icon: 'plus',       label: 'Add Container',           action: () => { setActiveTab('containers'); setDrawerContainer({ ...BLANK_CONTAINER, id: Date.now() }); } },
-                { icon: 'transferH',  label: 'Transfer Containers',      action: () => {} },
-                { icon: 'edit',       label: 'Change Order Type',        action: () => {} },
-                { icon: 'fileText',   label: 'View Billing Statement',   action: () => {} },
-                { icon: 'print',      label: 'Print Booking Advice',     action: () => {} },
+                { icon: 'transferH',  label: 'Transfer Containers',      action: () => toast({ variant: 'info', title: 'Transfer Containers', message: 'Coming soon — workflow under construction.' }) },
+                { icon: 'edit',       label: 'Change Order Type',        action: () => toast({ variant: 'info', title: 'Change Order Type', message: 'Coming soon — workflow under construction.' }) },
+                { icon: 'fileText',   label: 'View Billing Statement',   action: () => router.push('/billing/statement') },
+                { icon: 'print',      label: 'Print Booking Advice',     action: () => window.print() },
               ].map(qa => (
                 <button key={qa.label} onClick={qa.action} style={{ display: 'flex', alignItems: 'center', gap: 9, padding: '8px 10px', background: 'var(--gecko-bg-surface)', border: '1px solid var(--gecko-border)', borderRadius: 7, cursor: 'pointer', fontFamily: 'inherit', color: 'var(--gecko-text-primary)', fontSize: 12, fontWeight: 500, textAlign: 'left' }}>
                   <div style={{ width: 24, height: 24, borderRadius: 6, background: 'var(--gecko-bg-subtle)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--gecko-text-secondary)', flexShrink: 0 }}>
