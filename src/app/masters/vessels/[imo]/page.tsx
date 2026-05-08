@@ -4,6 +4,7 @@ import Link from 'next/link';
 import { useParams } from 'next/navigation';
 import { Icon } from '@/components/ui/Icon';
 import { ExportButton } from '@/components/ui/ExportButton';
+import { useToast } from '@/components/ui/Toast';
 
 // ── Vessel catalog (mirrors the list page) ────────────────────────────────────
 const VESSELS = [
@@ -200,6 +201,7 @@ const FLAG_OPTIONS = [
 export default function VesselDetailPage() {
   const params = useParams();
   const imo = Array.isArray(params.imo) ? params.imo[0] : (params.imo ?? '');
+  const { toast } = useToast();
 
   const vessel = VESSELS.find(v => v.imo === imo) ?? VESSELS[0];
   const voyages = VOYAGES[vessel.imo] ?? VOYAGES['9345612'];
@@ -242,7 +244,7 @@ export default function VesselDetailPage() {
           <span className="gecko-breadcrumb-current">{vessel.imo} — {vessel.name}</span>
         </nav>
         <div style={{ display: 'flex', gap: 10 }}>
-          <button className="gecko-btn gecko-btn-ghost gecko-btn-sm"><Icon name="copy" size={15} /> Clone</button>
+          <button className="gecko-btn gecko-btn-ghost gecko-btn-sm" onClick={() => toast({ variant: 'success', title: 'Vessel cloned', message: `Copy of IMO ${imo} created as a draft.` })}><Icon name="copy" size={15} /> Clone</button>
           <ExportButton resource="Vessel" iconSize={15} />
           {editMode ? (
             <>

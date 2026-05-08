@@ -3,6 +3,7 @@ import React, { useState } from 'react';
 import { useParams } from 'next/navigation';
 import Link from 'next/link';
 import { Icon } from '@/components/ui/Icon';
+import { useToast } from '@/components/ui/Toast';
 import { PageToolbar, Field } from '@/components/ui/OpsPrimitives';
 
 // ── Constants ─────────────────────────────────────────────────────────────────
@@ -664,6 +665,7 @@ const VISIT_STUBS: Record<string, any> = {
 export default function GateOutFormPage() {
   const params = useParams();
   const visitId = typeof params.id === 'string' ? params.id : 'GIN-4429';
+  const { toast } = useToast();
 
   const truck = VISIT_STUBS[visitId] ?? {
     plate: '—', trailer: '—', driver: '—', haulier: '—',
@@ -723,8 +725,8 @@ export default function GateOutFormPage() {
             <Link href="/gate/eir-out" className="gecko-btn gecko-btn-ghost gecko-btn-sm" style={{ textDecoration: 'none', display: 'inline-flex', alignItems: 'center', gap: 6 }}>
               <Icon name="chevronLeft" size={13} />Back to Queue
             </Link>
-            <button className="gecko-btn gecko-btn-outline gecko-btn-sm"><Icon name="check" size={13} />Save Draft</button>
-            <button className="gecko-btn gecko-btn-primary gecko-btn-sm" disabled={errCount > 0 || moves.length === 0}>
+            <button className="gecko-btn gecko-btn-outline gecko-btn-sm" onClick={() => toast({ variant: 'success', title: 'Draft saved', message: `EIR-Out ${visitId} draft preserved.` })}><Icon name="check" size={13} />Save Draft</button>
+            <button className="gecko-btn gecko-btn-primary gecko-btn-sm" disabled={errCount > 0 || moves.length === 0} onClick={() => { toast({ variant: 'success', title: 'EIR-Out committed', message: 'Gate pass printed — truck cleared to depart.' }); window.print(); }}>
               <Icon name="print" size={13} />Commit · Print Gate Pass
             </button>
           </>

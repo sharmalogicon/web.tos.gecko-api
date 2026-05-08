@@ -417,6 +417,7 @@ export default function CustomersListPage() {
     query: '', role: '', tier: '', tariff: '', status: 'active', country: 'TH',
   });
   const [sortBy, setSortBy] = useState('activity');
+  const { toast } = useToast();
   const [showModal, setShowModal] = useState(false);
 
   const filtered = useMemo(() => {
@@ -449,7 +450,7 @@ export default function CustomersListPage() {
         </div>
         <div className="gecko-toolbar">
           <ExportButton resource="Customers" iconSize={16} />
-          <button className="gecko-btn gecko-btn-outline gecko-btn-sm"><Icon name="upload" size={16} /> Import</button>
+          <button className="gecko-btn gecko-btn-outline gecko-btn-sm" onClick={() => toast({ variant: 'info', title: 'Import customers', message: 'CSV import workflow coming soon.' })}><Icon name="upload" size={16} /> Import</button>
           <FilterPopover
             fields={CUSTOMER_FILTER_FIELDS}
             values={filters}

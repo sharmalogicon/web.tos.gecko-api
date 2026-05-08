@@ -77,7 +77,7 @@ export default function MastersHubPage() {
           <>
             <ExportButton label="Export All" resource="All master data" iconSize={13} />
             <button className="gecko-btn gecko-btn-outline gecko-btn-sm" onClick={() => toast({ variant: 'info', title: 'EDI sync queued', message: 'Master data will refresh from EDI partners.' })}><Icon name="refresh" size={13} />Sync from EDI</button>
-            <button className="gecko-btn gecko-btn-primary gecko-btn-sm"><Icon name="plus" size={13} />New Record</button>
+            <button className="gecko-btn gecko-btn-primary gecko-btn-sm" onClick={() => toast({ variant: 'info', title: 'New Record', message: 'Pick a master entity below to create a new record.' })}><Icon name="plus" size={13} />New Record</button>
           </>
         }
       />

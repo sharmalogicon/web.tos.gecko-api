@@ -370,6 +370,7 @@ export default function ShippingLinesPage() {
   const [filters, setFilters] = useState<Record<string, string>>({ query: '', edi: '', alliance: '', status: 'active' });
   const [sortBy, setSortBy] = useState('name');
   const [showNewLineModal, setShowNewLineModal] = useState(false);
+  const { toast } = useToast();
 
   const filtered = useMemo(() => {
     return SHIPPING_LINES.filter((line) => {
@@ -402,7 +403,7 @@ export default function ShippingLinesPage() {
         </div>
         <div className="gecko-toolbar">
           <ExportButton resource="Shipping lines" iconSize={16} />
-          <button className="gecko-btn gecko-btn-outline gecko-btn-sm"><Icon name="refreshCcw" size={16} /> Sync SMDG</button>
+          <button className="gecko-btn gecko-btn-outline gecko-btn-sm" onClick={() => toast({ variant: 'info', title: 'Sync SMDG', message: 'SMDG carrier registry sync queued.' })}><Icon name="refreshCcw" size={16} /> Sync SMDG</button>
           <FilterPopover
             fields={LINE_FILTER_FIELDS}
             values={filters}

@@ -37,8 +37,8 @@ export default function CustomerDetailPage({ params }: { params: { id: string } 
         </div>
         <div style={{ display: 'flex', gap: 12 }}>
           <ExportButton resource="Customer" iconSize={16} />
-          <button className="gecko-btn gecko-btn-outline"><Icon name="edit" size={16} /> Edit</button>
-          <button className="gecko-btn gecko-btn-primary"><Icon name="plus" size={16} /> New Invoice</button>
+          <Link href={`/masters/customers/${id}/edit`} className="gecko-btn gecko-btn-outline" style={{ textDecoration: 'none' }}><Icon name="edit" size={16} /> Edit</Link>
+          <Link href="/billing/invoices" className="gecko-btn gecko-btn-primary" style={{ textDecoration: 'none' }}><Icon name="plus" size={16} /> New Invoice</Link>
         </div>
       </div>
 

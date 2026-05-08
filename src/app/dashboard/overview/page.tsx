@@ -1,4 +1,5 @@
 import React from 'react';
+import Link from 'next/link';
 import { Icon } from '@/components/ui/Icon';
 import { ExportButton } from '@/components/ui/ExportButton';
 import { RefreshButton } from '@/components/ui/RefreshButton';
@@ -81,7 +82,7 @@ export default function DashboardOverviewPage() {
             <Icon name="chevronDown" size={12} />
           </div>
           <ExportButton resource="Dashboard" variant="outline" iconSize={14} />
-          <button className="gecko-btn gecko-btn-primary gecko-btn-sm"><Icon name="plus" size={14} />New Appointment</button>
+          <Link href="/gate/appointments" className="gecko-btn gecko-btn-primary gecko-btn-sm" style={{ textDecoration: 'none' }}><Icon name="plus" size={14} />New Appointment</Link>
         </div>
       </div>
 

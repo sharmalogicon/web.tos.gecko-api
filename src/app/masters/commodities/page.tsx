@@ -493,6 +493,7 @@ export default function CommoditiesPage() {
   const [activeFilter, setActiveFilter] = useState<'all' | 'active' | 'inactive'>('active');
   const [modalOpen,    setModalOpen]    = useState(false);
   const [editItem,     setEditItem]     = useState<Commodity | null>(null);
+  const { toast } = useToast();
 
   const filtered = useMemo(() => COMMODITIES.filter(c => {
     if (activeFilter === 'active'   && !c.active) return false;
@@ -549,7 +550,7 @@ export default function CommoditiesPage() {
         </div>
         <div className="gecko-toolbar">
           <ExportButton resource="Commodities" iconSize={16} />
-          <button className="gecko-btn gecko-btn-outline gecko-btn-sm"><Icon name="upload" size={16} /> Import</button>
+          <button className="gecko-btn gecko-btn-outline gecko-btn-sm" onClick={() => toast({ variant: 'info', title: 'Import HS codes', message: 'CSV import workflow coming soon.' })}><Icon name="upload" size={16} /> Import</button>
           <button className="gecko-btn gecko-btn-primary gecko-btn-sm" onClick={openNew}><Icon name="plus" size={16} /> New Code</button>
         </div>
       </div>

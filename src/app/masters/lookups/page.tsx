@@ -427,6 +427,7 @@ export default function LookupMasterPage() {
   const [activeCategoryKey, setActiveCategoryKey] = useState('containerStatus');
   const [editEntry,   setEditEntry]   = useState<LookupEntry | null>(null);
   const [isNewEntry,  setIsNewEntry]  = useState(false);
+  const { toast } = useToast();
   const [searchQ,     setSearchQ]     = useState('');
   const [lcFilter,    setLcFilter]    = useState<Lifecycle | 'ALL'>('ALL');
   const activeGroup    = LOOKUP_GROUPS.find(g => g.id === activeGroupId)!;
@@ -469,8 +470,8 @@ export default function LookupMasterPage() {
         </div>
         <div className="gecko-toolbar">
           <ExportButton label="Export CSV" resource="Lookups" iconSize={15} />
-          <button className="gecko-btn gecko-btn-outline gecko-btn-sm"><Icon name="upload" size={15} /> Import CSV</button>
-          <button className="gecko-btn gecko-btn-outline gecko-btn-sm"><Icon name="refreshCcw" size={15} /> Sync SMDG</button>
+          <button className="gecko-btn gecko-btn-outline gecko-btn-sm" onClick={() => toast({ variant: 'info', title: 'Import CSV', message: 'Lookup CSV import workflow coming soon.' })}><Icon name="upload" size={15} /> Import CSV</button>
+          <button className="gecko-btn gecko-btn-outline gecko-btn-sm" onClick={() => toast({ variant: 'info', title: 'Sync SMDG', message: 'SMDG lookup sync queued.' })}><Icon name="refreshCcw" size={15} /> Sync SMDG</button>
           <button className="gecko-btn gecko-btn-primary gecko-btn-sm" onClick={openNew}><Icon name="plus" size={15} /> New Entry</button>
         </div>
       </div>
@@ -674,7 +675,7 @@ export default function LookupMasterPage() {
                 {activeCatMeta?.compliance && <> · Standard: <CompliancePill compliance={activeCatMeta.compliance} /></>}
               </span>
               <div style={{ marginLeft: 'auto', display: 'flex', gap: 8 }}>
-                <button className="gecko-btn gecko-btn-ghost gecko-btn-sm" style={{ fontSize: 11 }}><Icon name="arrowUp" size={12} /> Reorder</button>
+                <button className="gecko-btn gecko-btn-ghost gecko-btn-sm" style={{ fontSize: 11 }} onClick={() => toast({ variant: 'info', title: 'Reorder', message: 'Drag-to-reorder coming soon.' })}><Icon name="arrowUp" size={12} /> Reorder</button>
                 <ExportButton label="Export this category" resource="Lookup category" iconSize={12} className="" style={{ fontSize: 11 }} />
               </div>
             </div>

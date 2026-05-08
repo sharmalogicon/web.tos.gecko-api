@@ -618,7 +618,7 @@ export default function PortsListPage() {
           </div>
           <div className="gecko-toolbar">
             <ExportButton resource="Ports" iconSize={16} />
-            <button className="gecko-btn gecko-btn-outline gecko-btn-sm"><Icon name="upload" size={16} /> Import</button>
+            <button className="gecko-btn gecko-btn-outline gecko-btn-sm" onClick={() => toast({ variant: 'info', title: 'Import ports', message: 'UN/LOCODE import workflow coming soon.' })}><Icon name="upload" size={16} /> Import</button>
             <FilterPopover
               fields={PORT_FILTER_FIELDS}
               values={filters}

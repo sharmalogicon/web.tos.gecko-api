@@ -376,6 +376,7 @@ function NewLocationModal({ onClose }: { onClose: () => void }) {
 export default function LocationsPage() {
   const [activeNode, setActiveNode] = useState('Block A-01');
   const [showModal, setShowModal] = useState(false);
+  const { toast } = useToast();
 
   // Simple grid simulation data for the yard view
   const bays = Array.from({ length: 16 }, (_, i) => String(i + 1).padStart(2, '0'));
@@ -424,7 +425,7 @@ export default function LocationsPage() {
         </div>
         <div className="gecko-toolbar">
           <ExportButton label="Export tree" resource="Locations tree" iconSize={16} />
-          <button className="gecko-btn gecko-btn-outline gecko-btn-sm"><Icon name="map" size={16} /> Yard map view</button>
+          <button className="gecko-btn gecko-btn-outline gecko-btn-sm" onClick={() => toast({ variant: 'info', title: 'Yard map view', message: 'Interactive yard map coming soon.' })}><Icon name="map" size={16} /> Yard map view</button>
           <button className="gecko-btn gecko-btn-primary gecko-btn-sm" onClick={() => setShowModal(true)}><Icon name="plus" size={16} /> New Location</button>
         </div>
       </div>

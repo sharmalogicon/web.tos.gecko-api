@@ -4,6 +4,7 @@ import Link from 'next/link';
 import { Icon } from '@/components/ui/Icon';
 import { FilterPopover, FilterField, SortOption } from '@/components/ui/FilterPopover';
 import { ExportButton } from '@/components/ui/ExportButton';
+import { useToast } from '@/components/ui/Toast';
 import { usePagination, TablePagination } from '@/components/ui/TablePagination';
 
 type ChargeType = 'Revenue' | 'Cost' | 'Pass-through';
@@ -158,6 +159,7 @@ const totalEvents   = ALL_CODES.reduce((sum, c) => sum + parseInt(c.inUse.replac
 export default function ChargeCodesPage() {
   const [filters, setFilters] = useState<Record<string, string>>({ query: '', module: '', type: '', category: '', status: '' });
   const [sortBy, setSortBy] = useState('category');
+  const { toast } = useToast();
 
   const filtered = useMemo(() => {
     let rows = CHARGE_CATEGORIES.flatMap(cat =>
@@ -193,7 +195,7 @@ export default function ChargeCodesPage() {
         </div>
         <div className="gecko-toolbar">
           <ExportButton resource="Charge codes" iconSize={16} />
-          <button className="gecko-btn gecko-btn-outline gecko-btn-sm"><Icon name="copy" size={16} /> Clone from facility</button>
+          <button className="gecko-btn gecko-btn-outline gecko-btn-sm" onClick={() => toast({ variant: 'info', title: 'Clone from facility', message: 'Facility-clone workflow coming soon.' })}><Icon name="copy" size={16} /> Clone from facility</button>
           <FilterPopover
             fields={CC_FILTER_FIELDS}
             values={filters}

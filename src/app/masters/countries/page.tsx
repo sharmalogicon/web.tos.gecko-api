@@ -394,6 +394,7 @@ export default function CountriesPage() {
     query: '', region: '', unMember: '', status: '',
   });
   const [sortBy, setSortBy] = useState('name');
+  const { toast } = useToast();
   const [modalCountry, setModalCountry] = useState<Country | null>(null);
   const [isNew, setIsNew] = useState(false);
 
@@ -466,7 +467,7 @@ export default function CountriesPage() {
         </div>
         <div className="gecko-toolbar">
           <ExportButton resource="Countries" iconSize={16} />
-          <button className="gecko-btn gecko-btn-outline gecko-btn-sm"><Icon name="upload" size={16} /> Import</button>
+          <button className="gecko-btn gecko-btn-outline gecko-btn-sm" onClick={() => toast({ variant: 'info', title: 'Import countries', message: 'ISO-3166 import workflow coming soon.' })}><Icon name="upload" size={16} /> Import</button>
           <FilterPopover
             fields={COUNTRY_FILTER_FIELDS}
             values={filters}

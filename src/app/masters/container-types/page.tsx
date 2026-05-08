@@ -4,6 +4,7 @@ import Link from 'next/link';
 import { Icon } from '@/components/ui/Icon';
 import { usePagination, TablePagination } from '@/components/ui/TablePagination';
 import { ExportButton } from '@/components/ui/ExportButton';
+import { useToast } from '@/components/ui/Toast';
 
 const CONTAINER_TYPES = [
   { id: '22G1', iso: '22G1', name: "20' Standard", dims: "20' × 8'6\"", type: 'GP', cat: 'GENERAL', payload: '28,230 kg', tare: '2,300 kg', cube: '33.2 m³', active: 12, color: 'var(--gecko-primary-500)', bg: 'var(--gecko-primary-50)' },
@@ -44,6 +45,7 @@ function ContainerGraphic({ width, height, color }: { width: number, height: num
 export default function ContainerTypesPage() {
   const filtered = useMemo(() => CONTAINER_TYPES, []);
   const { page, setPage, pageSize, setPageSize, totalPages, pageItems, totalItems, startRow, endRow } = usePagination(filtered);
+  const { toast } = useToast();
 
   return (
     <div style={{ maxWidth: 'var(--gecko-container-max)', margin: '0 auto', display: 'flex', flexDirection: 'column', gap: 24, paddingBottom: 40 }}>
@@ -60,7 +62,7 @@ export default function ContainerTypesPage() {
         </div>
         <div className="gecko-toolbar">
           <ExportButton resource="Container types" iconSize={16} />
-          <button className="gecko-btn gecko-btn-outline gecko-btn-sm"><Icon name="refreshCcw" size={16} /> Sync BIC</button>
+          <button className="gecko-btn gecko-btn-outline gecko-btn-sm" onClick={() => toast({ variant: 'info', title: 'Sync BIC', message: 'BIC code registry sync queued.' })}><Icon name="refreshCcw" size={16} /> Sync BIC</button>
           <Link href="/masters/container-types/new" className="gecko-btn gecko-btn-primary gecko-btn-sm"><Icon name="plus" size={16} /> New Type</Link>
         </div>
       </div>

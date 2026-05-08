@@ -3,6 +3,7 @@ import React, { useState } from 'react';
 import Link from 'next/link';
 import { Icon } from '@/components/ui/Icon';
 import { ExportButton } from '@/components/ui/ExportButton';
+import { useToast } from '@/components/ui/Toast';
 
 const TABS = [
   { id: 'general',      label: 'General',         icon: 'tag' },
@@ -607,6 +608,7 @@ function TabUsage() {
 export default function ChargeCodeDetailPage({ params }: { params: { code: string } }) {
   const code = decodeURIComponent(params.code);
   const [activeTab, setActiveTab] = useState('general');
+  const { toast } = useToast();
   const [editing, setEditing] = useState(false);
 
   const tabContent: Record<string, React.ReactNode> = {
@@ -632,7 +634,7 @@ export default function ChargeCodeDetailPage({ params }: { params: { code: strin
           <span className="gecko-breadcrumb-current">{code}</span>
         </nav>
         <div style={{ display: 'flex', gap: 10 }}>
-          <button className="gecko-btn gecko-btn-ghost gecko-btn-sm"><Icon name="copy" size={15} /> Clone</button>
+          <button className="gecko-btn gecko-btn-ghost gecko-btn-sm" onClick={() => toast({ variant: 'success', title: 'Charge code cloned', message: `Copy of ${code} created as a draft.` })}><Icon name="copy" size={15} /> Clone</button>
           <ExportButton resource="Charge code" iconSize={15} />
           {editing ? (
             <>

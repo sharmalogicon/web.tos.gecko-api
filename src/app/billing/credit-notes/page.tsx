@@ -4,6 +4,7 @@ import Link from 'next/link';
 import { Icon } from '@/components/ui/Icon';
 import { FilterPopover, FilterField, SortOption } from '@/components/ui/FilterPopover';
 import { ExportButton } from '@/components/ui/ExportButton';
+import { useToast } from '@/components/ui/Toast';
 import { PrintDocumentModal, BarcodeScanInput } from '@/components/ui/BarcodeDisplay';
 
 const CREDIT_NOTES = [
@@ -35,6 +36,7 @@ function StatusBadge({ status }: { status: string }) {
 export default function CreditNotesPage() {
   const [filters, setFilters] = useState<Record<string, string>>({ query: '', status: '', date: '' });
   const [sortBy, setSortBy] = useState('date_desc');
+  const { toast } = useToast();
   const [printDoc, setPrintDoc] = useState<{ id: string; docType: string; details: {label:string;value:string}[] } | null>(null);
   const [scannedId, setScannedId] = useState<string | null>(null);
 
@@ -63,7 +65,7 @@ export default function CreditNotesPage() {
             sortValue={sortBy}
             onSortChange={setSortBy}
           />
-          <button className="gecko-btn gecko-btn-primary gecko-btn-sm"><Icon name="plus" size={16} /> Issue Credit Note</button>
+          <button className="gecko-btn gecko-btn-primary gecko-btn-sm" onClick={() => toast({ variant: 'info', title: 'Issue Credit Note', message: 'Credit-note creation form coming soon.' })}><Icon name="plus" size={16} /> Issue Credit Note</button>
         </div>
       </div>
 

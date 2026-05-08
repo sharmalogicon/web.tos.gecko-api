@@ -2,6 +2,7 @@
 import React, { useState } from 'react';
 import { Icon } from '@/components/ui/Icon';
 import { PageToolbar, Field } from '@/components/ui/OpsPrimitives';
+import { useToast } from '@/components/ui/Toast';
 
 // ── Constants ────────────────────────────────────────────────────────────────
 
@@ -907,6 +908,7 @@ function VisitSummaryRail({ moves, dropTeu, pickTeu, teuCap, teuUsed, teuRemaini
 // ── Page ──────────────────────────────────────────────────────────────────────
 
 export default function GateInPage() {
+  const { toast } = useToast();
   const [truck] = useState({
     plate: '70-4455', trailer: 'TLR-442-9', transporter: 'Laem Chabang Trans.',
     driver: 'Prem Kanchana', license: 'TH-D-8841-22', mobile: '+66 87 341 2200',
@@ -972,9 +974,9 @@ export default function GateInPage() {
         ]}
         actions={
           <>
-            <button className="gecko-btn gecko-btn-ghost gecko-btn-sm"><Icon name="x" size={13} />Cancel Visit</button>
-            <button className="gecko-btn gecko-btn-outline gecko-btn-sm"><Icon name="check" size={13} />Save Draft</button>
-            <button className="gecko-btn gecko-btn-primary gecko-btn-sm" disabled={errCount > 0}>
+            <button className="gecko-btn gecko-btn-ghost gecko-btn-sm" onClick={() => toast({ variant: 'warning', title: 'Visit cancelled', message: 'Truck visit cancelled — no movements recorded.' })}><Icon name="x" size={13} />Cancel Visit</button>
+            <button className="gecko-btn gecko-btn-outline gecko-btn-sm" onClick={() => toast({ variant: 'success', title: 'Draft saved', message: 'EIR-In draft preserved — finish later.' })}><Icon name="check" size={13} />Save Draft</button>
+            <button className="gecko-btn gecko-btn-primary gecko-btn-sm" disabled={errCount > 0} onClick={() => { toast({ variant: 'success', title: 'EIR-In committed', message: 'Gate pass printed — truck cleared to enter.' }); window.print(); }}>
               <Icon name="print" size={13} />Commit · Print Gate Pass
             </button>
           </>

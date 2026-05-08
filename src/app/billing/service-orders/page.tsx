@@ -4,6 +4,7 @@ import Link from 'next/link';
 import { Icon } from '@/components/ui/Icon';
 import { FilterPopover, FilterField, SortOption } from '@/components/ui/FilterPopover';
 import { ExportButton } from '@/components/ui/ExportButton';
+import { useToast } from '@/components/ui/Toast';
 import { PrintDocumentModal, BarcodeScanInput } from '@/components/ui/BarcodeDisplay';
 
 const SERVICE_ORDERS = [
@@ -40,6 +41,7 @@ function StatusBadge({ status }: { status: string }) {
 export default function ServiceOrdersPage() {
   const [filters, setFilters] = useState<Record<string, string>>({ query: '', code: '', status: 'pending', date: '' });
   const [sortBy, setSortBy] = useState('date_desc');
+  const { toast } = useToast();
   const [printDoc, setPrintDoc] = useState<{ id: string; docType: string; details: {label:string;value:string}[] } | null>(null);
   const [scannedId, setScannedId] = useState<string | null>(null);
 
@@ -68,7 +70,7 @@ export default function ServiceOrdersPage() {
             sortValue={sortBy}
             onSortChange={setSortBy}
           />
-          <button className="gecko-btn gecko-btn-primary gecko-btn-sm"><Icon name="plus" size={16} /> Manual Charge</button>
+          <button className="gecko-btn gecko-btn-primary gecko-btn-sm" onClick={() => toast({ variant: 'info', title: 'Manual Charge', message: 'Manual-charge entry form coming soon.' })}><Icon name="plus" size={16} /> Manual Charge</button>
         </div>
       </div>
 

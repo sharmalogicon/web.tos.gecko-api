@@ -3,6 +3,7 @@ import React, { useState } from 'react';
 import Link from 'next/link';
 import { Icon } from '@/components/ui/Icon';
 import { BarcodeDisplay } from '@/components/ui/BarcodeDisplay';
+import { useToast } from '@/components/ui/Toast';
 
 const WAREHOUSE_CARGO = [
   { id: 'LCL-8842-1', type: 'Pallet', desc: 'Auto Parts (Toyota)', weight: 1200, vol: 1.5, qty: 1, loc: 'WH-A1-01', bkg: 'BKG-2026-991' },
@@ -15,6 +16,7 @@ const WAREHOUSE_CARGO = [
 export default function StuffingPage() {
   const [stuffed, setStuffed] = useState<any[]>([]);
   const [warehouse, setWarehouse] = useState<any[]>(WAREHOUSE_CARGO);
+  const { toast } = useToast();
   const [selectedWh, setSelectedWh] = useState<Set<string>>(new Set());
   const [selectedStuffed, setSelectedStuffed] = useState<Set<string>>(new Set());
 
@@ -68,7 +70,7 @@ export default function StuffingPage() {
         </div>
         <div className="gecko-toolbar">
           <button className="gecko-btn gecko-btn-outline gecko-btn-sm" onClick={() => window.print()}><Icon name="printer" size={16} /> Print Tally Sheet</button>
-          <button className="gecko-btn gecko-btn-primary gecko-btn-sm"><Icon name="check" size={16} /> Complete Stuffing</button>
+          <button className="gecko-btn gecko-btn-primary gecko-btn-sm" onClick={() => toast({ variant: 'success', title: 'Stuffing completed', message: 'Container stuffing recorded.' })}><Icon name="check" size={16} /> Complete Stuffing</button>
         </div>
       </div>
 

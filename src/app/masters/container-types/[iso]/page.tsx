@@ -4,6 +4,7 @@ import Link from 'next/link';
 import { useParams } from 'next/navigation';
 import { Icon } from '@/components/ui/Icon';
 import { ExportButton } from '@/components/ui/ExportButton';
+import { useToast } from '@/components/ui/Toast';
 
 const CONTAINER_TYPES = [
   { id: '22G1', iso: '22G1', name: "20' Standard", dims: "20' × 8'6\"", type: 'GP', cat: 'GENERAL', payload: '28,230 kg', tare: '2,300 kg', cube: '33.2 m³', active: 12 },
@@ -473,6 +474,7 @@ function TabHistory({ iso }: { iso: string }) {
 export default function ContainerTypeDetailPage() {
   const params = useParams();
   const iso = (params?.iso as string) ?? '';
+  const { toast } = useToast();
 
   const ct = CONTAINER_TYPES.find(c => c.iso === iso);
 
@@ -518,7 +520,7 @@ export default function ContainerTypeDetailPage() {
           <span className="gecko-breadcrumb-current" style={{ fontFamily: 'var(--gecko-font-mono)' }}>{ct.iso}</span>
         </nav>
         <div style={{ display: 'flex', gap: 10 }}>
-          <button className="gecko-btn gecko-btn-ghost gecko-btn-sm"><Icon name="copy" size={14} /> Clone</button>
+          <button className="gecko-btn gecko-btn-ghost gecko-btn-sm" onClick={() => toast({ variant: 'success', title: 'Container type cloned', message: `Copy of ${iso} created as a draft.` })}><Icon name="copy" size={14} /> Clone</button>
           <ExportButton resource="Container type" iconSize={14} />
           {editing ? (
             <>

@@ -4,6 +4,7 @@ import Link from 'next/link';
 import { Icon } from '@/components/ui/Icon';
 import { usePagination, TablePagination } from '@/components/ui/TablePagination';
 import { ExportButton } from '@/components/ui/ExportButton';
+import { useToast } from '@/components/ui/Toast';
 
 // ── Keyframe animations injected into document ─────────────────────────────
 const ANIM_CSS = `
@@ -674,6 +675,7 @@ function ChargesPanel({ movement, applicableCharges, applicableVAS, onToggleChar
 export default function OrderTypeMasterPage() {
   const [selected, setSelected] = useState<OrderType>(ORDER_TYPES[0]);
   const [selectedSeq, setSelectedSeq] = useState<number | null>(null);
+  const { toast } = useToast();
   const [search, setSearch] = useState('');
 
   // All charges start as applicable
@@ -714,7 +716,7 @@ export default function OrderTypeMasterPage() {
         </div>
         <div className="gecko-toolbar">
           <ExportButton resource="Order types" iconSize={15} />
-          <button className="gecko-btn gecko-btn-outline gecko-btn-sm"><Icon name="edit" size={15} /> Edit</button>
+          <button className="gecko-btn gecko-btn-outline gecko-btn-sm" onClick={() => toast({ variant: 'info', title: 'Edit Order Type', message: 'Edit form coming soon.' })}><Icon name="edit" size={15} /> Edit</button>
           <Link href="/masters/order-types/new" className="gecko-btn gecko-btn-primary gecko-btn-sm"><Icon name="plus" size={15} /> New Work Order Type</Link>
         </div>
       </div>

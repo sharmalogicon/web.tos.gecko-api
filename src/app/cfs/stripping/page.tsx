@@ -3,6 +3,7 @@ import React, { useState } from 'react';
 import Link from 'next/link';
 import { Icon } from '@/components/ui/Icon';
 import { BarcodeDisplay } from '@/components/ui/BarcodeDisplay';
+import { useToast } from '@/components/ui/Toast';
 
 const CONTAINER_CARGO = [
   { id: 'LCL-IM-001', type: 'Pallet', desc: 'Apparel (Nike)', weight: 800, qty: 1, seal: 'OK', marks: 'NKE-TH' },
@@ -14,6 +15,7 @@ const CONTAINER_CARGO = [
 export default function StrippingPage() {
   const [container, setContainer] = useState<any[]>(CONTAINER_CARGO);
   const [warehouse, setWarehouse] = useState<any[]>([]);
+  const { toast } = useToast();
   const [selectedCont, setSelectedCont] = useState<Set<string>>(new Set());
   const [selectedWh, setSelectedWh] = useState<Set<string>>(new Set());
   const [destLoc, setDestLoc] = useState('WH-A1-01');
@@ -58,7 +60,7 @@ export default function StrippingPage() {
         </div>
         <div className="gecko-toolbar">
           <button className="gecko-btn gecko-btn-outline gecko-btn-sm" onClick={() => window.print()}><Icon name="printer" size={16} /> Print Receipt</button>
-          <button className="gecko-btn gecko-btn-primary gecko-btn-sm"><Icon name="check" size={16} /> Complete Stripping</button>
+          <button className="gecko-btn gecko-btn-primary gecko-btn-sm" onClick={() => toast({ variant: 'success', title: 'Stripping completed', message: 'Container stripping recorded.' })}><Icon name="check" size={16} /> Complete Stripping</button>
         </div>
       </div>
 

@@ -4,6 +4,7 @@ import { usePagination, TablePagination } from '@/components/ui/TablePagination'
 import Link from 'next/link';
 import { Icon } from '@/components/ui/Icon';
 import { ExportButton } from '@/components/ui/ExportButton';
+import { useToast } from '@/components/ui/Toast';
 import { FilterPopover, FilterField, SortOption } from '@/components/ui/FilterPopover';
 
 const VESSEL_FILTER_FIELDS: FilterField[] = [
@@ -45,6 +46,7 @@ function StatusBadge({ status }: { status: string }) {
 export default function VesselsPage() {
   const [filters, setFilters] = useState<Record<string, string>>({ query: '', line: '', class: '', eta: '7d' });
   const [sortBy, setSortBy] = useState('eta_asc');
+  const { toast } = useToast();
 
   const filtered = useMemo(() => VESSELS, []);
   const { page, setPage, pageSize, setPageSize, totalPages, pageItems, totalItems, startRow, endRow } = usePagination(filtered);
@@ -64,7 +66,7 @@ export default function VesselsPage() {
         </div>
         <div className="gecko-toolbar">
           <ExportButton resource="Vessels" iconSize={16} />
-          <button className="gecko-btn gecko-btn-outline gecko-btn-sm"><Icon name="refreshCcw" size={16} /> Import BAPLIE</button>
+          <button className="gecko-btn gecko-btn-outline gecko-btn-sm" onClick={() => toast({ variant: 'info', title: 'Import BAPLIE', message: 'BAPLIE EDI message import coming soon.' })}><Icon name="refreshCcw" size={16} /> Import BAPLIE</button>
           <FilterPopover
             fields={VESSEL_FILTER_FIELDS}
             values={filters}
@@ -137,9 +139,9 @@ export default function VesselsPage() {
             <h3 style={{ fontSize: 16, fontWeight: 700, margin: 0, color: 'var(--gecko-text-primary)' }}>Active voyages at Laem Chabang</h3>
             <div style={{ fontSize: 13, color: 'var(--gecko-text-secondary)', marginTop: 4 }}>Vessels berthed or expected at this facility in the next 48h</div>
           </div>
-          <button className="gecko-btn gecko-btn-ghost gecko-btn-sm" style={{ color: 'var(--gecko-text-secondary)' }}>
+          <Link href="/masters/vessels/schedule" className="gecko-btn gecko-btn-ghost gecko-btn-sm" style={{ color: 'var(--gecko-text-secondary)', textDecoration: 'none' }}>
             Berth schedule <Icon name="arrowRight" size={14} />
-          </button>
+          </Link>
         </div>
 
         <table className="gecko-table gecko-table-comfortable" style={{ fontSize: 13 }}>

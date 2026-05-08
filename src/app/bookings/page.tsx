@@ -5,6 +5,7 @@ import { Icon } from '@/components/ui/Icon';
 import { BarcodeScanInput } from '@/components/ui/BarcodeDisplay';
 import { ExportButton } from '@/components/ui/ExportButton';
 import { RefreshButton } from '@/components/ui/RefreshButton';
+import { useToast } from '@/components/ui/Toast';
 
 // ─── Types ─────────────────────────────────────────────────────────────────────
 
@@ -98,6 +99,7 @@ export default function BookingRegisterPage() {
   const [selected, setSelected] = useState<Set<string>>(new Set());
   const [sortKey, setSortKey] = useState<'etd' | 'cyCutoff' | 'createdOn'>('createdOn');
   const [sortDir, setSortDir] = useState<'asc' | 'desc'>('desc');
+  const { toast } = useToast();
 
   const filtered = useMemo(() => {
     return BOOKINGS
@@ -265,8 +267,8 @@ export default function BookingRegisterPage() {
           <span style={{ fontSize: 12, fontWeight: 600, color: 'var(--gecko-primary-700)' }}>{selected.size} booking{selected.size > 1 ? 's' : ''} selected</span>
           <div style={{ display: 'flex', gap: 6 }}>
             <ExportButton label="Export Selected" resource="Selected bookings" variant="outline" iconSize={12} />
-            <button className="gecko-btn gecko-btn-outline gecko-btn-sm"><Icon name="transferH" size={12} />Bulk Transfer</button>
-            <button className="gecko-btn gecko-btn-ghost gecko-btn-sm" style={{ color: 'var(--gecko-danger-600)' }}><Icon name="close" size={12} />Cancel Selected</button>
+            <button className="gecko-btn gecko-btn-outline gecko-btn-sm" onClick={() => toast({ variant: 'info', title: 'Bulk Transfer', message: `${selected.size} booking(s) — workflow under construction.` })}><Icon name="transferH" size={12} />Bulk Transfer</button>
+            <button className="gecko-btn gecko-btn-ghost gecko-btn-sm" style={{ color: 'var(--gecko-danger-600)' }} onClick={() => toast({ variant: 'warning', title: 'Cancel Selected', message: `${selected.size} booking(s) cancellation — confirmation flow under construction.` })}><Icon name="close" size={12} />Cancel Selected</button>
           </div>
           <button onClick={() => setSelected(new Set())} style={{ marginLeft: 'auto', background: 'none', border: 'none', cursor: 'pointer', color: 'var(--gecko-text-secondary)', fontSize: 11, fontFamily: 'inherit' }}>Clear selection</button>
         </div>

@@ -131,6 +131,7 @@ function ContainerDrawer({ container, onClose, onDuplicate, onDelete }: {
   onDuplicate: () => void; onDelete: () => void;
 }) {
   const [form, setForm] = useState({ ...container });
+  const { toast } = useToast();
   const isReefer = ['RF', 'RE', 'HR', 'RH'].includes(form.type);
   const isDG     = form.imoClass !== null && form.imoClass !== '';
 
@@ -380,7 +381,7 @@ function ContainerDrawer({ container, onClose, onDuplicate, onDelete }: {
           <button onClick={onDelete}    className="gecko-btn gecko-btn-ghost gecko-btn-sm" style={{ color: 'var(--gecko-danger-600)' }}><Icon name="trash" size={13} /> Delete</button>
           <div style={{ flex: 1 }} />
           <button onClick={onClose} className="gecko-btn gecko-btn-outline gecko-btn-sm">Cancel</button>
-          <button className="gecko-btn gecko-btn-primary gecko-btn-sm"><Icon name="save" size={13} /> Save Container</button>
+          <button className="gecko-btn gecko-btn-primary gecko-btn-sm" onClick={() => { toast({ variant: 'success', title: 'Container saved', message: form.containerNo || 'New container saved as draft.' }); onClose(); }}><Icon name="save" size={13} /> Save Container</button>
         </div>
       </div>
     </>
@@ -543,6 +544,7 @@ function TabVoyage() {
 function TabContainers({ onSelectContainer, onAddContainer }: { onSelectContainer: (c: Container) => void; onAddContainer: () => void }) {
   const [selected, setSelected] = useState<Set<number>>(new Set());
   const [search, setSearch] = useState('');
+  const { toast } = useToast();
 
   const filtered = CONTAINERS.filter(c =>
     !search || c.containerNo.toLowerCase().includes(search.toLowerCase())
@@ -584,8 +586,8 @@ function TabContainers({ onSelectContainer, onAddContainer }: { onSelectContaine
           {selected.size > 0 && (
             <div style={{ display: 'flex', gap: 6, alignItems: 'center', padding: '4px 10px', background: 'var(--gecko-primary-50)', border: '1px solid var(--gecko-primary-200)', borderRadius: 8 }}>
               <span style={{ fontSize: 12, fontWeight: 600, color: 'var(--gecko-primary-700)' }}>{selected.size} selected</span>
-              <button className="gecko-btn gecko-btn-ghost gecko-btn-sm" style={{ padding: '2px 8px', fontSize: 11 }}><Icon name="transferH" size={12} /> Transfer</button>
-              <button className="gecko-btn gecko-btn-ghost gecko-btn-sm" style={{ padding: '2px 8px', fontSize: 11, color: 'var(--gecko-danger-600)' }}><Icon name="trash" size={12} /> Delete</button>
+              <button className="gecko-btn gecko-btn-ghost gecko-btn-sm" style={{ padding: '2px 8px', fontSize: 11 }} onClick={() => toast({ variant: 'info', title: 'Transfer Containers', message: 'Coming soon — workflow under construction.' })}><Icon name="transferH" size={12} /> Transfer</button>
+              <button className="gecko-btn gecko-btn-ghost gecko-btn-sm" style={{ padding: '2px 8px', fontSize: 11, color: 'var(--gecko-danger-600)' }} onClick={() => toast({ variant: 'info', title: 'Delete Containers', message: 'Coming soon — bulk delete under construction.' })}><Icon name="trash" size={12} /> Delete</button>
             </div>
           )}
           <button className="gecko-btn gecko-btn-primary gecko-btn-sm" onClick={onAddContainer}><Icon name="plus" size={13} /> Add Container</button>
@@ -671,6 +673,7 @@ function TabContainers({ onSelectContainer, onAddContainer }: { onSelectContaine
 
 function TabCargo() {
   const c = BOOKING.cargo;
+  const { toast } = useToast();
   return (
     <div style={{ padding: '24px', display: 'flex', flexDirection: 'column', gap: 20 }}>
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 16 }}>
@@ -710,7 +713,7 @@ function TabCargo() {
         <textarea className="gecko-input" rows={2} defaultValue={c.remarks} style={{ resize: 'vertical' }} />
       </div>
       <div style={{ display: 'flex', justifyContent: 'flex-end' }}>
-        <button className="gecko-btn gecko-btn-primary gecko-btn-sm"><Icon name="save" size={13} /> Save Cargo Details</button>
+        <button className="gecko-btn gecko-btn-primary gecko-btn-sm" onClick={() => toast({ variant: 'success', title: 'Cargo details saved', message: 'Booking cargo information updated.' })}><Icon name="save" size={13} /> Save Cargo Details</button>
       </div>
     </div>
   );
@@ -843,7 +846,7 @@ export default function BookingDetailPage() {
             )}
           </div>
 
-          <button className="gecko-btn gecko-btn-primary gecko-btn-sm"><Icon name="save" size={13} /> Save</button>
+          <button className="gecko-btn gecko-btn-primary gecko-btn-sm" onClick={() => toast({ variant: 'success', title: 'Booking saved', message: `${b.bookingNo} updated successfully.` })}><Icon name="save" size={13} /> Save</button>
         </div>
 
         {/* Row 2: vessel info + cut-off urgency */}
