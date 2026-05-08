@@ -67,7 +67,7 @@ export default function StuffingPage() {
           <div style={{ fontSize: 13, color: 'var(--gecko-text-secondary)' }}>Load LCL cargo from the warehouse into outbound containers.</div>
         </div>
         <div className="gecko-toolbar">
-          <button className="gecko-btn gecko-btn-outline gecko-btn-sm"><Icon name="printer" size={16} /> Print Tally Sheet</button>
+          <button className="gecko-btn gecko-btn-outline gecko-btn-sm" onClick={() => window.print()}><Icon name="printer" size={16} /> Print Tally Sheet</button>
           <button className="gecko-btn gecko-btn-primary gecko-btn-sm"><Icon name="check" size={16} /> Complete Stuffing</button>
         </div>
       </div>

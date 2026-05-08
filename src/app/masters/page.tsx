@@ -1,8 +1,10 @@
+"use client";
 import React from 'react';
 import Link from 'next/link';
 import { Icon } from '@/components/ui/Icon';
 import { PageToolbar } from '@/components/ui/OpsPrimitives';
 import { ExportButton } from '@/components/ui/ExportButton';
+import { useToast } from '@/components/ui/Toast';
 
 function EntityCard({ entity }: { entity: any }) {
   return (
@@ -42,6 +44,7 @@ function EntityCard({ entity }: { entity: any }) {
 }
 
 export default function MastersHubPage() {
+  const { toast } = useToast();
   const entities = [
     { id: 'customers',       icon: 'user',       label: 'Customers',                    count: 284,  desc: 'Bill-to · consignee · shipper · agent. One entity, many roles.',                              updated: '2h ago',    stats: [['active', 268], ['on-hold', 4], ['prospect', 12]] },
     { id: 'lines',           icon: 'anchor',     label: 'Shipping Lines',               count: 42,   desc: 'Line operators / carriers. Drives EDO linkage and line tariff.',                              updated: 'Yesterday', stats: [['with-tariff', 38], ['edi-linked', 34]] },
@@ -73,7 +76,7 @@ export default function MastersHubPage() {
         actions={
           <>
             <ExportButton label="Export All" resource="All master data" iconSize={13} />
-            <button className="gecko-btn gecko-btn-outline gecko-btn-sm"><Icon name="refresh" size={13} />Sync from EDI</button>
+            <button className="gecko-btn gecko-btn-outline gecko-btn-sm" onClick={() => toast({ variant: 'info', title: 'EDI sync queued', message: 'Master data will refresh from EDI partners.' })}><Icon name="refresh" size={13} />Sync from EDI</button>
             <button className="gecko-btn gecko-btn-primary gecko-btn-sm"><Icon name="plus" size={13} />New Record</button>
           </>
         }
@@ -125,7 +128,7 @@ export default function MastersHubPage() {
               </div>
             ))}
             <div style={{ padding: '10px 12px', background: 'var(--gecko-bg-subtle)', textAlign: 'center' }}>
-              <button className="gecko-btn gecko-btn-ghost gecko-btn-sm" style={{ fontSize: 11 }}>View full audit log <Icon name="arrowRight" size={11} /></button>
+              <button className="gecko-btn gecko-btn-ghost gecko-btn-sm" style={{ fontSize: 11 }} onClick={() => toast({ variant: 'info', title: 'Audit log', message: 'Full audit log view coming soon.' })}>View full audit log <Icon name="arrowRight" size={11} /></button>
             </div>
           </div>
 

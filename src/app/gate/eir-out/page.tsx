@@ -3,6 +3,7 @@ import React, { useState, useMemo, useEffect } from 'react';
 import Link from 'next/link';
 import { Icon } from '@/components/ui/Icon';
 import { PageToolbar } from '@/components/ui/OpsPrimitives';
+import { RefreshButton } from '@/components/ui/RefreshButton';
 import { usePagination, TablePagination } from '@/components/ui/TablePagination';
 
 // ── Sample data ──────────────────────────────────────────────────────────────
@@ -141,8 +142,8 @@ export default function GateOutQueuePage() {
         ]}
         actions={
           <>
-            <button className="gecko-btn gecko-btn-ghost gecko-btn-sm"><Icon name="refresh" size={13} />Refresh</button>
-            <button className="gecko-btn gecko-btn-outline gecko-btn-sm"><Icon name="print" size={13} />Print Queue</button>
+            <RefreshButton resource="EIR-Out queue" variant="ghost" iconSize={13} />
+            <button className="gecko-btn gecko-btn-outline gecko-btn-sm" onClick={() => window.print()}><Icon name="print" size={13} />Print Queue</button>
             <Link href="/gate/eir-in" className="gecko-btn gecko-btn-primary gecko-btn-sm" style={{ textDecoration: 'none', display: 'inline-flex', alignItems: 'center', gap: 6 }}>
               <Icon name="plus" size={13} />New Gate-In
             </Link>

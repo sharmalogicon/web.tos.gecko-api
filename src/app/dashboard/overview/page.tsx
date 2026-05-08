@@ -1,6 +1,7 @@
 import React from 'react';
 import { Icon } from '@/components/ui/Icon';
 import { ExportButton } from '@/components/ui/ExportButton';
+import { RefreshButton } from '@/components/ui/RefreshButton';
 
 function Sparkline({ data, color = 'var(--gecko-primary-500)', height = 40, width = 120, fill = true }: { data: number[], color?: string, height?: number, width?: number, fill?: boolean }) {
   const max = Math.max(...data), min = Math.min(...data);
@@ -265,7 +266,7 @@ export default function DashboardOverviewPage() {
           </div>
           <div style={{ display: 'flex', gap: 8 }}>
             <button className="gecko-btn gecko-btn-outline gecko-btn-sm"><Icon name="filter" size={13} />Filter</button>
-            <button className="gecko-btn gecko-btn-outline gecko-btn-sm"><Icon name="refresh" size={13} />Refresh</button>
+            <RefreshButton resource="Dashboard" iconSize={13} />
           </div>
         </div>
         <div className="gecko-table-wrapper" style={{ border: 'none', borderRadius: 0, boxShadow: 'none', overflowX: 'auto' }}>

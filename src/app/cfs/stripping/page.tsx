@@ -57,7 +57,7 @@ export default function StrippingPage() {
           <div style={{ fontSize: 13, color: 'var(--gecko-text-secondary)' }}>Unload inbound LCL cargo from a container into the warehouse.</div>
         </div>
         <div className="gecko-toolbar">
-          <button className="gecko-btn gecko-btn-outline gecko-btn-sm"><Icon name="printer" size={16} /> Print Receipt</button>
+          <button className="gecko-btn gecko-btn-outline gecko-btn-sm" onClick={() => window.print()}><Icon name="printer" size={16} /> Print Receipt</button>
           <button className="gecko-btn gecko-btn-primary gecko-btn-sm"><Icon name="check" size={16} /> Complete Stripping</button>
         </div>
       </div>

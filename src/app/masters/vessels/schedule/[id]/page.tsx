@@ -214,7 +214,7 @@ export default function VoyageDetailPage() {
         </div>
         <div style={{ display: 'flex', gap: 8 }}>
           <ExportButton resource="Voyage" iconSize={15} />
-          <button className="gecko-btn gecko-btn-outline gecko-btn-sm"><Icon name="printer" size={15} /> Print Manifest</button>
+          <button className="gecko-btn gecko-btn-outline gecko-btn-sm" onClick={() => window.print()}><Icon name="printer" size={15} /> Print Manifest</button>
           <Link href={`/masters/vessels/schedule/new`} className="gecko-btn gecko-btn-primary gecko-btn-sm">
             <Icon name="edit" size={15} /> Edit Voyage
           </Link>

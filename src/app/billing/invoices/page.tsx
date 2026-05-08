@@ -55,7 +55,7 @@ export default function InvoicesPage() {
         </div>
         <div className="gecko-toolbar">
           <ExportButton resource="Invoices" iconSize={16} />
-          <button className="gecko-btn gecko-btn-outline gecko-btn-sm"><Icon name="printer" size={16} /> Print Batch</button>
+          <button className="gecko-btn gecko-btn-outline gecko-btn-sm" onClick={() => window.print()}><Icon name="printer" size={16} /> Print Batch</button>
           <FilterPopover
             fields={INV_FILTER_FIELDS}
             values={filters}

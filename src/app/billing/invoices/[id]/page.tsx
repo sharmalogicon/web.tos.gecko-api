@@ -3,9 +3,11 @@ import React from 'react';
 import Link from 'next/link';
 import { Icon } from '@/components/ui/Icon';
 import { BarcodeDisplay } from '@/components/ui/BarcodeDisplay';
+import { useToast } from '@/components/ui/Toast';
 
 export default function InvoiceDetailPage({ params }: { params: { id: string } }) {
   const id = params.id || 'INV-26-009412';
+  const { toast } = useToast();
 
   return (
     <div style={{ maxWidth: 900, margin: '0 auto', display: 'flex', flexDirection: 'column', gap: 24, paddingBottom: 60 }}>
@@ -18,9 +20,9 @@ export default function InvoiceDetailPage({ params }: { params: { id: string } }
           <span className="gecko-breadcrumb-current">{id}</span>
         </nav>
         <div style={{ display: 'flex', gap: 12 }}>
-          <button className="gecko-btn gecko-btn-ghost"><Icon name="printer" size={16} /> Print</button>
-          <button className="gecko-btn gecko-btn-outline"><Icon name="download" size={16} /> PDF</button>
-          <button className="gecko-btn gecko-btn-primary"><Icon name="send" size={16} /> Send via Email</button>
+          <button className="gecko-btn gecko-btn-ghost" onClick={() => window.print()}><Icon name="printer" size={16} /> Print</button>
+          <button className="gecko-btn gecko-btn-outline" onClick={() => toast({ variant: 'info', title: 'PDF queued', message: `Invoice ${id} will download shortly.` })}><Icon name="download" size={16} /> PDF</button>
+          <button className="gecko-btn gecko-btn-primary" onClick={() => toast({ variant: 'success', title: 'Invoice sent', message: `${id} emailed to the bill-to address.` })}><Icon name="send" size={16} /> Send via Email</button>
         </div>
       </div>
 

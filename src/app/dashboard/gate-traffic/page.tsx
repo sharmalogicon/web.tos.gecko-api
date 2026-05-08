@@ -3,6 +3,7 @@
 import React, { useState } from 'react';
 import { Icon } from '@/components/ui/Icon';
 import { ExportButton } from '@/components/ui/ExportButton';
+import { RefreshButton } from '@/components/ui/RefreshButton';
 
 function KpiCard({ label, value, sub, accent, trend }: { label: string; value: string; sub?: string; accent?: string; trend?: 'up' | 'down' | 'neutral' }) {
   return (
@@ -90,7 +91,7 @@ export default function GateTrafficDashboardPage() {
           <div style={{ fontSize: 13, color: 'var(--gecko-text-secondary)', marginTop: 4 }}>Real-time gate throughput, truck queue, and lane performance</div>
         </div>
         <div style={{ display: 'flex', gap: 8 }}>
-          <button className="gecko-btn gecko-btn-outline gecko-btn-sm"><Icon name="refresh" size={14} />Refresh</button>
+          <RefreshButton resource="Gate traffic" iconSize={14} />
           <ExportButton resource="Gate traffic" variant="primary" iconSize={14} />
         </div>
       </div>

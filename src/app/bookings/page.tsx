@@ -4,6 +4,7 @@ import Link from 'next/link';
 import { Icon } from '@/components/ui/Icon';
 import { BarcodeScanInput } from '@/components/ui/BarcodeDisplay';
 import { ExportButton } from '@/components/ui/ExportButton';
+import { RefreshButton } from '@/components/ui/RefreshButton';
 
 // ─── Types ─────────────────────────────────────────────────────────────────────
 
@@ -174,7 +175,7 @@ export default function BookingRegisterPage() {
         </div>
         <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
           <ExportButton resource="Bookings" iconSize={13} />
-          <button className="gecko-btn gecko-btn-outline gecko-btn-sm"><Icon name="refresh" size={13} />Refresh</button>
+          <RefreshButton resource="Bookings" iconSize={13} />
           <Link href="/bookings/new" className="gecko-btn gecko-btn-primary gecko-btn-sm" style={{ textDecoration: 'none', display: 'inline-flex', alignItems: 'center', gap: 6 }}>
             <Icon name="plus" size={13} />New Booking
           </Link>

@@ -1,6 +1,7 @@
 "use client";
 import React, { useState } from 'react';
 import { Icon } from '@/components/ui/Icon';
+import { useToast } from '@/components/ui/Toast';
 
 const RATE_ITEMS = [
   { id: 'LIFT-ON', desc: 'Container lift-on', base: 850, conditions: [
@@ -22,6 +23,7 @@ const RATE_ITEMS = [
 export default function RateCardsPage() {
   const [selectedPlan, setSelectedPlan] = useState('Public Tariff 2026 (Standard)');
   const [activeItem, setActiveItem] = useState(RATE_ITEMS[2]);
+  const { toast } = useToast();
 
   return (
     <div style={{ maxWidth: 'var(--gecko-container-max)', margin: '0 auto', display: 'flex', flexDirection: 'column', gap: 24, paddingBottom: 40, height: 'calc(100vh - 100px)' }}>
@@ -36,7 +38,7 @@ export default function RateCardsPage() {
           <div style={{ fontSize: 13, color: 'var(--gecko-text-secondary)', marginTop: 4 }}>Define pricing matrices using base rates and conditional constraint multipliers.</div>
         </div>
         <div className="gecko-toolbar">
-          <button className="gecko-btn gecko-btn-outline gecko-btn-sm"><Icon name="copy" size={16} /> Duplicate Plan</button>
+          <button className="gecko-btn gecko-btn-outline gecko-btn-sm" onClick={() => toast({ variant: 'success', title: 'Plan duplicated', message: `Copy of "${selectedPlan}" created as a draft.` })}><Icon name="copy" size={16} /> Duplicate Plan</button>
           <button className="gecko-btn gecko-btn-primary gecko-btn-sm"><Icon name="save" size={16} /> Save Changes</button>
         </div>
       </div>
@@ -119,7 +121,7 @@ export default function RateCardsPage() {
 
             <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 16 }}>
               <h3 style={{ fontSize: 16, fontWeight: 700, margin: 0 }}>Conditional Multipliers & Surcharges</h3>
-              <button className="gecko-btn gecko-btn-outline gecko-btn-sm" style={{ background: '#fff' }}><Icon name="plus" size={14} /> Add Constraint</button>
+              <button className="gecko-btn gecko-btn-outline gecko-btn-sm" style={{ background: '#fff' }} onClick={() => toast({ variant: 'info', title: 'Add Constraint', message: 'Constraint builder coming soon.' })}><Icon name="plus" size={14} /> Add Constraint</button>
             </div>
 
             <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
