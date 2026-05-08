@@ -2,6 +2,7 @@
 import React, { useState, useRef, useEffect } from 'react';
 import Link from 'next/link';
 import { Icon } from '@/components/ui/Icon';
+import { ExportButton } from '@/components/ui/ExportButton';
 
 // ── Voyage data ──────────────────────────────────────────────────────────────
 const LINE_COLORS: Record<string, { dot: string; bg: string; text: string }> = {
@@ -332,7 +333,7 @@ export default function VesselSchedulePage() {
           <Link href="/masters/vessels" className="gecko-btn gecko-btn-ghost gecko-btn-sm">
             <Icon name="list" size={16} /> List View
           </Link>
-          <button className="gecko-btn gecko-btn-outline gecko-btn-sm"><Icon name="download" size={16} /> Export</button>
+          <ExportButton resource="Vessel schedule" variant="outline" iconSize={16} />
           <Link href="/masters/vessels/schedule/new" className="gecko-btn gecko-btn-primary gecko-btn-sm">
             <Icon name="plus" size={16} /> New Voyage
           </Link>

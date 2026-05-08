@@ -3,6 +3,7 @@ import React, { useState } from 'react';
 import Link from 'next/link';
 import { Icon } from '@/components/ui/Icon';
 import { FilterPopover, FilterField, SortOption } from '@/components/ui/FilterPopover';
+import { ExportButton } from '@/components/ui/ExportButton';
 import { PrintDocumentModal, BarcodeScanInput } from '@/components/ui/BarcodeDisplay';
 
 const CREDIT_NOTES = [
@@ -50,7 +51,7 @@ export default function CreditNotesPage() {
           <div style={{ fontSize: 13, color: 'var(--gecko-text-secondary)' }}>Formal adjustments and refunds applied to finalized invoices.</div>
         </div>
         <div className="gecko-toolbar">
-          <button className="gecko-btn gecko-btn-ghost gecko-btn-sm"><Icon name="download" size={16} /> Export</button>
+          <ExportButton resource="Credit notes" iconSize={16} />
           <BarcodeScanInput onScan={v => setScannedId(v)} placeholder="Scan CN number…" size="sm" style={{ width: 200 }} />
           <FilterPopover
             fields={CN_FILTER_FIELDS}

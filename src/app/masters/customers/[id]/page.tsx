@@ -2,6 +2,7 @@
 import React from 'react';
 import Link from 'next/link';
 import { Icon } from '@/components/ui/Icon';
+import { ExportButton } from '@/components/ui/ExportButton';
 
 export default function CustomerDetailPage({ params }: { params: { id: string } }) {
   // Mock data for C-00142
@@ -35,7 +36,7 @@ export default function CustomerDetailPage({ params }: { params: { id: string } 
           </div>
         </div>
         <div style={{ display: 'flex', gap: 12 }}>
-          <button className="gecko-btn gecko-btn-ghost"><Icon name="download" size={16} /> Export</button>
+          <ExportButton resource="Customer" iconSize={16} />
           <button className="gecko-btn gecko-btn-outline"><Icon name="edit" size={16} /> Edit</button>
           <button className="gecko-btn gecko-btn-primary"><Icon name="plus" size={16} /> New Invoice</button>
         </div>

@@ -5,6 +5,7 @@ import { Icon } from '@/components/ui/Icon';
 import { FilterPopover, FilterField, SortOption } from '@/components/ui/FilterPopover';
 import { useToast } from '@/components/ui/Toast';
 import { EmptyState } from '@/components/ui/EmptyState';
+import { ExportButton } from '@/components/ui/ExportButton';
 import { usePagination, TablePagination } from '@/components/ui/TablePagination';
 
 const CUSTOMERS = [
@@ -447,7 +448,7 @@ export default function CustomersListPage() {
           <div style={{ fontSize: 13, color: 'var(--gecko-text-secondary)' }}>Unified party master — bill-to, consignee, shipper, agent, prospect. One record, many roles.</div>
         </div>
         <div className="gecko-toolbar">
-          <button className="gecko-btn gecko-btn-ghost gecko-btn-sm"><Icon name="download" size={16} /> Export</button>
+          <ExportButton resource="Customers" iconSize={16} />
           <button className="gecko-btn gecko-btn-outline gecko-btn-sm"><Icon name="upload" size={16} /> Import</button>
           <FilterPopover
             fields={CUSTOMER_FILTER_FIELDS}

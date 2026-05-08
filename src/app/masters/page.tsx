@@ -2,6 +2,7 @@ import React from 'react';
 import Link from 'next/link';
 import { Icon } from '@/components/ui/Icon';
 import { PageToolbar } from '@/components/ui/OpsPrimitives';
+import { ExportButton } from '@/components/ui/ExportButton';
 
 function EntityCard({ entity }: { entity: any }) {
   return (
@@ -71,7 +72,7 @@ export default function MastersHubPage() {
         badges={[{ label: '11 catalogs', kind: 'gray' }, { label: 'Single source of truth', kind: 'info' }]}
         actions={
           <>
-            <button className="gecko-btn gecko-btn-ghost gecko-btn-sm"><Icon name="download" size={13} />Export All</button>
+            <ExportButton label="Export All" resource="All master data" iconSize={13} />
             <button className="gecko-btn gecko-btn-outline gecko-btn-sm"><Icon name="refresh" size={13} />Sync from EDI</button>
             <button className="gecko-btn gecko-btn-primary gecko-btn-sm"><Icon name="plus" size={13} />New Record</button>
           </>

@@ -5,6 +5,7 @@ import { Icon } from '@/components/ui/Icon';
 import { FilterPopover, FilterField, SortOption } from '@/components/ui/FilterPopover';
 import { useToast } from '@/components/ui/Toast';
 import { EmptyState } from '@/components/ui/EmptyState';
+import { ExportButton } from '@/components/ui/ExportButton';
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -784,7 +785,7 @@ export default function HoldsPage() {
           </div>
         </div>
         <div className="gecko-toolbar">
-          <button className="gecko-btn gecko-btn-ghost gecko-btn-sm"><Icon name="download" size={16} /> Export</button>
+          <ExportButton resource="Holds" iconSize={16} />
           <FilterPopover
             fields={HOLDS_FILTER_FIELDS}
             values={filters}

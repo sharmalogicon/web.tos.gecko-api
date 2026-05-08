@@ -3,6 +3,7 @@ import React, { useState } from 'react';
 import Link from 'next/link';
 import { Icon } from '@/components/ui/Icon';
 import { FilterPopover, FilterField, SortOption } from '@/components/ui/FilterPopover';
+import { ExportButton } from '@/components/ui/ExportButton';
 
 const INVOICES = [
   { id: 'INV-26-009412', date: 'Apr 24, 2026', dueDate: 'May 24, 2026', customer: 'C-00142', custName: 'Thai Union Group PCL', amount: '฿12,450.00', vat: '฿871.50', total: '฿13,321.50', status: 'Draft' },
@@ -53,7 +54,7 @@ export default function InvoicesPage() {
           <div style={{ fontSize: 13, color: 'var(--gecko-text-secondary)' }}>Consolidated bills for customers. Includes both cash and credit terms.</div>
         </div>
         <div className="gecko-toolbar">
-          <button className="gecko-btn gecko-btn-ghost gecko-btn-sm"><Icon name="download" size={16} /> Export</button>
+          <ExportButton resource="Invoices" iconSize={16} />
           <button className="gecko-btn gecko-btn-outline gecko-btn-sm"><Icon name="printer" size={16} /> Print Batch</button>
           <FilterPopover
             fields={INV_FILTER_FIELDS}

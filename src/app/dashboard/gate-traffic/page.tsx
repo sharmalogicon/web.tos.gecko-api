@@ -2,6 +2,7 @@
 
 import React, { useState } from 'react';
 import { Icon } from '@/components/ui/Icon';
+import { ExportButton } from '@/components/ui/ExportButton';
 
 function KpiCard({ label, value, sub, accent, trend }: { label: string; value: string; sub?: string; accent?: string; trend?: 'up' | 'down' | 'neutral' }) {
   return (
@@ -90,7 +91,7 @@ export default function GateTrafficDashboardPage() {
         </div>
         <div style={{ display: 'flex', gap: 8 }}>
           <button className="gecko-btn gecko-btn-outline gecko-btn-sm"><Icon name="refresh" size={14} />Refresh</button>
-          <button className="gecko-btn gecko-btn-primary gecko-btn-sm"><Icon name="download" size={14} />Export</button>
+          <ExportButton resource="Gate traffic" variant="primary" iconSize={14} />
         </div>
       </div>
 

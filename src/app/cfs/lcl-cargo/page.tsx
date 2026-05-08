@@ -3,6 +3,7 @@ import React, { useState } from 'react';
 import Link from 'next/link';
 import { Icon } from '@/components/ui/Icon';
 import { FilterPopover, FilterField, SortOption } from '@/components/ui/FilterPopover';
+import { ExportButton } from '@/components/ui/ExportButton';
 
 const LCL_CARGO = [
   { id: 'LCL-8842-1', bkg: 'BKG-2026-991', desc: 'Auto Parts (Toyota)', type: 'Pallet', qty: 1, weight: '1,200 kg', vol: '1.5 cbm', loc: 'WH-A1-01', status: 'Ready for Stuffing' },
@@ -51,7 +52,7 @@ export default function LclCargoPage() {
           <div style={{ fontSize: 13, color: 'var(--gecko-text-secondary)' }}>Live inventory of all loose cargo currently in the CFS warehouse.</div>
         </div>
         <div className="gecko-toolbar">
-          <button className="gecko-btn gecko-btn-ghost gecko-btn-sm"><Icon name="download" size={16} /> Export</button>
+          <ExportButton resource="LCL cargo" iconSize={16} />
           <FilterPopover
             fields={LCL_FILTER_FIELDS}
             values={filters}

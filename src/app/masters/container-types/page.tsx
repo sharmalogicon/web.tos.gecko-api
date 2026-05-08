@@ -3,6 +3,7 @@ import React, { useMemo, useState } from 'react';
 import Link from 'next/link';
 import { Icon } from '@/components/ui/Icon';
 import { usePagination, TablePagination } from '@/components/ui/TablePagination';
+import { ExportButton } from '@/components/ui/ExportButton';
 
 const CONTAINER_TYPES = [
   { id: '22G1', iso: '22G1', name: "20' Standard", dims: "20' × 8'6\"", type: 'GP', cat: 'GENERAL', payload: '28,230 kg', tare: '2,300 kg', cube: '33.2 m³', active: 12, color: 'var(--gecko-primary-500)', bg: 'var(--gecko-primary-50)' },
@@ -58,7 +59,7 @@ export default function ContainerTypesPage() {
           <div style={{ fontSize: 13, color: 'var(--gecko-text-secondary)', marginTop: 4 }}>ISO 6346 type code catalog. Drives rate matrix, yard slot dimensions, and vessel stow.</div>
         </div>
         <div className="gecko-toolbar">
-          <button className="gecko-btn gecko-btn-ghost gecko-btn-sm"><Icon name="download" size={16} /> Export</button>
+          <ExportButton resource="Container types" iconSize={16} />
           <button className="gecko-btn gecko-btn-outline gecko-btn-sm"><Icon name="refreshCcw" size={16} /> Sync BIC</button>
           <Link href="/masters/container-types/new" className="gecko-btn gecko-btn-primary gecko-btn-sm"><Icon name="plus" size={16} /> New Type</Link>
         </div>

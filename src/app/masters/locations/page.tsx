@@ -2,6 +2,7 @@
 import React, { useState } from 'react';
 import { Icon } from '@/components/ui/Icon';
 import { useToast } from '@/components/ui/Toast';
+import { ExportButton } from '@/components/ui/ExportButton';
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -422,7 +423,7 @@ export default function LocationsPage() {
           <div style={{ fontSize: 13, color: 'var(--gecko-text-secondary)', marginTop: 4 }}>Hierarchical spatial tree — facilities down to individual container slots. 1,842 nodes across 3 facilities.</div>
         </div>
         <div className="gecko-toolbar">
-          <button className="gecko-btn gecko-btn-ghost gecko-btn-sm"><Icon name="download" size={16} /> Export tree</button>
+          <ExportButton label="Export tree" resource="Locations tree" iconSize={16} />
           <button className="gecko-btn gecko-btn-outline gecko-btn-sm"><Icon name="map" size={16} /> Yard map view</button>
           <button className="gecko-btn gecko-btn-primary gecko-btn-sm" onClick={() => setShowModal(true)}><Icon name="plus" size={16} /> New Location</button>
         </div>

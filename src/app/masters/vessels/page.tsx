@@ -3,6 +3,7 @@ import React, { useState, useMemo } from 'react';
 import { usePagination, TablePagination } from '@/components/ui/TablePagination';
 import Link from 'next/link';
 import { Icon } from '@/components/ui/Icon';
+import { ExportButton } from '@/components/ui/ExportButton';
 import { FilterPopover, FilterField, SortOption } from '@/components/ui/FilterPopover';
 
 const VESSEL_FILTER_FIELDS: FilterField[] = [
@@ -62,7 +63,7 @@ export default function VesselsPage() {
           <div style={{ fontSize: 13, color: 'var(--gecko-text-secondary)', marginTop: 4 }}>Vessel catalog with IMO-keyed identity, plus current and scheduled voyages.</div>
         </div>
         <div className="gecko-toolbar">
-          <button className="gecko-btn gecko-btn-ghost gecko-btn-sm"><Icon name="download" size={16} /> Export</button>
+          <ExportButton resource="Vessels" iconSize={16} />
           <button className="gecko-btn gecko-btn-outline gecko-btn-sm"><Icon name="refreshCcw" size={16} /> Import BAPLIE</button>
           <FilterPopover
             fields={VESSEL_FILTER_FIELDS}

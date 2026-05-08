@@ -4,6 +4,7 @@ import { usePagination, TablePagination } from '@/components/ui/TablePagination'
 import { Icon } from '@/components/ui/Icon';
 import { FilterPopover, FilterField, SortOption } from '@/components/ui/FilterPopover';
 import { useToast } from '@/components/ui/Toast';
+import { ExportButton } from '@/components/ui/ExportButton';
 import { EmptyState } from '@/components/ui/EmptyState';
 
 // ─── Types ────────────────────────────────────────────────────────────────────
@@ -464,7 +465,7 @@ export default function CountriesPage() {
           </div>
         </div>
         <div className="gecko-toolbar">
-          <button className="gecko-btn gecko-btn-ghost gecko-btn-sm"><Icon name="download" size={16} /> Export</button>
+          <ExportButton resource="Countries" iconSize={16} />
           <button className="gecko-btn gecko-btn-outline gecko-btn-sm"><Icon name="upload" size={16} /> Import</button>
           <FilterPopover
             fields={COUNTRY_FILTER_FIELDS}

@@ -3,6 +3,7 @@ import React, { useState } from 'react';
 import Link from 'next/link';
 import { useParams } from 'next/navigation';
 import { Icon } from '@/components/ui/Icon';
+import { ExportButton } from '@/components/ui/ExportButton';
 
 const CONTAINER_TYPES = [
   { id: '22G1', iso: '22G1', name: "20' Standard", dims: "20' × 8'6\"", type: 'GP', cat: 'GENERAL', payload: '28,230 kg', tare: '2,300 kg', cube: '33.2 m³', active: 12 },
@@ -518,7 +519,7 @@ export default function ContainerTypeDetailPage() {
         </nav>
         <div style={{ display: 'flex', gap: 10 }}>
           <button className="gecko-btn gecko-btn-ghost gecko-btn-sm"><Icon name="copy" size={14} /> Clone</button>
-          <button className="gecko-btn gecko-btn-ghost gecko-btn-sm"><Icon name="download" size={14} /> Export</button>
+          <ExportButton resource="Container type" iconSize={14} />
           {editing ? (
             <>
               <button className="gecko-btn gecko-btn-outline gecko-btn-sm" onClick={() => setEditing(false)}>Cancel</button>

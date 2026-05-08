@@ -5,6 +5,7 @@ import { Icon } from '@/components/ui/Icon';
 import { FilterPopover, FilterField, SortOption } from '@/components/ui/FilterPopover';
 import { useToast } from '@/components/ui/Toast';
 import { EmptyState } from '@/components/ui/EmptyState';
+import { ExportButton } from '@/components/ui/ExportButton';
 import { usePagination, TablePagination } from '@/components/ui/TablePagination';
 
 // ─── New Line Modal Types ──────────────────────────────────────────────────────
@@ -400,7 +401,7 @@ export default function ShippingLinesPage() {
           <div style={{ fontSize: 13, color: 'var(--gecko-text-secondary)', marginTop: 4 }}>Line operators and carriers. Source of EDO, BL, and vessel schedule.</div>
         </div>
         <div className="gecko-toolbar">
-          <button className="gecko-btn gecko-btn-ghost gecko-btn-sm"><Icon name="download" size={16} /> Export</button>
+          <ExportButton resource="Shipping lines" iconSize={16} />
           <button className="gecko-btn gecko-btn-outline gecko-btn-sm"><Icon name="refreshCcw" size={16} /> Sync SMDG</button>
           <FilterPopover
             fields={LINE_FILTER_FIELDS}

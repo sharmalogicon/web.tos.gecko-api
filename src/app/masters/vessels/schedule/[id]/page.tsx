@@ -3,6 +3,7 @@ import React, { useState, useMemo } from 'react';
 import Link from 'next/link';
 import { useParams } from 'next/navigation';
 import { Icon } from '@/components/ui/Icon';
+import { ExportButton } from '@/components/ui/ExportButton';
 
 // ── Voyage master data (mirrors schedule/page.tsx) ────────────────────────────
 const LINE_COLORS: Record<string, { dot: string; bg: string; text: string }> = {
@@ -212,7 +213,7 @@ export default function VoyageDetailPage() {
           </div>
         </div>
         <div style={{ display: 'flex', gap: 8 }}>
-          <button className="gecko-btn gecko-btn-ghost gecko-btn-sm"><Icon name="download" size={15} /> Export</button>
+          <ExportButton resource="Voyage" iconSize={15} />
           <button className="gecko-btn gecko-btn-outline gecko-btn-sm"><Icon name="printer" size={15} /> Print Manifest</button>
           <Link href={`/masters/vessels/schedule/new`} className="gecko-btn gecko-btn-primary gecko-btn-sm">
             <Icon name="edit" size={15} /> Edit Voyage

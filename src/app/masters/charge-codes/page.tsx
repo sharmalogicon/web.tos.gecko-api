@@ -3,6 +3,7 @@ import React, { useState, useMemo } from 'react';
 import Link from 'next/link';
 import { Icon } from '@/components/ui/Icon';
 import { FilterPopover, FilterField, SortOption } from '@/components/ui/FilterPopover';
+import { ExportButton } from '@/components/ui/ExportButton';
 import { usePagination, TablePagination } from '@/components/ui/TablePagination';
 
 type ChargeType = 'Revenue' | 'Cost' | 'Pass-through';
@@ -191,7 +192,7 @@ export default function ChargeCodesPage() {
           </div>
         </div>
         <div className="gecko-toolbar">
-          <button className="gecko-btn gecko-btn-ghost gecko-btn-sm"><Icon name="download" size={16} /> Export</button>
+          <ExportButton resource="Charge codes" iconSize={16} />
           <button className="gecko-btn gecko-btn-outline gecko-btn-sm"><Icon name="copy" size={16} /> Clone from facility</button>
           <FilterPopover
             fields={CC_FILTER_FIELDS}

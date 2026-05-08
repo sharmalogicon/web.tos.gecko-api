@@ -3,6 +3,7 @@ import React, { useState } from 'react';
 import Link from 'next/link';
 import { Icon } from '@/components/ui/Icon';
 import { FilterPopover, FilterField, SortOption } from '@/components/ui/FilterPopover';
+import { ExportButton } from '@/components/ui/ExportButton';
 
 const TARIFF_PLANS = [
   { id: 'TP-2026-PUB', name: 'Public Tariff 2026 (Standard)', type: 'Public', customer: 'All Standard Customers', effective: 'Jan 01, 2026', expiry: 'Dec 31, 2026', status: 'Active' },
@@ -49,7 +50,7 @@ export default function TariffPlansPage() {
           <div style={{ fontSize: 13, color: 'var(--gecko-text-secondary)', marginTop: 4 }}>High-level pricing agreements containing rate cards and free-time logic.</div>
         </div>
         <div className="gecko-toolbar">
-          <button className="gecko-btn gecko-btn-ghost gecko-btn-sm"><Icon name="download" size={16} /> Export</button>
+          <ExportButton resource="Tariff plans" iconSize={16} />
           <FilterPopover
             fields={PLAN_FILTER_FIELDS}
             values={filters}

@@ -3,6 +3,7 @@ import React, { useState, useMemo } from 'react';
 import Link from 'next/link';
 import { Icon } from '@/components/ui/Icon';
 import { BarcodeScanInput } from '@/components/ui/BarcodeDisplay';
+import { ExportButton } from '@/components/ui/ExportButton';
 
 // ─── Types ─────────────────────────────────────────────────────────────────────
 
@@ -172,7 +173,7 @@ export default function BookingRegisterPage() {
           </div>
         </div>
         <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
-          <button className="gecko-btn gecko-btn-ghost gecko-btn-sm"><Icon name="download" size={13} />Export</button>
+          <ExportButton resource="Bookings" iconSize={13} />
           <button className="gecko-btn gecko-btn-outline gecko-btn-sm"><Icon name="refresh" size={13} />Refresh</button>
           <Link href="/bookings/new" className="gecko-btn gecko-btn-primary gecko-btn-sm" style={{ textDecoration: 'none', display: 'inline-flex', alignItems: 'center', gap: 6 }}>
             <Icon name="plus" size={13} />New Booking
@@ -262,7 +263,7 @@ export default function BookingRegisterPage() {
         <div style={{ padding: '10px 14px', background: 'var(--gecko-primary-50)', border: '1px solid var(--gecko-primary-200)', borderRadius: 8, display: 'flex', alignItems: 'center', gap: 12 }}>
           <span style={{ fontSize: 12, fontWeight: 600, color: 'var(--gecko-primary-700)' }}>{selected.size} booking{selected.size > 1 ? 's' : ''} selected</span>
           <div style={{ display: 'flex', gap: 6 }}>
-            <button className="gecko-btn gecko-btn-outline gecko-btn-sm"><Icon name="download" size={12} />Export Selected</button>
+            <ExportButton label="Export Selected" resource="Selected bookings" variant="outline" iconSize={12} />
             <button className="gecko-btn gecko-btn-outline gecko-btn-sm"><Icon name="transferH" size={12} />Bulk Transfer</button>
             <button className="gecko-btn gecko-btn-ghost gecko-btn-sm" style={{ color: 'var(--gecko-danger-600)' }}><Icon name="close" size={12} />Cancel Selected</button>
           </div>

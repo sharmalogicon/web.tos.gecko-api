@@ -3,6 +3,7 @@ import React, { useState, useMemo } from 'react';
 import { Icon } from '@/components/ui/Icon';
 import { DateField } from '@/components/ui/DateField';
 import { useToast } from '@/components/ui/Toast';
+import { ExportButton } from '@/components/ui/ExportButton';
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -467,7 +468,7 @@ export default function LookupMasterPage() {
           </div>
         </div>
         <div className="gecko-toolbar">
-          <button className="gecko-btn gecko-btn-ghost gecko-btn-sm"><Icon name="download" size={15} /> Export CSV</button>
+          <ExportButton label="Export CSV" resource="Lookups" iconSize={15} />
           <button className="gecko-btn gecko-btn-outline gecko-btn-sm"><Icon name="upload" size={15} /> Import CSV</button>
           <button className="gecko-btn gecko-btn-outline gecko-btn-sm"><Icon name="refreshCcw" size={15} /> Sync SMDG</button>
           <button className="gecko-btn gecko-btn-primary gecko-btn-sm" onClick={openNew}><Icon name="plus" size={15} /> New Entry</button>
@@ -674,7 +675,7 @@ export default function LookupMasterPage() {
               </span>
               <div style={{ marginLeft: 'auto', display: 'flex', gap: 8 }}>
                 <button className="gecko-btn gecko-btn-ghost gecko-btn-sm" style={{ fontSize: 11 }}><Icon name="arrowUp" size={12} /> Reorder</button>
-                <button className="gecko-btn gecko-btn-ghost gecko-btn-sm" style={{ fontSize: 11 }}><Icon name="download" size={12} /> Export this category</button>
+                <ExportButton label="Export this category" resource="Lookup category" iconSize={12} className="" style={{ fontSize: 11 }} />
               </div>
             </div>
           )}

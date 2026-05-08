@@ -4,6 +4,7 @@ import { Icon } from '@/components/ui/Icon';
 import { usePagination, TablePagination } from '@/components/ui/TablePagination';
 import { FilterPopover, FilterField, SortOption } from '@/components/ui/FilterPopover';
 import { useToast } from '@/components/ui/Toast';
+import { ExportButton } from '@/components/ui/ExportButton';
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -991,7 +992,7 @@ export default function BillingStatementPage() {
             </div>
           </div>
           <div className="gecko-toolbar">
-            <button className="gecko-btn gecko-btn-ghost gecko-btn-sm"><Icon name="download" size={16} /> Export</button>
+            <ExportButton resource="Billing statement" iconSize={16} />
             <FilterPopover
               fields={STMT_FILTER_FIELDS}
               values={filters}

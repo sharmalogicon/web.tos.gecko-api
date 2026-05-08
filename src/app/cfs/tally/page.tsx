@@ -3,6 +3,7 @@ import React, { useState } from 'react';
 import Link from 'next/link';
 import { Icon } from '@/components/ui/Icon';
 import { FilterPopover, FilterField, SortOption } from '@/components/ui/FilterPopover';
+import { ExportButton } from '@/components/ui/ExportButton';
 import { PrintDocumentModal, BarcodeScanInput } from '@/components/ui/BarcodeDisplay';
 
 const TALLY_LISTS = [
@@ -52,7 +53,7 @@ export default function TallyListsPage() {
           <div style={{ fontSize: 13, color: 'var(--gecko-text-secondary)' }}>Master ledger of all CFS stuffing and stripping operations.</div>
         </div>
         <div className="gecko-toolbar">
-          <button className="gecko-btn gecko-btn-ghost gecko-btn-sm"><Icon name="download" size={16} /> Export</button>
+          <ExportButton resource="Tally" iconSize={16} />
           <BarcodeScanInput onScan={v => setScannedId(v)} placeholder="Scan tally no or container…" size="sm" style={{ width: 220 }} />
           <FilterPopover
             fields={TALLY_FILTER_FIELDS}

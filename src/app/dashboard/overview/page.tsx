@@ -1,5 +1,6 @@
 import React from 'react';
 import { Icon } from '@/components/ui/Icon';
+import { ExportButton } from '@/components/ui/ExportButton';
 
 function Sparkline({ data, color = 'var(--gecko-primary-500)', height = 40, width = 120, fill = true }: { data: number[], color?: string, height?: number, width?: number, fill?: boolean }) {
   const max = Math.max(...data), min = Math.min(...data);
@@ -78,7 +79,7 @@ export default function DashboardOverviewPage() {
             Today · 23 Apr
             <Icon name="chevronDown" size={12} />
           </div>
-          <button className="gecko-btn gecko-btn-outline gecko-btn-sm"><Icon name="download" size={14} />Export</button>
+          <ExportButton resource="Dashboard" variant="outline" iconSize={14} />
           <button className="gecko-btn gecko-btn-primary gecko-btn-sm"><Icon name="plus" size={14} />New Appointment</button>
         </div>
       </div>
