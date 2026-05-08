@@ -160,23 +160,34 @@ function Sidebar({ collapsed, onToggle }: { collapsed: boolean, onToggle: () => 
                   </>
                 )}
               </button>
-              {!collapsed && isOpen && mod.children && (
-                <div id={`nav-group-${mod.id}`} className="gecko-nav-children">
-                  {mod.children.map((child) => {
-                    const active = pathname?.includes(child.path);
-                    return (
-                      <Link
-                        key={child.id}
-                        href={child.path}
-                        className={`gecko-nav-child${active ? ' gecko-nav-child-active' : ''}`}
-                        aria-current={active ? 'page' : undefined}
-                      >
-                        {child.label}
-                      </Link>
-                    );
-                  })}
-                </div>
-              )}
+              {!collapsed && isOpen && mod.children && (() => {
+                // Find the child whose path is the longest match for the current pathname.
+                // Without this, nested paths (e.g. /masters/vessels and /masters/vessels/schedule)
+                // would both highlight when on /masters/vessels/schedule.
+                const matches = mod.children.filter(c =>
+                  pathname === c.path || pathname?.startsWith(c.path + '/')
+                );
+                const activeChildId = matches.length > 0
+                  ? matches.reduce((longest, c) => c.path.length > longest.path.length ? c : longest).id
+                  : null;
+                return (
+                  <div id={`nav-group-${mod.id}`} className="gecko-nav-children">
+                    {mod.children.map((child) => {
+                      const active = child.id === activeChildId;
+                      return (
+                        <Link
+                          key={child.id}
+                          href={child.path}
+                          className={`gecko-nav-child${active ? ' gecko-nav-child-active' : ''}`}
+                          aria-current={active ? 'page' : undefined}
+                        >
+                          {child.label}
+                        </Link>
+                      );
+                    })}
+                  </div>
+                );
+              })()}
             </div>
           );
         })}
