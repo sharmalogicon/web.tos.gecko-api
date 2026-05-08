@@ -3,6 +3,7 @@ import React, { useState, useMemo, useEffect, useRef, useCallback } from 'react'
 import { Icon } from '@/components/ui/Icon';
 import { usePagination, TablePagination } from '@/components/ui/TablePagination';
 import { FilterPopover, FilterField, SortOption } from '@/components/ui/FilterPopover';
+import { useToast } from '@/components/ui/Toast';
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -349,6 +350,12 @@ function ChargeDetailModal({ charge, isNew, containers, onClose }: ChargeDetailM
   const [form, setForm] = useState<ChargeRow>({ ...charge });
   const [applyTo, setApplyTo] = useState<ApplyTo>('this');
   const [selectedContainers, setSelectedContainers] = useState<Set<string>>(new Set(containers));
+  const { toast } = useToast();
+  const handleSaveCharge = () => {
+    if (!canSave) return;
+    toast({ variant: 'success', title: isNew ? 'Charge added' : 'Charge updated', message: `${form.chargeCode} · ${form.chargeDesc}` });
+    onClose();
+  };
 
   const set = useCallback((partial: Partial<ChargeRow>) => {
     setForm(prev => {
@@ -562,7 +569,7 @@ function ChargeDetailModal({ charge, isNew, containers, onClose }: ChargeDetailM
           {isNew && <div style={{ flex: 1, fontSize: 11, color: 'var(--gecko-text-disabled)' }}>* Charge Code and Description are required</div>}
           <div style={{ marginLeft: isNew ? undefined : 'auto', display: 'flex', gap: 8 }}>
             <button className="gecko-btn gecko-btn-outline gecko-btn-sm" onClick={onClose}>Cancel</button>
-            <button className="gecko-btn gecko-btn-primary gecko-btn-sm" onClick={onClose} disabled={!canSave} style={!canSave ? { opacity: 0.45, cursor: 'not-allowed' } : {}}>
+            <button className="gecko-btn gecko-btn-primary gecko-btn-sm" onClick={handleSaveCharge} disabled={!canSave} style={!canSave ? { opacity: 0.45, cursor: 'not-allowed' } : {}}>
               <Icon name="save" size={14} /> Save Charge
             </button>
           </div>
@@ -592,6 +599,12 @@ function BulkChargeModal({ containers, mode, onClose }: BulkChargeModalProps) {
   const [discountType, setDiscountType] = useState<DiscountType>('NONE');
   const [discountRate, setDiscountRate] = useState(0);
   const [includedCtrs, setIncludedCtrs] = useState<Set<string>>(new Set(containers));
+  const { toast } = useToast();
+  const handleApply = () => {
+    if (includedCtrs.size === 0 || !chargeCode.trim()) return;
+    toast({ variant: 'success', title: mode === 'add' ? 'Charges added' : 'Charges updated', message: `${chargeCode} applied to ${includedCtrs.size} container(s).` });
+    onClose();
+  };
 
   const sellingRate = discountType === 'NONE' ? originalRate : discountType === 'AMT' ? Math.max(0, originalRate - discountRate) : Math.max(0, originalRate * (1 - discountRate / 100));
   const toggleCtr = (c: string) => setIncludedCtrs(prev => { const n = new Set(prev); n.has(c) ? n.delete(c) : n.add(c); return n; });
@@ -702,7 +715,7 @@ function BulkChargeModal({ containers, mode, onClose }: BulkChargeModalProps) {
 
         <div style={{ padding: '14px 24px', borderTop: '1px solid var(--gecko-border)', borderRadius: '0 0 12px 12px', display: 'flex', justifyContent: 'flex-end', gap: 8 }}>
           <button className="gecko-btn gecko-btn-outline gecko-btn-sm" onClick={onClose}>Cancel</button>
-          <button className="gecko-btn gecko-btn-primary gecko-btn-sm" onClick={onClose} disabled={includedCtrs.size === 0 || !chargeCode.trim()} style={includedCtrs.size === 0 || !chargeCode.trim() ? { opacity: 0.45 } : {}}>
+          <button className="gecko-btn gecko-btn-primary gecko-btn-sm" onClick={handleApply} disabled={includedCtrs.size === 0 || !chargeCode.trim()} style={includedCtrs.size === 0 || !chargeCode.trim() ? { opacity: 0.45 } : {}}>
             Apply to {includedCtrs.size} Container{includedCtrs.size !== 1 ? 's' : ''}
           </button>
         </div>
@@ -722,6 +735,11 @@ function RegenerateModal({ charges, onClose }: RegenerateModalProps) {
   const willUpdate = charges.filter(c => !c.isLocked && c.status === 'Pending');
   const willSkip = charges.filter(c => c.isLocked || c.status === 'Invoiced');
   const invoicedCount = charges.filter(c => c.status === 'Invoiced').length;
+  const { toast } = useToast();
+  const handleRegenerate = () => {
+    toast({ variant: 'warning', title: 'Charges regenerated', message: `${willUpdate.length} updated · ${willSkip.length} skipped (locked or invoiced).` });
+    onClose();
+  };
 
   return (
     <div className="gecko-overlay" onClick={e => { if (e.target === e.currentTarget) onClose(); }}>
@@ -783,7 +801,7 @@ function RegenerateModal({ charges, onClose }: RegenerateModalProps) {
 
         <div style={{ padding: '14px 24px', borderTop: '1px solid var(--gecko-border)', borderRadius: '0 0 12px 12px', display: 'flex', justifyContent: 'flex-end', gap: 8 }}>
           <button className="gecko-btn gecko-btn-outline gecko-btn-sm" onClick={onClose}>Cancel</button>
-          <button onClick={onClose} style={{ background: 'var(--gecko-danger-600)', color: '#fff', border: 'none', borderRadius: 7, padding: '0 16px', height: 32, fontSize: 12.5, fontWeight: 700, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 6 }}>
+          <button onClick={handleRegenerate} className="gecko-btn gecko-btn-danger gecko-btn-sm">
             <Icon name="refreshCcw" size={13} /> Regenerate Now
           </button>
         </div>
@@ -806,6 +824,12 @@ function WaiveModal({ selectedCharges, customerName, onClose }: WaiveModalProps)
   const [notes, setNotes] = useState('');
   const totalWaived = selectedCharges.reduce((s, c) => s + c.sellingRate * c.qty, 0);
   const canConfirm = reasonCode.trim() !== '';
+  const { toast } = useToast();
+  const handleWaive = () => {
+    if (!canConfirm) return;
+    toast({ variant: 'warning', title: 'Charges waived', message: `${selectedCharges.length} charge(s) waived for ${customerName} · Reason: ${reasonCode}.` });
+    onClose();
+  };
 
   return (
     <div className="gecko-overlay" onClick={e => { if (e.target === e.currentTarget) onClose(); }}>
@@ -864,7 +888,7 @@ function WaiveModal({ selectedCharges, customerName, onClose }: WaiveModalProps)
 
         <div style={{ padding: '14px 24px', borderTop: '1px solid var(--gecko-border)', borderRadius: '0 0 12px 12px', display: 'flex', justifyContent: 'flex-end', gap: 8 }}>
           <button className="gecko-btn gecko-btn-outline gecko-btn-sm" onClick={onClose}>Cancel</button>
-          <button onClick={onClose} disabled={!canConfirm} style={{ background: canConfirm ? 'var(--gecko-warning-600)' : 'var(--gecko-gray-300)', color: '#fff', border: 'none', borderRadius: 7, padding: '0 16px', height: 32, fontSize: 12.5, fontWeight: 700, cursor: canConfirm ? 'pointer' : 'not-allowed', display: 'flex', alignItems: 'center', gap: 6 }}>
+          <button onClick={handleWaive} disabled={!canConfirm} className="gecko-btn gecko-btn-warning gecko-btn-sm" style={!canConfirm ? { opacity: 0.45, cursor: 'not-allowed' } : {}}>
             <Icon name="check" size={13} /> Confirm Waiver
           </button>
         </div>

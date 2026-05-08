@@ -3,6 +3,7 @@ import React, { useState, useMemo } from 'react';
 import Link from 'next/link';
 import { Icon } from '@/components/ui/Icon';
 import { FilterPopover, FilterField, SortOption } from '@/components/ui/FilterPopover';
+import { useToast } from '@/components/ui/Toast';
 import { usePagination, TablePagination } from '@/components/ui/TablePagination';
 
 const CUSTOMERS = [
@@ -95,6 +96,7 @@ interface NewCustomerModalProps {
 function NewCustomerModal({ onClose }: NewCustomerModalProps) {
   const [form, setForm] = useState<NewCustomerForm>({ ...EMPTY_CUSTOMER });
   const [touched, setTouched] = useState(false);
+  const { toast } = useToast();
 
   const set = (partial: Partial<NewCustomerForm>) => setForm(prev => ({ ...prev, ...partial }));
 
@@ -115,6 +117,7 @@ function NewCustomerModal({ onClose }: NewCustomerModalProps) {
     setTouched(true);
     if (!canSave) return;
     // TODO: persist new customer
+    toast({ variant: 'success', title: 'Customer saved', message: `${form.code} · ${form.name} added.` });
     onClose();
   };
 

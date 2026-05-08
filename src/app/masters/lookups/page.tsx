@@ -2,6 +2,7 @@
 import React, { useState, useMemo } from 'react';
 import { Icon } from '@/components/ui/Icon';
 import { DateField } from '@/components/ui/DateField';
+import { useToast } from '@/components/ui/Toast';
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -237,6 +238,12 @@ function EntryModal({ entry, isNew, catMeta, groupColor, groupBg, onClose }: Ent
 
   const locked  = entry.entryType === 'SYSTEM';
   const canSave = !isNew || (form.code.trim() !== '' && form.description.trim() !== '');
+  const { toast } = useToast();
+  const handleSave = () => {
+    if (!canSave) return;
+    toast({ variant: 'success', title: isNew ? 'Lookup added' : 'Lookup updated', message: `${form.code} · ${form.description}` });
+    onClose();
+  };
 
   const sectionHead = (title: string) => (
     <div style={{ fontSize: 10.5, fontWeight: 800, textTransform: 'uppercase' as const, letterSpacing: '0.09em', color: groupColor, marginBottom: 12, paddingBottom: 7, borderBottom: `2px solid ${groupColor}28` }}>
@@ -396,7 +403,7 @@ function EntryModal({ entry, isNew, catMeta, groupColor, groupBg, onClose }: Ent
           <button className="gecko-btn gecko-btn-outline gecko-btn-sm" onClick={onClose}>Cancel</button>
           <button
             className="gecko-btn gecko-btn-primary gecko-btn-sm"
-            onClick={onClose}
+            onClick={handleSave}
             disabled={!canSave}
             style={!canSave ? { opacity: 0.45, cursor: 'not-allowed' } : {}}
           >

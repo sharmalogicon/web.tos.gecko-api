@@ -3,6 +3,7 @@ import React, { useState, useMemo } from 'react';
 import Link from 'next/link';
 import { Icon } from '@/components/ui/Icon';
 import { FilterPopover, FilterField, SortOption } from '@/components/ui/FilterPopover';
+import { useToast } from '@/components/ui/Toast';
 import { usePagination, TablePagination } from '@/components/ui/TablePagination';
 
 // ─── New Line Modal Types ──────────────────────────────────────────────────────
@@ -63,6 +64,12 @@ interface NewLineModalProps {
 function NewLineModal({ onClose }: NewLineModalProps) {
   const [form, setForm] = useState<NewLineForm>({ ...EMPTY_LINE_FORM });
   const set = (partial: Partial<NewLineForm>) => setForm(prev => ({ ...prev, ...partial }));
+  const { toast } = useToast();
+  const handleSave = () => {
+    if (!canSave) return;
+    toast({ variant: 'success', title: 'Line saved', message: `${form.lineCode} · ${form.fullName} added.` });
+    onClose();
+  };
 
   const canSave = form.lineCode.trim() !== '' && form.scacCode.trim() !== '' && form.fullName.trim() !== '';
 
@@ -316,7 +323,7 @@ function NewLineModal({ onClose }: NewLineModalProps) {
             <button className="gecko-btn gecko-btn-outline gecko-btn-sm" onClick={onClose}>Cancel</button>
             <button
               className="gecko-btn gecko-btn-primary gecko-btn-sm"
-              onClick={onClose}
+              onClick={handleSave}
               disabled={!canSave}
               style={!canSave ? { opacity: 0.45, cursor: 'not-allowed' } : {}}
             >

@@ -1,6 +1,7 @@
 "use client";
 import React, { useState } from 'react';
 import { Icon } from '@/components/ui/Icon';
+import { useToast } from '@/components/ui/Toast';
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -76,9 +77,16 @@ function NewLocationModal({ onClose }: { onClose: () => void }) {
   const [form, setForm] = useState<NewLocationForm>({ ...EMPTY_FORM });
   const set = (partial: Partial<NewLocationForm>) =>
     setForm(prev => ({ ...prev, ...partial }));
+  const { toast } = useToast();
 
   const canSave =
     form.locationCode.trim() !== '' && form.locationName.trim() !== '';
+
+  const handleSave = () => {
+    if (!canSave) return;
+    toast({ variant: 'success', title: 'Location saved', message: `${form.locationCode} · ${form.locationName} added.` });
+    onClose();
+  };
 
   const showRows  = form.locationType === 'Block';
   const showBays  = form.locationType === 'Block';
@@ -347,7 +355,7 @@ function NewLocationModal({ onClose }: { onClose: () => void }) {
             </button>
             <button
               className="gecko-btn gecko-btn-primary gecko-btn-sm"
-              onClick={onClose}
+              onClick={handleSave}
               disabled={!canSave}
               style={!canSave ? { opacity: 0.45, cursor: 'not-allowed' } : {}}
               type="button"

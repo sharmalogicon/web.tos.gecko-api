@@ -3,6 +3,7 @@ import React, { useState, useMemo } from 'react';
 import { usePagination, TablePagination } from '@/components/ui/TablePagination';
 import { Icon } from '@/components/ui/Icon';
 import { FilterPopover, FilterField, SortOption } from '@/components/ui/FilterPopover';
+import { useToast } from '@/components/ui/Toast';
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -507,6 +508,7 @@ export default function PortsListPage() {
   const [sortBy, setSortBy] = useState('name');
   const [modalPort, setModalPort] = useState<Port | null>(null);
   const [modalOpen, setModalOpen] = useState(false);
+  const { toast } = useToast();
 
   // Derived counts
   const seaportCount = ports.filter(p => p.portType === 'SEAPORT').length;
@@ -551,6 +553,7 @@ export default function PortsListPage() {
   }
 
   function handleSave(p: Port) {
+    const isUpdate = modalPort !== null;
     setPorts(prev => {
       const idx = prev.findIndex(x => x.locode === p.locode && modalPort !== null);
       if (idx >= 0) {
@@ -560,6 +563,7 @@ export default function PortsListPage() {
       }
       return [...prev, p];
     });
+    toast({ variant: 'success', title: isUpdate ? 'Port updated' : 'Port added', message: `${p.locode} · ${p.name}` });
     closeModal();
   }
 

@@ -2,6 +2,7 @@
 import React, { useState, useMemo } from 'react';
 import { usePagination, TablePagination } from '@/components/ui/TablePagination';
 import { Icon } from '@/components/ui/Icon';
+import { useToast } from '@/components/ui/Toast';
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -226,6 +227,12 @@ function CommodityModal({ commodity, onClose }: CommodityModalProps) {
   );
   const set = (patch: Partial<ModalForm>) => setFormRaw(prev => ({ ...prev, ...patch }));
   const canSave = form.hsCode.trim() !== '' && form.description.trim() !== '';
+  const { toast } = useToast();
+  const handleSave = () => {
+    if (!canSave) return;
+    toast({ variant: 'success', title: isNew ? 'Commodity added' : 'Commodity updated', message: `${form.hsCode} · ${form.description}` });
+    onClose();
+  };
 
   const sectionHead = (title: string) => (
     <div style={{
@@ -447,7 +454,7 @@ function CommodityModal({ commodity, onClose }: CommodityModalProps) {
           <button className="gecko-btn gecko-btn-outline gecko-btn-sm" onClick={onClose}>Cancel</button>
           <button
             className="gecko-btn gecko-btn-primary gecko-btn-sm"
-            onClick={onClose}
+            onClick={handleSave}
             disabled={!canSave}
             style={!canSave ? { opacity: 0.45, cursor: 'not-allowed' } : {}}
           >

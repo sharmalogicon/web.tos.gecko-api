@@ -3,6 +3,7 @@ import React, { useState, useMemo } from 'react';
 import { usePagination, TablePagination } from '@/components/ui/TablePagination';
 import { Icon } from '@/components/ui/Icon';
 import { FilterPopover, FilterField, SortOption } from '@/components/ui/FilterPopover';
+import { useToast } from '@/components/ui/Toast';
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -158,6 +159,12 @@ function CountryModal({ country, isNew, onClose }: CountryModalProps) {
     setForm(prev => ({ ...prev, [field]: e.target.checked }));
 
   const canSave = form.code.trim().length === 2 && form.name.trim() !== '';
+  const { toast } = useToast();
+  const handleSave = () => {
+    if (!canSave) return;
+    toast({ variant: 'success', title: isNew ? 'Country added' : 'Country updated', message: `${form.code} · ${form.name}` });
+    onClose();
+  };
 
   const modalTitle = isNew
     ? 'New Country'
@@ -365,7 +372,7 @@ function CountryModal({ country, isNew, onClose }: CountryModalProps) {
           <button className="gecko-btn gecko-btn-outline gecko-btn-sm" onClick={onClose}>Cancel</button>
           <button
             className="gecko-btn gecko-btn-primary gecko-btn-sm"
-            onClick={onClose}
+            onClick={handleSave}
             disabled={!canSave}
             style={!canSave ? { opacity: 0.45, cursor: 'not-allowed' } : {}}
           >

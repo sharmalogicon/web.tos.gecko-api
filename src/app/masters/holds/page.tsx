@@ -3,6 +3,7 @@ import React, { useState, useMemo } from 'react';
 import { usePagination, TablePagination } from '@/components/ui/TablePagination';
 import { Icon } from '@/components/ui/Icon';
 import { FilterPopover, FilterField, SortOption } from '@/components/ui/FilterPopover';
+import { useToast } from '@/components/ui/Toast';
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -355,8 +356,15 @@ interface HoldModalProps {
 function HoldModal({ hold, isNew, onClose }: HoldModalProps) {
   const [form, setForm] = useState<Hold>({ ...hold });
   const set = (partial: Partial<Hold>) => setForm(prev => ({ ...prev, ...partial }));
+  const { toast } = useToast();
 
   const canSave = form.code.trim() !== '' && form.name.trim() !== '';
+
+  const handleSave = () => {
+    if (!canSave) return;
+    toast({ variant: 'success', title: isNew ? 'Hold added' : 'Hold updated', message: `${form.code} · ${form.name}` });
+    onClose();
+  };
 
   const sectionHead = (title: string) => (
     <div style={{
@@ -624,7 +632,7 @@ function HoldModal({ hold, isNew, onClose }: HoldModalProps) {
             <button className="gecko-btn gecko-btn-outline gecko-btn-sm" onClick={onClose}>Cancel</button>
             <button
               className="gecko-btn gecko-btn-primary gecko-btn-sm"
-              onClick={onClose}
+              onClick={handleSave}
               disabled={!canSave}
               style={!canSave ? { opacity: 0.45, cursor: 'not-allowed' } : {}}
             >
