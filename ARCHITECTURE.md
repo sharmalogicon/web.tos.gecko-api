@@ -565,6 +565,39 @@ Display formatting is the UI's problem. Storage uses one consistent shape.
 - Reporting / analytics: read replica + dedicated reporting DB (Phase 5+),
   populated via change data capture from operational DBs
 
+### Referential integrity — no physical FK constraints
+
+We do **not** create physical FK constraints on operational DBs. Every
+reference is a "logical FK" enforced by application code + index +
+reconciliation. See ADR-007 for rationale.
+
+**Companion disciplines (non-negotiable):**
+
+1. **Index every `<entity>_id` column.** CI lints reject `*_id` columns
+   without an accompanying index. Composite indexes when the column is
+   part of a tenant-scoped query (`(tenant_id, customer_id)`).
+
+2. **Naming convention** for cross-module references. Within a module DB,
+   `<entity>_id` points to `<entity>.id` in the same DB. Across module
+   boundaries, prefix the source module: `master_customer_id` →
+   `master.customers.id` (different DB).
+
+3. **Nightly reconciliation jobs** in `Gecko.Worker` (Quartz scheduled,
+   per-tenant) detect orphans and either auto-cleanup, alert, or page
+   depending on severity. Logged to `gecko_audit`.
+
+4. **EF Core configuration** uses `HasOne().WithMany().HasForeignKey()`
+   for navigation property setup, but a custom `NoForeignKeyConvention`
+   strips constraint generation from migrations. Indexes still emitted.
+
+5. **Logical-reference documentation** per module in `docs/DOMAIN-MODEL.md`
+   lists every cross-table reference (source, source column, target,
+   target column, cross-DB flag). This is the join graph for BI consumers
+   and onboarding.
+
+**The reporting DB (Phase 5+) gets FK constraints added back** — purely
+for BI tool join detection. Operational DBs stay FK-less.
+
 ---
 
 ## 9. Background Work & Events
@@ -941,6 +974,37 @@ and Identity DB geo-replicated. Indonesia tenants will migrate to
 **Why:** UU PDP (Indonesia), Cybersecurity Law (Vietnam), and PDPA
 sectoral rules (Thailand) require region awareness. DB-per-tenant model
 makes this near-zero-cost to implement.
+
+### ADR-007: No physical FK constraints on operational DBs (2026-05-09)
+**Decision:** Operational module DBs (Master, TOS, EDI, Trucking, Fleet,
+M&R) carry **no physical FK constraints**. References between tables are
+"logical FKs" — `<entity>_id` columns enforced by:
+  - mandatory indexes (CI-linted),
+  - application-layer validation in domain handlers,
+  - nightly reconciliation jobs in `Gecko.Worker`,
+  - explicit naming convention,
+  - documented logical-reference list per module.
+**Why:**
+  - DB-per-tenant per module already prohibits cross-module FKs by topology
+    (different physical DBs). The no-FK rule extends that consistency
+    within each DB.
+  - Faster commits at gate-in/out peak (each gate write touches 4+ tables;
+    no FK validation per write).
+  - Schema evolution / partitioning / archive moves are constraint-free.
+  - Bulk ETL from legacy `Vector` runs without constraint-disable dance.
+  - Microservice extraction unchanged — modules already enforce integrity
+    in code, not via DB.
+**Tradeoffs accepted:**
+  - Application bugs can create orphan rows. Reconciliation jobs detect
+    these nightly with audit logging + alerts.
+  - BI tools lose auto-join detection on operational DBs. Mitigated by
+    rebuilding FK constraints in the reporting DB (Phase 5+) and by
+    documented logical-reference tables.
+  - More EF Core configuration boilerplate. Centralised in a
+    `NoForeignKeyConvention` so every module is consistent.
+**Reporting DB exception:** the read-replica reporting DB (Phase 5+) will
+have FK constraints added back, purely for BI tool consumption. This is a
+one-way ETL concern, not an operational design.
 
 ---
 

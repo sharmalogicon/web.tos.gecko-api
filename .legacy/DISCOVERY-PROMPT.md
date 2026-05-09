@@ -227,8 +227,34 @@ For **each** master-data candidate from Step 2, do the following:
    ORDER BY cnt DESC;
    ```
 
-5. **FK relationships** — what references this table, what does it
-   reference. Use `mcp__mssql__get_relationships`.
+5. **References** — capture both physical FKs and *implied* logical FKs.
+
+   The new Gecko schema is **FK-less by design** (see ADR-007 in
+   ARCHITECTURE.md), so the audit should document references as a
+   *logical join graph*, not as a list of hard constraints.
+
+   - Use `mcp__mssql__get_relationships` for declared FKs.
+   - Then ALSO scan column names across ALL tables for the pattern
+     `<entity_singular>_id` (or legacy `<entity>ID` / `<entity>Code`):
+     ```sql
+     SELECT s.name + '.' + t.name AS referencing_table,
+            c.name AS column_name,
+            ty.name AS column_type
+     FROM sys.columns c
+     JOIN sys.tables t ON c.object_id = t.object_id
+     JOIN sys.schemas s ON t.schema_id = s.schema_id
+     JOIN sys.types ty ON c.user_type_id = ty.user_type_id
+     WHERE c.name LIKE '%CustID' OR c.name LIKE '%CustCode'
+        OR c.name LIKE '%LineID' OR c.name LIKE '%LineCode'
+        OR c.name LIKE '%PortID' OR c.name LIKE '%PortCode'
+        OR c.name LIKE '%ShipID' OR c.name LIKE '%VesselID'
+        -- ... and so on for every master-data entity
+     ORDER BY referencing_table, column_name;
+     ```
+   - Document both: declared FKs + columns that *look like* FKs but
+     aren't enforced.
+   - Note any orphan-detection tooling the legacy app uses (likely none —
+     legacy WinForms apps usually rely on FK constraints).
 
 ### Output file: `.legacy/audit/03-MASTER-DATA.md`
 
