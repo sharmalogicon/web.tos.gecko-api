@@ -4,8 +4,8 @@
 > (ARCHITECTURE.md). Defines the new `master_<tenant>` per-tenant DB schema
 > for Phase 1.
 
-**Version:** Draft v1
-**Status:** For architect (Sharma) review before SQL DDL is generated
+**Version:** Draft v2 — All 10 architect review questions resolved
+**Status:** Locked. Next step is SQL DDL generation (`db/master/migrations/0001_initial.sql`)
 **Source audit:** `.legacy/audit/00-SUMMARY.md` through `05-LOOKUPS.md`
 **Last updated:** 2026-05-09
 
@@ -89,28 +89,33 @@ The legacy `AuditID xml` column → discarded. Temporal tables replace it.
 
 ## 3. Entity inventory — Phase 1 Master DB
 
-18 entities. Tier 1 = Phase 1 launch blockers, Tier 2 = designed but ETL deferred.
+22 entities. Tier 1 = Phase 1 launch blockers, Tier 2 = designed but ETL deferred.
 
 | # | Entity | Legacy source | Tier | Rows (est) |
 |---|--------|--------------|------|-----------|
 | 1 | `parties` | `Master.Customer` (decomposed) | 1 | ~28k |
-| 2 | `customer_extensions` | `Master.Customer` (role-specific cols) | 1 | ~28k |
-| 3 | `shipping_line_extensions` | extracted from `Master.Customer` IsShippingAgent=1 | 1 | ~1.9k |
-| 4 | `haulier_extensions` | extracted from IsHaulier=1 | 1 | ~6.2k |
-| 5 | `forwarder_extensions` | extracted from IsFwdAgent=1 | 1 | ~6.5k |
-| 6 | `contacts` | `Master.Contact` (refactored) | 1 | ~22k |
-| 7 | `vessels` | `Master.Vessel` | 1 | ~6.2k |
-| 8 | `ports` | `Master.Port` | 1 | ~4.2k |
-| 9 | `locations` | `Master.Location` (kept inland-delivery scope) | 1 | ~2.8k |
-| 10 | `container_types` | `Config.EquipmentTypeSize` | 1 | ~30 |
-| 11 | `charge_codes` | `Master.ChargeCode` (decomposed) | 1 | ~150 (down from 300) |
-| 12 | `order_types` | `Master.OrderType` | 1 | ~21 |
-| 13 | `movements` | `Master.Movement` | 1 | ~4 (deduped from 8) |
-| 14 | `holds` | extracted from `Master.ContainerStatus.IsHold` | 1 | ~5 |
-| 15 | `companies` | `Master.Company` | 1 | ~1 (active) |
-| 16 | `branches` | `Master.Branch` | 1 | ~6 |
-| 17 | `yards` | `Master.Yard` + `YardMap` | 1 | ~16 |
-| 18 | `commodities` | NEW — HS Code-based | 2 | ~5k (seeded) |
+| 2 | `party_aliases` | NEW — preserves legacy codes as searchable aliases | 1 | ~28k+ |
+| 3 | `customer_extensions` | `Master.Customer` (role-specific cols) | 1 | ~28k |
+| 4 | `shipping_line_extensions` | extracted from `Master.Customer` IsShippingAgent=1 | 1 | ~1.9k |
+| 5 | `haulier_extensions` | extracted from IsHaulier=1 | 1 | ~6.2k |
+| 6 | `forwarder_extensions` | extracted from IsFwdAgent=1 | 1 | ~6.5k |
+| 7 | `contacts` | `Master.Contact` (refactored) | 1 | ~22k |
+| 8 | `vessels` | `Master.Vessel` | 1 | ~6.2k |
+| 9 | `ports` | `Master.Port` | 1 | ~4.2k |
+| 10 | `locations` | `Master.Location` (kept inland-delivery scope) | 1 | ~2.8k |
+| 11 | `container_types` | `Config.EquipmentTypeSize` | 1 | ~30 |
+| 12 | `charge_codes` | `Master.ChargeCode` (canonical concept) | 1 | ~150 |
+| 13 | `charge_code_variants` | `Master.ChargeCode` (bill_to × payment_term matrix) | 1 | ~300 |
+| 14 | `order_types` | `Master.OrderType` | 1 | ~21 |
+| 15 | `order_type_movements` | NEW — junction table | 1 | ~80 |
+| 16 | `order_type_charges` | NEW — junction table | 1 | ~150 |
+| 17 | `movements` | `Master.Movement` | 1 | ~4 (deduped from 8) |
+| 18 | `holds` | extracted from `Master.ContainerStatus.IsHold` | 1 | ~5 |
+| 19 | `container_conditions` | `Master.ContainerStatus` (non-hold rows) | 1 | ~10 |
+| 20 | `companies` | `Master.Company` | 1 | ~1 (active) |
+| 21 | `branches` | `Master.Branch` | 1 | ~6 |
+| 22 | `yards` + `yard_blocks` | `Master.Yard` + `YardMap` | 1 | ~16 + ~3 |
+| 23 | `commodities` | IMO codes (auto) + cargo-description worklist (manual map) | 1+2 | ~18 → ~120 |
 
 Plus reference data (read-only, sourced from Platform DB, **not duplicated per tenant**):
 - `countries` → Platform DB (ISO 3166-1 alpha-2)
@@ -159,8 +164,8 @@ CREATE TABLE parties (
   primary_website   VARCHAR(500)     NULL,
 
   -- Operational
-  operator_code     VARCHAR(10)      NULL,        -- Short code for ops
   remarks           NVARCHAR(500)    NULL,
+  -- (operator_code moved to shipping_line_extensions per Q2 — line-specific)
 
   -- Status (master-level)
   is_active         BIT              NOT NULL DEFAULT 1,
@@ -188,7 +193,7 @@ ALTER TABLE parties SET (SYSTEM_VERSIONING = ON (HISTORY_TABLE = master_history.
 | `CustomerName2` | `name_local` | NULL if empty string. Legacy stored '' instead of NULL. |
 | `RegistrationNo` | `registration_no` | NULL if empty |
 | `CurrencyCode` | `default_currency` | NULL if empty (87% empty in legacy — fine) |
-| `OperatorCode` | `operator_code` | NULL if empty |
+| `OperatorCode` | `shipping_line_extensions.operator_code` | Only for IsShippingAgent=1 rows; NULL if empty |
 | `Status` | `is_active` | Direct (1 = active) |
 | `Remark` | `remarks` | Direct |
 | `IsBillingCustomer` | → `customer_extensions` | Triggers row creation |
@@ -201,9 +206,87 @@ ALTER TABLE parties SET (SYSTEM_VERSIONING = ON (HISTORY_TABLE = master_history.
 | `AuditID xml` | DROPPED | Replaced by temporal table |
 | `CreatedBy/CreatedOn/ModifiedBy/ModifiedOn` | `created_at/by`, `updated_at/by` | UserID string → UUID via Identity DB lookup |
 
-**Open questions:**
-- Customer codes have 5 prefix conventions in legacy (numeric, dated, "C-" prefixed, etc.). Migrate as-is, or normalise to a new format for new records (existing keep their codes)?
-- `OperatorCode` is mostly empty — keep column or drop?
+**Resolved (Q1, Q2):**
+- **Canonical code format:** `C-NNNNNN` for customers, `L-NNNNN` for lines, `H-NNNNN` for hauliers, `F-NNNNN` for forwarders. Generated by per-tenant sequence at row insert.
+- **Legacy code preservation:** original `CustomerCode` migrates to `party_aliases` table with `alias_type = 'LEGACY'`. Search resolves either canonical or any alias. See §4.1a.
+- **`operator_code` removed from this table** — moved to `shipping_line_extensions` (line-specific concept; CMA-line vs APL-operator pattern).
+
+---
+
+### 4.1a `party_aliases` (canonical + alias pattern)
+
+**Purpose:** Preserve every legacy code, customer's own ERP code, SCAC, customs registration, tax ID, etc. as a searchable alias of the canonical party. Search-by-any-code resolves to the same party.
+
+This is the NAVIS / CargoWise standard for handling legacy code preservation without polluting the canonical identifier. New records get a clean `C-NNNNNN`-style code; legacy migrations preserve the original code as a typed alias.
+
+```sql
+CREATE TABLE party_aliases (
+  id              UNIQUEIDENTIFIER PRIMARY KEY DEFAULT NEWSEQUENTIALID(),
+  tenant_id       UNIQUEIDENTIFIER NOT NULL,
+  party_id        UNIQUEIDENTIFIER NOT NULL,                -- → parties.id
+
+  alias_type      VARCHAR(30)      NOT NULL,                -- 'LEGACY' | 'CUSTOMER_ERP' |
+                                                             -- 'BANK_REF' | 'SCAC' | 'SMDG' |
+                                                             -- 'CUSTOMS_REG' | 'TAX_ID' |
+                                                             -- 'EDI_PARTNER' | 'OTHER'
+  alias_value     VARCHAR(50)      NOT NULL,
+  alias_label     NVARCHAR(100)    NULL,                     -- Human description
+                                                             -- ("Old SCT system code", "DHL ERP code")
+
+  -- Time-bound aliases (a customer's ERP code changes when they migrate ERP)
+  valid_from      DATE             NULL,
+  valid_to        DATE             NULL,
+
+  is_primary_for_type  BIT         NOT NULL DEFAULT 0,       -- Default alias of its type
+  is_active            BIT         NOT NULL DEFAULT 1,
+
+  created_at, created_by, updated_at, updated_by, row_version
+);
+
+-- Uniqueness: same alias_value can't be reused within (tenant, alias_type)
+CREATE UNIQUE INDEX uq_party_aliases_value
+  ON party_aliases(tenant_id, alias_type, alias_value)
+  WHERE is_active = 1;
+
+-- Find-by-any-code lookup (covers all alias types in one index)
+CREATE INDEX ix_party_aliases_value
+  ON party_aliases(tenant_id, alias_value)
+  INCLUDE (party_id, alias_type);
+
+-- "Show all aliases of this party"
+CREATE INDEX ix_party_aliases_party
+  ON party_aliases(tenant_id, party_id, alias_type);
+```
+
+**Search logic** (in `Master.Application` repository layer):
+
+```sql
+-- Find party by any code (canonical or alias):
+SELECT party_id FROM (
+  SELECT id AS party_id, party_code AS matched_code, 'CANONICAL' AS matched_type
+  FROM parties
+  WHERE tenant_id = @t AND party_code = @input AND deleted_at IS NULL
+
+  UNION
+
+  SELECT party_id, alias_value AS matched_code, alias_type AS matched_type
+  FROM party_aliases
+  WHERE tenant_id = @t AND alias_value = @input AND is_active = 1
+) matches;
+```
+
+**Migration:** for every legacy `Customer`:
+1. Generate new canonical `party_code` from per-tenant sequence (C-000001, C-000002, ...)
+2. Insert into `parties` with the new canonical
+3. Insert legacy `CustomerCode` into `party_aliases` with `alias_type = 'LEGACY'`, `is_primary_for_type = 1`
+4. If legacy row had `RegistrationNo`, also insert as `alias_type = 'CUSTOMS_REG'`
+5. If `IsShippingAgent = 1` and a recognisable SCAC pattern exists in code or name, prompt ops to confirm SCAC → insert as `alias_type = 'SCAC'`
+
+**Display rules:**
+- List views: show canonical code as primary identifier
+- Detail views: show "Also known as: {legacy_code}, {erp_code}, {scac}"
+- Search box: matches both canonical and aliases (single search bar, no filter needed)
+- EDI: per-partner config decides which code goes out (customs wants tax_id, line EDI wants SCAC, etc.)
 
 ---
 
@@ -261,6 +344,11 @@ CREATE TABLE shipping_line_extensions (
   imo_company_no      VARCHAR(15)      NULL,    -- IMO line number
   iata_code           VARCHAR(3)       NULL,    -- For air-related operations
 
+  -- Operator identity (Q2 — slot charter / alliance / vessel-sharing)
+  -- Used when this line operates a service/vessel different from its parent line.
+  -- Example: CMA owns vessel; APL operates the service. APL's operator_code = 'APL'.
+  operator_code       VARCHAR(10)      NULL,
+
   -- Container fleet identification
   container_prefix_primary    VARCHAR(4) NULL,  -- e.g. "EGHU"
   container_prefix_secondary  VARCHAR(4) NULL,
@@ -277,8 +365,9 @@ CREATE TABLE shipping_line_extensions (
   edi_supports_coarri BIT NOT NULL DEFAULT 0,
   edi_supports_baplie BIT NOT NULL DEFAULT 0,
 
-  -- Branding
-  brand_color_hex     CHAR(7)          NULL,    -- '#1A73E8' for UI
+  -- Branding (line-specific, e.g. Maersk blue) — distinct from tenant white-label
+  -- branding which lives in gecko_platform.tenant_branding (Q7).
+  brand_color_hex     CHAR(7)          NULL,    -- '#1A73E8' for UI line badge
 
   -- Audit
   created_at, created_by, updated_at, updated_by, deleted_at, row_version
@@ -509,53 +598,104 @@ CREATE UNIQUE INDEX uq_container_types_tenant_typesize ON container_types(tenant
 
 ---
 
-### 4.9 `charge_codes` (decomposed for payment terms)
+### 4.9 `charge_codes` + `charge_code_variants` (two-level structure)
 
-**Issue:** Legacy duplicates each charge for cash vs credit (`SA001-CA`, `SA001-CR`). 300 records → ~150 unique charges.
+**Issue clarified by architect:** Legacy `-CA/-CR` suffixes encode TWO dimensions, not just payment term:
+1. **Bill-to party** — `-CA` = bill customer (cash); `-CR` = bill agent (credit)
+2. **Payment term** — cash vs credit
 
-**Fix:** Single charge definition; payment term is a separate dimension applied at booking/invoice time.
+Same charge concept, different (bill-to × payment-term) scenarios. The variants may have different rates, GL accounts, and VAT treatment.
+
+**Solution:** Two-level structure. `charge_codes` is the canonical concept (one row per "what is this charge?"). `charge_code_variants` is the matrix (one row per scenario combination, holding the actual billing rules).
 
 ```sql
+-- Canonical charge concept (one row per charge "what")
 CREATE TABLE charge_codes (
   id                UNIQUEIDENTIFIER PRIMARY KEY DEFAULT NEWSEQUENTIALID(),
   tenant_id         UNIQUEIDENTIFIER NOT NULL,
 
-  charge_code       VARCHAR(15)      NOT NULL,    -- Without -CA/-CR suffix
+  charge_code       VARCHAR(15)      NOT NULL,    -- Canonical: "SA001" (no suffix)
   description_en    NVARCHAR(200)    NOT NULL,
   description_local NVARCHAR(200)    NULL,
 
-  -- Classification
+  -- Classification (shared across all variants)
   module            VARCHAR(20)      NOT NULL,    -- 'TOS' | 'CFS' | 'TRUCKING' | 'EMR'
   charge_type       VARCHAR(30)      NOT NULL,    -- 'STORAGE' | 'LIFT' | 'GATE' | 'DOC' | 'VAS'
   charge_category   VARCHAR(30)      NOT NULL,    -- 'GENERAL' | 'REEFER' | 'DG' | 'OOG'
   billing_unit      VARCHAR(30)      NOT NULL,    -- 'PER_CONTAINER' | 'PER_TEU' | 'PER_DAY' | 'PER_TON' | 'PER_BL'
   is_by_service     BIT              NOT NULL DEFAULT 0,
 
-  -- Tax
-  vat_rate          DECIMAL(5,2)     NOT NULL DEFAULT 0.00,    -- e.g. 7.00 for Thai VAT
+  is_active         BIT              NOT NULL DEFAULT 1,
+  created_at, created_by, updated_at, updated_by, deleted_at, row_version
+);
 
-  -- GL accounts (per ARCHITECTURE.md global TOS standard)
-  revenue_gl        VARCHAR(20)      NULL,
+CREATE UNIQUE INDEX uq_charge_codes_tenant_code
+  ON charge_codes(tenant_id, charge_code) WHERE deleted_at IS NULL;
+CREATE INDEX ix_charge_codes_module_type ON charge_codes(tenant_id, module, charge_type);
+
+-- Bill-to × payment-term variants (one row per actual billing rule)
+CREATE TABLE charge_code_variants (
+  id                UNIQUEIDENTIFIER PRIMARY KEY DEFAULT NEWSEQUENTIALID(),
+  tenant_id         UNIQUEIDENTIFIER NOT NULL,
+  charge_code_id    UNIQUEIDENTIFIER NOT NULL,    -- → charge_codes.id
+
+  -- The matrix
+  bill_to           VARCHAR(20)      NOT NULL,    -- 'CUSTOMER' | 'AGENT' | 'LINE' |
+                                                   -- 'SHIPPER' | 'CONSIGNEE' | 'FORWARDER'
+  payment_term      VARCHAR(20)      NOT NULL,    -- 'CASH' | 'CREDIT' | 'PREPAID' | 'COD'
+
+  -- Per-variant billing rules (these may differ between -CA and -CR in legacy)
+  default_rate      DECIMAL(19,4)    NULL,
+  currency          CHAR(3)          NOT NULL,
+  vat_rate          DECIMAL(5,2)     NOT NULL DEFAULT 0.00,
+  credit_term_days  SMALLINT         NULL,        -- Relevant for credit terms
+  revenue_gl        VARCHAR(20)      NULL,        -- May differ (cash GL vs credit GL)
   cost_gl           VARCHAR(20)      NULL,
 
-  -- Default applicability
-  default_currency  CHAR(3)          NULL,        -- e.g. 'THB' for local, 'USD' for international
+  -- Migration audit trail
+  legacy_charge_code VARCHAR(15)     NULL,        -- e.g. "SA001-CA" — original
 
   is_active         BIT              NOT NULL DEFAULT 1,
   created_at, created_by, updated_at, updated_by, deleted_at, row_version
 );
 
-CREATE UNIQUE INDEX uq_charge_codes_tenant_code ON charge_codes(tenant_id, charge_code) WHERE deleted_at IS NULL;
-CREATE INDEX ix_charge_codes_module_type ON charge_codes(tenant_id, module, charge_type);
+CREATE UNIQUE INDEX uq_charge_code_variants_matrix
+  ON charge_code_variants(tenant_id, charge_code_id, bill_to, payment_term)
+  WHERE deleted_at IS NULL;
+CREATE INDEX ix_charge_code_variants_legacy
+  ON charge_code_variants(tenant_id, legacy_charge_code)
+  WHERE legacy_charge_code IS NOT NULL;
 ```
 
 **Migration:**
-- Group legacy charges by `LEFT(ChargeCode, LEN(ChargeCode)-3)` (strip `-CA`/`-CR`)
-- For each group, take first row's metadata as canonical
-- Store payment term as a future booking-level attribute (not on charge_code itself)
-- The 300 → 150 reduction needs spot-checking by ops team — keep audit trail of merged codes
-- Module smallint → VARCHAR via Lookup decomposition
-- ChargeType, BillingUnit, ChargeTerm — all decomposed from Config.Lookup categories
+
+For each legacy `XXX-CA` row:
+1. Find or create canonical `XXX` in `charge_codes` (using description, module, charge_type, billing_unit from the legacy row)
+2. Create variant `(charge_code_id=XXX, bill_to='CUSTOMER', payment_term='CASH')` with the legacy row's rate / GL / VAT
+3. Set `legacy_charge_code = 'XXX-CA'` for traceability
+
+For each legacy `XXX-CR` row:
+1. Lookup canonical `XXX`
+2. Create variant `(charge_code_id=XXX, bill_to='AGENT', payment_term='CREDIT')` with that row's properties
+3. Set `legacy_charge_code = 'XXX-CR'`
+
+Result: ~150 canonical charges + ~300 variants. Same data, structurally clean.
+
+**Application logic** (in TOS module's billing):
+
+```csharp
+// When applying a charge to a booking, look up the right variant:
+var variant = await _db.ChargeCodeVariants
+    .FirstOrDefaultAsync(v =>
+        v.TenantId == _tenant.Id &&
+        v.ChargeCodeId == chargeCodeId &&
+        v.BillTo == billing.BillToType &&        // 'CUSTOMER' or 'AGENT'
+        v.PaymentTerm == billing.PaymentTerm);   // 'CASH' or 'CREDIT'
+
+// variant.DefaultRate, variant.VatRate, variant.RevenueGl drive the booking charge line
+```
+
+**Bonus:** new combinations are first-class. Want a third variant (`bill_to=LINE, payment_term=PREPAID`)? Insert one row. Legacy required adding a new charge code suffix that didn't fit the scheme.
 
 ---
 
@@ -575,10 +715,6 @@ CREATE TABLE order_types (
   shipment_type   VARCHAR(20)      NOT NULL,    -- 'CY' | 'CFS' | 'CY-IN' | 'CY-OUT'
   cargo_type      VARCHAR(20)      NULL,        -- 'GENERAL' | 'REEFER' | 'DG' | 'OOG'
 
-  -- Workflow
-  applicable_movements JSON         NULL,        -- Array of movement_codes valid for this order type
-  default_charges  JSON              NULL,        -- Array of charge_code IDs auto-applied
-
   is_active        BIT              NOT NULL DEFAULT 1,
   created_at, created_by, updated_at, updated_by, deleted_at, row_version,
 
@@ -588,10 +724,74 @@ CREATE TABLE order_types (
 CREATE UNIQUE INDEX uq_order_types_tenant_code ON order_types(tenant_id, order_code) WHERE deleted_at IS NULL;
 ```
 
+**Workflow relationships** are in junction tables — see §4.10a and §4.10b below.
+
 **Migration:**
 - Legacy `BookingType smallint (101=Import, 102=Export)` → typed `direction`
 - Legacy `ShipmentType smallint (201=CY, 202=CFS, 203=CY-IN)` → typed `shipment_type`
-- Legacy `Master.OrderTypeMovement` and `Master.OrderTypeCharges` (junction tables) → JSON arrays embedded here. Junction tables disappear; the relationships move to embedded JSON for simplicity. (Alternative: keep as junction tables. **Recommend embedded JSON — these change rarely and querying as a unit is cleaner.**)
+- Legacy `Master.OrderTypeMovement` → new `order_type_movements` (preserved as junction)
+- Legacy `Master.OrderTypeCharges` → new `order_type_charges` (preserved as junction)
+
+---
+
+### 4.10a `order_type_movements` (junction)
+
+Defines which movements are valid for each order type. Every booking, container, and movement record references this. Junction over JSON because of query patterns:
+- "Show me all bookings whose order_type allows FULL_IN" → indexed JOIN
+- "What movements are valid for EXP CY/CY?" → indexed JOIN
+- "Validate booking — does this order_type allow this movement?" → indexed lookup
+
+```sql
+CREATE TABLE order_type_movements (
+  tenant_id         UNIQUEIDENTIFIER NOT NULL,
+  order_type_id     UNIQUEIDENTIFIER NOT NULL,    -- → order_types.id
+  movement_id       UNIQUEIDENTIFIER NOT NULL,    -- → movements.id
+
+  sequence_no       SMALLINT         NULL,        -- Workflow order (1, 2, 3...)
+  is_required       BIT              NOT NULL DEFAULT 1,    -- Mandatory step in workflow
+  is_billable       BIT              NOT NULL DEFAULT 1,    -- Triggers charge generation
+
+  created_at, created_by, updated_at, updated_by, row_version,
+
+  PRIMARY KEY (tenant_id, order_type_id, movement_id)
+);
+
+CREATE INDEX ix_order_type_movements_movement
+  ON order_type_movements(tenant_id, movement_id, order_type_id);
+-- Reverse-direction lookup: given a movement, which order types allow it?
+```
+
+**Migration:** direct from `Master.OrderTypeMovement` legacy table.
+
+---
+
+### 4.10b `order_type_charges` (junction)
+
+Defines which charges are auto-applied for each order type, optionally scoped to a specific movement (e.g., "lift-in charge applies only on FULL_IN movement").
+
+```sql
+CREATE TABLE order_type_charges (
+  tenant_id         UNIQUEIDENTIFIER NOT NULL,
+  order_type_id     UNIQUEIDENTIFIER NOT NULL,    -- → order_types.id
+  charge_code_id    UNIQUEIDENTIFIER NOT NULL,    -- → charge_codes.id (canonical)
+  movement_id       UNIQUEIDENTIFIER NULL,        -- → movements.id (optional scope)
+
+  is_default        BIT              NOT NULL DEFAULT 1,    -- Auto-apply on booking
+  is_optional       BIT              NOT NULL DEFAULT 0,    -- User can opt-in/out
+  default_qty       DECIMAL(10,2)    NULL,                  -- Override billing-unit default
+
+  created_at, created_by, updated_at, updated_by, row_version,
+
+  -- Composite PK with NULL-safe movement_id (using a sentinel UUID for the NULL case)
+  PRIMARY KEY (tenant_id, order_type_id, charge_code_id,
+               COALESCE(movement_id, '00000000-0000-0000-0000-000000000000'))
+);
+
+CREATE INDEX ix_order_type_charges_charge
+  ON order_type_charges(tenant_id, charge_code_id, order_type_id);
+```
+
+**Migration:** direct from `Master.OrderTypeCharges` and `Master.OrderTypeChargesVAS` legacy tables.
 
 ---
 
@@ -739,7 +939,10 @@ CREATE INDEX ix_commodities_dangerous ON commodities(tenant_id, is_dangerous) WH
 
 ### 4.14 `companies`, `branches`, `yards`, `yard_blocks`
 
-The legacy hierarchy preserved:
+The legacy hierarchy preserved. **Tenant-level branding (logo, white-label
+colors, domain, fonts) lives in `gecko_platform.tenant_branding` per Q7 —
+not on these operational tables.** A company in Master DB holds operational
+identity only.
 
 ```sql
 CREATE TABLE companies (
@@ -749,6 +952,8 @@ CREATE TABLE companies (
   company_name_en NVARCHAR(255)    NOT NULL,
   company_name_local NVARCHAR(255) NULL,
   registration_no NVARCHAR(100)    NULL,
+  tax_id          VARCHAR(30)      NULL,    -- For invoicing
+  default_currency CHAR(3)         NULL,    -- Currency for invoices issued by this company
   is_active       BIT              NOT NULL DEFAULT 1,
   created_at, created_by, updated_at, updated_by, deleted_at, row_version
 );
@@ -854,25 +1059,45 @@ The 488-row `Config.Lookup` with 40+ categories becomes **typed enum tables** pe
 Order of execution (respecting logical dependencies):
 
 ```
-1. companies     ← Master.Company (8 rows)
-2. branches      ← Master.Branch (8 rows)
-3. yards         ← Master.Yard (16 rows)
-4. yard_blocks   ← Master.YardMap (3 rows)
-5. parties       ← Master.Customer (28,070 rows) — most complex
-6. customer_extensions       ← from parties + IsBillingCustomer flag (~28k)
-7. shipping_line_extensions  ← from parties + IsShippingAgent flag (~1.9k)
-8. haulier_extensions        ← from parties + IsHaulier flag (~6.2k)
-9. forwarder_extensions      ← from parties + IsFwdAgent flag (~6.5k)
-10. contacts     ← Master.Contact (22,814 rows) refactored
-11. vessels      ← Master.Vessel (6,164 rows)
-12. ports        ← Master.Port (4,150 rows) — needs CountryCode cleanup
-13. container_types ← Config.EquipmentTypeSize (31 → ~50 after ISO split)
-14. charge_codes ← Master.ChargeCode (300 → ~150 after CA/CR merge)
-15. order_types  ← Master.OrderType (21 rows)
-16. movements    ← Master.Movement (8 → 4 rows)
-17. holds + container_conditions ← Master.ContainerStatus (15 rows split)
-18. commodities  ← seed from WCO HS 2022 standard (~5k rows)
+ 1. companies              ← Master.Company (8 rows; tax_id + default_currency populated by ops)
+ 2. branches               ← Master.Branch (8 rows)
+ 3. yards                  ← Master.Yard (16 rows)
+ 4. yard_blocks            ← Master.YardMap (3 rows)
+ 5. parties                ← Master.Customer (28,070 rows) — assign new C-NNNNNN canonical
+ 6. party_aliases          ← legacy CustomerCode → alias (1 row per customer, type='LEGACY')
+                            + RegistrationNo → alias (type='CUSTOMS_REG' if non-empty)
+ 7. customer_extensions    ← from parties + IsBillingCustomer/IsShipper/IsConsignee/IsTransporter (~28k)
+ 8. shipping_line_extensions ← from parties + IsShippingAgent (~1.9k)
+                              + carry over OperatorCode from legacy Customer.OperatorCode
+ 9. haulier_extensions     ← from parties + IsHaulier (~6.2k)
+10. forwarder_extensions   ← from parties + IsFwdAgent (~6.5k)
+11. contacts               ← Master.Contact (22,814 rows) refactored to typed FKs
+12. vessels                ← Master.Vessel (6,164 rows; IMO NULL initially per Q6)
+13. ports                  ← Master.Port (4,150 rows) — needs CountryCode cleanup;
+                            lat/long varchar → DECIMAL(9,6) with parse-failure flagging
+14. container_types        ← Config.EquipmentTypeSize (31 → ~50 after ISO semicolon split)
+15. charge_codes           ← Master.ChargeCode CANONICAL (~150 distinct concepts)
+16. charge_code_variants   ← Master.ChargeCode VARIANTS (~300 rows: -CA → CUSTOMER+CASH,
+                                                        -CR → AGENT+CREDIT)
+17. order_types            ← Master.OrderType (21 rows)
+18. order_type_movements   ← Master.OrderTypeMovement (junction preserved)
+19. order_type_charges     ← Master.OrderTypeCharges + OrderTypeChargesVAS (junction preserved)
+20. movements              ← Master.Movement (8 → 4 deduped, applies_to_module='BOTH' for shared)
+21. holds                  ← Master.ContainerStatus rows where IsHold=1 (DMG, OHF, SALE.)
+22. container_conditions   ← Master.ContainerStatus rows where IsHold=0 (AV, SOUND, SW, etc.)
+23. commodities — Pass A   ← Auto-migrate Master.IMOCode (18 hazardous goods rows)
+24. commodities — Pass B   ← Tool: scan booking cargo descriptions, dedupe top 100 unique,
+                              present as worklist for ops to manually map to HS codes over 1-2 weeks
+                              (no commercial dataset purchased per Q5)
 ```
+
+**ETL safety:**
+- Each step is idempotent (re-runnable without duplicates) using `legacy_charge_code` /
+  `party_aliases.alias_value` / similar legacy-reference columns
+- Each step writes a row to `legacy_migration_log` with counts in/out, rejection reasons,
+  duration, and timestamp
+- Steps 5-10 form one logical transaction conceptually (parties + extensions); ETL
+  uses a staging table to assemble all extension rows before flushing
 
 ### Validation per entity (post-migration reconciliation)
 
@@ -886,30 +1111,20 @@ Each validation result logged to `legacy_migration_log` table per tenant.
 
 ---
 
-## 8. Open questions for architect review
+## 8. Resolved decisions (architect review locked 2026-05-09)
 
-Numbered for easy answer-pasting:
-
-1. **Customer code prefix conventions** — migrate as-is (5 different conventions) or normalise on entry to new system (existing keep their codes)?
-
-2. **`OperatorCode` column** — mostly empty in legacy. Drop in new schema, or keep for tenants who use it?
-
-3. **`order_types.applicable_movements` and `default_charges`** — store as JSON arrays embedded, or keep as junction tables (`order_type_movements`, `order_type_charges`)? My recommendation is JSON for simplicity, but junctions are more queryable. **You decide — depends on whether ops queries often "which order types apply to this movement?"**
-
-4. **Charge code merge (300 → ~150)** — automated by stripping `-CA/-CR` suffix. Need ops sign-off that the metadata between -CA and -CR variants is identical (sometimes only the `PaymentTerm` differs, sometimes other metadata too).
-
-5. **`commodities` seed source** — buy a commercial HS 2022 dataset, scrape WCO public, or only seed entries that appear in legacy bookings (sparse but customer-relevant)?
-
-6. **`vessels.imo_number`** — leave NULL initially, or block save until populated? My recommendation: NULL initially, with a "vessel registry sync" feature in Phase 2 to backfill from IHS Sea-web or similar.
-
-7. **Tenant branding** — should `companies.brand_color`, `companies.logo_url` etc. exist on the company table for white-label tenants, or stay in Platform DB tenant config?
-
-8. **Multi-language description fields** — added `_en` and `_local` columns on every named entity. For Phase 1 launch (English-only UI), should we just use a single `description` column and add `_local` later? **My recommendation: keep both columns from day 1** — schema changes in Phase 4 are expensive across all tenant DBs.
-
-9. **`AuditID xml` column** — confirmed dropped, replaced by SQL Server temporal tables. Any objection?
-
-10. **Soft-delete via `deleted_at`** — applied to all master tables. Lookup-style tables (`movements`, `holds`, `container_grades`) use `is_active` only (no deletion). Confirm?
-
+| # | Question | Resolution | Design impact |
+|---|----------|-----------|---------------|
+| 1 | Customer code prefix conventions — migrate as-is or normalise? | **Canonical + aliases pattern** (NAVIS / CargoWise / Envision standard). Every party gets a normalised canonical code (`C-NNNNNN`, `L-NNNNN`, `H-NNNNN`, `F-NNNNN` per role); legacy code preserved as a row in new `party_aliases` table with `alias_type = 'LEGACY'`. Search resolves by either. | Adds `party_aliases` table (§4.4) |
+| 2 | `OperatorCode` — keep or drop? | **Keep, with operator semantics.** Used when a line operates a vessel/service different from its parent line (slot charter, alliance vessel sharing — e.g., CMA owns vessel, APL operates it). Moves from `parties` to `shipping_line_extensions` since it's line-specific. | `shipping_line_extensions.operator_code` (was on legacy `Customer.OperatorCode`) |
+| 3 | `order_types.applicable_movements` JSON or junction tables? | **Junction tables** — `order_type_movements`, `order_type_charges`. JSON would force scans on every booking-movement query; junction tables index cleanly. Reversed my JSON recommendation based on architect's note that all booking-container-movement records reference order-type movements. | Adds 2 junction tables (§4.10–4.11) |
+| 4 | Charge code merge `-CA/-CR` (300 → ~150)? | **Two-level structure.** `charge_codes` is the canonical concept (~150). `charge_code_variants` is the (bill_to × payment_term) matrix (~300) holding the actual rate / GL / VAT per scenario. Legacy `-CA` rows become variants with (bill_to=CUSTOMER, payment_term=CASH); `-CR` rows become (bill_to=AGENT, payment_term=CREDIT). | Replaces single `charge_codes` design with `charge_codes` + `charge_code_variants` (§4.9) |
+| 5 | `commodities` seed source? | **B + C combined.** (B) Auto-migrate the 18 IMO hazardous codes immediately. (C) One-time tool scans legacy booking cargo-description fields, dedupes top 100 unique descriptions, presents as worklist for ops to map to HS codes over a week or two. No commercial HS dataset purchased. | ETL adds two-pass commodity seed (§7) |
+| 6 | `vessels.imo_number` mandatory? | **NULL initially.** Vessel registry sync from IHS Sea-web (or similar) deferred to Phase 2. | Already locked in §4.6 |
+| 7 | Tenant branding location? | **Platform DB tenant config.** `gecko_platform.tenant_branding` (logo, colors, fonts, white-label assets) — not on Master `companies` table. Companies in Master DB hold operational identity only. | Removed brand fields from §4.14 `companies` |
+| 8 | Multi-language `_en` + `_local` columns from day 1? | **Yes.** Schema changes in Phase 4 across all tenant DBs are expensive. | Already applied throughout |
+| 9 | Drop `AuditID xml`, replace with temporal tables? | **Yes.** | Already applied |
+| 10 | Soft-delete via `deleted_at` (master) vs `is_active` (lookups)? | **Yes.** | Already applied |
 ---
 
 ## 9. Decision points to lock before SQL DDL
