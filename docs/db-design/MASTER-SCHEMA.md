@@ -4,10 +4,42 @@
 > (ARCHITECTURE.md). Defines the new `master_<tenant>` per-tenant DB schema
 > for Phase 1.
 
-**Version:** Draft v2 — All 10 architect review questions resolved
-**Status:** Locked. Next step is SQL DDL generation (`db/master/migrations/0001_initial.sql`)
+**Version:** Draft v3 — Gap-close additions (9 new tables) + order_types decomposition
+**Status:** Locked. SQL DDL implemented in `db/master/migrations/0001` through `0005`.
 **Source audit:** `.legacy/audit/00-SUMMARY.md` through `05-LOOKUPS.md`
-**Last updated:** 2026-05-09
+**Last updated:** 2026-05-10
+
+## v3 changes summary (vs v2)
+
+Closes the gaps identified in the Phase 1 cross-check + redesigns
+`order_types` for global-standard alignment ahead of MENA/Europe expansion.
+
+**9 new tables added:**
+- `direction_types` (lookup, system-wide)
+- `service_types` (per-tenant, decomposes `order_types.shipment_type`)
+- `cargo_classes` (lookup, system-wide, decomposes `order_types.cargo_type`)
+- `customer_tiers` (lookup, system-wide — VIP/Gold/Silver/Bronze/Standard/Prospect)
+- `incoterms` (lookup, ISO INCOTERMS 2020 — 11 codes)
+- `document_types` (lookup, ~30 codes covering Transport/Customs/Financial/EMR)
+- `tax_codes` (per-tenant, multi-country VAT/GST with effective dates)
+- `yard_rows` (optional, for tenants needing row-level yard granularity)
+- `yard_slots` (optional, for tenants needing slot-level yard granularity)
+
+**`order_types` decomposed:**
+- Removed embedded `direction VARCHAR(10)`, `shipment_type VARCHAR(20)`,
+  `cargo_type VARCHAR(20)` columns
+- Added `direction_code VARCHAR(20)` → `direction_types.code`
+- Added `service_type_id UNIQUEIDENTIFIER` → `service_types.id` (nullable)
+- Added `cargo_class_code VARCHAR(20)` → `cargo_classes.code`
+- Industry-aligned: matches NAVIS N4 (Booking Type / Service Type / Cargo Class),
+  CargoWise One (Job Type / Service Type / Container Mode), and global EDI standards
+- Bookings can either pick a pre-built `order_types` template OR specify
+  direction + service_type + cargo_class directly for ad-hoc combinations
+
+**`customer_extensions.tier_code`** added (logical FK to `customer_tiers.code`,
+default `'STANDARD'`).
+
+**Total entity count: 32 tables** (23 from v2 + 9 from gap-close).
 
 ---
 

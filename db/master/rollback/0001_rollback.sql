@@ -39,6 +39,8 @@ EXEC sp_executesql @drop;
 GO
 
 -- 4. Drop main tables in reverse dependency order
+-- (Includes tables added by 0003: direction_types, service_types, cargo_classes,
+--  customer_tiers, incoterms, document_types, tax_codes, yard_rows, yard_slots)
 IF OBJECT_ID(N'dbo.legacy_migration_log', N'U') IS NOT NULL DROP TABLE dbo.legacy_migration_log;
 IF OBJECT_ID(N'dbo.commodities',           N'U') IS NOT NULL DROP TABLE dbo.commodities;
 IF OBJECT_ID(N'dbo.container_conditions',  N'U') IS NOT NULL DROP TABLE dbo.container_conditions;
@@ -60,10 +62,20 @@ IF OBJECT_ID(N'dbo.shipping_line_extensions', N'U') IS NOT NULL DROP TABLE dbo.s
 IF OBJECT_ID(N'dbo.customer_extensions',   N'U') IS NOT NULL DROP TABLE dbo.customer_extensions;
 IF OBJECT_ID(N'dbo.party_aliases',         N'U') IS NOT NULL DROP TABLE dbo.party_aliases;
 IF OBJECT_ID(N'dbo.parties',               N'U') IS NOT NULL DROP TABLE dbo.parties;
+-- Tables added by 0003 (gap-close):
+IF OBJECT_ID(N'dbo.yard_slots',            N'U') IS NOT NULL DROP TABLE dbo.yard_slots;
+IF OBJECT_ID(N'dbo.yard_rows',             N'U') IS NOT NULL DROP TABLE dbo.yard_rows;
 IF OBJECT_ID(N'dbo.yard_blocks',           N'U') IS NOT NULL DROP TABLE dbo.yard_blocks;
 IF OBJECT_ID(N'dbo.yards',                 N'U') IS NOT NULL DROP TABLE dbo.yards;
 IF OBJECT_ID(N'dbo.branches',              N'U') IS NOT NULL DROP TABLE dbo.branches;
 IF OBJECT_ID(N'dbo.companies',             N'U') IS NOT NULL DROP TABLE dbo.companies;
+IF OBJECT_ID(N'dbo.tax_codes',             N'U') IS NOT NULL DROP TABLE dbo.tax_codes;
+IF OBJECT_ID(N'dbo.document_types',        N'U') IS NOT NULL DROP TABLE dbo.document_types;
+IF OBJECT_ID(N'dbo.incoterms',             N'U') IS NOT NULL DROP TABLE dbo.incoterms;
+IF OBJECT_ID(N'dbo.customer_tiers',        N'U') IS NOT NULL DROP TABLE dbo.customer_tiers;
+IF OBJECT_ID(N'dbo.cargo_classes',         N'U') IS NOT NULL DROP TABLE dbo.cargo_classes;
+IF OBJECT_ID(N'dbo.service_types',         N'U') IS NOT NULL DROP TABLE dbo.service_types;
+IF OBJECT_ID(N'dbo.direction_types',       N'U') IS NOT NULL DROP TABLE dbo.direction_types;
 GO
 
 -- 5. Drop RLS function
