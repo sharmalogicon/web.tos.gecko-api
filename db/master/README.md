@@ -64,40 +64,53 @@ fresh tenant DB.
 ## Verification (after running all 5 migrations)
 
 ```sql
--- Should return 32 user tables (23 from 0001 + 9 from 0003)
-SELECT COUNT(*) AS table_count
+-- Should return 27 dbo tables (23 from 0001 + 4 from 0003: service_types, tax_codes, yard_rows, yard_slots)
+SELECT COUNT(*) AS dbo_table_count
 FROM sys.tables t JOIN sys.schemas s ON t.schema_id = s.schema_id
 WHERE s.name = N'dbo' AND t.name <> N'sysdiagrams';
+
+-- Should return 5 lookup tables (system-wide reference, no tenant_id)
+SELECT COUNT(*) AS lookup_table_count
+FROM sys.tables t JOIN sys.schemas s ON t.schema_id = s.schema_id
+WHERE s.name = N'lookup';
 
 -- Should return 20 history tables (18 from 0001 + 2 from 0003 — service_types + tax_codes)
 SELECT COUNT(*) AS history_count
 FROM sys.tables t JOIN sys.schemas s ON t.schema_id = s.schema_id
 WHERE s.name = N'history';
 
--- Should return 1 active security policy
+-- Should return 1 active security policy (covers dbo tables only — lookup is system-wide, no RLS)
 SELECT name, is_enabled
 FROM sys.security_policies
 WHERE name = N'gecko_master_tenant_isolation';
 
 -- Verify seed data loaded
-SELECT 'direction_types'      AS table_name, COUNT(*) AS rows FROM dbo.direction_types
-UNION ALL SELECT 'cargo_classes',            COUNT(*) FROM dbo.cargo_classes
-UNION ALL SELECT 'customer_tiers',           COUNT(*) FROM dbo.customer_tiers
-UNION ALL SELECT 'incoterms',                COUNT(*) FROM dbo.incoterms
-UNION ALL SELECT 'document_types',           COUNT(*) FROM dbo.document_types
-UNION ALL SELECT 'movements (tenant)',       COUNT(*) FROM dbo.movements
-UNION ALL SELECT 'holds (tenant)',           COUNT(*) FROM dbo.holds
-UNION ALL SELECT 'container_conditions',     COUNT(*) FROM dbo.container_conditions
-UNION ALL SELECT 'container_types (tenant)', COUNT(*) FROM dbo.container_types
-UNION ALL SELECT 'service_types (tenant)',   COUNT(*) FROM dbo.service_types
-UNION ALL SELECT 'tax_codes (tenant)',       COUNT(*) FROM dbo.tax_codes;
+SELECT 'lookup.direction_types'      AS table_name, COUNT(*) AS rows FROM lookup.direction_types
+UNION ALL SELECT 'lookup.cargo_classes',            COUNT(*) FROM lookup.cargo_classes
+UNION ALL SELECT 'lookup.customer_tiers',           COUNT(*) FROM lookup.customer_tiers
+UNION ALL SELECT 'lookup.incoterms',                COUNT(*) FROM lookup.incoterms
+UNION ALL SELECT 'lookup.document_types',           COUNT(*) FROM lookup.document_types
+UNION ALL SELECT 'dbo.movements (tenant)',          COUNT(*) FROM dbo.movements
+UNION ALL SELECT 'dbo.holds (tenant)',              COUNT(*) FROM dbo.holds
+UNION ALL SELECT 'dbo.container_conditions',        COUNT(*) FROM dbo.container_conditions
+UNION ALL SELECT 'dbo.container_types (tenant)',    COUNT(*) FROM dbo.container_types
+UNION ALL SELECT 'dbo.service_types (tenant)',      COUNT(*) FROM dbo.service_types
+UNION ALL SELECT 'dbo.tax_codes (tenant)',          COUNT(*) FROM dbo.tax_codes;
 ```
 
 Expected:
-- 32 dbo tables, 20 history tables, RLS policy enabled
-- direction_types = 5, cargo_classes = 7, customer_tiers = 6, incoterms = 11, document_types = 30
-- movements = 8, holds = 7, container_conditions = 10, container_types = 12
-- service_types = 11, tax_codes = 8
+- 27 dbo tables, 5 lookup tables, 20 history tables, RLS policy enabled
+- lookup.direction_types = 5, lookup.cargo_classes = 7, lookup.customer_tiers = 6, lookup.incoterms = 11, lookup.document_types = 30
+- dbo.movements = 8, dbo.holds = 7, dbo.container_conditions = 10, dbo.container_types = 12
+- dbo.service_types = 11, dbo.tax_codes = 8
+
+## Schema convention
+
+| Schema | Purpose | Tenant-scoped? | RLS applied? | Temporal? |
+|--------|---------|----------------|--------------|-----------|
+| `dbo` | Per-tenant operational + reference data | Yes (`tenant_id` column on every table) | Yes | Yes (audit-worthy) |
+| `lookup` | System-wide reference data (industry standards, app-defined enums) | No | No (shared by all tenants) | No (low churn) |
+| `history` | Temporal-table history (auto-managed) | Inherits from source | Inherits | n/a |
 
 ## Tenant context for app connections
 

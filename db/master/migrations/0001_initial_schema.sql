@@ -973,20 +973,20 @@ CREATE TABLE dbo.container_conditions (
   description_en        NVARCHAR(100)    NOT NULL,
   description_local     NVARCHAR(100)    NULL,
 
-  severity              TINYINT          NOT NULL CONSTRAINT df_cc_severity DEFAULT 5,
-  is_serviceable        BIT              NOT NULL CONSTRAINT df_cc_serviceable DEFAULT 1,
-  requires_repair       BIT              NOT NULL CONSTRAINT df_cc_requires_repair DEFAULT 0,
+  severity              TINYINT          NOT NULL CONSTRAINT df_ccond_severity DEFAULT 5,
+  is_serviceable        BIT              NOT NULL CONSTRAINT df_ccond_serviceable DEFAULT 1,
+  requires_repair       BIT              NOT NULL CONSTRAINT df_ccond_requires_repair DEFAULT 0,
 
-  is_active             BIT              NOT NULL CONSTRAINT df_cc_is_active DEFAULT 1,
+  is_active             BIT              NOT NULL CONSTRAINT df_ccond_is_active DEFAULT 1,
 
-  created_at            DATETIMEOFFSET(3) NOT NULL CONSTRAINT df_cc_created_at_v2 DEFAULT SYSDATETIMEOFFSET(),
+  created_at            DATETIMEOFFSET(3) NOT NULL CONSTRAINT df_ccond_created_at DEFAULT SYSDATETIMEOFFSET(),
   created_by            UNIQUEIDENTIFIER  NOT NULL,
-  updated_at            DATETIMEOFFSET(3) NOT NULL CONSTRAINT df_cc_updated_at_v2 DEFAULT SYSDATETIMEOFFSET(),
+  updated_at            DATETIMEOFFSET(3) NOT NULL CONSTRAINT df_ccond_updated_at DEFAULT SYSDATETIMEOFFSET(),
   updated_by            UNIQUEIDENTIFIER  NOT NULL,
   row_version           ROWVERSION        NOT NULL,
 
   CONSTRAINT pk_container_conditions PRIMARY KEY CLUSTERED (id),
-  CONSTRAINT ck_cc_severity CHECK (severity BETWEEN 1 AND 9)
+  CONSTRAINT ck_ccond_severity CHECK (severity BETWEEN 1 AND 9)
 );
 
 CREATE UNIQUE INDEX uq_container_conditions_tenant_code

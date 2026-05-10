@@ -4,10 +4,22 @@
 > (ARCHITECTURE.md). Defines the new `master_<tenant>` per-tenant DB schema
 > for Phase 1.
 
-**Version:** Draft v3 — Gap-close additions (9 new tables) + order_types decomposition
+**Version:** Draft v3.1 — Hybrid schema (`dbo` + `lookup`) + constraint-name fixes
 **Status:** Locked. SQL DDL implemented in `db/master/migrations/0001` through `0005`.
 **Source audit:** `.legacy/audit/00-SUMMARY.md` through `05-LOOKUPS.md`
 **Last updated:** 2026-05-10
+
+## Schema convention (locked v3.1)
+
+| Schema | Purpose | Tables (count) | Tenant-scoped? | RLS? | Temporal? |
+|--------|---------|----------------|----------------|------|-----------|
+| `dbo` | Per-tenant operational + reference data | 27 | Yes (`tenant_id`) | Yes | Yes (audit-worthy) |
+| `lookup` | System-wide reference: INCOTERMS, document types, customer tiers, direction types, cargo classes | 5 | No (shared) | No | No |
+| `history` | Temporal-table history (auto-created by SQL Server) | 20 | Inherits | Inherits | n/a |
+
+The `lookup` schema holds well-known industry standards (INCOTERMS 2020, EDIFACT-derived document types) and app-defined enums that don't need per-tenant customisation. They have no `tenant_id` column. All tenants in the same DB share these. Read-mostly; updated only by platform deploys.
+
+The `dbo` schema holds everything tenant-scoped — operational data, per-tenant reference data (movements, holds, container_types are tenant-scoped because operators may add custom codes), and per-tenant business rules (service_types, tax_codes).
 
 ## v3 changes summary (vs v2)
 

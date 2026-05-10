@@ -62,7 +62,7 @@ IF OBJECT_ID(N'dbo.shipping_line_extensions', N'U') IS NOT NULL DROP TABLE dbo.s
 IF OBJECT_ID(N'dbo.customer_extensions',   N'U') IS NOT NULL DROP TABLE dbo.customer_extensions;
 IF OBJECT_ID(N'dbo.party_aliases',         N'U') IS NOT NULL DROP TABLE dbo.party_aliases;
 IF OBJECT_ID(N'dbo.parties',               N'U') IS NOT NULL DROP TABLE dbo.parties;
--- Tables added by 0003 (gap-close):
+-- Tables added by 0003 (gap-close) — dbo schema:
 IF OBJECT_ID(N'dbo.yard_slots',            N'U') IS NOT NULL DROP TABLE dbo.yard_slots;
 IF OBJECT_ID(N'dbo.yard_rows',             N'U') IS NOT NULL DROP TABLE dbo.yard_rows;
 IF OBJECT_ID(N'dbo.yard_blocks',           N'U') IS NOT NULL DROP TABLE dbo.yard_blocks;
@@ -70,20 +70,24 @@ IF OBJECT_ID(N'dbo.yards',                 N'U') IS NOT NULL DROP TABLE dbo.yard
 IF OBJECT_ID(N'dbo.branches',              N'U') IS NOT NULL DROP TABLE dbo.branches;
 IF OBJECT_ID(N'dbo.companies',             N'U') IS NOT NULL DROP TABLE dbo.companies;
 IF OBJECT_ID(N'dbo.tax_codes',             N'U') IS NOT NULL DROP TABLE dbo.tax_codes;
-IF OBJECT_ID(N'dbo.document_types',        N'U') IS NOT NULL DROP TABLE dbo.document_types;
-IF OBJECT_ID(N'dbo.incoterms',             N'U') IS NOT NULL DROP TABLE dbo.incoterms;
-IF OBJECT_ID(N'dbo.customer_tiers',        N'U') IS NOT NULL DROP TABLE dbo.customer_tiers;
-IF OBJECT_ID(N'dbo.cargo_classes',         N'U') IS NOT NULL DROP TABLE dbo.cargo_classes;
 IF OBJECT_ID(N'dbo.service_types',         N'U') IS NOT NULL DROP TABLE dbo.service_types;
-IF OBJECT_ID(N'dbo.direction_types',       N'U') IS NOT NULL DROP TABLE dbo.direction_types;
+GO
+
+-- Tables added by 0003 (gap-close) — lookup schema (system-wide reference):
+IF OBJECT_ID(N'lookup.document_types',     N'U') IS NOT NULL DROP TABLE lookup.document_types;
+IF OBJECT_ID(N'lookup.incoterms',          N'U') IS NOT NULL DROP TABLE lookup.incoterms;
+IF OBJECT_ID(N'lookup.customer_tiers',     N'U') IS NOT NULL DROP TABLE lookup.customer_tiers;
+IF OBJECT_ID(N'lookup.cargo_classes',      N'U') IS NOT NULL DROP TABLE lookup.cargo_classes;
+IF OBJECT_ID(N'lookup.direction_types',    N'U') IS NOT NULL DROP TABLE lookup.direction_types;
 GO
 
 -- 5. Drop RLS function
 IF OBJECT_ID(N'dbo.fn_tenant_filter', N'IF') IS NOT NULL DROP FUNCTION dbo.fn_tenant_filter;
 GO
 
--- 6. Drop history schema
+-- 6. Drop history + lookup schemas
 IF SCHEMA_ID(N'history') IS NOT NULL DROP SCHEMA history;
+IF SCHEMA_ID(N'lookup')  IS NOT NULL DROP SCHEMA lookup;
 GO
 
 PRINT N'== Rollback complete';

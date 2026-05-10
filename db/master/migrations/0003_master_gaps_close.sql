@@ -28,11 +28,29 @@ GO
 PRINT N'== 0003_master_gaps_close.sql starting at ' + CONVERT(NVARCHAR, SYSDATETIMEOFFSET(), 121);
 
 -- ==========================================================================
+-- SECTION 0 — Schemas
+-- ==========================================================================
+-- The `lookup` schema holds system-wide reference data (no tenant_id):
+-- direction_types, cargo_classes, customer_tiers, incoterms, document_types.
+-- These are shared across all tenants in the same DB; they're industry
+-- standards (INCOTERMS, document categories) or app-defined enums that
+-- don't need per-tenant customisation. Hybrid model:
+--   dbo    = tenant-scoped operational data (parties, vessels, charges, ...)
+--   lookup = system-wide reference data (no tenant_id, shared)
+--   history = temporal-table history (auto-managed)
+
+IF SCHEMA_ID(N'lookup') IS NULL
+  EXEC(N'CREATE SCHEMA lookup AUTHORIZATION dbo');
+GO
+
+PRINT N'  Schema lookup created';
+
+-- ==========================================================================
 -- SECTION 1 — Decompose order_types into 3 dimensions + composite
 -- ==========================================================================
 
--- 1a. direction_types — small, stable, app-defined
-CREATE TABLE dbo.direction_types (
+-- 1a. direction_types — small, stable, app-defined (system-wide → lookup schema)
+CREATE TABLE lookup.direction_types (
   code              VARCHAR(20)      NOT NULL,    -- IMPORT / EXPORT / TRANSHIPMENT / DOMESTIC / INTRA_TERMINAL
   description_en    NVARCHAR(200)    NOT NULL,
   description_local NVARCHAR(200)    NULL,
@@ -48,7 +66,7 @@ CREATE TABLE dbo.direction_types (
 );
 GO
 
-INSERT INTO dbo.direction_types (code, description_en, display_order) VALUES
+INSERT INTO lookup.direction_types (code, description_en, display_order) VALUES
   (N'IMPORT',         N'Import — cargo arriving at terminal',                 10),
   (N'EXPORT',         N'Export — cargo leaving terminal',                     20),
   (N'TRANSHIPMENT',   N'Through-port transfer between vessels',               30),
@@ -97,8 +115,8 @@ GO
 -- because seeds need a tenant context (tenant_id is a column).
 -- See db/master/migrations/0005_seed_lookups.sql.
 
--- 1c. cargo_classes — small, stable, app-defined
-CREATE TABLE dbo.cargo_classes (
+-- 1c. cargo_classes — small, stable, app-defined (system-wide → lookup schema)
+CREATE TABLE lookup.cargo_classes (
   code              VARCHAR(20)      NOT NULL,    -- GENERAL / REEFER / DG / OOG / EMPTY / BREAKBULK / PROJECT
   description_en    NVARCHAR(200)    NOT NULL,
   description_local NVARCHAR(200)    NULL,
@@ -120,7 +138,7 @@ CREATE TABLE dbo.cargo_classes (
 );
 GO
 
-INSERT INTO dbo.cargo_classes
+INSERT INTO lookup.cargo_classes
   (code, description_en, requires_temp_control, requires_imdg_handling, requires_oog_handling, is_empty_repositioning, display_order)
 VALUES
   (N'GENERAL',     N'General / dry cargo',                              0, 0, 0, 0, 10),
@@ -174,35 +192,35 @@ PRINT N'  Section 1: order_types decomposed into direction + service + cargo cla
 GO
 
 -- ==========================================================================
--- SECTION 2 — customer_tiers (lookup, app-defined)
+-- SECTION 2 — customer_tiers (system-wide → lookup schema)
 -- ==========================================================================
 
-CREATE TABLE dbo.customer_tiers (
+CREATE TABLE lookup.customer_tiers (
   code              VARCHAR(20)      NOT NULL,    -- VIP / GOLD / SILVER / BRONZE / STANDARD / PROSPECT
   description_en    NVARCHAR(200)    NOT NULL,
   description_local NVARCHAR(200)    NULL,
 
   -- Service-level expectations (informational, drives UI badge + reports)
-  priority          TINYINT          NOT NULL CONSTRAINT df_ct_priority DEFAULT 5,
+  priority          TINYINT          NOT NULL CONSTRAINT df_ctier_priority DEFAULT 5,
   display_color_hex CHAR(7)          NULL,        -- Tier badge colour
   default_credit_term_days SMALLINT  NULL,        -- Default credit terms for this tier
 
-  display_order     SMALLINT         NOT NULL CONSTRAINT df_ct_display_order DEFAULT 99,
-  is_active         BIT              NOT NULL CONSTRAINT df_ct_is_active DEFAULT 1,
+  display_order     SMALLINT         NOT NULL CONSTRAINT df_ctier_display_order DEFAULT 99,
+  is_active         BIT              NOT NULL CONSTRAINT df_ctier_is_active DEFAULT 1,
 
-  created_at        DATETIMEOFFSET(3) NOT NULL CONSTRAINT df_ct_created_at_v2 DEFAULT SYSDATETIMEOFFSET(),
-  updated_at        DATETIMEOFFSET(3) NOT NULL CONSTRAINT df_ct_updated_at_v2 DEFAULT SYSDATETIMEOFFSET(),
+  created_at        DATETIMEOFFSET(3) NOT NULL CONSTRAINT df_ctier_created_at DEFAULT SYSDATETIMEOFFSET(),
+  updated_at        DATETIMEOFFSET(3) NOT NULL CONSTRAINT df_ctier_updated_at DEFAULT SYSDATETIMEOFFSET(),
   row_version       ROWVERSION        NOT NULL,
 
   CONSTRAINT pk_customer_tiers PRIMARY KEY CLUSTERED (code),
-  CONSTRAINT ck_customer_tiers_priority CHECK (priority BETWEEN 1 AND 9),
-  CONSTRAINT ck_customer_tiers_color
+  CONSTRAINT ck_ctier_priority CHECK (priority BETWEEN 1 AND 9),
+  CONSTRAINT ck_ctier_color
     CHECK (display_color_hex IS NULL
            OR display_color_hex LIKE N'#[0-9A-Fa-f][0-9A-Fa-f][0-9A-Fa-f][0-9A-Fa-f][0-9A-Fa-f][0-9A-Fa-f]')
 );
 GO
 
-INSERT INTO dbo.customer_tiers
+INSERT INTO lookup.customer_tiers
   (code, description_en, priority, display_color_hex, default_credit_term_days, display_order)
 VALUES
   (N'VIP',      N'VIP — dedicated account manager, top priority',  1, N'#9333EA', 60, 10),
@@ -230,10 +248,10 @@ PRINT N'  Section 2: customer_tiers + customer_extensions.tier_code added';
 GO
 
 -- ==========================================================================
--- SECTION 3 — incoterms (lookup, ISO standard — INCOTERMS 2020)
+-- SECTION 3 — incoterms (ISO standard, INCOTERMS 2020 — lookup schema)
 -- ==========================================================================
 
-CREATE TABLE dbo.incoterms (
+CREATE TABLE lookup.incoterms (
   code              CHAR(3)          NOT NULL,    -- EXW / FCA / CPT / CIP / DAP / DPU / DDP / FAS / FOB / CFR / CIF
   description_en    NVARCHAR(200)    NOT NULL,
   description_local NVARCHAR(200)    NULL,
@@ -258,7 +276,7 @@ CREATE TABLE dbo.incoterms (
 );
 GO
 
-INSERT INTO dbo.incoterms
+INSERT INTO lookup.incoterms
   (code, description_en, transport_mode, seller_pays_main_carriage, seller_pays_insurance, display_order)
 VALUES
   -- Group I — Any mode of transport
@@ -280,10 +298,10 @@ PRINT N'  Section 3: incoterms (INCOTERMS 2020) seeded with 11 codes';
 GO
 
 -- ==========================================================================
--- SECTION 4 — document_types (lookup)
+-- SECTION 4 — document_types (system-wide → lookup schema)
 -- ==========================================================================
 
-CREATE TABLE dbo.document_types (
+CREATE TABLE lookup.document_types (
   code              VARCHAR(20)      NOT NULL,
   description_en    NVARCHAR(200)    NOT NULL,
   description_local NVARCHAR(200)    NULL,
@@ -311,7 +329,7 @@ CREATE TABLE dbo.document_types (
 );
 GO
 
-INSERT INTO dbo.document_types
+INSERT INTO lookup.document_types
   (code, description_en, document_category, is_legal_document, requires_signature, retention_years, edi_message_type, default_format, display_order)
 VALUES
   -- Transport documents
@@ -503,21 +521,23 @@ GO
 
 PRINT N'== 0003_master_gaps_close.sql complete';
 PRINT N'';
-PRINT N'   Tables added (9):';
-PRINT N'     direction_types       (5 rows seeded)';
-PRINT N'     service_types         (seed in 0005, per-tenant)';
-PRINT N'     cargo_classes         (7 rows seeded)';
-PRINT N'     customer_tiers        (6 rows seeded: VIP/GOLD/SILVER/BRONZE/STANDARD/PROSPECT)';
-PRINT N'     incoterms             (11 rows seeded: INCOTERMS 2020)';
-PRINT N'     document_types        (30 rows seeded)';
-PRINT N'     tax_codes             (seed in 0005, per-tenant)';
-PRINT N'     yard_rows             (optional)';
-PRINT N'     yard_slots            (optional)';
+PRINT N'   Tables added in lookup schema (5, system-wide reference, no tenant_id):';
+PRINT N'     lookup.direction_types  (5 rows seeded)';
+PRINT N'     lookup.cargo_classes    (7 rows seeded)';
+PRINT N'     lookup.customer_tiers   (6 rows: VIP/GOLD/SILVER/BRONZE/STANDARD/PROSPECT)';
+PRINT N'     lookup.incoterms        (11 rows: INCOTERMS 2020)';
+PRINT N'     lookup.document_types   (30 rows: Transport/Customs/Financial/EMR)';
+PRINT N'';
+PRINT N'   Tables added in dbo schema (4, per-tenant):';
+PRINT N'     dbo.service_types       (seed in 0005)';
+PRINT N'     dbo.tax_codes           (seed in 0005)';
+PRINT N'     dbo.yard_rows           (optional)';
+PRINT N'     dbo.yard_slots          (optional)';
 PRINT N'';
 PRINT N'   Tables altered:';
-PRINT N'     order_types           — direction/shipment_type/cargo_type cols replaced';
-PRINT N'                             with direction_code + service_type_id + cargo_class_code';
-PRINT N'     customer_extensions   — added tier_code (default STANDARD)';
+PRINT N'     dbo.order_types          — direction/shipment_type/cargo_type cols replaced';
+PRINT N'                                with direction_code + service_type_id + cargo_class_code';
+PRINT N'     dbo.customer_extensions  — added tier_code (default STANDARD)';
 PRINT N'';
 PRINT N'   Next: db/master/migrations/0004_master_gaps_temporal_rls.sql';
 GO
