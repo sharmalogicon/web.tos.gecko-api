@@ -1,10 +1,62 @@
 "use client";
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { Icon } from '../ui/Icon';
 import { ToastProvider } from '../ui/Toast';
+
+// Page-title / breadcrumb derivation from the NAV tree. Single source of truth:
+// browser tab title and in-app header both come from here. Future pages added
+// to NAV inherit titles automatically.
+function titleCaseSegment(s: string) {
+  return s.replace(/[-_]/g, ' ').replace(/\b\w/g, c => c.toUpperCase());
+}
+
+function useNavMatch(pathname: string | null) {
+  return useMemo(() => {
+    const path = pathname ?? '/';
+    const segments = path.split('/').filter(Boolean);
+
+    // Root
+    if (segments.length === 0) {
+      return { pageTitle: 'Workspace', breadcrumbs: ['Workspace'] };
+    }
+
+    const mod = NAV.find(m => m.id === segments[0]);
+    if (!mod) {
+      // Route not in NAV (e.g. /404, /unauth). Title-case the first segment.
+      const label = titleCaseSegment(segments[0]);
+      return { pageTitle: label, breadcrumbs: [label] };
+    }
+
+    // Longest-prefix-matching child (same algorithm the sidebar uses for highlighting).
+    const matches = (mod.children ?? []).filter(c =>
+      path === c.path || path.startsWith(c.path + '/')
+    );
+    const child = matches.length
+      ? matches.reduce((longest, c) => c.path.length > longest.path.length ? c : longest)
+      : null;
+
+    if (!child) {
+      return { pageTitle: mod.label, breadcrumbs: [mod.label] };
+    }
+
+    // Exact child match (list page or static child).
+    if (path === child.path) {
+      return { pageTitle: child.label, breadcrumbs: [mod.label, child.label] };
+    }
+
+    // Deeper path: detail page under the child. Surface the trailing segment
+    // (booking number, IMO, invoice id) so the tab title and breadcrumb stay distinct.
+    const remainder = path.slice(child.path.length).replace(/^\/+/, '');
+    const detail = decodeURIComponent(remainder.split('/').filter(Boolean).pop() || '');
+    return {
+      pageTitle: detail || child.label,
+      breadcrumbs: [mod.label, child.label, detail].filter(Boolean),
+    };
+  }, [pathname]);
+}
 
 const NAV = [
   { id: 'dashboard', icon: 'home', label: 'Dashboard',
@@ -291,7 +343,18 @@ function Header({ collapsed, onToggleSidebar, pageTitle = "Dashboard", breadcrum
 
 export function AppShell({ children }: { children: React.ReactNode }) {
   const [collapsed, setCollapsed] = useState(false);
-  
+  const pathname = usePathname();
+  const { pageTitle, breadcrumbs } = useNavMatch(pathname);
+
+  // Drive the browser tab title from the same source as the in-app header.
+  // The metadata.title.template in app/layout.tsx appends " · Gecko TOS" for
+  // server-rendered HTML; this useEffect keeps client-side navigation in sync.
+  useEffect(() => {
+    if (typeof document !== 'undefined' && pageTitle) {
+      document.title = `${pageTitle} · Gecko TOS`;
+    }
+  }, [pageTitle]);
+
   return (
     <ToastProvider>
       <div className="gecko-app" style={{ position: 'relative', minHeight: '100vh', background: 'var(--gecko-bg-subtle)' }}>
@@ -308,6 +371,8 @@ export function AppShell({ children }: { children: React.ReactNode }) {
           <Header
             collapsed={collapsed}
             onToggleSidebar={() => setCollapsed(c => !c)}
+            pageTitle={pageTitle}
+            breadcrumbs={breadcrumbs}
           />
           <main className="gecko-content" style={{ flex: 1, padding: 'var(--gecko-space-6)', overflowX: 'auto' }}>
             {children}
