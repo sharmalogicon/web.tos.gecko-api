@@ -3,7 +3,7 @@
 > Single source of truth. Update when decisions change — do not let the
 > codebase drift away from this doc.
 
-**Last updated:** 2026-05-08
+**Last updated:** 2026-05-13
 **Owner:** Sharma (founding architect)
 **Status:** Locked for Phase 1 (Identity + Master Data). Re-review before Phase 2.
 
@@ -85,6 +85,8 @@ Tier 2 — MASTER (per tenant, foundation for all operational modules)
 Tier 3 — OPERATIONAL (per tenant, per module — only created if subscribed)
 ├── TOS                   — bookings, movements, yard, gate, CFS, billing
 ├── EDI Hub               — message inbox/outbox, partner configs, templates
+├── Gate Appointments     — VBS slots, trucker/vehicle registration, booking,
+│   (a.k.a. VBS)            queue smoothing  (see docs/db-design/CONTAINERCHAIN-GAPS.md)
 ├── Trucking & Haulage    — dispatch, trips, drivers, fuel
 ├── Fleet                 — vehicle registry, preventive maintenance
 └── Equipment M & R       — damage inspection, repair work orders, chargeback
@@ -106,10 +108,10 @@ Tier 3 — OPERATIONAL (per tenant, per module — only created if subscribed)
                  │   ports, vessels, ...   │
                  └───────────┬─────────────┘
                              │
-        ┌────────┬───────────┼───────────┬────────┐
-        ▼        ▼           ▼           ▼        ▼
-      [TOS]    [EDI]    [Trucking]    [Fleet]   [M&R]
-   (per ten)  (per ten) (per ten)    (per ten) (per ten)
+        ┌────────┬───────────┼───────────┬────────┬────────┐
+        ▼        ▼           ▼           ▼        ▼        ▼
+      [TOS]    [EDI]      [VBS]      [Trucking] [Fleet] [M&R]
+   (per ten)  (per ten)  (per ten)   (per ten)  (per ten)(per ten)
 ```
 
 **Operational modules read Master via API or replicated read-model.** They never
@@ -147,13 +149,19 @@ extends with trip-time defaults), and so on.
 
 | Phase | Scope | Output |
 |-------|-------|--------|
-| 1 | Platform (Identity, Subs, RefData) + Master DB schema + tenant onboarding | Self-service tenant provisioning works |
-| 2 | TOS — booking, yard, gate, CFS | First operational tenant runs gate-in/out |
+| 1 | Platform (Identity, Subs, RefData) + Master DB schema + tenant onboarding. **Includes:** `notification_templates` + `notification_subscriptions` in Platform DB (closes ContainerChain Gap 4 — see CONTAINERCHAIN-GAPS.md). | Self-service tenant provisioning works |
+| 1.5 | Master DB gap-close additions: `carrier_hire_terms`, `depot_locations` (foundations for ECP workflow). | Empty Container Park workflow modelable |
+| 2 | TOS — booking, yard, gate, CFS. **Includes:** `ecp_hires` (empty hire-out/return movements) and `release_readiness` projection (closes ContainerChain Gaps 2 & 3). | First operational tenant runs gate-in/out + ECP |
 | 3 | TOS — billing, statement, invoicing | Charges → invoices → receipts |
 | 4 | EDI Hub — COPARN, CODECO, COARRI, BAPLIE, IFTMIN, CUSCAR | Live partner connection |
+| **4.5** | **Gate Appointments (VBS) module** — appointment_slots, appointment_bookings, trucker_registrations, vehicle_registrations, appointment_audit_events, slot_availability_cache. Trucker self-service portal. Closes ContainerChain Gap 1 (the biggest competitive gap). | Trucker books a 30-min slot, arrives, gate-in matches by appointment_id |
 | 5 | Trucking & Haulage | Dispatch + trip lifecycle integrated with TOS |
 | 6 | Equipment M & R | Damage inspection → work order → chargeback |
 | 7 | Fleet | Vehicle registry + preventive maintenance |
+
+See [docs/db-design/CONTAINERCHAIN-GAPS.md](docs/db-design/CONTAINERCHAIN-GAPS.md)
+for the four ContainerChain gaps and the schemas that close them across
+Phase 1 / 1.5 / 2 / 4.5.
 
 ---
 
@@ -189,6 +197,11 @@ edi_<tenant>       — Provisioned if tenant subscribes to EDI.
                      edi_messages (raw + parsed), partners, templates,
                      transmission_log, dlq.
 
+vbs_<tenant>       — Provisioned if tenant subscribes to Gate Appointments.
+                     appointment_slots, appointment_bookings,
+                     trucker_registrations, vehicle_registrations,
+                     appointment_audit_events, slot_availability_cache.
+
 trucking_<tenant>  — Provisioned if tenant subscribes to Trucking.
                      trips, dispatch_plans, drivers, fuel_log.
 
@@ -206,9 +219,12 @@ mnr_<tenant>       — Provisioned if tenant subscribes to M&R.
 |--------|----------|-----|
 | **EDI-only** | Forwarder integrating with carriers | gecko_platform + gecko_identity + gecko_audit + master + edi |
 | **Depot Lite** | Small ICD running depot ops | + tos |
+| **Depot Lite Plus** | Depot + empty container park hire workflow | + tos (with ECP tables) |
 | **Depot + EDI** | Mid-tier ICD with carrier EDI | + tos + edi |
+| **VBS-only** | Terminal already on legacy TOS but wants gate-appointment booking | + vbs (TOS read-model via events) |
+| **Terminal Pro** | ICD with appointment-controlled gate | + tos + vbs |
 | **Trucking-only** | Haulage operator with fleet | + trucking + fleet |
-| **Full Stack** | Full terminal (e.g., LCB ICD) | + tos + edi + trucking + fleet + mnr |
+| **Full Stack** | Full terminal (e.g., LCB ICD) | + tos + edi + vbs + trucking + fleet + mnr |
 
 ### Why this topology
 
@@ -1005,6 +1021,37 @@ M&R) carry **no physical FK constraints**. References between tables are
 **Reporting DB exception:** the read-replica reporting DB (Phase 5+) will
 have FK constraints added back, purely for BI tool consumption. This is a
 one-way ETL concern, not an operational design.
+
+### ADR-008: Gate Appointments (VBS) as its own module, not a sub-module of TOS (2026-05-13)
+**Decision:** Gate Appointments (Vehicle Booking System) is a top-level
+operational module — `vbs_<tenant>` DB, `Gecko.Vbs.*` projects — not a
+feature inside `Gecko.Tos.*`.
+**Why:**
+  - **Standalone monetisable bundle.** Many tenants on legacy NAVIS / Envision
+    want to bolt on a modern appointment portal without replacing their TOS.
+    "VBS-only" must be deployable without provisioning a `tos_<tenant>` DB.
+    The TOS read-model arrives via events (`container.ready_for_pickup`,
+    `appointment.booked`).
+  - **Different scale profile.** Appointment slot availability queries can
+    burst 100× the TOS booking-write rate (truckers refreshing the portal at
+    07:00 looking for slots). Keeping it in its own DB avoids polluting the
+    TOS query plan cache and DTU budget.
+  - **Different consumer.** Truckers / dispatchers are external users with
+    their own auth flow (limited-scope JWTs, mobile-first). TOS users are
+    internal terminal ops staff. Mixing the two in one DB invites a tenant-
+    boundary slip.
+  - **Different release cadence.** Appointment policy (no-show penalties,
+    cancellation windows, peak-hour pricing) changes far more often than
+    core TOS gate logic. Keeping them separate avoids tying core-gate
+    deploys to portal-policy tweaks.
+**Tradeoffs accepted:**
+  - One more DB per "Terminal Pro" tenant (cheap in Elastic Pool, expensive
+    in mental model).
+  - Cross-DB consistency on `appointment ↔ booking ↔ unit` is eventual, via
+    events. Designed with idempotency from the start — `appointment.no_show`
+    and `gate_in.recorded` arrive in any order.
+**See:** [docs/db-design/CONTAINERCHAIN-GAPS.md](docs/db-design/CONTAINERCHAIN-GAPS.md)
+Gap 1 for the full schema and design.
 
 ---
 

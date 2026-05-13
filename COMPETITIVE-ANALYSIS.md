@@ -7,7 +7,7 @@
 > **Constraint:** Every "How Gecko wins" claim below maps to capability we
 > have already shipped or have committed to building. No vapourware.
 
-**Last updated:** 2026-05-08
+**Last updated:** 2026-05-13
 **Audience:** Founder + future GTM team
 
 ---
@@ -18,6 +18,7 @@
 |--------|---------|-----------------|---------------------|
 | **NAVIS (Kaleris)** | N4 | Large container terminals, port operators | $5–15M+ |
 | **WiseTech Global** | CargoWise One | 3PLs, freight forwarders, terminal operators | $2–8M+ |
+| **WiseTech / ContainerChain** | ContainerChain (Depot, VBS, Notify) | Empty-container depots + adjacent terminals (AU/NZ-strong, ASEAN-growing) | $0.3–1.5M |
 | **Envision** | Terminal | Small-mid container terminals | $1–4M |
 | **Tideworks** | TOS-Plus, GateVision | US-centric mid-tier | $1–3M |
 | **Solvo** | Solvo.TOS | CIS / Eastern European | $0.8–2M |
@@ -35,31 +36,33 @@ which is itself a pain point we exploit.
 
 ✓ = strong, △ = partial / dated, ✗ = weak / missing, **G** = where Gecko wins
 
-| Capability | NAVIS N4 | CargoWise | Envision | Tideworks | Solvo | **Gecko** |
-|---|---|---|---|---|---|---|
-| **Modern web UX** | △ (web wrapper on legacy) | △ (dense, dated) | △ | ✗ | ✗ | **✓ G** |
-| **Mobile / responsive** | ✗ | △ | ✗ | ✗ | ✗ | **✓ G** |
-| **Native SaaS multi-tenant** | ✗ (hosted legacy) | △ (tenant-aware but old DB) | ✗ | △ | ✗ | **✓ G** |
-| **Open APIs (OpenAPI/REST)** | △ (SOAP legacy) | △ (rate-limited, expensive) | ✗ | △ | ✗ | **✓ G** |
-| **Real-time event streaming** | ✗ | ✗ | ✗ | ✗ | ✗ | **✓ G** |
-| **Per-module pricing** | ✗ | ✓ | △ | △ | ✗ | **✓ G** |
-| **Self-service tenant provisioning** | ✗ (months) | ✗ (months) | ✗ | ✗ | ✗ | **✓ G** |
-| **Modern observability** | ✗ | ✗ | ✗ | ✗ | ✗ | **✓ G** |
-| **In-product audit log** | △ (bolt-on) | △ | ✗ | ✗ | ✗ | **✓ G** |
-| **Customer self-service portal** | ✗ ($$$ add-on) | ✗ ($$$ add-on) | ✗ | ✗ | ✗ | **✓ G** (using existing UI) |
-| **Sub-30-day onboarding** | ✗ (6–18 mo) | ✗ (6–18 mo) | △ (3–6 mo) | △ | ✗ | **✓ G** |
-| **EDI integration depth** | ✓ | ✓ | △ | △ | △ | △ → ✓ (Phase 4) |
-| **Tariff & rate flexibility** | ✓ | ✓ | △ | △ | △ | **✓ G** (already designed) |
-| **Yard planning & stowage** | ✓ | △ | △ | ✓ | △ | △ → ✓ (Phase 2–3) |
-| **Vessel ops & berth planning** | ✓ | △ | △ | ✓ | △ | △ → ✓ (Phase 2) |
-| **CFS / depot ops** | △ | ✓ | △ | △ | △ | **✓ G** |
-| **Trucking / haulage integrated** | ✗ (separate product) | △ | ✗ | ✗ | ✗ | △ → ✓ (Phase 5) |
-| **Equipment M&R integrated** | △ | △ | ✗ | ✗ | ✗ | △ → ✓ (Phase 6) |
-| **Fleet / preventive maintenance** | ✗ | ✗ | ✗ | ✗ | ✗ | △ → ✓ (Phase 7) |
-| **Multi-region / data residency** | △ | △ | ✗ | ✗ | ✗ | **✓ G** (Azure global) |
-| **Customisation without code** | ✗ (XML config hell) | ✗ (XML config hell) | △ | △ | ✗ | **✓ G** (config-driven UI ready) |
-| **Monthly cost for SME** | $$$$ | $$$$ | $$$ | $$ | $ | **$ G** |
-| **Vendor lock-in escape** | ✗ | ✗ | △ | △ | △ | **✓ G** (open standards) |
+| Capability | NAVIS N4 | CargoWise | ContainerChain | Envision | Tideworks | Solvo | **Gecko** |
+|---|---|---|---|---|---|---|---|
+| **Modern web UX** | △ (web wrapper on legacy) | △ (dense, dated) | ✓ (modern web) | △ | ✗ | ✗ | **✓ G** |
+| **Mobile / responsive** | ✗ | △ | ✓ (trucker mobile app) | ✗ | ✗ | ✗ | **✓ G** |
+| **Native SaaS multi-tenant** | ✗ (hosted legacy) | △ (tenant-aware but old DB) | ✓ | ✗ | △ | ✗ | **✓ G** |
+| **Open APIs (OpenAPI/REST)** | △ (SOAP legacy) | △ (rate-limited, expensive) | △ (partner-only) | ✗ | △ | ✗ | **✓ G** |
+| **Real-time event streaming** | ✗ | ✗ | △ (webhooks) | ✗ | ✗ | ✗ | **✓ G** |
+| **Per-module pricing** | ✗ | ✓ | ✓ | △ | △ | ✗ | **✓ G** |
+| **Self-service tenant provisioning** | ✗ (months) | ✗ (months) | △ (weeks) | ✗ | ✗ | ✗ | **✓ G** |
+| **Modern observability** | ✗ | ✗ | △ | ✗ | ✗ | ✗ | **✓ G** |
+| **In-product audit log** | △ (bolt-on) | △ | △ | ✗ | ✗ | ✗ | **✓ G** |
+| **Customer self-service portal** | ✗ ($$$ add-on) | ✗ ($$$ add-on) | ✓ (their core) | ✗ | ✗ | ✗ | **✓ G** (using existing UI) |
+| **Trucker / VBS appointment portal** | ✗ (3rd-party bolt-on) | ✗ | **✓ (their flagship)** | ✗ | △ | ✗ | △ → ✓ (Phase 4.5) |
+| **Empty Container Park (ECP) workflow** | △ (generic depot) | ✗ | **✓ (their flagship)** | ✗ | ✗ | ✗ | △ → ✓ (Phase 1.5/2) |
+| **Sub-30-day onboarding** | ✗ (6–18 mo) | ✗ (6–18 mo) | △ (4–8 wk) | △ (3–6 mo) | △ | ✗ | **✓ G** |
+| **EDI integration depth** | ✓ | ✓ | △ (not their focus) | △ | △ | △ | △ → ✓ (Phase 4) |
+| **Tariff & rate flexibility** | ✓ | ✓ | △ (carrier-hire only) | △ | △ | △ | **✓ G** (already designed) |
+| **Yard planning & stowage** | ✓ | △ | ✗ (not in scope) | △ | ✓ | △ | △ → ✓ (Phase 2–3) |
+| **Vessel ops & berth planning** | ✓ | △ | ✗ | △ | ✓ | △ | △ → ✓ (Phase 2) |
+| **CFS / depot ops** | △ | ✓ | **✓ (empty depot only)** | △ | △ | △ | **✓ G** |
+| **Trucking / haulage integrated** | ✗ (separate product) | △ | △ (Trucker side only) | ✗ | ✗ | ✗ | △ → ✓ (Phase 5) |
+| **Equipment M&R integrated** | △ | △ | ✗ | ✗ | ✗ | ✗ | △ → ✓ (Phase 6) |
+| **Fleet / preventive maintenance** | ✗ | ✗ | ✗ | ✗ | ✗ | ✗ | △ → ✓ (Phase 7) |
+| **Multi-region / data residency** | △ | △ | △ | ✗ | ✗ | ✗ | **✓ G** (Azure global) |
+| **Customisation without code** | ✗ (XML config hell) | ✗ (XML config hell) | △ | △ | △ | ✗ | **✓ G** (config-driven UI ready) |
+| **Monthly cost for SME** | $$$$ | $$$$ | $$ | $$$ | $$ | $ | **$ G** |
+| **Vendor lock-in escape** | ✗ | ✗ | ✗ (WiseTech ecosystem) | △ | △ | △ | **✓ G** (open standards) |
 
 ---
 
@@ -106,6 +109,32 @@ which is itself a pain point we exploit.
 | **Less polished UX** | Functional but not delightful. | Gecko: modern design system, consistent components. **Already shipped.** |
 | **EDI support shallower** | Works for COPARN/CODECO but missing CUSCAR, MOVINS, BAPLIE depth. | Gecko EDI Hub designed for full message family, including customs (CUSCAR/CUSREP) — Phase 4. **Roadmap.** |
 
+### 3.5 ContainerChain — pain point inventory
+
+ContainerChain became part of WiseTech in 2019 and is the de-facto empty-
+container-park + VBS layer in AU/NZ. They're spreading into ASEAN
+(Singapore, Malaysia, Thailand) — that's our territory, so this is the
+most directly relevant competitor for Phase 1–2 sales.
+
+| ContainerChain pain point | What the operator feels | How Gecko already wins / will win |
+|---|---|---|
+| **Empty-park only — no full TOS** | "Great for empties, but we still run a separate system for laden boxes, billing, CFS." | Gecko TOS handles both laden + empty in one DB, one UI. ECP workflow (`ecp_hires`) is a Phase 1.5/2 add-on to the full TOS — not a separate product. **See CONTAINERCHAIN-GAPS.md Gap 2.** |
+| **WiseTech ecosystem lock-in** | Tightly coupled to CargoWise / WiseTech Global. Pricing, contracts, and roadmap are dictated by parent. | Gecko: open SQL schema, OpenAPI, exportable data. No parent vendor agenda. |
+| **Closed APIs** | Integration is partner-portal only, often via webhook + flat-file. No public OpenAPI. | Gecko: public OpenAPI per module, day 1. |
+| **Notify-Party automation is a paid premium** | SMS/email to consignee when container arrives is the upsell, not the baseline. | Gecko: `notification_templates` + `notification_subscriptions` in Platform DB, baseline feature. **See CONTAINERCHAIN-GAPS.md Gap 4.** |
+| **Trucker registration is national-marketplace style** | Truckers register once with ContainerChain to access all depots — depots can't deny or filter to their own approved list. | Gecko VBS: per-tenant trucker registration. Each depot owns its trucker whitelist. Optional cross-tenant lookup possible later. |
+| **D&D / detention not first-class** | Detention is calculated outside ContainerChain, then keyed in. | Gecko: D&D rules in TOS billing module, evaluated continuously, posted to charges automatically. Phase 3. |
+| **Doesn't handle multi-modal (CFS, rail)** | Box leaves depot → out of system. | Gecko TOS covers gate-out → trucking dispatch → trip lifecycle (Phase 5). |
+| **No mainland/region-specific customs hooks** | Built for AU/NZ Customs; SEA single-window (Thai e-Customs, Indonesia INSW, Vietnam VNACCS) is bolt-on per integration. | Gecko EDI Hub designed with `ICustomsAdapter` abstraction for all 6 SEA NSW systems. Phase 4. |
+| **Pricing in USD/AUD only** | Local-currency invoicing not native. | Gecko: every money column is `DECIMAL(19,4) + currency`, FX from Platform.ReferenceData. THB/SGD/MYR/IDR/VND/PHP native. |
+
+**Strategic risk:** ContainerChain is the closest direct competitor in our
+Phase 1 GTM zone (SEA empty-container depots). They have first-mover
+brand recognition in AU/NZ and a growing ASEAN footprint. Our wedge is
+**"full TOS for the same price as ContainerChain's depot module."**
+
+---
+
 ### 3.4 Cross-cutting industry gaps
 
 **Things every TOS gets wrong, that we get right by default:**
@@ -121,6 +150,411 @@ which is itself a pain point we exploit.
 | **Disaster recovery is opaque** | "Trust us, we have backups." | Gecko: per-tenant backup, point-in-time restore, documented RTO/RPO. **Azure SQL native.** |
 | **Per-tenant region compliance** | "Sorry, all data is in our Frankfurt DC." | Gecko: deploy tenant DB in their preferred region. **Multi-region commitment.** |
 | **Open data export** | Vendor lock-in by file format. | Gecko: every list has CSV export today. SQL schema is standard. **Already shipped (`<ExportButton>` on 30+ pages).** |
+
+---
+
+## 3A. Deep per-vendor analysis
+
+This is the long-form read of the five vendors that matter most to Gecko's
+GTM. Each section follows the same structure: positioning, what they do
+well, what they do poorly, gaps vs Gecko, where they will beat us, where
+we beat them, strategic threats / opportunities.
+
+### 3A.1 NAVIS N4 (Kaleris) — the 800-pound gorilla
+
+**Positioning.** NAVIS N4 is the most-deployed container TOS globally —
+roughly 300+ container terminals run on it, including the largest
+operators (APM, PSA on selected sites, Hutchison, COSCO Shipping Ports).
+Kaleris bought NAVIS from Cargotec in 2022; since then the product
+roadmap has been turbulent (re-platforming attempts, leadership churn).
+
+**Customer profile.** Large container terminals, port operators,
+mega-ports (10M+ TEU/year). Typical deal size $5–15M+ over 5 years
+inclusive of consulting, hardware, integration, and per-user licensing.
+
+**Strengths (genuinely hard to match).**
+- **Stowage planning depth.** N4's vessel-stowage editor (StowMan
+  integration) handles complex deck/hold rules, hazardous segregation,
+  reefer power slots, IMO class checks. This is decades of domain
+  encoding.
+- **Crane / equipment optimisation.** N4's TOS+ECN stack drives RTG /
+  STS crane sequencing in real time. SME terminals don't need this; mega-
+  ports can't operate without it.
+- **Reference customers.** "APM uses it" carries weight in every RFP.
+- **Decades of EDI partner mappings.** Every quirky carrier filter that
+  takes a quarter to figure out — they already figured it out.
+- **24/7 global support.** Three follow-the-sun centres.
+
+**Weaknesses (where they bleed customers).**
+- **UX is dated.** Even the N4 "Web" client is a thin wrapper over the
+  Java Swing legacy. Gate clerks complain. Training takes weeks.
+- **Implementation is brutal.** Industry-standard implementation timeline
+  is 12–24 months. Mid-cycle scope creep is the norm.
+- **Per-user licensing.** $X per named user, per year. Gate clerks on
+  rotating shifts get expensive fast.
+- **Customisation requires Kaleris-certified consultants** at $200–500/hr.
+- **APIs are SOAP-era.** Modern REST/OpenAPI is a roadmap item, perennially.
+- **Reporting is a separate product** (Cognos / Tableau integration).
+- **No real SaaS multi-tenancy.** Each customer is a hosted instance,
+  not a tenant. Operational economics scale linearly with customer count.
+
+**Specific gaps vs Gecko.**
+
+| Gap | Gecko advantage |
+|-----|-----------------|
+| No native VBS — relies on third-party (ContainerChain, eModal) | Gecko Phase 4.5 VBS is in-platform, same DB, same auth |
+| No empty-park (ECP) workflow — depots run separate systems | Gecko ECP is built into TOS DB |
+| No trucker self-service portal in product | Gecko VBS portal is part of the platform |
+| Multi-region by hosting only, not by data residency design | Gecko per-tenant region selection |
+| No event-driven architecture — polling everywhere | Gecko Service Bus + outbox + idempotency-keys |
+| SEA single-window customs requires per-country custom dev | Gecko `ICustomsAdapter` abstraction for 6 SEA NSWs |
+
+**Where NAVIS will beat us (honestly).**
+- **Bid for a mega-port.** Year 1–3, we cannot win an RFP at Tanjung
+  Pelepas or Laem Chabang main berth. Their depth in stowage, crane
+  optimisation, and vessel sequencing is real.
+- **Stickiness.** Once a terminal is on NAVIS for 5+ years, switching
+  cost (operator retraining, EDI re-mapping, migration risk) keeps them
+  there even when they complain.
+- **Reference effect.** "APM uses NAVIS" closes deals we cannot.
+
+**Where we beat them (honestly).**
+- **Mid-tier ICDs, depots, CFS.** They were never designed for the
+  $200–$2,000/month tenant. Their cost structure can't go there.
+- **Modern UX.** They cannot rewrite N4's UI without re-encoding 20
+  years of business rules. We have a 5-year head start on UX.
+- **Time to value.** Days vs. months.
+- **Per-module pricing.** A forwarder wanting just EDI cannot buy that
+  from NAVIS without buying the rest. We sell it standalone.
+
+**Strategic positioning.** NAVIS is **not the enemy in Phase 1**. They
+ignored the SME market for two decades — it's ours to take. Worry about
+NAVIS in Phase 5+ when we approach mid-tier mainline terminals. By then
+the moat (modular monolith, open APIs, per-tenant region, real event
+streaming) is durable.
+
+---
+
+### 3A.2 ContainerChain (WiseTech) — the most directly relevant competitor
+
+**Positioning.** ContainerChain (1-Stop's depot product, acquired by
+WiseTech 2019) is the de-facto empty-container park (ECP) and Vehicle
+Booking System (VBS) layer in AU/NZ. Active expansion into SEA
+(Singapore, Malaysia, Thailand) since 2022 makes them **our most
+directly competitive vendor in Phase 1**.
+
+**Customer profile.** Empty-container depots, container freight stations,
+small-mid terminals that want modern gate-appointment and notify-party
+automation. Typical deal $50K–$500K/year subscription.
+
+**Product surface.**
+- **Depot.** Empty container park management (hire-out / hire-return,
+  carrier-hire terms, condition grading, EOR/EIR receipts).
+- **VBS.** Vehicle Booking System — truckers self-book gate slots,
+  depots manage slot capacity, no-shows tracked.
+- **Notify.** Carrier-driven SMS/email to consignees on container
+  arrival, release readiness, payment received.
+- **Trucker app.** Mobile app for truck drivers — slot booking, QR-code
+  arrival, document upload.
+
+**Strengths (genuinely hard to match).**
+- **Network effect on truckers.** In Sydney, virtually every container
+  trucker has the ContainerChain Trucker app. New depot joining the
+  network instantly gets a trucker base.
+- **Modern web UX.** Built post-2010, not a legacy port-over.
+- **VBS is mature.** They solved the no-show problem with credit-system
+  + booking deposits years ago.
+- **Webhooks + partner API.** Integrators can subscribe to events.
+- **AU/NZ dominance.** They are the standard.
+
+**Weaknesses.**
+- **Empty-park only — not a full TOS.** Laden containers, billing
+  beyond hire fees, CFS operations, vessel ops — all require a separate
+  system. Operators end up running two stacks.
+- **WiseTech ecosystem dependency.** Pricing, contracts, roadmap
+  dictated by WiseTech corporate. Independent operators worry about it.
+- **Notify-Party is the upsell.** Baseline SMS volume is metered.
+- **National-marketplace trucker model** — depots can't enforce a
+  trucker whitelist, must accept anyone with a ContainerChain account.
+  Some terminals want this; others don't.
+- **SEA-localisation thin.** Currency, language, customs hooks for
+  Thailand / Indonesia / Vietnam are bolt-on, not native.
+- **No D&D engine.** Detention / demurrage calculated externally, then
+  entered.
+
+**Specific gaps vs Gecko.**
+
+| Gap | Gecko advantage |
+|-----|-----------------|
+| Empty-park only — no laden TOS, billing, CFS | Gecko TOS handles laden + empty + CFS + billing in one platform |
+| No D&D / detention engine | Gecko Phase 3 billing handles D&D rules natively |
+| Notify-Party is paid add-on | Gecko `notification_templates` is baseline (CONTAINERCHAIN-GAPS.md Gap 4) |
+| Closed partner API only | Gecko: public OpenAPI per module |
+| AU-currency / USD pricing native; SEA currencies bolt-on | Gecko: DECIMAL(19,4) + ISO 4217, FX from Platform.ReferenceData, native THB/SGD/MYR/IDR/VND/PHP |
+| Marketplace trucker model — depot can't filter | Gecko VBS: per-tenant trucker whitelist owned by depot |
+| Customs single-window for SEA is bolt-on | Gecko EDI Hub `ICustomsAdapter` per country |
+| Yard slot / position tracking absent | Gecko Master DB has yard_blocks → yard_rows → yard_slots hierarchy |
+
+**Where ContainerChain will beat us (honestly).**
+- **Year 1 in AU/NZ.** Their trucker network is impossible to replicate
+  in months. We're not chasing that market in Phase 1.
+- **In SEA depot-only deals where the operator already runs NAVIS / a
+  legacy TOS for laden.** They get "VBS-only" deals we'd have to ask
+  the customer to migrate their whole stack for. *This is what our
+  "VBS-only" bundle (ARCHITECTURE.md §4) targets.*
+- **Brand recognition.** A depot operator searching "empty container
+  depot software" finds them. We need 12–18 months of inbound SEO.
+
+**Where we beat them (honestly).**
+- **One-platform story.** Tenants don't want a second login, second
+  bill, second support contact for ECP + VBS on top of their TOS.
+- **Full TOS at SME pricing.** Their "Depot + VBS + Notify" lands at
+  the price point of our full Phase 1–2 stack.
+- **SEA-native.** Thai, Bahasa, Vietnamese — Phase 4 commitment.
+  ContainerChain's localisation is shallow.
+- **No WiseTech overlord.** Independent operators wary of WiseTech
+  vendor risk (CEO controversies, slowing growth, integration record)
+  are an active market for us.
+- **D&D billing.** A real revenue lever for depots that ContainerChain
+  forces them to handle externally.
+
+**Strategic positioning.** **ContainerChain is the vendor we will
+displace deal-by-deal in Phase 1.** Our Phase 4.5 VBS module is the
+direct counter-punch. The CONTAINERCHAIN-GAPS.md doc is our spec for
+that fight. Bundles to lead with:
+
+- **Depot Lite Plus** ($X/mo) — TOS + ECP — beats their "Depot" alone
+- **Terminal Pro** ($Y/mo) — TOS + VBS — beats their "Depot + VBS"
+- **VBS-only** ($Z/mo) — for terminals on legacy NAVIS who want
+  appointment control without a full migration — direct steal from
+  ContainerChain's wedge product
+
+---
+
+### 3A.3 CargoWise One (WiseTech) — the forwarder-leaning incumbent
+
+**Positioning.** CargoWise One is the dominant freight-forwarder
+operations platform globally. Marketed as "one platform for the entire
+logistics chain" — forwarding, customs, accounting, warehousing, and
+terminal/depot via embedded modules. **Not primarily a TOS** but
+competes for tenant attention because forwarders + 3PLs are an overlap
+buyer.
+
+**Customer profile.** Mid-large freight forwarders, NVOCCs, customs
+brokers, 3PLs. Some terminal operators running combined forwarding +
+depot. Typical TCO $2–8M over 5 years.
+
+**Strengths.**
+- **End-to-end forwarder workflow.** Quote → booking → shipment →
+  customs → invoice → accounting, in one DB.
+- **Customs broker module.** Mature integration with customs authorities
+  in 30+ countries (including Singapore TradeNet, Malaysia uCustoms).
+- **EDI integration breadth.** Every major carrier mapping is in there.
+- **Accounting built-in.** No external GL integration headache for
+  forwarder-side P&L.
+- **WiseTech-trained consultant ecosystem.** Plenty of implementation
+  partners.
+
+**Weaknesses (well-documented in operator forums).**
+- **"CargoWise way" rigidity.** Forced workflows don't fit local
+  practice. Customisation requires CW-certified consultants and XML
+  hacking.
+- **XML config is a black art.** "I needed a CW-certified consultant
+  for 3 months to add a single field." — actual quote.
+- **Steep learning curve.** 3+ months for new ops staff to be
+  productive.
+- **API rate-limiting + metering.** Pay extra for higher API tiers;
+  bursts hit production.
+- **Customer self-service portals are paid add-ons.** Lines / shippers
+  pay extra to see their own data.
+- **WiseTech turbulence (2024–2025).** Founder controversies, growth
+  slowdown, multiple failed acquisitions — customers actively looking
+  for exit strategies.
+- **Per-module licensing micro-fragmentation.** Final bill hard to
+  predict.
+- **Terminal-side functionality is thin.** Yard, gate, stowage all
+  weaker than NAVIS / Tideworks.
+
+**Specific gaps vs Gecko.**
+
+| Gap | Gecko advantage |
+|-----|-----------------|
+| Terminal/depot ops shallow | Gecko TOS is purpose-built for terminal, not adapted from forwarding |
+| XML config + consultant lock-in | Gecko: schema migrations + code in version control |
+| API metered/rate-limited | Gecko: flat per-module subscription, no metering |
+| Customer portal is paid add-on | Gecko: same UI shell, role-scoped views, included |
+| WiseTech vendor risk | Gecko: open SQL schema, exportable, no vendor lock-in |
+| No event-driven architecture | Gecko: Service Bus + outbox |
+| No real SaaS multi-tenant — hosted single-tenant deployments | Gecko: native DB-per-tenant SaaS |
+
+**Where CargoWise will beat us.**
+- **Pure freight-forwarder buyers.** We are TOS, not a forwarder TMS.
+  A forwarder needs quote management, customs filing, accounting —
+  CargoWise is purpose-built. We explicitly de-scoped this
+  (COMPETITIVE-ANALYSIS.md §9).
+- **Combined forwarder + terminal buyers** who already have CargoWise
+  for forwarding. Convincing them to run two systems is hard.
+
+**Where we beat them.**
+- **Pure terminal / depot buyers** who want depot ops + EDI without
+  forwarder-style workflow ceiling.
+- **Operators fleeing WiseTech vendor risk.**
+- **Modern UX.** Their UI is denser and more dated than even NAVIS.
+- **Self-service everything** — customer portals, API access,
+  provisioning — all without consultant gates.
+
+**Strategic positioning.** Don't compete head-on with CargoWise on
+forwarder operations. **Compete sideways** by being the obvious choice
+for the depot / terminal half of combined operators, and intercept
+WiseTech-fleeing customers on the terminal side. Our EDI Hub module
+(Phase 4) is the bridge — if we publish carrier-EDI compatibility on
+par with CargoWise, the terminal side switches even when the
+forwarder side stays.
+
+---
+
+### 3A.4 WiseTech Global (the portfolio risk)
+
+**Positioning.** Australian-listed parent of CargoWise + ContainerChain +
+several acquisitions (Envase, Trinium, BlackPearl, Cargosphere,
+etc.). Strategy is **"one supply-chain platform"** via aggressive
+acquisition. Market cap fluctuated dramatically 2024–2025.
+
+**Why analyse them as a portfolio.** Because in a real RFP, WiseTech's
+bid is "CargoWise + ContainerChain + Envase (trucking) — one bill,
+one integration." That bundle competes directly with Gecko's "Full
+Stack" subscription (TOS + EDI + VBS + Trucking + Fleet + M&R).
+
+**Strengths.**
+- **Bundle story.** Single vendor for forwarder + terminal + trucker.
+- **Cross-product data sharing** (in theory — execution patchy).
+- **Acquisition firepower.** Can buy any modern competitor that gets
+  traction.
+- **Sales scale.** Global teams, established procurement relationships.
+
+**Weaknesses.**
+- **Integration debt.** Acquisitions sit alongside, not integrated.
+  Customers using two WiseTech products often still re-key data.
+- **Vendor concentration risk.** Customers increasingly nervous about
+  the size of their WiseTech bill.
+- **Innovation velocity.** Big-co rhythm — quarterly releases,
+  conservative roadmaps. Acquired startups slow down after integration.
+- **Founder/governance controversies (2024–2025)** spilling into
+  customer confidence.
+- **Pricing power, used aggressively.** Renewal increases of 15–30%
+  reported.
+
+**Specific gaps vs Gecko.**
+
+| Gap | Gecko advantage |
+|-----|-----------------|
+| Portfolio is integration-fragmented, not single-platform | Gecko: one modular monolith, one DB topology, one auth, one UI |
+| Each acquisition retains its own UX and DB | Gecko: shared design system across all modules |
+| Bundled pricing not transparent | Gecko: per-module flat subscription, public pricing page |
+| Vendor risk concentration is *increasing* with their growth | Gecko: open-source-friendly stack, schema is standard SQL |
+
+**Where WiseTech will beat us.**
+- **Mega-deals with global 3PLs / forwarders** that need a single
+  vendor for compliance. We aren't pitching there in Phase 1–4.
+- **Stickiness.** Once a customer has CW + CC + Envase, switching is
+  expensive even when painful.
+
+**Where we beat them.**
+- **Single-platform truth.** Our 5 modules + Master + Platform all
+  share one DbContext convention, one event bus, one auth. WiseTech's
+  acquisitions don't.
+- **Independent operators wary of WiseTech concentration.** Active
+  pipeline.
+- **Modern UX delta is widening, not closing.**
+- **SEA-native vs WiseTech AU-centric heritage.**
+
+**Strategic positioning.** **Treat WiseTech as the portfolio risk to
+position against.** In SEA pitches, the line is: *"You can buy
+CargoWise + ContainerChain + Envase and run three integrations, or
+you can run Gecko."* Single-vendor message + lower TCO + modern UX is
+the wedge.
+
+---
+
+### 3A.5 Envision — the mid-tier mirror
+
+**Positioning.** Envision Enterprise Solutions (US-based, mid-tier
+container TOS vendor). Customers are small-mid container terminals,
+ICDs, off-dock yards in Americas, MENA, parts of SEA. Direct
+competitor in our SME wheelhouse.
+
+**Customer profile.** 50K–500K TEU/year terminals. Typical TCO
+$1–4M over 5 years.
+
+**Strengths.**
+- **Coverage of TOS basics.** Yard, gate, billing, CFS, EDI — all
+  present.
+- **Lower price than NAVIS.** A real consideration for mid-tier.
+- **Faster implementation than NAVIS.** 3–6 months typical.
+- **Decent customer support reputation.**
+
+**Weaknesses.**
+- **Limited feature depth.** Multi-vessel complex stowage, dense
+  scheduling, advanced equipment optimisation — they don't try.
+- **Not truly SaaS.** Each customer is a hosted single-tenant
+  deployment. Operational scaling is linear.
+- **UI is functional but not delightful.** Mid-2010s web tech.
+- **EDI is COPARN/CODECO baseline.** CUSCAR, MOVINS, BAPLIE depth
+  weaker than NAVIS / CargoWise.
+- **Trucking, M&R, Fleet** all not in product. Integrate or live
+  without.
+- **No VBS / appointment system in product.**
+- **Reporting lags.** Operational DB doubles as reporting DB.
+- **Customisation limited** without vendor engagement.
+
+**Specific gaps vs Gecko.**
+
+| Gap | Gecko advantage |
+|-----|-----------------|
+| Single-tenant hosted deployments | Gecko: native multi-tenant DB-per-tenant SaaS |
+| No VBS / appointment booking | Gecko Phase 4.5 VBS module |
+| No integrated trucking | Gecko Phase 5 |
+| No integrated M&R | Gecko Phase 6 |
+| Polling-based UI | Gecko: event-driven + Redis pub/sub |
+| Reporting on operational DB | Gecko: reporting replica (Phase 5+) |
+| Mid-2010s UI | Gecko: 2026 design system |
+| No customer self-service portal | Gecko: role-scoped views in same UI |
+
+**Where Envision will beat us.**
+- **Existing references.** They've been at it 15+ years; we are new.
+- **Year 1 inbound** — operators searching for a mid-tier TOS find
+  Envision before they find us.
+
+**Where we beat them.**
+- **Modern stack.** They will not rewrite their UI / event model in
+  the next 3 years. We start there.
+- **Full breadth.** TOS + EDI + VBS + Trucking + Fleet + M&R, all on
+  one platform.
+- **SEA-native.** Their SEA footprint is thin.
+- **Sub-30-day onboarding.** They quote 3–6 months. We can quote 30
+  days because tenant provisioning is automated.
+
+**Strategic positioning.** **Envision is the mid-tier mirror — we
+look exactly like them but with a 5-year tech advantage and broader
+module suite.** Win deals on (a) modern UX, (b) module bundle (they
+can't sell trucking + M&R), (c) faster onboarding, (d) per-tenant
+region for SEA data residency.
+
+---
+
+### 3A.6 Summary — who to fear in each phase
+
+| Phase | Primary threat | Why | Our response |
+|-------|---------------|-----|--------------|
+| **1 (Identity + Master)** | None — pre-revenue | We're not selling yet | Ship the foundation |
+| **2 (TOS operational)** | ContainerChain | SEA depot operators evaluating their first modern system | Lead with "Full TOS at ContainerChain's depot price" |
+| **3 (Billing)** | ContainerChain + Envision | Our differentiator becomes real — D&D engine, multi-currency billing | Public D&D rule examples; case study from pilot |
+| **4 (EDI Hub)** | CargoWise on EDI breadth | Forwarders need carrier-EDI parity | Publish supported message matrix; partner certifications |
+| **4.5 (VBS)** | ContainerChain — direct counter-punch | This is the deal we steal | VBS-only bundle for legacy-TOS operators |
+| **5 (Trucking)** | WiseTech (Envase) | Trucker dispatch consolidation pitches | Bundle pricing + single-platform message |
+| **6 (M&R)** | None major in SME segment | Most competitors don't offer this | Differentiator — close M&R-led deals |
+| **7 (Fleet)** | Generic fleet vendors | Out of TOS scope, but our customers want it | Integration story; do not over-build |
+| **8+ (Up-market)** | NAVIS, TBA, TGI | When we approach mid-tier mainline | Stowage depth + crane optimisation gaps real; partner or build |
 
 ---
 
