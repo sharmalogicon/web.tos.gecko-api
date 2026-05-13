@@ -38,7 +38,7 @@ SET XACT_ABORT ON;
 GO
 
 PRINT N'== 0004_master_gaps_temporal_rls.sql starting at ' + CONVERT(NVARCHAR, SYSDATETIMEOFFSET(), 121);
-
+GO
 -- ==========================================================================
 -- SECTION A — Activate temporal tables on per-tenant tables added in 0003
 -- ==========================================================================

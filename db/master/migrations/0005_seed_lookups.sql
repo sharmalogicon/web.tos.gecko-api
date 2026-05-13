@@ -29,7 +29,7 @@ SET XACT_ABORT ON;
 GO
 
 PRINT N'== 0005_seed_lookups.sql starting at ' + CONVERT(NVARCHAR, SYSDATETIMEOFFSET(), 121);
-
+GO
 -- Bypass RLS for seed (we're running as db_owner)
 ALTER SECURITY POLICY dbo.gecko_master_tenant_isolation WITH (STATE = OFF);
 GO

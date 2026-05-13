@@ -47,6 +47,7 @@ PRINT N'  Schema history created';
 
 -- RLS predicate function: row visible if its tenant_id matches session context,
 -- OR caller is db_owner (for migration / backfill operations).
+GO
 CREATE OR ALTER FUNCTION dbo.fn_tenant_filter(@tenant_id UNIQUEIDENTIFIER)
 RETURNS TABLE
 WITH SCHEMABINDING

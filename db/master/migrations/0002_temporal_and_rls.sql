@@ -28,7 +28,7 @@ SET XACT_ABORT ON;
 GO
 
 PRINT N'== 0002_temporal_and_rls.sql starting at ' + CONVERT(NVARCHAR, SYSDATETIMEOFFSET(), 121);
-
+GO
 -- ==========================================================================
 -- SECTION A — Activate temporal tables
 -- ==========================================================================

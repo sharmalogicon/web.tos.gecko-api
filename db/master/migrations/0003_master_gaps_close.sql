@@ -26,7 +26,7 @@ SET XACT_ABORT ON;
 GO
 
 PRINT N'== 0003_master_gaps_close.sql starting at ' + CONVERT(NVARCHAR, SYSDATETIMEOFFSET(), 121);
-
+GO
 -- ==========================================================================
 -- SECTION 0 — Schemas
 -- ==========================================================================
@@ -44,7 +44,7 @@ IF SCHEMA_ID(N'lookup') IS NULL
 GO
 
 PRINT N'  Schema lookup created';
-
+GO
 -- ==========================================================================
 -- SECTION 1 — Decompose order_types into 3 dimensions + composite
 -- ==========================================================================
