@@ -65,7 +65,12 @@ const NAV = [
       { id: 'yard-glance',    label: 'Yard at a Glance',       path: '/dashboard/yard-glance' },
       { id: 'gate-traffic',   label: 'Gate & Traffic',         path: '/dashboard/gate-traffic' },
       { id: 'voyage-dash',    label: 'Voyage & Vessel',        path: '/dashboard/voyage' },
-      { id: 'dwell-time',     label: 'Container Dwell Time',   path: '/dashboard/dwell-time' },
+      // HIDDEN 2026-05-13 — dwell-time as a standalone page is being retired.
+      // Operational dwell still lives in /dashboard/yard-glance + /units/unit-inquiry.
+      // Money side moves to laden/empty storage under Billing in Phase 2/3.
+      // Page file kept on disk for reference; will be deleted or folded during Phase 2.
+      // See docs/modules/tos.md (api.gecko-api repo) for the storage model.
+      // { id: 'dwell-time',     label: 'Container Dwell Time',   path: '/dashboard/dwell-time' },
       { id: 'accounts-dash',  label: 'Accounts & Revenue',     path: '/dashboard/accounts' },
       { id: 'billing-health', label: 'Billing Health',         path: '/dashboard/billing-health' },
       { id: 'edi-dash',       label: 'EDI & Partners',         path: '/dashboard/edi' },
