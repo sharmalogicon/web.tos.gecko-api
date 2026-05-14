@@ -360,6 +360,12 @@ export function AppShell({ children }: { children: React.ReactNode }) {
     }
   }, [pageTitle]);
 
+  // Auth-shaped pages render bare — no sidebar, no header, no breadcrumbs.
+  // Currently /login; future /forgot, /reset, /onboarding will follow the same pattern.
+  if (pathname?.startsWith('/login')) {
+    return <ToastProvider>{children}</ToastProvider>;
+  }
+
   return (
     <ToastProvider>
       <div className="gecko-app" style={{ position: 'relative', minHeight: '100vh', background: 'var(--gecko-bg-subtle)' }}>
