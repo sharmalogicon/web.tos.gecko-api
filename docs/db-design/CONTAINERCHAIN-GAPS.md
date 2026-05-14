@@ -151,13 +151,26 @@ Plus a **public trucker self-service portal** — mobile-first, no auth required
 
 ### Gap 2 — Empty Container Park (ECP) workflow
 
+> **Terminology note (locked 2026-05-13):** The depot's recurring revenue
+> from empties is **EMPTY storage** — billed to the shipping line on a
+> monthly statement, accrues whenever an empty is in the depot's custody.
+> See `api.gecko-api/docs/modules/tos.md §3` for the LADEN vs EMPTY
+> storage model. The `ecp_hires` table below is the **workflow tracker**
+> for hire-out events — it tells the storage engine when the empty is
+> OUT of custody (so storage stops accruing). The actual money flow for
+> empty storage lives on `unit_storage_charges` (flavor=EMPTY,
+> variant=STORAGE-AR), not on `ecp_hires`. Per-hire transaction fees
+> (handling, condition assessment) are a secondary, separate billing
+> line and stay on `ecp_hires` if used.
+
 #### What's missing
 
 Specialised empty-container depot workflow — distinct from full-container terminal ops. Things our current Phase 2 TOS scope doesn't address:
 
-- **Hire-out tracking** — empty container leaves depot under hire-out terms; due back by a specific date; daily rate after free time
+- **EMPTY storage billing** — recurring daily accrual to the shipping line for empties parked at the depot (monthly statement, variant `STORAGE-AR`); the dominant revenue line for ECP operators
+- **Hire-out workflow tracking** — empty container leaves depot under hire terms; due back by a specific date; "free park" days before storage starts (per `carrier_hire_terms`)
 - **Hire-mode** — one-way (drop at destination depot) vs round-trip (return to issuing depot)
-- **Per-carrier free time** — line A allows 7 days free; line B allows 5; line C allows 14 with seasonal variation
+- **Per-carrier free park** — line A allows 7 days free park; line B allows 0; line C allows 14 with seasonal variation
 - **Condition at issue vs return** — capture grade at hire-out; re-grade at hire-in; bill repair if downgraded
 - **Wash / repair routing** — empty returns dirty → wash; empty returns damaged → M&R; clean and good → back into pool
 - **Inter-depot transfers** — pool rebalancing between depot locations
@@ -229,7 +242,10 @@ CREATE TABLE dbo.ecp_hires (
   origin_depot_id     UNIQUEIDENTIFIER NOT NULL,    -- → master.depot_locations
   destination_depot_id UNIQUEIDENTIFIER NULL,       -- For one-way; null for round-trip
 
-  -- Hire terms (snapshot from carrier_hire_terms at hire-out)
+  -- Hire terms snapshot from carrier_hire_terms at hire-out.
+  -- NOTE: these fields drive when EMPTY storage accrual STOPS (clock pauses
+  -- while the empty is in the customer's custody, not the depot's). The
+  -- actual money rows live in tos.dbo.unit_storage_charges, not here.
   hire_mode           VARCHAR(20)      NOT NULL,
   free_time_days      SMALLINT         NOT NULL,
   daily_rate_after_free DECIMAL(19,4)  NOT NULL,
@@ -248,10 +264,11 @@ CREATE TABLE dbo.ecp_hires (
   requires_repair_on_return BIT        NOT NULL DEFAULT 0,
   repair_work_order_id UNIQUEIDENTIFIER NULL,       -- → mnr.work_orders.id (cross-DB)
 
-  -- Charges accrued
-  free_days_used      SMALLINT         NULL,
-  chargeable_days     SMALLINT         NULL,
-  total_charges       DECIMAL(19,4)    NULL,
+  -- Charges accrued — handling / hire transaction fees ONLY (if tenant
+  -- charges per hire). Recurring EMPTY storage charges live separately
+  -- on tos.dbo.unit_storage_charges (variant STORAGE-AR, monthly cycle).
+  handling_fee_amount DECIMAL(19,4)    NULL,
+  handling_fee_currency CHAR(3)        NULL,
   invoice_id          UNIQUEIDENTIFIER NULL,        -- → tos.invoices.id when billed
 
   -- audit cols + RLS
@@ -264,19 +281,20 @@ CREATE TABLE dbo.ecp_hires (
 - `EMPTY_INTER_DEPOT_OUT` / `EMPTY_INTER_DEPOT_IN` — pool rebalancing
 
 **Workflow events:**
-- `ecp.hire_out` → bills line; creates ecp_hires row; triggers TOS movement
-- `ecp.hire_return` → calculates chargeable days; assesses condition; routes to wash/M&R if needed; closes ecp_hires
-- `ecp.overdue` (scheduled job) → flags hires past due_back_at; notifies line; bills overdue rates
+- `ecp.hire_out` → creates ecp_hires row; emits `tos.unit.empty_hired_out`; pauses EMPTY storage accrual on `unit_storage_charges` (empty leaves depot custody)
+- `ecp.hire_return` → assesses condition; routes to wash/M&R if needed; closes ecp_hires; resumes EMPTY storage accrual on the returned empty
+- `ecp.overdue` (scheduled job) → flags hires past due_back_at; notifies line; optionally triggers premium daily rate
 - `ecp.condition_downgrade` → triggers M&R work order; bills repair to line
 
 #### Acceptance criteria
 
 - Empty container hire-out captures all required terms (mode, free time, rate, due date)
-- Daily billing automation: chargeable days = MAX(0, days_actual - free_time_days)
+- EMPTY storage accrual on `unit_storage_charges` (variant STORAGE-AR) pauses for the duration the empty is hired out, resumes on return
+- Per-line free-park days (on `carrier_hire_terms`) delay storage accrual on first gate-in; seasonal override applies
 - Overdue detection runs nightly; notifications sent to line agent + ops
 - Condition-at-return triggers M&R if grade dropped
 - Inter-depot transfers update pool counts at both ends atomically
-- Per-line free-time configurability with seasonal override
+- Monthly statement to each carrier shows storage days + handling fees per container
 
 ---
 
