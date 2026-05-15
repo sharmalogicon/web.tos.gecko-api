@@ -89,6 +89,7 @@ const NAV = [
   { id: 'gate', icon: 'truck', label: 'Gate & Yard',
     children: [
       { id: 'appointments', label: 'Gate Appointments', path: '/gate/appointments' },
+      { id: 'kiosk', label: 'Gate Kiosk', path: '/gate/kiosk' },
       { id: 'eir-in', label: 'EIR-In', path: '/gate/eir-in' },
       { id: 'eir-in-v2', label: 'EIR-In V2 (HUD)', path: '/gate/eir-in-v2' },
       { id: 'eir-out', label: 'EIR-Out', path: '/gate/eir-out' },
@@ -137,6 +138,7 @@ const NAV = [
       { id: 'roles',          label: 'Roles & Rights',       path: '/config/roles' },
       { id: 'users',          label: 'Users & Roles',        path: '/config/users' },
       { id: 'edi-partners',   label: 'EDI Partners',         path: '/config/edi-partners' },
+      { id: 'auto-gate',      label: 'Auto-Gate (OCR)',      path: '/config/auto-gate' },
       { id: 'integrations',   label: 'Notifications',        path: '/config/integrations' },
       { id: 'approval-wf',    label: 'Approval Workflows',   path: '/config/approval-workflows' },
       { id: 'system-params',  label: 'System Parameters',    path: '/config/system-params' },
@@ -368,8 +370,9 @@ export function AppShell({ children }: { children: React.ReactNode }) {
   }, [pageTitle]);
 
   // Auth-shaped pages render bare — no sidebar, no header, no breadcrumbs.
-  // Currently /login; future /forgot, /reset, /onboarding will follow the same pattern.
-  if (pathname?.startsWith('/login')) {
+  // Currently /login; future /forgot, /reset, /onboarding follow the same pattern.
+  // Gate kiosk is also chromeless: it runs full-screen on a gatehouse display.
+  if (pathname?.startsWith('/login') || pathname?.startsWith('/gate/kiosk')) {
     return <ToastProvider>{children}</ToastProvider>;
   }
 

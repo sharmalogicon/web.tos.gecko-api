@@ -539,17 +539,31 @@ function ChannelCard({ meta, state, expanded, onToggleExpand, onToggle, updateCh
   const enabled    = state?.enabled ?? false;
   const isPlaceholder = meta.phase > 1;
 
+  // The header is a click-to-expand region. It contains the ToggleSwitch (a <button>),
+  // so the header itself cannot be a <button> — nested buttons are invalid HTML and
+  // trigger a React hydration error. Use a div with role="button" + keyboard support.
+  const handleHeaderClick = isPlaceholder ? undefined : onToggleExpand;
+  const handleHeaderKey = (e: React.KeyboardEvent) => {
+    if (isPlaceholder) return;
+    if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); onToggleExpand(); }
+  };
+
   return (
     <section className="gecko-card" style={{ padding: 0, overflow: 'hidden', borderColor: enabled && !isPlaceholder ? meta.brandColor + '40' : undefined }}>
-      <button
-        onClick={isPlaceholder ? undefined : onToggleExpand}
-        disabled={isPlaceholder}
+      <div
+        role={isPlaceholder ? undefined : 'button'}
+        tabIndex={isPlaceholder ? -1 : 0}
+        aria-expanded={isPlaceholder ? undefined : expanded}
+        aria-disabled={isPlaceholder || undefined}
+        onClick={handleHeaderClick}
+        onKeyDown={handleHeaderKey}
         title={isPlaceholder ? 'Available for Enterprise tenants — contact your account manager to enable.' : undefined}
         style={{
           width: '100%', display: 'grid', gridTemplateColumns: 'auto 1fr auto auto auto', gap: 10, alignItems: 'center',
-          padding: '14px 16px', border: 'none', background: expanded ? meta.brandColor + '0d' : 'var(--gecko-bg-surface)',
+          padding: '14px 16px', background: expanded ? meta.brandColor + '0d' : 'var(--gecko-bg-surface)',
           cursor: isPlaceholder ? 'default' : 'pointer', textAlign: 'left', fontFamily: 'inherit',
           opacity: isPlaceholder ? 0.72 : 1,
+          outline: 'none',
         }}
       >
         {/* Brand icon */}
@@ -579,7 +593,7 @@ function ChannelCard({ meta, state, expanded, onToggleExpand, onToggle, updateCh
           <Icon name="chevronDown" size={14} style={{ color: 'var(--gecko-text-secondary)', transform: expanded ? 'rotate(180deg)' : 'none', transition: 'transform 0.15s', flexShrink: 0 }} />
         )}
         {isPlaceholder && <span style={{ width: 14 }} />}
-      </button>
+      </div>
 
       {expanded && !isPlaceholder && (
         <div style={{ padding: '18px 22px 22px', background: 'var(--gecko-bg-subtle)', borderTop: '1px solid var(--gecko-border)' }}>

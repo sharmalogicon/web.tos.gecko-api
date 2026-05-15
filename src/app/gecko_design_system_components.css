@@ -4350,3 +4350,17 @@ input[type="checkbox"].gecko-toggle.gecko-toggle-sm:checked::after { transform: 
 }
 
 
+/* ------------------------------------------------------------
+   5.34 LIVE PULSE DOT — for "Live" indicators on dashboard pages
+   ------------------------------------------------------------ */
+
+@keyframes gecko-pulse {
+  0%, 100% { opacity: 1; transform: scale(1); }
+  50%      { opacity: 0.55; transform: scale(0.85); }
+}
+
+.gecko-pulse-dot {
+  animation: gecko-pulse 1.6s ease-in-out infinite;
+}
+
+

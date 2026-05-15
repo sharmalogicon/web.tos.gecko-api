@@ -1,5 +1,29 @@
 "use client";
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
+
+/* ──────────────────────────────────────────────────────────────────────────
+   Kiosk prefill — additive only. The Gate Kiosk writes a scanned-token
+   payload to sessionStorage when the driver confirms, then router.push()'s
+   here. We read it once on mount, seed initial state, and clear the key so
+   a refresh doesn't re-fill stale data.
+   ────────────────────────────────────────────────────────────────────────── */
+
+const GATE_PREFILL_KEY = 'gecko.gate.kioskPrefill';
+
+interface KioskPrefill {
+  apt: string; drv: string; hau: string; plt: string;
+  cnt?: string; iso?: string; dir: 'IN' | 'OUT'; ot: string;
+  lane?: string; slot?: string; cust?: string;
+}
+
+function readKioskPrefill(): KioskPrefill | null {
+  if (typeof window === 'undefined') return null;
+  try {
+    const raw = sessionStorage.getItem(GATE_PREFILL_KEY);
+    if (!raw) return null;
+    return JSON.parse(raw) as KioskPrefill;
+  } catch { return null; }
+}
 import { Icon } from '@/components/ui/Icon';
 import { PageToolbar, Field } from '@/components/ui/OpsPrimitives';
 import { useToast } from '@/components/ui/Toast';
@@ -909,16 +933,71 @@ function VisitSummaryRail({ moves, dropTeu, pickTeu, teuCap, teuUsed, teuRemaini
 
 export default function GateInPage() {
   const { toast } = useToast();
-  const [truck] = useState({
-    plate: '70-4455', trailer: 'TLR-442-9', transporter: 'Laem Chabang Trans.',
-    driver: 'Prem Kanchana', license: 'TH-D-8841-22', mobile: '+66 87 341 2200',
-    appt: 'APT-2026-04-4432', apptVerified: true, apptSource: 'slot-booking',
-    apptSlot: '14:30 – 15:00', apptBookedAt: '2026-04-23 09:14', apptBookedBy: 'Thai Union Group PCL',
-    truckCategory: '18W', orderType: 'EXP CY/CY', arrivedAt: '14:34', lane: 'Lane 3',
+
+  // Kiosk handoff: if the driver just came through the gate kiosk, sessionStorage
+  // contains the scanned appointment. We seed truck + first move from it.
+  const [prefillBadge, setPrefillBadge] = useState<KioskPrefill | null>(null);
+
+  const [truck] = useState(() => {
+    const p = readKioskPrefill();
+    const base = {
+      plate: '70-4455', trailer: 'TLR-442-9', transporter: 'Laem Chabang Trans.',
+      driver: 'Prem Kanchana', license: 'TH-D-8841-22', mobile: '+66 87 341 2200',
+      appt: 'APT-2026-04-4432', apptVerified: true, apptSource: 'slot-booking',
+      apptSlot: '14:30 – 15:00', apptBookedAt: '2026-04-23 09:14', apptBookedBy: 'Thai Union Group PCL',
+      truckCategory: '18W', orderType: 'EXP CY/CY', arrivedAt: '14:34', lane: 'Lane 3',
+    };
+    if (!p) return base;
+    return {
+      ...base,
+      plate: p.plt,
+      driver: p.drv,
+      transporter: p.hau,
+      appt: p.apt,
+      apptSource: 'kiosk-qr',
+      apptBookedBy: p.cust ?? base.apptBookedBy,
+      orderType: p.ot,
+      lane: p.lane ?? base.lane,
+    };
   });
 
-  const [moves, setMoves] = useState<Move[]>([]);
+  const [moves, setMoves] = useState<Move[]>(() => {
+    const p = readKioskPrefill();
+    if (!p || p.dir !== 'IN' || !p.cnt) return [];
+    // Seed one drop move with the container the driver is delivering
+    const isReefer = (p.iso ?? '').includes('R');
+    const isHC = (p.iso ?? '').includes('5');
+    const isoLabel = isReefer ? (isHC ? '40HC-RF' : '20RF') : (isHC ? '40HC' : '20GP');
+    const teu = isHC ? 2 : 1;
+    const isReturn = /return|empty/i.test(p.ot);
+    return [{
+      id: 1, kind: 'drop', status: 'active',
+      ctr: p.cnt, iso: isoLabel, teu,
+      lade: isReturn ? 'E' : 'F',
+      condition: 'sound', statusCode: 'NOR',
+      movement: isReturn ? 'EMPTY_RETURN' : 'IMPORT',
+      sealLine: '', sealShipper: '',
+      booking: p.apt, line: '', agentCode: '',
+      vgm: null, vgmMethod: 'M1', wbTicket: '', vgmVerifiedBy: '',
+      dg: false, dgClass: '', dgUn: '', dgPg: 'III',
+      yardSpot: p.slot ?? '',
+      notes: p.cust ? `Consignee: ${p.cust}` : '',
+      damages: [],
+    }];
+  });
   const [activeId, setActiveId] = useState<number | null>(null);
+
+  // Surface the prefill banner, then clear sessionStorage so a refresh doesn't re-fill.
+  useEffect(() => {
+    const p = readKioskPrefill();
+    if (p) {
+      setPrefillBadge(p);
+      if (moves.length > 0) setActiveId(moves[0].id);
+      sessionStorage.removeItem(GATE_PREFILL_KEY);
+      toast({ variant: 'success', title: 'Prefilled from gate kiosk', message: `${p.apt} · ${p.drv} (${p.plt})` });
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   const TEU_CAP = 2;
   const dropTeu = moves.filter(m => m.kind === 'drop').reduce((s, m) => s + m.teu, 0);
@@ -965,6 +1044,35 @@ export default function GateInPage() {
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
+      {prefillBadge && (
+        <div style={{
+          padding: '10px 14px', display: 'flex', alignItems: 'center', gap: 12,
+          background: 'linear-gradient(90deg, var(--gecko-success-50), var(--gecko-info-50))',
+          border: '1px solid var(--gecko-success-200)', borderRadius: 10,
+          fontSize: 12,
+        }}>
+          <div style={{ width: 28, height: 28, borderRadius: 7, background: 'var(--gecko-success-600)', color: '#fff', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+            <Icon name="check" size={14} />
+          </div>
+          <div style={{ flex: 1, minWidth: 0 }}>
+            <div style={{ fontSize: 12, fontWeight: 700, color: 'var(--gecko-success-700)' }}>
+              Prefilled from gate-kiosk QR scan · <span style={{ fontFamily: 'var(--gecko-font-mono)' }}>{prefillBadge.apt}</span>
+            </div>
+            <div style={{ fontSize: 11, color: 'var(--gecko-text-secondary)', marginTop: 2 }}>
+              {prefillBadge.drv} · {prefillBadge.hau} · Truck <strong style={{ fontFamily: 'var(--gecko-font-mono)' }}>{prefillBadge.plt}</strong>
+              {prefillBadge.cnt && <> · Container <strong style={{ fontFamily: 'var(--gecko-font-mono)' }}>{prefillBadge.cnt}</strong></>}
+              {' · '}Order type <strong>{prefillBadge.ot}</strong>
+            </div>
+          </div>
+          <button
+            onClick={() => setPrefillBadge(null)}
+            style={{ background: 'transparent', border: 'none', color: 'var(--gecko-text-disabled)', cursor: 'pointer', padding: 4, fontFamily: 'inherit' }}
+            aria-label="Dismiss prefill banner"
+          >
+            <Icon name="x" size={14} />
+          </button>
+        </div>
+      )}
       <PageToolbar
         title="Gate-In · Truck Visit"
         subtitle={<>Receive + Release combined visit · From appointment <span style={{ fontFamily: 'var(--gecko-font-mono)', color: 'var(--gecko-text-primary)', fontWeight: 600 }}>{truck.appt}</span> · Gate 1 · {truck.lane}</>}
