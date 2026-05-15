@@ -282,18 +282,42 @@ function Legend() {
 }
 
 // ── Main Page ─────────────────────────────────────────────────────────────────
+type DirectionFilter = 'all' | 'inbound' | 'outbound';
+
+// The date a voyage shows up on the calendar:
+//   Outbound — ETD (when the vessel departs LCB; relevant to export cutoffs)
+//   Inbound  — ETA (when the vessel arrives at LCB; relevant to discharge ops)
+function voyageCalendarDate(v: Voyage): string {
+  return v.direction === 'Inbound' ? v.eta.slice(0, 10) : v.etd.slice(0, 10);
+}
+
 export default function VesselSchedulePage() {
   const [month, setMonth] = useState(3); // April = 3 (0-indexed)
   const [year, setYear]   = useState(2026);
+  const [direction, setDirection] = useState<DirectionFilter>('all');
   const [hovered, setHovered] = useState<{ voyage: Voyage; rect: DOMRect } | null>(null);
   const containerRef = useRef<HTMLDivElement>(null);
   const leaveTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const today = toKey(new Date('2026-04-25'));
 
-  // Map ETD date → voyages
-  const voyagesByDay = VOYAGES.reduce<Record<string, Voyage[]>>((acc, v) => {
-    const d = v.etd.slice(0, 10);
+  // Apply direction filter
+  const filteredVoyages = VOYAGES.filter(v =>
+    direction === 'all' ||
+    (direction === 'inbound'  && v.direction === 'Inbound') ||
+    (direction === 'outbound' && v.direction === 'Outbound')
+  );
+
+  // Counts per direction (used in the toggle labels so users see how many voyages each filter contains)
+  const counts = {
+    all:      VOYAGES.length,
+    inbound:  VOYAGES.filter(v => v.direction === 'Inbound').length,
+    outbound: VOYAGES.filter(v => v.direction === 'Outbound').length,
+  };
+
+  // Map calendar date → voyages (ETA for inbound, ETD for outbound)
+  const voyagesByDay = filteredVoyages.reduce<Record<string, Voyage[]>>((acc, v) => {
+    const d = voyageCalendarDate(v);
     if (!acc[d]) acc[d] = [];
     acc[d].push(v);
     return acc;
@@ -327,7 +351,7 @@ export default function VesselSchedulePage() {
             <h1 style={{ fontSize: 24, fontWeight: 700, margin: 0, color: 'var(--gecko-text-primary)' }}>Vessel Call Schedule</h1>
             <span style={{ fontSize: 12, fontWeight: 600, color: 'var(--gecko-primary-700)', background: 'var(--gecko-primary-100)', padding: '2px 8px', borderRadius: 12 }}>Calendar View</span>
           </div>
-          <div style={{ fontSize: 13, color: 'var(--gecko-text-secondary)', marginTop: 4 }}>ETD-based voyage calendar for Laem Chabang ICD · hover a dot to see voyage details</div>
+          <div style={{ fontSize: 13, color: 'var(--gecko-text-secondary)', marginTop: 4 }}>Operational voyage calendar for Laem Chabang ICD — ETA for inbound, ETD for outbound · hover a dot to see voyage details</div>
         </div>
         <div className="gecko-toolbar">
           <Link href="/masters/vessels" className="gecko-btn gecko-btn-ghost gecko-btn-sm">
@@ -358,6 +382,30 @@ export default function VesselSchedulePage() {
             <button className="gecko-btn gecko-btn-ghost gecko-btn-sm" onClick={() => { setMonth(3); setYear(2026); }} style={{ fontSize: 12 }}>
               Today
             </button>
+
+            {/* Direction filter — All / Inbound / Outbound */}
+            <div style={{ display: 'flex', background: 'var(--gecko-bg-subtle)', borderRadius: 8, padding: 2, border: '1px solid var(--gecko-border)', marginLeft: 8 }}>
+              {([
+                { v: 'all' as const,      l: 'All',          hint: `All voyages (${counts.all})`,                      color: 'var(--gecko-text-primary)'   },
+                { v: 'inbound' as const,  l: '↓ Inbound',    hint: `Import · arrivals at LCB (${counts.inbound})`,    color: 'var(--gecko-success-700)'    },
+                { v: 'outbound' as const, l: '↑ Outbound',   hint: `Export · departures from LCB (${counts.outbound})`, color: 'var(--gecko-primary-700)'    },
+              ]).map(opt => (
+                <button
+                  key={opt.v}
+                  onClick={() => setDirection(opt.v)}
+                  title={opt.hint}
+                  style={{
+                    padding: '4px 12px', borderRadius: 6, fontSize: 11.5, fontWeight: 600,
+                    cursor: 'pointer', border: 'none', fontFamily: 'inherit',
+                    background: direction === opt.v ? 'var(--gecko-bg-surface)' : 'transparent',
+                    color:      direction === opt.v ? opt.color : 'var(--gecko-text-secondary)',
+                    boxShadow:  direction === opt.v ? '0 1px 3px rgba(0,0,0,0.08)' : 'none',
+                  }}
+                >
+                  {opt.l}
+                </button>
+              ))}
+            </div>
           </div>
           <Legend />
         </div>
@@ -413,13 +461,21 @@ export default function VesselSchedulePage() {
         </div>
       </div>
 
-      {/* Month summary strip */}
+      {/* Month summary strip — scoped to filtered direction + visible month, using each voyage's
+          calendar date (ETA for inbound, ETD for outbound) */}
+      {(() => {
+        const monthKey = `${year}-${String(month + 1).padStart(2, '0')}`;
+        const voyagesThisMonth = filteredVoyages.filter(v => voyageCalendarDate(v).startsWith(monthKey));
+        const monthLabel       = direction === 'inbound' ? 'Inbound voyages this month'
+                              : direction === 'outbound' ? 'Outbound voyages this month'
+                              : 'Voyages this month';
+        return (
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 12 }}>
         {[
-          { label: 'Voyages this month', value: VOYAGES.filter(v => v.etd.startsWith(`${year}-${String(month + 1).padStart(2, '0')}`)).length, icon: 'ship', color: 'var(--gecko-primary-600)', bg: 'var(--gecko-primary-50)' },
-          { label: 'Open for booking',   value: VOYAGES.filter(v => v.etd.startsWith(`${year}-${String(month + 1).padStart(2, '0')}`) && v.status === 'Open').length, icon: 'check', color: 'var(--gecko-success-600)', bg: 'var(--gecko-success-50)' },
-          { label: 'Total TEU capacity', value: VOYAGES.filter(v => v.etd.startsWith(`${year}-${String(month + 1).padStart(2, '0')}`)).reduce((s, v) => s + v.teu, 0).toLocaleString(), icon: 'layers', color: 'var(--gecko-info-600)', bg: 'var(--gecko-info-50)' },
-          { label: 'Shipping lines',     value: [...new Set(VOYAGES.filter(v => v.etd.startsWith(`${year}-${String(month + 1).padStart(2, '0')}`)).map(v => v.line))].length, icon: 'flag', color: 'var(--gecko-accent-600)', bg: 'var(--gecko-accent-50)' },
+          { label: monthLabel,           value: voyagesThisMonth.length,                                                                                  icon: 'ship',   color: 'var(--gecko-primary-600)', bg: 'var(--gecko-primary-50)' },
+          { label: 'Open for booking',   value: voyagesThisMonth.filter(v => v.status === 'Open').length,                                                 icon: 'check',  color: 'var(--gecko-success-600)', bg: 'var(--gecko-success-50)' },
+          { label: 'Total TEU capacity', value: voyagesThisMonth.reduce((s, v) => s + v.teu, 0).toLocaleString(),                                          icon: 'layers', color: 'var(--gecko-info-600)',    bg: 'var(--gecko-info-50)'    },
+          { label: 'Shipping lines',     value: [...new Set(voyagesThisMonth.map(v => v.line))].length,                                                   icon: 'flag',   color: 'var(--gecko-accent-600)',  bg: 'var(--gecko-accent-50)'  },
         ].map(stat => (
           <div key={stat.label} className="gecko-card" style={{ padding: '16px 20px', display: 'flex', alignItems: 'center', gap: 14 }}>
             <div style={{ width: 40, height: 40, borderRadius: 10, background: stat.bg, display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
@@ -432,6 +488,8 @@ export default function VesselSchedulePage() {
           </div>
         ))}
       </div>
+        );
+      })()}
     </div>
   );
 }

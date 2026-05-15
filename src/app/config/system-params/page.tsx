@@ -423,6 +423,12 @@ function GateSection({ onDirty }: { onDirty: () => void }) {
   const [alertPct,    setAlertPct]   = useState('80');
   const [escalate,    setEscalate]   = useState('60');
   const [escEmail,    setEscEmail]   = useState('ops-manager@logicon-lcb.th');
+  // Billing & Tax
+  const [feeBasis,    setFeeBasis]   = useState('chassis');
+  const [feeBillTo,   setFeeBillTo]  = useState('booking');
+  const [taxInvoice,  setTaxInvoice] = useState(true);
+  const [applyWht,    setApplyWht]   = useState(true);
+  const [whtRate,     setWhtRate]    = useState('3');
   const [savedMsg,    setSavedMsg]   = useState(false);
 
   const d = (fn: (v: string) => void) => (v: string) => { fn(v); onDirty(); };
@@ -505,6 +511,44 @@ function GateSection({ onDirty }: { onDirty: () => void }) {
         <FieldRow label="Escalation Recipient">
           <TF value={escEmail} onChange={d(setEscEmail)} type="email" />
         </FieldRow>
+      </Card>
+
+      <Card>
+        <GroupLabel>Billing &amp; Tax</GroupLabel>
+        <FieldRow label="Gate Fee Basis" hint="How the gate fee is calculated for each visit">
+          <Sel value={feeBasis} onChange={v => { setFeeBasis(v); onDirty(); }} options={[
+            { v: 'chassis',   l: 'Per chassis (flat per visit)' },
+            { v: 'container', l: 'Per container (× container count)' },
+          ]} />
+        </FieldRow>
+        <FieldRow label="Gate Fee Bill-To" hint="Party charged when the gate fee is invoiced separately from other charges">
+          <Sel value={feeBillTo} onChange={v => { setFeeBillTo(v); onDirty(); }} options={[
+            { v: 'booking',  l: 'Per booking default (recommended)' },
+            { v: 'customer', l: 'Customer / Consignee' },
+            { v: 'haulier',  l: 'Haulier / Transporter' },
+            { v: 'carrier',  l: 'Carrier / Shipping line' },
+          ]} />
+        </FieldRow>
+        <FieldRow
+          label="Issue Full Tax Invoice at Gate-In"
+          hint="VAT-compliant tax invoice (ใบกำกับภาษีเต็มรูปแบบ) printed with EIR-In when charges are collected — qualifies for customer input VAT credit"
+        >
+          <Toggle on={taxInvoice} onChange={v => { setTaxInvoice(v); onDirty(); }} />
+        </FieldRow>
+        <FieldRow
+          label="Apply Withholding Tax at Gate-In"
+          hint="Auto-deduct WHT per Thai Revenue Code at the point of payment (gate-in)"
+        >
+          <Toggle on={applyWht} onChange={v => { setApplyWht(v); onDirty(); }} />
+        </FieldRow>
+        {applyWht && (
+          <FieldRow label="WHT Rate" hint="3% services · 1% goods · 5% rent (per Thai Revenue Code)">
+            <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+              <TF value={whtRate} onChange={d(setWhtRate)} type="number" mono />
+              <span style={{ fontSize: 14, color: 'var(--gecko-text-secondary)', fontWeight: 600 }}>%</span>
+            </div>
+          </FieldRow>
+        )}
       </Card>
     </SectionWrap>
   );

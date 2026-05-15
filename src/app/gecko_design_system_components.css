@@ -2037,8 +2037,10 @@
 
 .gecko-checkbox:disabled { opacity: 0.45; cursor: not-allowed; }
 
-/* Toggle / Switch */
-.gecko-toggle {
+/* Legacy label-wrapped toggle: <label class="gecko-toggle"><input type="checkbox"/><span/></label>
+   Scoped to label.gecko-toggle so it does NOT bleed into the newer
+   button.gecko-toggle pattern (Section 5.23) where the inner span is the thumb. */
+label.gecko-toggle {
   display: inline-flex;
   align-items: center;
   gap: 8px;
@@ -2046,9 +2048,9 @@
   user-select: none;
 }
 
-.gecko-toggle input { position: absolute; opacity: 0; width: 0; height: 0; }
+label.gecko-toggle input { position: absolute; opacity: 0; width: 0; height: 0; }
 
-.gecko-toggle span {
+label.gecko-toggle span {
   position: relative;
   display: inline-block;
   width: 36px;
@@ -2059,7 +2061,7 @@
   flex-shrink: 0;
 }
 
-.gecko-toggle span::after {
+label.gecko-toggle span::after {
   content: '';
   position: absolute;
   top: 2px;
@@ -2072,17 +2074,17 @@
   transition: transform var(--gecko-transition-fast) var(--gecko-ease-in-out);
 }
 
-.gecko-toggle input:checked + span { background: var(--gecko-primary-600); }
-.gecko-toggle input:checked + span::after { transform: translateX(16px); }
-.gecko-toggle input:focus-visible + span { outline: 2px solid var(--gecko-primary-400); outline-offset: 2px; border-radius: var(--gecko-radius-full); }
-.gecko-toggle input:disabled + span { opacity: 0.45; cursor: not-allowed; }
+label.gecko-toggle input:checked + span { background: var(--gecko-primary-600); }
+label.gecko-toggle input:checked + span::after { transform: translateX(16px); }
+label.gecko-toggle input:focus-visible + span { outline: 2px solid var(--gecko-primary-400); outline-offset: 2px; border-radius: var(--gecko-radius-full); }
+label.gecko-toggle input:disabled + span { opacity: 0.45; cursor: not-allowed; }
 
-.gecko-toggle-sm span            { width: 28px; height: 16px; }
-.gecko-toggle-sm span::after     { width: 12px; height: 12px; }
-.gecko-toggle-sm input:checked + span::after { transform: translateX(12px); }
+label.gecko-toggle.gecko-toggle-sm span            { width: 28px; height: 16px; }
+label.gecko-toggle.gecko-toggle-sm span::after     { width: 12px; height: 12px; }
+label.gecko-toggle.gecko-toggle-sm input:checked + span::after { transform: translateX(12px); }
 
 [data-theme="dark"] .gecko-checkbox { background: var(--gecko-gray-800); border-color: var(--gecko-gray-600); }
-[data-theme="dark"] .gecko-toggle span { background: var(--gecko-gray-600); }
+[data-theme="dark"] label.gecko-toggle span { background: var(--gecko-gray-600); }
 
 /* Direct input variant: <input type="checkbox" class="gecko-toggle"> */
 input[type="checkbox"].gecko-toggle {
@@ -3315,5 +3317,1036 @@ input[type="checkbox"].gecko-toggle.gecko-toggle-sm:checked::after { transform: 
 .gecko-stat-delta-up   { background: var(--gecko-success-50); color: var(--gecko-success-700); }
 .gecko-stat-delta-down { background: var(--gecko-error-50);   color: var(--gecko-error-700); }
 .gecko-stat-delta-flat { background: var(--gecko-gray-100);   color: var(--gecko-text-secondary); }
+
+
+/* ============================================================
+   SECTION 5.18 — STATUS PILLS
+   ------------------------------------------------------------
+   Small uppercase status indicators with optional leading dot
+   or icon. Used for: ACTIVE / NOT SET / OVERDUE / ENTERPRISE
+   / SAVED, etc. across integration cards, queue rows, app
+   shell breadcrumbs.
+
+   Usage:
+     <span class="gecko-pill gecko-pill-success">● Active</span>
+     <span class="gecko-pill gecko-pill-violet">🔒 Enterprise</span>
+   ============================================================ */
+
+.gecko-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 3px 8px;
+  border-radius: var(--gecko-radius-sm, 4px);
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  border: 1px solid transparent;
+  white-space: nowrap;
+  flex-shrink: 0;
+  line-height: 1.2;
+}
+
+.gecko-pill-success  { background: var(--gecko-success-50);  color: var(--gecko-success-700);  border-color: var(--gecko-success-200); }
+.gecko-pill-warning  { background: var(--gecko-warning-50);  color: var(--gecko-warning-700);  border-color: var(--gecko-warning-200); }
+.gecko-pill-danger   { background: var(--gecko-error-50);    color: var(--gecko-error-700);    border-color: var(--gecko-error-200); }
+.gecko-pill-info     { background: var(--gecko-info-50);     color: var(--gecko-info-700);     border-color: var(--gecko-info-200); }
+.gecko-pill-primary  { background: var(--gecko-primary-50);  color: var(--gecko-primary-700);  border-color: var(--gecko-primary-200); }
+.gecko-pill-neutral  { background: var(--gecko-bg-subtle);   color: var(--gecko-text-secondary); border-color: var(--gecko-border); }
+.gecko-pill-violet   { background: #ede9fe;                  color: #6d28d9;                   border-color: #ddd6fe; }
+
+
+/* ============================================================
+   SECTION 5.19 — KPI TILES
+   ------------------------------------------------------------
+   Compact stat tile: icon swatch + numeric value + label.
+   Used in toolbars/strips above tables (yard-view, eir-out
+   queue, gate appointments, etc.).
+
+   Usage:
+     <div class="gecko-kpi-tile">
+       <div class="gecko-kpi-tile-icon gecko-kpi-tile-icon-primary">
+         <Icon name="bell" />
+       </div>
+       <div>
+         <div class="gecko-kpi-tile-value">42</div>
+         <div class="gecko-kpi-tile-label">Active triggers</div>
+       </div>
+     </div>
+   ============================================================ */
+
+.gecko-kpi-tile {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 12px 14px;
+  background: var(--gecko-bg-surface);
+  border: 1px solid var(--gecko-border);
+  border-radius: 10px;
+}
+
+.gecko-kpi-tile-icon {
+  width: 36px;
+  height: 36px;
+  border-radius: 8px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+.gecko-kpi-tile-icon-primary { background: var(--gecko-primary-50); color: var(--gecko-primary-700); }
+.gecko-kpi-tile-icon-success { background: var(--gecko-success-50); color: var(--gecko-success-700); }
+.gecko-kpi-tile-icon-warning { background: var(--gecko-warning-50); color: var(--gecko-warning-700); }
+.gecko-kpi-tile-icon-danger  { background: var(--gecko-error-50);   color: var(--gecko-error-700); }
+.gecko-kpi-tile-icon-info    { background: var(--gecko-info-50);    color: var(--gecko-info-700); }
+.gecko-kpi-tile-icon-neutral { background: var(--gecko-bg-subtle);  color: var(--gecko-text-secondary); }
+
+.gecko-kpi-tile-value {
+  font-size: 18px;
+  font-weight: 700;
+  font-family: var(--gecko-font-mono);
+  line-height: 1;
+  letter-spacing: -0.02em;
+  color: var(--gecko-text-primary);
+}
+
+.gecko-kpi-tile-label {
+  font-size: 11px;
+  color: var(--gecko-text-secondary);
+  margin-top: 2px;
+}
+
+
+/* ============================================================
+   SECTION 5.20 — SECTION HEADERS
+   ------------------------------------------------------------
+   Small-caps eyebrow + plain subtitle. Used to delimit groups
+   of cards / rows (Customer Notification Channels, Team
+   Collaboration, etc.).
+
+   Usage:
+     <div class="gecko-section-header">
+       <div class="gecko-section-header-title">Customer Notification Channels</div>
+       <div class="gecko-section-header-subtitle">How customers hear from us</div>
+     </div>
+   ============================================================ */
+
+.gecko-section-header-title {
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--gecko-text-secondary);
+}
+
+.gecko-section-header-subtitle {
+  font-size: 12px;
+  color: var(--gecko-text-disabled);
+  margin-top: 2px;
+}
+
+
+/* ============================================================
+   SECTION 5.21 — SEGMENTED TAB CONTROL
+   ------------------------------------------------------------
+   Pill-group used for in-page tabs and filter toggles (All /
+   Inbound / Outbound, Channels / Triggers / Previews, etc.).
+   Distinct from full-page tabs (5.6).
+
+   Usage:
+     <div class="gecko-segctrl">
+       <button class="gecko-segctrl-btn gecko-segctrl-btn-active">All</button>
+       <button class="gecko-segctrl-btn">Today</button>
+     </div>
+   ============================================================ */
+
+.gecko-segctrl {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 3px;
+  background: var(--gecko-bg-subtle);
+  border: 1px solid var(--gecko-border);
+  border-radius: 8px;
+}
+
+.gecko-segctrl-btn {
+  padding: 4px 12px;
+  border-radius: 6px;
+  font-size: 11.5px;
+  font-weight: 600;
+  cursor: pointer;
+  border: none;
+  background: transparent;
+  color: var(--gecko-text-secondary);
+  font-family: inherit;
+  white-space: nowrap;
+  transition: background var(--gecko-transition-fast), color var(--gecko-transition-fast);
+}
+
+.gecko-segctrl-btn:hover:not(.gecko-segctrl-btn-active):not(:disabled) {
+  color: var(--gecko-text-primary);
+}
+
+.gecko-segctrl-btn-active {
+  background: var(--gecko-bg-surface);
+  color: var(--gecko-text-primary);
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.08);
+}
+
+.gecko-segctrl-btn:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+}
+
+
+/* ============================================================
+   SECTION 5.22 — STICKY ACTION BAR
+   ------------------------------------------------------------
+   Fixed footer that slides up when there are unsaved changes
+   in a settings / config page. Includes warning indicator and
+   action buttons (Discard / Save all changes).
+
+   Usage:
+     <div class="gecko-sticky-action-bar">
+       <div class="gecko-sticky-action-bar-msg">
+         <Icon name="warning" /> You have unsaved changes
+       </div>
+       <div class="gecko-sticky-action-bar-actions">
+         <button>Discard</button>
+         <button>Save</button>
+       </div>
+     </div>
+   ============================================================ */
+
+.gecko-sticky-action-bar {
+  position: fixed;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  background: var(--gecko-bg-surface);
+  border-top: 1px solid var(--gecko-border);
+  box-shadow: 0 -2px 8px rgba(0, 0, 0, 0.06);
+  padding: 12px 24px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  z-index: 50;
+}
+
+.gecko-sticky-action-bar-msg {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--gecko-warning-700);
+}
+
+.gecko-sticky-action-bar-actions {
+  display: flex;
+  gap: 8px;
+}
+
+
+/* ============================================================
+   SECTION 5.23 — TOGGLE SWITCH (ROCKER)
+   ------------------------------------------------------------
+   Native-feel iOS-style toggle. Used to enable/disable
+   notification channels, trigger events, feature flags.
+
+   Usage:
+     <button class="gecko-toggle" role="switch" aria-checked="true">
+       <span class="gecko-toggle-thumb"></span>
+     </button>
+   Add .gecko-toggle-on when checked.
+   ============================================================ */
+
+.gecko-toggle {
+  width: 38px;
+  height: 22px;
+  padding: 2px;
+  border-radius: 999px;
+  border: none;
+  cursor: pointer;
+  background: var(--gecko-gray-300, #d1d5db);
+  display: flex;
+  align-items: center;
+  justify-content: flex-start;
+  flex-shrink: 0;
+  transition: background var(--gecko-transition-fast);
+}
+
+.gecko-toggle-on {
+  background: var(--gecko-primary-600);
+  justify-content: flex-end;
+}
+
+.gecko-toggle:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+}
+
+.gecko-toggle-thumb {
+  width: 18px;
+  height: 18px;
+  border-radius: 50%;
+  background: #fff;
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.25);
+  transition: transform var(--gecko-transition-fast);
+}
+
+
+/* ============================================================
+   SECTION 5.24 — FIELD ROW / FIELD HINT
+   ------------------------------------------------------------
+   Standardized label + control + help-text stack used in
+   settings pages and forms (system-params, integrations,
+   yard-zones properties panel).
+
+   Usage:
+     <div class="gecko-field">
+       <label class="gecko-field-label">SMTP Host</label>
+       <input class="gecko-input" />
+       <div class="gecko-field-hint">Port 587 for TLS, 465 for SSL</div>
+     </div>
+   ============================================================ */
+
+.gecko-field {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  min-width: 0;
+}
+
+.gecko-field-label {
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--gecko-text-secondary);
+  display: block;
+}
+
+.gecko-field-label-required::after {
+  content: " *";
+  color: var(--gecko-error-600);
+}
+
+.gecko-field-hint {
+  font-size: 10.5px;
+  color: var(--gecko-text-disabled);
+  line-height: 1.4;
+  margin-top: 3px;
+}
+
+
+/* ============================================================
+   SECTION 5.25 — CTA CARD
+   ------------------------------------------------------------
+   Dashed-border, icon-led navigation card pointing users to
+   another page (e.g., "Spatial layout lives in the Yard Plan →").
+   Distinct from regular cards (5.2) — used for affordance, not
+   data display.
+
+   Usage:
+     <div class="gecko-cta-card">
+       <div class="gecko-cta-card-icon"><Icon name="grid" /></div>
+       <div class="gecko-cta-card-body">
+         <div class="gecko-cta-card-title">Yard Plan</div>
+         <div class="gecko-cta-card-text">Detailed cell-level view…</div>
+       </div>
+       <a href="…" class="gecko-btn gecko-btn-primary">Open</a>
+     </div>
+   ============================================================ */
+
+.gecko-cta-card {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  padding: 20px;
+  background: linear-gradient(135deg, var(--gecko-primary-50) 0%, var(--gecko-bg-surface) 100%);
+  border: 1px dashed var(--gecko-primary-200);
+  border-radius: 12px;
+}
+
+.gecko-cta-card-icon {
+  width: 48px;
+  height: 48px;
+  border-radius: 10px;
+  background: var(--gecko-primary-100);
+  color: var(--gecko-primary-700);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+.gecko-cta-card-body {
+  flex: 1;
+  min-width: 0;
+}
+
+.gecko-cta-card-title {
+  font-size: 14px;
+  font-weight: 700;
+  color: var(--gecko-text-primary);
+}
+
+.gecko-cta-card-text {
+  font-size: 12px;
+  color: var(--gecko-text-secondary);
+  margin-top: 4px;
+  line-height: 1.5;
+}
+
+
+/* ============================================================
+   SECTION 5.26 — DEVICE FRAMES
+   ------------------------------------------------------------
+   iPhone-style phone frame + browser-style window chrome used
+   in the Notifications → Message Previews tab to show LINE /
+   WhatsApp / Slack / Email mock-ups in their native context.
+
+   Usage:
+     <div class="gecko-phone-frame">
+       <div class="gecko-phone-frame-notch"></div>
+       <div class="gecko-phone-frame-speaker"></div>
+       <div class="gecko-phone-frame-screen">
+         <div class="gecko-phone-frame-statusbar">9:41</div>
+         …chat content…
+         <div class="gecko-phone-frame-home"></div>
+       </div>
+     </div>
+     <div class="gecko-phone-frame-caption">iPhone · 09:41</div>
+
+     <div class="gecko-window-frame">
+       <div class="gecko-window-frame-chrome">
+         <span class="gecko-window-frame-dot gecko-window-frame-dot-r"></span>
+         <span class="gecko-window-frame-dot gecko-window-frame-dot-y"></span>
+         <span class="gecko-window-frame-dot gecko-window-frame-dot-g"></span>
+         <span class="gecko-window-frame-title">Slack · #channel</span>
+       </div>
+       …content…
+     </div>
+   ============================================================ */
+
+.gecko-phone-frame {
+  width: 360px;
+  height: 720px;
+  background: #0f172a;
+  border-radius: 44px;
+  padding: 12px;
+  box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.4), inset 0 0 0 2px #334155;
+  position: relative;
+}
+
+.gecko-phone-frame-notch {
+  position: absolute;
+  top: 12px;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 140px;
+  height: 28px;
+  background: #0f172a;
+  border-bottom-left-radius: 18px;
+  border-bottom-right-radius: 18px;
+  z-index: 10;
+  pointer-events: none;
+}
+
+.gecko-phone-frame-speaker {
+  position: absolute;
+  top: 22px;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 60px;
+  height: 6px;
+  background: #1e293b;
+  border-radius: 3px;
+  z-index: 11;
+  pointer-events: none;
+}
+
+.gecko-phone-frame-screen {
+  width: 100%;
+  height: 100%;
+  background: #fff;
+  border-radius: 32px;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+  position: relative;
+}
+
+.gecko-phone-frame-statusbar {
+  height: 38px;
+  padding: 8px 28px 0;
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  font-size: 13px;
+  font-weight: 700;
+  color: #000;
+  flex-shrink: 0;
+}
+
+.gecko-phone-frame-home {
+  display: flex;
+  justify-content: center;
+  padding: 6px 0 8px;
+  flex-shrink: 0;
+}
+
+.gecko-phone-frame-home::after {
+  content: "";
+  display: block;
+  width: 140px;
+  height: 5px;
+  background: #000;
+  border-radius: 3px;
+}
+
+.gecko-phone-frame-caption,
+.gecko-window-frame-caption {
+  font-size: 10px;
+  color: var(--gecko-text-disabled);
+  font-family: var(--gecko-font-mono);
+  letter-spacing: 0.05em;
+  text-align: center;
+  margin-top: 8px;
+}
+
+.gecko-window-frame {
+  background: #fff;
+  border-radius: 12px;
+  overflow: hidden;
+  box-shadow: 0 20px 40px -12px rgba(0, 0, 0, 0.25), 0 0 0 1px rgba(0, 0, 0, 0.05);
+}
+
+.gecko-window-frame-chrome {
+  background: #f1f5f9;
+  padding: 10px 14px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  border-bottom: 1px solid #e2e8f0;
+}
+
+.gecko-window-frame-dot {
+  width: 11px;
+  height: 11px;
+  border-radius: 50%;
+  display: inline-block;
+  flex-shrink: 0;
+}
+
+.gecko-window-frame-dot-r { background: #ef4444; }
+.gecko-window-frame-dot-y { background: #f59e0b; }
+.gecko-window-frame-dot-g { background: #10b981; }
+
+.gecko-window-frame-title {
+  margin-left: 12px;
+  font-size: 11px;
+  color: #64748b;
+  font-weight: 600;
+}
+
+
+/* ------------------------------------------------------------
+   5.27 CHARGE CARDS — progressive dimension disclosure
+   Used in: tariff schedule editor (rate cards), any priced-item
+   editor where the user adds axes (Size, Type, Truck-Cat, Cargo-Cat)
+   only when needed and adds explicit rate rows under each axis combo.
+
+   Anatomy:
+     <div class="gecko-charge-card">
+       <div class="gecko-charge-card-head">
+         <span class="gecko-charge-card-code">SA001</span>
+         <span class="gecko-charge-card-desc">Admission Fee</span>
+         <button class="gecko-charge-card-remove">×</button>
+       </div>
+       <div class="gecko-charge-card-body">
+         <div class="gecko-axis-toolbar">
+           <span class="gecko-axis-toolbar-label">Vary by:</span>
+           <button class="gecko-axis-chip">+ Size</button>
+           <button class="gecko-axis-chip gecko-axis-chip-active">Size ×</button>
+         </div>
+         <div class="gecko-rate-rows">
+           <div class="gecko-rate-row">…</div>
+         </div>
+       </div>
+     </div>
+   ------------------------------------------------------------ */
+
+.gecko-charge-card {
+  background: var(--gecko-bg-surface);
+  border: 1px solid var(--gecko-border);
+  border-radius: 12px;
+  overflow: hidden;
+  transition: box-shadow 120ms var(--gecko-ease-in-out);
+}
+
+.gecko-charge-card:hover {
+  box-shadow: var(--gecko-shadow-sm);
+}
+
+.gecko-charge-card-head {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 14px;
+  background: var(--gecko-bg-subtle);
+  border-bottom: 1px solid var(--gecko-border);
+}
+
+.gecko-charge-card-code {
+  font-family: var(--gecko-font-mono);
+  font-size: 12px;
+  font-weight: 700;
+  color: var(--gecko-text-primary);
+  padding: 2px 6px;
+  background: var(--gecko-bg-surface);
+  border: 1px solid var(--gecko-border);
+  border-radius: 4px;
+}
+
+.gecko-charge-card-desc {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--gecko-text-primary);
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.gecko-charge-card-meta {
+  font-size: 11px;
+  color: var(--gecko-text-secondary);
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.gecko-charge-card-remove {
+  background: none;
+  border: none;
+  cursor: pointer;
+  color: var(--gecko-text-disabled);
+  width: 24px;
+  height: 24px;
+  border-radius: 6px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 120ms;
+  font-family: inherit;
+}
+
+.gecko-charge-card-remove:hover {
+  background: var(--gecko-error-50);
+  color: var(--gecko-error-600);
+}
+
+.gecko-charge-card-body {
+  padding: 14px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+/* — Axis toolbar — */
+.gecko-axis-toolbar {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  align-items: center;
+}
+
+.gecko-axis-toolbar-label {
+  font-size: 10px;
+  font-weight: 700;
+  color: var(--gecko-text-secondary);
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  margin-right: 4px;
+}
+
+.gecko-axis-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 4px 10px;
+  font-size: 11px;
+  font-weight: 600;
+  background: transparent;
+  color: var(--gecko-text-secondary);
+  border: 1px dashed var(--gecko-border);
+  border-radius: 999px;
+  cursor: pointer;
+  transition: all 120ms;
+  font-family: inherit;
+  line-height: 1.4;
+}
+
+.gecko-axis-chip:hover {
+  background: var(--gecko-bg-subtle);
+  color: var(--gecko-text-primary);
+  border-color: var(--gecko-gray-400);
+}
+
+.gecko-axis-chip-active {
+  background: var(--gecko-primary-50);
+  color: var(--gecko-primary-700);
+  border: 1px solid var(--gecko-primary-300);
+  border-style: solid;
+}
+
+.gecko-axis-chip-active:hover {
+  background: var(--gecko-primary-100);
+  border-color: var(--gecko-primary-400);
+}
+
+/* — Rate rows (the editable rate table inside a charge card) — */
+.gecko-rate-rows {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.gecko-rate-rows-header,
+.gecko-rate-row {
+  display: grid;
+  gap: 8px;
+  align-items: center;
+  padding: 6px 10px;
+  border-radius: 6px;
+}
+
+.gecko-rate-rows-header {
+  background: transparent;
+  font-size: 10px;
+  font-weight: 700;
+  color: var(--gecko-text-secondary);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  padding: 2px 10px;
+}
+
+.gecko-rate-row {
+  background: var(--gecko-bg-subtle);
+  border: 1px solid var(--gecko-border);
+  font-size: 12px;
+}
+
+.gecko-rate-row:hover {
+  background: var(--gecko-bg-surface);
+  border-color: var(--gecko-primary-300);
+}
+
+.gecko-rate-row-amount {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  justify-content: flex-end;
+}
+
+.gecko-rate-row-amount-input {
+  width: 90px;
+  text-align: right;
+  font-family: var(--gecko-font-mono);
+  font-weight: 700;
+  font-size: 13px;
+  color: var(--gecko-text-primary);
+  border: 1px solid var(--gecko-border);
+  border-radius: 6px;
+  padding: 4px 8px;
+  background: var(--gecko-bg-surface);
+  outline: none;
+}
+
+.gecko-rate-row-amount-input:focus {
+  border-color: var(--gecko-primary-500);
+  box-shadow: 0 0 0 3px var(--gecko-primary-100);
+}
+
+.gecko-rate-row-currency {
+  font-size: 10px;
+  font-weight: 700;
+  color: var(--gecko-text-secondary);
+  font-family: var(--gecko-font-mono);
+}
+
+.gecko-rate-row-remove {
+  background: none;
+  border: none;
+  cursor: pointer;
+  color: var(--gecko-text-disabled);
+  width: 22px;
+  height: 22px;
+  border-radius: 4px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-family: inherit;
+}
+
+.gecko-rate-row-remove:hover {
+  background: var(--gecko-error-50);
+  color: var(--gecko-error-600);
+}
+
+.gecko-rate-row-add {
+  align-self: flex-start;
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 5px 12px;
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--gecko-primary-700);
+  background: transparent;
+  border: 1px dashed var(--gecko-primary-300);
+  border-radius: 6px;
+  cursor: pointer;
+  font-family: inherit;
+  transition: all 120ms;
+}
+
+.gecko-rate-row-add:hover {
+  background: var(--gecko-primary-50);
+  border-style: solid;
+}
+
+/* — Catalog drawer (where the user picks charges to add) — */
+.gecko-catalog-item {
+  display: grid;
+  grid-template-columns: auto 1fr auto;
+  gap: 10px;
+  align-items: center;
+  padding: 8px 12px;
+  background: var(--gecko-bg-surface);
+  border: 1px solid var(--gecko-border);
+  border-radius: 8px;
+  cursor: pointer;
+  transition: all 120ms;
+}
+
+.gecko-catalog-item:hover {
+  background: var(--gecko-primary-50);
+  border-color: var(--gecko-primary-300);
+}
+
+.gecko-catalog-item-added {
+  opacity: 0.5;
+  pointer-events: none;
+}
+
+.gecko-catalog-item-code {
+  font-family: var(--gecko-font-mono);
+  font-size: 11px;
+  font-weight: 700;
+  color: var(--gecko-primary-700);
+}
+
+.gecko-catalog-item-desc {
+  font-size: 12px;
+  color: var(--gecko-text-primary);
+}
+
+/* — Compact rate-band table (used by storage / PTI / precool cards) — */
+.gecko-band-row {
+  display: grid;
+  grid-template-columns: 80px 80px 1fr auto;
+  gap: 8px;
+  align-items: center;
+  padding: 8px 10px;
+  background: var(--gecko-bg-subtle);
+  border: 1px solid var(--gecko-border);
+  border-radius: 6px;
+  font-size: 12px;
+}
+
+.gecko-band-row-header {
+  background: transparent;
+  border: none;
+  padding: 2px 10px;
+  font-size: 10px;
+  font-weight: 700;
+  color: var(--gecko-text-secondary);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
+
+/* ------------------------------------------------------------
+   5.28 RESOLUTION ROW — Test-a-Move output
+   Per-charge resolution result row used in the Tariff Schedule
+   "Test a Move" tab. Shows: charge code+desc, precedence trail,
+   reason pill, resolved amount.
+   ------------------------------------------------------------ */
+
+.gecko-resolution-row {
+  display: grid;
+  grid-template-columns: 2fr 2fr 1fr 1fr;
+  gap: 14px;
+  align-items: center;
+  padding: 10px 14px;
+  background: var(--gecko-bg-surface);
+  border: 1px solid var(--gecko-border);
+  border-radius: 10px;
+  transition: border-color 120ms;
+}
+
+.gecko-resolution-row:hover {
+  border-color: var(--gecko-primary-300);
+}
+
+.gecko-resolution-row-charge {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  min-width: 0;
+}
+
+.gecko-resolution-row-trail {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  flex-wrap: wrap;
+  font-family: var(--gecko-font-mono);
+  font-size: 11px;
+}
+
+.gecko-resolution-row-reason {
+  display: flex;
+  justify-content: flex-start;
+}
+
+.gecko-resolution-row-amount {
+  display: flex;
+  align-items: baseline;
+  justify-content: flex-end;
+  gap: 4px;
+}
+
+/* ------------------------------------------------------------
+   5.29 DROP ZONE — CSV / Excel upload affordance
+   ------------------------------------------------------------ */
+
+.gecko-drop-zone {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  padding: 28px 16px;
+  background: var(--gecko-bg-surface);
+  border: 2px dashed var(--gecko-border);
+  border-radius: 12px;
+  cursor: pointer;
+  transition: all 120ms;
+  text-align: center;
+}
+
+.gecko-drop-zone:hover {
+  background: var(--gecko-primary-50);
+  border-color: var(--gecko-primary-400);
+}
+
+
+/* ------------------------------------------------------------
+   5.30 WORKFLOW CARD — selectable approval-chain card
+   Used by Tariff Schedule editor (Overview tab) when picking a
+   workflow. data-selected="true" applies the active visual state.
+   ------------------------------------------------------------ */
+
+.gecko-workflow-card {
+  background: var(--gecko-bg-surface);
+  border: 1.5px solid var(--gecko-border);
+  border-radius: 12px;
+  padding: 14px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  cursor: pointer;
+  font-family: inherit;
+  transition: all 120ms;
+  text-align: left;
+}
+
+.gecko-workflow-card:hover {
+  border-color: var(--gecko-primary-400);
+  background: var(--gecko-primary-50);
+}
+
+.gecko-workflow-card[data-selected="true"] {
+  border-color: var(--gecko-primary-600);
+  background: var(--gecko-primary-50);
+  box-shadow: 0 0 0 3px var(--gecko-primary-100);
+}
+
+
+/* ------------------------------------------------------------
+   5.31 WORKFLOW STEP — editable row in approval-workflow config
+   ------------------------------------------------------------ */
+
+.gecko-workflow-step {
+  background: var(--gecko-bg-surface);
+  border: 1px solid var(--gecko-border);
+  border-radius: 10px;
+  padding: 12px 14px;
+}
+
+.gecko-workflow-step-num {
+  width: 28px;
+  height: 28px;
+  border-radius: 8px;
+  background: var(--gecko-primary-600);
+  color: #fff;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: 800;
+  font-size: 13px;
+  flex-shrink: 0;
+}
+
+
+/* ------------------------------------------------------------
+   5.32 RATE ROW BLOCK + CONDITIONS STRIP
+   Wraps a rate row with its conditional surcharge strip
+   ------------------------------------------------------------ */
+
+.gecko-rate-row-block {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.gecko-conditions-strip {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  align-items: center;
+  padding-left: 10px;
+}
+
+
+/* ------------------------------------------------------------
+   5.33 CLICKABLE TABLE ROW
+   Adds hover affordance for list rows that link to detail pages
+   ------------------------------------------------------------ */
+
+.gecko-row-clickable {
+  cursor: pointer;
+  transition: background var(--gecko-transition-fast);
+}
+
+.gecko-row-clickable:hover td {
+  background: var(--gecko-primary-50);
+}
 
 

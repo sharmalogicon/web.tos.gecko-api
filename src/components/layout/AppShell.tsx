@@ -123,8 +123,10 @@ const NAV = [
   { id: 'tariff', icon: 'tag', label: 'Tariff Management',
     children: [
       { id: 'plans', label: 'Tariff Schedules', path: '/tariff/plans' },
-      { id: 'rate-cards', label: 'Rate Cards', path: '/tariff/rate-cards' },
-      { id: 'free-time', label: 'Free Time & D&D Rules', path: '/tariff/free-time' },
+      // Rate Cards and Free Time pages folded into Tariff Schedule editor tabs.
+      // NAV entries hidden; routes preserved for deep-links and future admin views.
+      // { id: 'rate-cards', label: 'Rate Cards', path: '/tariff/rate-cards' },
+      // { id: 'free-time', label: 'Free Time & D&D Rules', path: '/tariff/free-time' },
     ]
   },
   { id: 'config', icon: 'settings', label: 'Configuration',
@@ -135,6 +137,8 @@ const NAV = [
       { id: 'roles',          label: 'Roles & Rights',       path: '/config/roles' },
       { id: 'users',          label: 'Users & Roles',        path: '/config/users' },
       { id: 'edi-partners',   label: 'EDI Partners',         path: '/config/edi-partners' },
+      { id: 'integrations',   label: 'Notifications',        path: '/config/integrations' },
+      { id: 'approval-wf',    label: 'Approval Workflows',   path: '/config/approval-workflows' },
       { id: 'system-params',  label: 'System Parameters',    path: '/config/system-params' },
     ]
   },
@@ -148,7 +152,10 @@ const NAV = [
       { id: 'container-types', label: 'ISO Container Types', path: '/masters/container-types' },
       { id: 'order-types', label: 'Work Order Types', path: '/masters/order-types' },
       { id: 'charge-codes', label: 'Charge Codes', path: '/masters/charge-codes' },
-      { id: 'locations', label: 'Facility & Yard Locations', path: '/masters/locations' },
+      // HIDDEN 2026-05-13 — facility & yard hierarchy is now owned by the
+      // visual editor at Configuration → Yard Zones & Blocks, which covers
+      // both the registry and the spatial layout. Page file kept on disk.
+      // { id: 'locations', label: 'Facility & Yard Locations', path: '/masters/locations' },
       { id: 'countries', label: 'Countries', path: '/masters/countries' },
       { id: 'ports', label: 'Ports & Locations (UN/LOCODE)', path: '/masters/ports' },
       { id: 'commodities', label: 'Commodity / HS Codes', path: '/masters/commodities' },

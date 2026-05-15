@@ -1,8 +1,16 @@
 "use client";
 import React, { useState } from 'react';
+import Link from 'next/link';
 import { Icon } from '@/components/ui/Icon';
 import { useToast } from '@/components/ui/Toast';
 import { ExportButton } from '@/components/ui/ExportButton';
+
+// 2026-05-13 — spatial-layout duplication: the inline 6×16 grid below the
+// block-detail card is identical in purpose to /gate/yard-view (cell drilldown
+// + stack cross-section). Master Data is now the entity registry only; the
+// spatial visualisation lives on the operational yard-view page. Setting this
+// flag back to true restores the inline grid for comparison.
+const SHOW_INLINE_SPATIAL_LAYOUT = false;
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -425,7 +433,9 @@ export default function LocationsPage() {
         </div>
         <div className="gecko-toolbar">
           <ExportButton label="Export tree" resource="Locations tree" iconSize={16} />
-          <button className="gecko-btn gecko-btn-outline gecko-btn-sm" onClick={() => toast({ variant: 'info', title: 'Yard map view', message: 'Interactive yard map coming soon.' })}><Icon name="map" size={16} /> Yard map view</button>
+          <Link href="/gate/yard-view" className="gecko-btn gecko-btn-outline gecko-btn-sm" style={{ textDecoration: 'none', display: 'inline-flex', alignItems: 'center', gap: 6 }}>
+            <Icon name="map" size={16} /> Yard map view
+          </Link>
           <button className="gecko-btn gecko-btn-primary gecko-btn-sm" onClick={() => setShowModal(true)}><Icon name="plus" size={16} /> New Location</button>
         </div>
       </div>
@@ -582,55 +592,89 @@ export default function LocationsPage() {
             </div>
           </div>
 
-          {/* Grid View */}
-          <div style={{ background: 'var(--gecko-bg-surface)', border: '1px solid var(--gecko-border)', borderRadius: 12, padding: 24, boxShadow: 'var(--gecko-shadow-sm)' }}>
-            <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', marginBottom: 24 }}>
-              <div>
-                <h3 style={{ fontSize: 16, fontWeight: 700, margin: 0, color: 'var(--gecko-text-primary)' }}>Spatial layout</h3>
-                <div style={{ fontSize: 13, color: 'var(--gecko-text-secondary)', marginTop: 4 }}>6 rows × 16 bays × 4 tiers = 384 TEU slot capacity</div>
+          {/* Spatial layout — hidden in favour of /gate/yard-view (set
+              SHOW_INLINE_SPATIAL_LAYOUT = true at the top of this file to
+              re-enable for side-by-side comparison). */}
+          {SHOW_INLINE_SPATIAL_LAYOUT && (
+            <div style={{ background: 'var(--gecko-bg-surface)', border: '1px solid var(--gecko-border)', borderRadius: 12, padding: 24, boxShadow: 'var(--gecko-shadow-sm)' }}>
+              <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', marginBottom: 24 }}>
+                <div>
+                  <h3 style={{ fontSize: 16, fontWeight: 700, margin: 0, color: 'var(--gecko-text-primary)' }}>Spatial layout</h3>
+                  <div style={{ fontSize: 13, color: 'var(--gecko-text-secondary)', marginTop: 4 }}>6 rows × 16 bays × 4 tiers = 384 TEU slot capacity</div>
+                </div>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 16, fontSize: 11, fontWeight: 600, color: 'var(--gecko-text-secondary)' }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}><div style={{ width: 12, height: 12, border: '1px solid var(--gecko-border)' }} /> Empty</div>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}><div style={{ width: 12, height: 12, background: 'var(--gecko-primary-200)' }} /> 1–2 high</div>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}><div style={{ width: 12, height: 12, background: 'var(--gecko-primary-600)' }} /> 3 high</div>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}><div style={{ width: 12, height: 12, background: 'var(--gecko-warning-500)' }} /> 4 high</div>
+                </div>
               </div>
-              <div style={{ display: 'flex', alignItems: 'center', gap: 16, fontSize: 11, fontWeight: 600, color: 'var(--gecko-text-secondary)' }}>
-                <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}><div style={{ width: 12, height: 12, border: '1px solid var(--gecko-border)' }} /> Empty</div>
-                <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}><div style={{ width: 12, height: 12, background: 'var(--gecko-primary-200)' }} /> 1–2 high</div>
-                <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}><div style={{ width: 12, height: 12, background: 'var(--gecko-primary-600)' }} /> 3 high</div>
-                <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}><div style={{ width: 12, height: 12, background: 'var(--gecko-warning-500)' }} /> 4 high</div>
-              </div>
-            </div>
 
-            <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
-              {/* X Axis labels */}
-              <div style={{ display: 'flex', paddingLeft: 24, gap: 4 }}>
-                {bays.map(b => (
-                  <div key={b} style={{ flex: 1, textAlign: 'center', fontSize: 10, fontWeight: 700, color: 'var(--gecko-text-disabled)', fontFamily: 'var(--gecko-font-mono)' }}>{b}</div>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+                {/* X Axis labels */}
+                <div style={{ display: 'flex', paddingLeft: 24, gap: 4 }}>
+                  {bays.map(b => (
+                    <div key={b} style={{ flex: 1, textAlign: 'center', fontSize: 10, fontWeight: 700, color: 'var(--gecko-text-disabled)', fontFamily: 'var(--gecko-font-mono)' }}>{b}</div>
+                  ))}
+                </div>
+
+                {/* Grid Rows */}
+                {rows.map(r => (
+                  <div key={r} style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
+                    <div style={{ width: 20, textAlign: 'right', fontSize: 11, fontWeight: 700, color: 'var(--gecko-text-secondary)', paddingRight: 4 }}>{r}</div>
+                    {bays.map(b => {
+                      const tier = getCellTier(r, b);
+                      const color = getCellColor(tier);
+                      return (
+                        <div
+                          key={`${r}-${b}`}
+                          style={{
+                            flex: 1, aspectRatio: '1', background: color, border: tier === 0 ? '1px solid var(--gecko-border)' : 'none',
+                            display: 'flex', alignItems: 'center', justifyContent: 'center',
+                            color: tier >= 2 ? '#fff' : 'var(--gecko-primary-700)',
+                            fontSize: 10, fontWeight: 700, cursor: 'pointer', transition: 'transform 100ms',
+                            borderRadius: 2
+                          }}
+                        >
+                          {tier > 0 ? tier : ''}
+                        </div>
+                      );
+                    })}
+                  </div>
                 ))}
               </div>
-
-              {/* Grid Rows */}
-              {rows.map(r => (
-                <div key={r} style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
-                  <div style={{ width: 20, textAlign: 'right', fontSize: 11, fontWeight: 700, color: 'var(--gecko-text-secondary)', paddingRight: 4 }}>{r}</div>
-                  {bays.map(b => {
-                    const tier = getCellTier(r, b);
-                    const color = getCellColor(tier);
-                    return (
-                      <div
-                        key={`${r}-${b}`}
-                        style={{
-                          flex: 1, aspectRatio: '1', background: color, border: tier === 0 ? '1px solid var(--gecko-border)' : 'none',
-                          display: 'flex', alignItems: 'center', justifyContent: 'center',
-                          color: tier >= 2 ? '#fff' : 'var(--gecko-primary-700)',
-                          fontSize: 10, fontWeight: 700, cursor: 'pointer', transition: 'transform 100ms',
-                          borderRadius: 2
-                        }}
-                      >
-                        {tier > 0 ? tier : ''}
-                      </div>
-                    );
-                  })}
-                </div>
-              ))}
             </div>
-          </div>
+          )}
+
+          {/* Replacement CTA — points operators at the live spatial view */}
+          {!SHOW_INLINE_SPATIAL_LAYOUT && (
+            <div style={{
+              background: 'linear-gradient(135deg, var(--gecko-primary-50) 0%, var(--gecko-bg-surface) 100%)',
+              border: '1px dashed var(--gecko-primary-200)',
+              borderRadius: 12, padding: 20,
+              display: 'flex', alignItems: 'center', gap: 16,
+            }}>
+              <div style={{
+                width: 48, height: 48, borderRadius: 10,
+                background: 'var(--gecko-primary-100)', color: 'var(--gecko-primary-700)',
+                display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0,
+              }}>
+                <Icon name="grid" size={22} />
+              </div>
+              <div style={{ flex: 1, minWidth: 0 }}>
+                <div style={{ fontSize: 14, fontWeight: 700, color: 'var(--gecko-text-primary)' }}>
+                  Spatial layout lives in the Yard Plan
+                </div>
+                <div style={{ fontSize: 12, color: 'var(--gecko-text-secondary)', marginTop: 4, lineHeight: 1.5 }}>
+                  Live occupancy heatmap, per-stack drilldown, and tier-by-tier cross-sections are on the operational view.
+                  This page stays focused on the entity registry — codes, hierarchy, attributes.
+                </div>
+              </div>
+              <Link href="/gate/yard-view" className="gecko-btn gecko-btn-primary gecko-btn-sm" style={{ textDecoration: 'none', display: 'inline-flex', alignItems: 'center', gap: 6, flexShrink: 0 }}>
+                Open Yard Plan <Icon name="arrowRight" size={13} />
+              </Link>
+            </div>
+          )}
 
         </div>
 

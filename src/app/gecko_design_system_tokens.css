@@ -280,3 +280,57 @@
 }
 
 
+/* ============================================================
+   SECTION 5: EXTERNAL BRAND TOKENS
+   ------------------------------------------------------------
+   Third-party brand colors used by integration / notification UIs.
+   These are LITERAL brand hex values from each platform's official
+   guidelines — do not invent variants. Pair the solid color with a
+   tinted background for buttons / pills.
+
+   Usage:
+     background: var(--gecko-brand-line);
+     background: var(--gecko-brand-line-soft);
+   ============================================================ */
+
+:root {
+  /* LINE — Thailand/Japan/Taiwan primary messaging */
+  --gecko-brand-line:        #06C755;
+  --gecko-brand-line-soft:   rgba(6, 199, 85, 0.10);
+
+  /* WhatsApp Business — SEA/MENA primary messaging */
+  --gecko-brand-whatsapp:        #25D366;
+  --gecko-brand-whatsapp-dark:   #075E54;
+  --gecko-brand-whatsapp-soft:   rgba(37, 211, 102, 0.10);
+
+  /* Slack — internal team comms */
+  --gecko-brand-slack:        #4A154B;
+  --gecko-brand-slack-soft:   rgba(74, 21, 75, 0.08);
+
+  /* Microsoft Teams — enterprise internal comms */
+  --gecko-brand-teams:        #5059C9;
+  --gecko-brand-teams-soft:   rgba(80, 89, 201, 0.10);
+
+  /* Telegram — secondary in some SEA / MENA markets */
+  --gecko-brand-telegram:        #26A5E4;
+  --gecko-brand-telegram-soft:   rgba(38, 165, 228, 0.10);
+
+  /* Zalo — Vietnam primary */
+  --gecko-brand-zalo:        #0068FF;
+  --gecko-brand-zalo-soft:   rgba(0, 104, 255, 0.10);
+
+  /* Viber — Philippines / Eastern Europe */
+  --gecko-brand-viber:        #7360F2;
+  --gecko-brand-viber-soft:   rgba(115, 96, 242, 0.10);
+
+  /* SMS — neutral, falls under "system" */
+  --gecko-brand-sms:        var(--gecko-gray-600, #64748B);
+  --gecko-brand-sms-soft:   var(--gecko-gray-100, rgba(100, 116, 139, 0.10));
+
+  /* Discord — declined for Gecko (wrong audience for logistics).
+     Defined for completeness in case a tenant later requests it. */
+  --gecko-brand-discord:        #5865F2;
+  --gecko-brand-discord-soft:   rgba(88, 101, 242, 0.10);
+}
+
+
