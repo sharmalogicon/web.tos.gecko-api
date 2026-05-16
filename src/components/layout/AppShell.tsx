@@ -5,6 +5,7 @@ import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { Icon } from '../ui/Icon';
 import { ToastProvider } from '../ui/Toast';
+import { AskGeckoWidget } from '../ai/AskGeckoWidget';
 import { autoSeedIfEmpty, seedDemoData } from '@/lib/demo-seed';
 
 // Page-title / breadcrumb derivation from the NAV tree. Single source of truth:
@@ -441,6 +442,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
             {children}
           </main>
         </div>
+        <AskGeckoWidget />
       </div>
     </ToastProvider>
   );

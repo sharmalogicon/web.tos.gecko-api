@@ -4659,3 +4659,430 @@ input[type="checkbox"].gecko-toggle.gecko-toggle-sm:checked::after { transform: 
 }
 
 
+/* ------------------------------------------------------------
+   5.38 AI ASSIST WIDGET — "Ask Gecko"
+   Floating action button anchored bottom-right; opens a 420×620
+   chat panel. Phase 1 deterministic intents; Phase 2 swaps to
+   GPT-4o. See src/components/ai/AskGeckoWidget.tsx +
+   docs/08-AI-STRATEGY.md.
+
+   Anatomy:
+     <button class="gecko-ai-fab">…</button>
+     <div class="gecko-ai-panel">
+       <div class="gecko-ai-panel-header">…</div>
+       <div class="gecko-ai-panel-body">
+         <div class="gecko-ai-message-assistant">
+           <div class="gecko-ai-bot-avatar">…</div>
+           <div class="gecko-ai-bubble gecko-ai-bubble-assistant">…</div>
+         </div>
+         <div class="gecko-ai-message-user">
+           <div class="gecko-ai-bubble gecko-ai-bubble-user">…</div>
+         </div>
+       </div>
+       <form class="gecko-ai-panel-input-row">…</form>
+     </div>
+   ------------------------------------------------------------ */
+
+.gecko-ai-fab {
+  position: fixed;
+  bottom: 24px;
+  right: 24px;
+  z-index: 50;
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  height: 48px;
+  padding: 0 18px 0 16px;
+  background: var(--gecko-primary-600);
+  color: #fff;
+  border: none;
+  border-radius: 999px;
+  font-family: inherit;
+  font-size: 13px;
+  font-weight: 700;
+  letter-spacing: 0.01em;
+  cursor: pointer;
+  box-shadow: 0 10px 30px rgba(15, 23, 42, 0.18), 0 2px 6px rgba(15, 23, 42, 0.1);
+  transition: transform var(--gecko-transition-fast),
+              box-shadow var(--gecko-transition-fast),
+              background var(--gecko-transition-fast);
+}
+
+.gecko-ai-fab:hover {
+  background: var(--gecko-primary-700);
+  transform: translateY(-1px);
+  box-shadow: 0 14px 36px rgba(15, 23, 42, 0.22), 0 3px 8px rgba(15, 23, 42, 0.12);
+}
+
+.gecko-ai-fab:active {
+  transform: translateY(0);
+}
+
+.gecko-ai-fab-open {
+  width: 48px;
+  padding: 0;
+  justify-content: center;
+}
+
+.gecko-ai-fab-label {
+  white-space: nowrap;
+}
+
+.gecko-ai-panel {
+  position: fixed;
+  right: 24px;
+  bottom: 84px;
+  z-index: 50;
+  width: 420px;
+  height: min(620px, calc(100vh - 120px));
+  background: var(--gecko-bg-surface);
+  border: 1px solid var(--gecko-border);
+  border-radius: 16px;
+  box-shadow: 0 24px 60px rgba(15, 23, 42, 0.24), 0 4px 12px rgba(15, 23, 42, 0.1);
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  animation: geckoAiPanelIn 180ms ease-out;
+}
+
+@keyframes geckoAiPanelIn {
+  from { opacity: 0; transform: translateY(8px) scale(0.98); }
+  to   { opacity: 1; transform: translateY(0)   scale(1); }
+}
+
+.gecko-ai-panel-header {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 12px 12px 12px 14px;
+  border-bottom: 1px solid var(--gecko-border);
+  background: var(--gecko-bg-surface);
+  flex-shrink: 0;
+}
+
+.gecko-ai-panel-avatar {
+  width: 30px;
+  height: 30px;
+  border-radius: 8px;
+  background: linear-gradient(135deg, var(--gecko-primary-600), var(--gecko-primary-400));
+  color: #fff;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+.gecko-ai-panel-title-block {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+  min-width: 0;
+}
+
+.gecko-ai-panel-title {
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--gecko-text-primary);
+  line-height: 1.2;
+}
+
+.gecko-ai-panel-subtitle {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  font-size: 10.5px;
+  font-weight: 600;
+  color: var(--gecko-text-secondary);
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+}
+
+.gecko-ai-status-dot {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: var(--gecko-success-500, #10b981);
+  box-shadow: 0 0 0 2px rgba(16, 185, 129, 0.18);
+  animation: geckoAiPulse 1.8s ease-in-out infinite;
+}
+
+@keyframes geckoAiPulse {
+  0%, 100% { opacity: 1; }
+  50%      { opacity: 0.55; }
+}
+
+.gecko-ai-panel-body {
+  flex: 1;
+  overflow-y: auto;
+  padding: 16px 14px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  background: var(--gecko-bg-subtle);
+}
+
+.gecko-ai-welcome {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.gecko-ai-message-user {
+  display: flex;
+  justify-content: flex-end;
+}
+
+.gecko-ai-message-assistant {
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+}
+
+.gecko-ai-bot-avatar {
+  width: 26px;
+  height: 26px;
+  border-radius: 7px;
+  background: linear-gradient(135deg, var(--gecko-primary-600), var(--gecko-primary-400));
+  color: #fff;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  margin-top: 2px;
+}
+
+.gecko-ai-bubble {
+  max-width: 320px;
+  padding: 9px 13px;
+  font-size: 13px;
+  line-height: 1.55;
+  border-radius: 12px;
+  word-wrap: break-word;
+  overflow-wrap: break-word;
+}
+
+.gecko-ai-bubble-user {
+  background: var(--gecko-primary-600);
+  color: #fff;
+  border-bottom-right-radius: 4px;
+}
+
+.gecko-ai-bubble-assistant {
+  background: var(--gecko-bg-surface);
+  color: var(--gecko-text-primary);
+  border: 1px solid var(--gecko-border);
+  border-bottom-left-radius: 4px;
+}
+
+.gecko-ai-bubble-assistant strong {
+  color: var(--gecko-text-primary);
+  font-weight: 700;
+}
+
+.gecko-ai-bubble-user strong {
+  color: #fff;
+  font-weight: 700;
+}
+
+.gecko-ai-suggestion-list {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  margin-left: 34px;
+}
+
+.gecko-ai-suggestion-chip {
+  display: inline-block;
+  align-self: flex-start;
+  max-width: 100%;
+  padding: 7px 12px;
+  background: var(--gecko-bg-surface);
+  border: 1px solid var(--gecko-border);
+  border-radius: 999px;
+  font-family: inherit;
+  font-size: 12px;
+  font-weight: 500;
+  color: var(--gecko-text-primary);
+  cursor: pointer;
+  text-align: left;
+  line-height: 1.3;
+  transition: all var(--gecko-transition-fast);
+}
+
+.gecko-ai-suggestion-chip:hover {
+  border-color: var(--gecko-primary-500);
+  color: var(--gecko-primary-700);
+  background: var(--gecko-primary-50);
+}
+
+.gecko-ai-suggestion-chip-sm {
+  font-size: 11.5px;
+  padding: 5px 10px;
+}
+
+.gecko-ai-cta-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-top: 8px;
+}
+
+.gecko-ai-inline-cta {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 6px 11px;
+  background: var(--gecko-primary-50);
+  color: var(--gecko-primary-700);
+  border: 1px solid var(--gecko-primary-200, var(--gecko-primary-100));
+  border-radius: 8px;
+  font-size: 12px;
+  font-weight: 600;
+  text-decoration: none;
+  cursor: pointer;
+  transition: all var(--gecko-transition-fast);
+}
+
+.gecko-ai-inline-cta:hover {
+  background: var(--gecko-primary-100);
+  border-color: var(--gecko-primary-400);
+  color: var(--gecko-primary-700);
+}
+
+.gecko-ai-followup-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-top: 8px;
+}
+
+.gecko-ai-typing {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 11px 14px;
+}
+
+.gecko-ai-typing-dot {
+  width: 6px;
+  height: 6px;
+  background: var(--gecko-text-disabled);
+  border-radius: 50%;
+  animation: geckoAiTypingBounce 1.2s ease-in-out infinite;
+}
+
+.gecko-ai-typing-dot:nth-child(2) {
+  animation-delay: 0.18s;
+}
+
+.gecko-ai-typing-dot:nth-child(3) {
+  animation-delay: 0.36s;
+}
+
+@keyframes geckoAiTypingBounce {
+  0%, 60%, 100% { transform: translateY(0);    opacity: 0.45; }
+  30%           { transform: translateY(-4px); opacity: 1;    }
+}
+
+.gecko-ai-panel-input-row {
+  display: flex;
+  align-items: flex-end;
+  gap: 8px;
+  padding: 10px 12px 6px 12px;
+  border-top: 1px solid var(--gecko-border);
+  background: var(--gecko-bg-surface);
+  flex-shrink: 0;
+}
+
+.gecko-ai-input {
+  flex: 1;
+  resize: none;
+  min-height: 36px;
+  max-height: 100px;
+  padding: 8px 12px;
+  background: var(--gecko-bg-subtle);
+  border: 1px solid var(--gecko-border);
+  border-radius: 10px;
+  font-family: inherit;
+  font-size: 13px;
+  line-height: 1.4;
+  color: var(--gecko-text-primary);
+  outline: none;
+  transition: border-color var(--gecko-transition-fast),
+              box-shadow var(--gecko-transition-fast);
+}
+
+.gecko-ai-input:focus {
+  border-color: var(--gecko-primary-500);
+  box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.15);
+  background: var(--gecko-bg-surface);
+}
+
+.gecko-ai-input:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+.gecko-ai-input::placeholder {
+  color: var(--gecko-text-disabled);
+}
+
+.gecko-ai-send-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 36px;
+  height: 36px;
+  background: var(--gecko-primary-600);
+  color: #fff;
+  border: none;
+  border-radius: 10px;
+  cursor: pointer;
+  flex-shrink: 0;
+  transition: background var(--gecko-transition-fast),
+              transform var(--gecko-transition-fast);
+}
+
+.gecko-ai-send-btn:hover:not(:disabled) {
+  background: var(--gecko-primary-700);
+}
+
+.gecko-ai-send-btn:active:not(:disabled) {
+  transform: scale(0.96);
+}
+
+.gecko-ai-send-btn:disabled {
+  background: var(--gecko-bg-muted, var(--gecko-bg-subtle));
+  color: var(--gecko-text-disabled);
+  cursor: not-allowed;
+}
+
+.gecko-ai-disclosure {
+  padding: 0 14px 10px 14px;
+  font-size: 10.5px;
+  color: var(--gecko-text-disabled);
+  text-align: center;
+  background: var(--gecko-bg-surface);
+  flex-shrink: 0;
+  line-height: 1.4;
+}
+
+/* Hide widget on auth + kiosk routes — the AppShell early-return takes care
+   of it via not mounting AskGeckoWidget there. This media query just keeps
+   it tidy on narrow viewports (we still render the full panel, just narrower). */
+@media (max-width: 480px) {
+  .gecko-ai-panel {
+    width: calc(100vw - 24px);
+    right: 12px;
+    bottom: 78px;
+  }
+  .gecko-ai-fab {
+    right: 16px;
+    bottom: 16px;
+  }
+  .gecko-ai-bubble {
+    max-width: calc(100vw - 110px);
+  }
+}
+
