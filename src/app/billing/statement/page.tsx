@@ -5,6 +5,10 @@ import { usePagination, TablePagination } from '@/components/ui/TablePagination'
 import { FilterPopover, FilterField, SortOption } from '@/components/ui/FilterPopover';
 import { useToast } from '@/components/ui/Toast';
 import { ExportButton } from '@/components/ui/ExportButton';
+import {
+  SendToInvoiceMenu, NewInvoiceModal, ExistingInvoiceModal,
+  type SendAction,
+} from '@/components/billing/SendToInvoice';
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -907,12 +911,186 @@ type ModalState =
   | { type: 'waive' }
   | null;
 
+// ─── Grouped Select Menu ──────────────────────────────────────────────────────
+// Drives the new "Select ▼" dropdown that lets the user bulk-select pending
+// charges by payment term (CASH/CREDIT) or by charge code. Only pending,
+// non-waived rows are eligible for selection — invoiced/waived rows stay out.
+
+function GroupedSelectMenu({ charges, onSetSelection, onDeselectAll }: {
+  charges: ChargeRow[];
+  onSetSelection: (ids: string[]) => void;
+  onDeselectAll: () => void;
+}) {
+  const [open, setOpen] = useState(false);
+  const ref = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    const h = (e: MouseEvent) => { if (ref.current && !ref.current.contains(e.target as Node)) setOpen(false); };
+    const k = (e: KeyboardEvent) => { if (e.key === 'Escape') setOpen(false); };
+    document.addEventListener('mousedown', h);
+    document.addEventListener('keydown', k);
+    return () => { document.removeEventListener('mousedown', h); document.removeEventListener('keydown', k); };
+  }, []);
+
+  const eligible = useMemo(
+    () => charges.filter(c => c.status === 'Pending' && !c.isWaived),
+    [charges]
+  );
+
+  const byTerm = useMemo(() => {
+    const groups: Record<'CASH' | 'CREDIT' | 'FREE' | 'PREPAID', { ids: string[]; total: number }> = {
+      CASH:    { ids: [], total: 0 },
+      CREDIT:  { ids: [], total: 0 },
+      FREE:    { ids: [], total: 0 },
+      PREPAID: { ids: [], total: 0 },
+    };
+    eligible.forEach(c => {
+      groups[c.paymentTerm].ids.push(c.id);
+      groups[c.paymentTerm].total += c.sellingRate * c.qty;
+    });
+    return groups;
+  }, [eligible]);
+
+  const byCode = useMemo(() => {
+    const map = new Map<string, { ids: string[]; total: number; desc: string }>();
+    eligible.forEach(c => {
+      const prev = map.get(c.chargeCode) ?? { ids: [], total: 0, desc: c.chargeDesc };
+      prev.ids.push(c.id);
+      prev.total += c.sellingRate * c.qty;
+      map.set(c.chargeCode, prev);
+    });
+    return [...map.entries()].sort((a, b) => a[0].localeCompare(b[0]));
+  }, [eligible]);
+
+  const allIds = eligible.map(c => c.id);
+
+  const Section = ({ title, children }: { title: string; children: React.ReactNode }) => (
+    <div style={{ padding: '6px 0', borderBottom: '1px solid var(--gecko-border)' }}>
+      <div style={{ padding: '6px 14px 4px', fontSize: 10, fontWeight: 700, color: 'var(--gecko-text-disabled)', textTransform: 'uppercase', letterSpacing: '0.06em' }}>
+        {title}
+      </div>
+      {children}
+    </div>
+  );
+
+  const Row = ({ label, meta, tone, onClick, disabled, mono }: {
+    label: React.ReactNode; meta?: string; tone?: 'success' | 'info' | 'neutral';
+    onClick: () => void; disabled?: boolean; mono?: boolean;
+  }) => (
+    <button
+      onClick={onClick}
+      disabled={disabled}
+      style={{
+        width: '100%', padding: '7px 14px',
+        background: 'transparent', border: 'none',
+        cursor: disabled ? 'not-allowed' : 'pointer',
+        textAlign: 'left', fontFamily: 'inherit',
+        display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12,
+        opacity: disabled ? 0.45 : 1,
+      }}
+      onMouseEnter={e => { if (!disabled) e.currentTarget.style.background = 'var(--gecko-bg-subtle)'; }}
+      onMouseLeave={e => { e.currentTarget.style.background = 'transparent'; }}
+    >
+      <span style={{
+        fontSize: 12, fontWeight: 600, color: 'var(--gecko-text-primary)',
+        fontFamily: mono ? 'var(--gecko-font-mono)' : 'inherit',
+        display: 'flex', alignItems: 'center', gap: 8,
+      }}>
+        {tone === 'success' && <span style={{ width: 6, height: 6, borderRadius: '50%', background: 'var(--gecko-success-500)' }} />}
+        {tone === 'info'    && <span style={{ width: 6, height: 6, borderRadius: '50%', background: 'var(--gecko-info-500)' }} />}
+        {label}
+      </span>
+      {meta && (
+        <span style={{ fontSize: 11, fontFamily: 'var(--gecko-font-mono)', color: 'var(--gecko-text-secondary)' }}>
+          {meta}
+        </span>
+      )}
+    </button>
+  );
+
+  return (
+    <div ref={ref} style={{ position: 'relative' }}>
+      <button
+        className="gecko-btn gecko-btn-outline gecko-btn-sm"
+        onClick={() => setOpen(o => !o)}
+        style={{ display: 'inline-flex', alignItems: 'center', gap: 5 }}
+      >
+        <Icon name="checkSquare" size={13} />
+        Select
+        <Icon name="chevronDown" size={12} />
+      </button>
+      {open && (
+        <div style={{
+          position: 'absolute', left: 0, top: 'calc(100% + 6px)',
+          width: 320, maxHeight: 480, overflowY: 'auto',
+          background: 'var(--gecko-bg-surface)',
+          border: '1px solid var(--gecko-border)', borderRadius: 10,
+          boxShadow: '0 12px 30px rgba(0,0,0,0.16)', zIndex: 200,
+        }}>
+          <Section title="Quick">
+            <Row
+              label={`Select all pending`}
+              meta={`${allIds.length} · ฿${fmt(eligible.reduce((s, c) => s + c.sellingRate * c.qty, 0))}`}
+              onClick={() => { onSetSelection(allIds); setOpen(false); }}
+              disabled={allIds.length === 0}
+            />
+            <Row label="Deselect all" onClick={() => { onDeselectAll(); setOpen(false); }} />
+          </Section>
+
+          {(byTerm.CASH.ids.length > 0 || byTerm.CREDIT.ids.length > 0) && (
+            <Section title="By payment term">
+              {byTerm.CASH.ids.length > 0 && (
+                <Row
+                  label={`All CASH pending`}
+                  meta={`${byTerm.CASH.ids.length} · ฿${fmt(byTerm.CASH.total)}`}
+                  tone="success"
+                  onClick={() => { onSetSelection(byTerm.CASH.ids); setOpen(false); }}
+                />
+              )}
+              {byTerm.CREDIT.ids.length > 0 && (
+                <Row
+                  label={`All CREDIT pending`}
+                  meta={`${byTerm.CREDIT.ids.length} · ฿${fmt(byTerm.CREDIT.total)}`}
+                  tone="info"
+                  onClick={() => { onSetSelection(byTerm.CREDIT.ids); setOpen(false); }}
+                />
+              )}
+            </Section>
+          )}
+
+          {byCode.length > 0 && (
+            <Section title="By charge code">
+              {byCode.map(([code, g]) => (
+                <Row
+                  key={code}
+                  label={code}
+                  meta={`${g.ids.length} · ฿${fmt(g.total)}`}
+                  mono
+                  onClick={() => { onSetSelection(g.ids); setOpen(false); }}
+                />
+              ))}
+            </Section>
+          )}
+
+          {eligible.length === 0 && (
+            <div style={{ padding: '16px 14px', fontSize: 11, color: 'var(--gecko-text-disabled)', fontStyle: 'italic', textAlign: 'center' }}>
+              Nothing eligible to select — all charges are already invoiced, waived, or cancelled.
+            </div>
+          )}
+        </div>
+      )}
+    </div>
+  );
+}
+
 // ─── Main Page ────────────────────────────────────────────────────────────────
 
 export default function BillingStatementPage() {
   const [activeStatement, setActiveStatement] = useState<BookingStatement | null>(null);
   const [selectedRows, setSelectedRows] = useState<Set<string>>(new Set());
   const [showActionMenu, setShowActionMenu] = useState(false);
+  const [pendingSendAction, setPendingSendAction] = useState<SendAction | null>(null);
+  const { toast } = useToast();
   const [modalState, setModalState] = useState<ModalState>(null);
   const [filters, setFilters] = useState<Record<string, string>>({ query: '', bookingType: '', orderType: '', agent: '', customer: '', status: '', date: '' });
   const [sortBy, setSortBy] = useState('date_desc');
@@ -968,6 +1146,50 @@ export default function BillingStatementPage() {
   const allSelected = charges.length > 0 && selectedRows.size === charges.length;
 
   const selectedCharges = charges.filter(c => selectedRows.has(c.id));
+
+  // ── Send-to-Invoice: scope selected charges to a single payment term ──────
+  // (Only Pending + non-waived rows count toward an invoice.)
+  const sendableByTerm = useMemo(() => {
+    const cash   = selectedCharges.filter(c => c.status === 'Pending' && !c.isWaived && c.paymentTerm === 'CASH');
+    const credit = selectedCharges.filter(c => c.status === 'Pending' && !c.isWaived && c.paymentTerm === 'CREDIT');
+    return {
+      CASH:   { count: cash.length,   total: cash.reduce((s, c) => s + c.sellingRate * c.qty, 0) },
+      CREDIT: { count: credit.length, total: credit.reduce((s, c) => s + c.sellingRate * c.qty, 0) },
+    } as const;
+  }, [selectedCharges]);
+
+  const sendModalTotals = pendingSendAction
+    ? sendableByTerm[pendingSendAction.term as 'CASH' | 'CREDIT']
+    : { count: 0, total: 0 };
+
+  const handleSendPick = (a: SendAction) => setPendingSendAction(a);
+
+  const handleNewInvoiceConfirm = (_note: string) => {
+    if (!pendingSendAction) return;
+    const term = pendingSendAction.term;
+    const { count, total } = sendableByTerm[term as 'CASH' | 'CREDIT'];
+    const draftNo = `INV-${new Date().getFullYear()}-${String(Math.floor(Math.random() * 9000 + 1000))}`;
+    toast({
+      variant: 'success',
+      title: 'Draft invoice created',
+      message: `${draftNo} · ${term} · ${count} charges · ฿${fmt(total)}`,
+    });
+    deselectAll();
+    setPendingSendAction(null);
+  };
+
+  const handleExistingInvoiceConfirm = (invoiceNo: string) => {
+    if (!pendingSendAction) return;
+    const term = pendingSendAction.term;
+    const { count, total } = sendableByTerm[term as 'CASH' | 'CREDIT'];
+    toast({
+      variant: 'success',
+      title: 'Appended to invoice',
+      message: `${count} charges (฿${fmt(total)}) added to ${invoiceNo}`,
+    });
+    deselectAll();
+    setPendingSendAction(null);
+  };
 
   // ── Charge totals ────────────────────────────────────────────────────────────
   const chargesSubtotal = charges.filter(c => !c.isWaived).reduce((s, c) => s + c.sellingRate * c.qty, 0);
@@ -1180,9 +1402,17 @@ export default function BillingStatementPage() {
           )}
         </div>
         <div className="gecko-toolbar">
-          <button className="gecko-btn gecko-btn-ghost gecko-btn-sm" onClick={allSelected ? deselectAll : selectAll}>
-            {allSelected ? 'Deselect All' : 'Select All'}
-          </button>
+          <GroupedSelectMenu
+            charges={charges}
+            onSetSelection={ids => setSelectedRows(new Set(ids))}
+            onDeselectAll={deselectAll}
+          />
+
+          <SendToInvoiceMenu
+            disabled={selectedRows.size === 0}
+            onPick={handleSendPick}
+            size="sm"
+          />
 
           {/* Add Charge dropdown */}
           <div style={{ position: 'relative' }} ref={actionMenuRef}>
@@ -1378,6 +1608,26 @@ export default function BillingStatementPage() {
           onClose={() => setModalState(null)}
         />
       )}
+
+      {/* Send-to-Invoice modals — scoped to the selected payment term */}
+      <NewInvoiceModal
+        open={pendingSendAction?.kind === 'new'}
+        action={pendingSendAction?.kind === 'new' ? { term: pendingSendAction.term } : null}
+        lineCount={sendModalTotals.count}
+        lineLabel="charges"
+        total={sendModalTotals.total}
+        onCancel={() => setPendingSendAction(null)}
+        onConfirm={handleNewInvoiceConfirm}
+      />
+      <ExistingInvoiceModal
+        open={pendingSendAction?.kind === 'existing'}
+        action={pendingSendAction?.kind === 'existing' ? { term: pendingSendAction.term } : null}
+        lineCount={sendModalTotals.count}
+        lineLabel="charges"
+        total={sendModalTotals.total}
+        onCancel={() => setPendingSendAction(null)}
+        onConfirm={handleExistingInvoiceConfirm}
+      />
     </div>
   );
 }

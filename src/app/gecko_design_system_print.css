@@ -1,0 +1,245 @@
+/* ============================================================
+   GECKO PRINT STYLESHEET
+   ============================================================
+   Three print modes are driven by body classes set just before
+   window.print() is invoked:
+
+     body.print-mode-eir         -> A4 official EIR-Out paperwork
+     body.print-mode-gate-slip   -> 8.5" dot-matrix continuous form
+     body.print-mode-receipt     -> 80mm thermal cash receipt
+
+   The corresponding off-screen template (e.g. .print-template-eir)
+   is the ONLY thing that renders during print; everything else is
+   hidden. The JS caller is responsible for adding the body class
+   before window.print() and removing it after.
+
+   Paper size hint: we set a default A4 @page. For thermal we
+   inject a dedicated @page rule at print time from JS, because
+   @page cannot be scoped by body class in CSS.
+   ============================================================ */
+
+/* Print templates are always hidden on screen — they only show during print */
+.print-template { display: none; }
+
+@media print {
+
+  /* ── 1) Hide everything by default ───────────────────────── */
+  body * { visibility: hidden; }
+
+  /* Re-show the active print template + its descendants */
+  body.print-mode-eir        .print-template-eir,
+  body.print-mode-eir        .print-template-eir *,
+  body.print-mode-gate-slip  .print-template-gate-slip,
+  body.print-mode-gate-slip  .print-template-gate-slip *,
+  body.print-mode-receipt    .print-template-receipt,
+  body.print-mode-receipt    .print-template-receipt * {
+    visibility: visible;
+  }
+
+  body.print-mode-eir        .print-template-eir,
+  body.print-mode-gate-slip  .print-template-gate-slip,
+  body.print-mode-receipt    .print-template-receipt {
+    display: block;
+    position: absolute;
+    left: 0;
+    top: 0;
+    width: 100%;
+    background: #fff;
+    color: #000;
+    margin: 0;
+    padding: 0;
+  }
+
+  /* ── 2) Strip the rest of the chrome ─────────────────────── */
+  .no-print { display: none !important; }
+  body { background: #fff !important; margin: 0; padding: 0; }
+  html { background: #fff !important; }
+
+  /* Default page (overridden at runtime for thermal) */
+  @page { size: A4; margin: 12mm; }
+
+  /* ── 3) Reset link colors for print ──────────────────────── */
+  a { color: inherit; text-decoration: none; }
+}
+
+
+/* ============================================================
+   ON-SCREEN PREVIEW MOCKS
+   ============================================================
+   Used in the Print Options modal to show the user what each
+   print format looks like at a glance.
+   ============================================================ */
+
+/* — A4 mini preview: small white card with portrait aspect — */
+.gecko-print-preview-a4 {
+  width: 100%;
+  aspect-ratio: 210 / 297;
+  background: #fff;
+  border: 1px solid #d1d5db;
+  border-radius: 6px;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
+  padding: 10px;
+  font-size: 6.5px;
+  line-height: 1.35;
+  color: #111827;
+  overflow: hidden;
+  font-family: var(--gecko-font-sans);
+}
+
+/* — Dot-matrix mini preview: continuous-feed look — */
+.gecko-print-preview-dot {
+  width: 100%;
+  aspect-ratio: 8.5 / 5.5;
+  background: #fffef2;
+  border: 1px solid #d6d3c4;
+  border-radius: 2px;
+  padding: 10px;
+  font-family: var(--gecko-font-mono);
+  font-size: 7px;
+  line-height: 1.4;
+  color: #1f1f1f;
+  position: relative;
+  overflow: hidden;
+  background-image:
+    repeating-linear-gradient(0deg, transparent 0, transparent 11px, #f0eedd 11px, #f0eedd 12px);
+}
+.gecko-print-preview-dot::before,
+.gecko-print-preview-dot::after {
+  content: "";
+  position: absolute;
+  top: 0; bottom: 0;
+  width: 8px;
+  background-image: radial-gradient(circle at 4px 6px, #fff 2px, transparent 2.5px);
+  background-size: 8px 12px;
+  background-repeat: repeat-y;
+}
+.gecko-print-preview-dot::before { left: 0;  border-right: 1px solid #d6d3c4; }
+.gecko-print-preview-dot::after  { right: 0; border-left:  1px solid #d6d3c4; }
+
+/* — Thermal mini preview: narrow tape look — */
+.gecko-print-preview-thermal {
+  width: 60%;
+  margin: 0 auto;
+  background: #fff;
+  border: 1px solid #d1d5db;
+  border-bottom: none;
+  border-radius: 2px 2px 0 0;
+  padding: 10px 8px;
+  font-family: var(--gecko-font-mono);
+  font-size: 8px;
+  line-height: 1.4;
+  color: #111827;
+  position: relative;
+}
+.gecko-print-preview-thermal::after {
+  content: "";
+  position: absolute;
+  left: -1px; right: -1px; bottom: -8px;
+  height: 8px;
+  background-image:
+    linear-gradient(135deg, transparent 50%, #fff 50%),
+    linear-gradient(45deg, transparent 50%, #fff 50%);
+  background-size: 8px 8px;
+  background-position: 0 0, 4px 0;
+  background-repeat: repeat-x;
+  border-bottom: 1px solid #d1d5db;
+}
+
+
+/* ============================================================
+   PRINT TEMPLATE SHARED STYLES
+   ============================================================
+   These render at print-time only (or in the modal preview if
+   parent gets a special class).
+   ============================================================ */
+
+/* — A4 EIR document — */
+.print-template-eir {
+  font-family: var(--gecko-font-sans), system-ui, sans-serif;
+  color: #000;
+  background: #fff;
+  font-size: 11pt;
+  line-height: 1.35;
+}
+.print-template-eir h1 {
+  font-size: 16pt; font-weight: 800; margin: 0 0 4pt;
+  letter-spacing: -0.01em;
+}
+.print-template-eir h2 {
+  font-size: 11pt; font-weight: 700; margin: 14pt 0 4pt;
+  border-bottom: 1pt solid #000; padding-bottom: 2pt;
+  text-transform: uppercase; letter-spacing: 0.04em;
+}
+.print-template-eir table {
+  width: 100%; border-collapse: collapse; font-size: 10pt;
+  margin-top: 4pt;
+}
+.print-template-eir th,
+.print-template-eir td {
+  border: 0.5pt solid #000; padding: 4pt 6pt; text-align: left;
+  vertical-align: top;
+}
+.print-template-eir th {
+  background: #f0f0f0; font-weight: 700; font-size: 9pt;
+  text-transform: uppercase; letter-spacing: 0.03em;
+}
+.print-template-eir .mono {
+  font-family: var(--gecko-font-mono), monospace;
+}
+.print-template-eir .signatures {
+  display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 24pt; margin-top: 28pt;
+}
+.print-template-eir .signatures > div {
+  border-top: 0.5pt solid #000; padding-top: 4pt; text-align: center;
+  font-size: 9pt;
+}
+
+/* — Dot-matrix gate slip — */
+.print-template-gate-slip {
+  font-family: var(--gecko-font-mono), 'Courier New', monospace;
+  font-size: 10pt;
+  line-height: 1.5;
+  color: #000;
+  white-space: pre;
+  padding: 0;
+}
+.print-template-gate-slip pre {
+  font-family: inherit;
+  font-size: inherit;
+  margin: 0;
+  white-space: pre;
+}
+
+/* — Thermal 80mm receipt — */
+.print-template-receipt {
+  font-family: var(--gecko-font-mono), 'Courier New', monospace;
+  font-size: 9pt;
+  line-height: 1.4;
+  color: #000;
+  background: #fff;
+  /* 72mm content width = 80mm - 4mm side margins */
+  width: 72mm;
+  padding: 3mm 4mm;
+  box-sizing: border-box;
+}
+.print-template-receipt .center { text-align: center; }
+.print-template-receipt .right  { text-align: right; }
+.print-template-receipt hr {
+  border: none; border-top: 1pt dashed #000;
+  margin: 4pt 0;
+}
+.print-template-receipt h1 {
+  font-size: 11pt; font-weight: 800; margin: 0 0 2pt;
+  text-align: center; letter-spacing: 0.02em;
+}
+.print-template-receipt .small { font-size: 7.5pt; }
+.print-template-receipt .row {
+  display: flex; justify-content: space-between; gap: 4pt;
+}
+.print-template-receipt .row strong { font-weight: 700; }
+.print-template-receipt .total {
+  font-size: 11pt; font-weight: 800;
+  margin: 4pt 0;
+  padding: 3pt 0;
+  border-top: 2pt solid #000; border-bottom: 2pt solid #000;
+}

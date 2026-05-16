@@ -94,10 +94,20 @@ export interface TEUBand {
   ratePerDay: number;
 }
 
+// User-defined day slab. Customer/depot decides the day boundaries, not us —
+// "1-5, 6-10, 11+" is just a common default. Slabs are ordered low→high; the
+// LAST slab is treated as open-ended past its toDay (rate continues forever).
+export interface DaySlab {
+  id: string;
+  fromDay: number;
+  toDay: number;
+  ratePerDay: number;
+}
+
 export interface StorageConfig {
   freeDays: number;
   mode: 'PER_DAY_SLAB' | 'FLEET_TEU_SLAB';
-  perDaySlab: { tier1: number; tier2: number; tier3: number };
+  perDaySlabs: DaySlab[];
   fleetTeuBands: TEUBand[];
 }
 

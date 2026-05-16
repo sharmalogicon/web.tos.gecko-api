@@ -376,7 +376,7 @@ export default function GateKioskPage() {
             {SAMPLE_TOKENS.map(s => (
               <button
                 key={s.label}
-                onClick={() => processScan(encodeToken(s.token))}
+                onClick={() => { setShowSimulator(false); processScan(encodeToken(s.token)); }}
                 style={{
                   textAlign: 'left',
                   padding: '10px 12px',

@@ -76,10 +76,17 @@ interface TEUBand {
   ratePerDay: number;
 }
 
+interface DaySlab {
+  id: string;
+  fromDay: number;
+  toDay: number;
+  ratePerDay: number;
+}
+
 interface StorageConfig {
   freeDays: number;
   mode: 'PER_DAY_SLAB' | 'FLEET_TEU_SLAB';
-  perDaySlab: { tier1: number; tier2: number; tier3: number };
+  perDaySlabs: DaySlab[];
   fleetTeuBands: TEUBand[];
 }
 
@@ -1045,29 +1052,93 @@ function StorageCard({
       </div>
 
       {config.mode === 'PER_DAY_SLAB' ? (
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 12 }}>
-          {([
-            { key: 'tier1', label: 'Tier 1 (Day 1–5 after free)', tone: 'var(--gecko-info-500)' },
-            { key: 'tier2', label: 'Tier 2 (Day 6–10)',           tone: 'var(--gecko-warning-500)' },
-            { key: 'tier3', label: 'Tier 3 (Day 11+)',            tone: 'var(--gecko-error-500)' },
-          ] as const).map(t => (
-            <div key={t.key} style={{ background: 'var(--gecko-bg-subtle)', border: '1px solid var(--gecko-border)', borderRadius: 10, padding: 12 }}>
-              <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 6 }}>
-                <span style={{ width: 8, height: 8, borderRadius: '50%', background: t.tone }} />
-                <span style={{ fontSize: 11, fontWeight: 700, color: 'var(--gecko-text-secondary)' }}>{t.label}</span>
-              </div>
-              <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-                <input
-                  type="number" min="0" step="0.01"
-                  className="gecko-input gecko-input-sm"
-                  value={config.perDaySlab[t.key]}
-                  onChange={e => onChange({ ...config, perDaySlab: { ...config.perDaySlab, [t.key]: Number(e.target.value) || 0 } })}
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+          <div className="gecko-band-row gecko-band-row-header" style={{ background: 'transparent', border: 'none', gridTemplateColumns: '110px 110px 1fr auto' }}>
+            <div>From day</div>
+            <div>To day</div>
+            <div>Rate per day per container</div>
+            <div />
+          </div>
+
+          {config.perDaySlabs.map((s, i) => {
+            const isLast = i === config.perDaySlabs.length - 1;
+            const TONES = ['var(--gecko-info-500)', 'var(--gecko-warning-500)', 'var(--gecko-error-500)', 'var(--gecko-primary-500)', 'var(--gecko-accent-500)'];
+            const tone = TONES[i % TONES.length];
+            return (
+              <div key={s.id} className="gecko-band-row" style={{ gridTemplateColumns: '110px 110px 1fr auto', alignItems: 'center' }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+                  <span style={{ width: 8, height: 8, borderRadius: '50%', background: tone, flexShrink: 0 }} />
+                  <input type="number" min="1" className="gecko-input gecko-input-sm"
+                    value={s.fromDay} onChange={e => {
+                      const next = [...config.perDaySlabs];
+                      next[i] = { ...s, fromDay: Number(e.target.value) || 1 };
+                      onChange({ ...config, perDaySlabs: next });
+                    }}
+                    style={{ textAlign: 'right', fontFamily: 'var(--gecko-font-mono)', fontWeight: 700 }}
+                  />
+                </div>
+                <input type="number" min={s.fromDay} className="gecko-input gecko-input-sm"
+                  value={s.toDay} onChange={e => {
+                    const next = [...config.perDaySlabs];
+                    next[i] = { ...s, toDay: Number(e.target.value) || s.fromDay };
+                    onChange({ ...config, perDaySlabs: next });
+                  }}
                   style={{ textAlign: 'right', fontFamily: 'var(--gecko-font-mono)', fontWeight: 700 }}
                 />
-                <span style={{ fontSize: 10, fontWeight: 700, color: 'var(--gecko-text-secondary)' }}>THB / day / cont</span>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                  <input type="number" min="0" step="0.01" className="gecko-input gecko-input-sm"
+                    value={s.ratePerDay} onChange={e => {
+                      const next = [...config.perDaySlabs];
+                      next[i] = { ...s, ratePerDay: Number(e.target.value) || 0 };
+                      onChange({ ...config, perDaySlabs: next });
+                    }}
+                    style={{ width: 120, textAlign: 'right', fontFamily: 'var(--gecko-font-mono)', fontWeight: 700 }}
+                  />
+                  <span style={{ fontSize: 10, fontWeight: 700, color: 'var(--gecko-text-secondary)' }}>THB / day / cont</span>
+                  {isLast && (
+                    <span className="gecko-pill gecko-pill-neutral" style={{ fontSize: 9 }}>
+                      and after
+                    </span>
+                  )}
+                </div>
+                <button
+                  className="gecko-charge-card-remove"
+                  onClick={() => {
+                    const next = config.perDaySlabs.filter(x => x.id !== s.id);
+                    onChange({ ...config, perDaySlabs: next.length === 0
+                      ? [{ id: rid(), fromDay: 1, toDay: 5, ratePerDay: 0 }]
+                      : next
+                    });
+                  }}
+                  aria-label="Remove slab"
+                  disabled={config.perDaySlabs.length === 1}
+                  title={config.perDaySlabs.length === 1 ? 'At least one slab is required' : 'Remove this slab'}
+                >
+                  <Icon name="x" size={14} />
+                </button>
               </div>
-            </div>
-          ))}
+            );
+          })}
+
+          <button
+            className="gecko-rate-row-add"
+            onClick={() => {
+              const last = config.perDaySlabs[config.perDaySlabs.length - 1];
+              const nextFrom = last ? last.toDay + 1 : 1;
+              const nextTo   = nextFrom + 4;
+              const nextRate = last ? Math.round(last.ratePerDay * 1.5) : 0;
+              onChange({
+                ...config,
+                perDaySlabs: [...config.perDaySlabs, { id: rid(), fromDay: nextFrom, toDay: nextTo, ratePerDay: nextRate }],
+              });
+            }}
+          >
+            <Icon name="plus" size={12} /> Add day slab
+          </button>
+
+          <div style={{ fontSize: 11, color: 'var(--gecko-text-disabled)', fontStyle: 'italic' }}>
+            Tip: slabs are evaluated low → high. The last slab applies for all days beyond its <strong>To day</strong>.
+          </div>
         </div>
       ) : (
         <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
@@ -1078,8 +1149,8 @@ function StorageCard({
           }}>
             <Icon name="info" size={14} style={{ flexShrink: 0, marginTop: 1 }} />
             <div>
-              <strong>Fleet-TEU slab (APL pattern):</strong> rate is determined by the line's <em>total fleet TEU</em> at the depot on the storage day —
-              so the more boxes the line has parked, the lower the per-box per-day rate. This is regressive volume pricing across the line's whole footprint, not per-container slab.
+              <strong>Fleet-TEU slab:</strong> rate is determined by the line&apos;s <em>total fleet TEU</em> at the depot on the storage day —
+              so the more boxes the line has parked, the lower the per-box per-day rate. Regressive volume pricing across the line&apos;s whole footprint, not per-container slab.
             </div>
           </div>
 
@@ -1987,12 +2058,20 @@ export default function NewTariffSchedulePage() {
   const [prices, setPrices] = useState<PricedCharge[]>([]);
   const [ladenStorage, setLadenStorage] = useState<StorageConfig>({
     freeDays: 3, mode: 'PER_DAY_SLAB',
-    perDaySlab: { tier1: 80, tier2: 160, tier3: 240 },
+    perDaySlabs: [
+      { id: rid(), fromDay: 1,  toDay: 5,  ratePerDay:  80 },
+      { id: rid(), fromDay: 6,  toDay: 10, ratePerDay: 160 },
+      { id: rid(), fromDay: 11, toDay: 30, ratePerDay: 240 },
+    ],
     fleetTeuBands: [],
   });
   const [emptyStorage, setEmptyStorage] = useState<StorageConfig>({
     freeDays: 14, mode: 'PER_DAY_SLAB',
-    perDaySlab: { tier1: 30, tier2: 60, tier3: 90 },
+    perDaySlabs: [
+      { id: rid(), fromDay: 1,  toDay: 5,  ratePerDay: 30 },
+      { id: rid(), fromDay: 6,  toDay: 10, ratePerDay: 60 },
+      { id: rid(), fromDay: 11, toDay: 60, ratePerDay: 90 },
+    ],
     fleetTeuBands: [
       { id: rid(), from: 1, to: 499, ratePerDay: 0 },
       { id: rid(), from: 500, to: 800, ratePerDay: 5 },

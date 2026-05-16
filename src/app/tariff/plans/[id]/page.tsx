@@ -484,21 +484,13 @@ function NonMovementView({ schedule }: { schedule: Schedule }) {
   return (
     <>
       <ReadOnlyCard title="Laden Storage" icon="package" subtitle={`Free days: ${schedule.ladenStorage.freeDays} · Mode: per-day slab`}>
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 12 }}>
-          <StorageTile label="Tier 1 (Day 1–5)"  value={schedule.ladenStorage.perDaySlab.tier1} tone="info" />
-          <StorageTile label="Tier 2 (Day 6–10)" value={schedule.ladenStorage.perDaySlab.tier2} tone="warning" />
-          <StorageTile label="Tier 3 (Day 11+)"  value={schedule.ladenStorage.perDaySlab.tier3} tone="error" />
-        </div>
+        <DaySlabReadout slabs={schedule.ladenStorage.perDaySlabs} />
       </ReadOnlyCard>
 
       <ReadOnlyCard title="Empty Storage" icon="box"
         subtitle={`Free days: ${schedule.emptyStorage.freeDays} · Mode: ${schedule.emptyStorage.mode === 'FLEET_TEU_SLAB' ? 'Fleet-TEU slab' : 'per-day slab'}`}>
         {schedule.emptyStorage.mode === 'PER_DAY_SLAB' ? (
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 12 }}>
-            <StorageTile label="Tier 1" value={schedule.emptyStorage.perDaySlab.tier1} tone="info" />
-            <StorageTile label="Tier 2" value={schedule.emptyStorage.perDaySlab.tier2} tone="warning" />
-            <StorageTile label="Tier 3" value={schedule.emptyStorage.perDaySlab.tier3} tone="error" />
-          </div>
+          <DaySlabReadout slabs={schedule.emptyStorage.perDaySlabs} />
         ) : (
           <table className="gecko-table" style={{ fontSize: 12 }}>
             <thead><tr><th>Fleet TEU band</th><th style={{ textAlign: 'right' }}>Rate per day per container</th></tr></thead>
@@ -524,6 +516,48 @@ function NonMovementView({ schedule }: { schedule: Schedule }) {
         <ReeferTable rates={schedule.precoolRates} />
       </ReadOnlyCard>
     </>
+  );
+}
+
+function DaySlabReadout({ slabs }: { slabs: { id: string; fromDay: number; toDay: number; ratePerDay: number }[] }) {
+  if (slabs.length === 0) {
+    return <div style={{ fontSize: 12, color: 'var(--gecko-text-disabled)', fontStyle: 'italic' }}>No slabs configured.</div>;
+  }
+  const TONES = ['info', 'warning', 'error', 'primary', 'neutral'];
+  return (
+    <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+      {slabs.map((s, i) => {
+        const tone = TONES[i % TONES.length];
+        const isLast = i === slabs.length - 1;
+        return (
+          <div key={s.id} style={{
+            display: 'grid', gridTemplateColumns: '14px 1fr auto', gap: 12, alignItems: 'center',
+            padding: '10px 14px',
+            background: 'var(--gecko-bg-subtle)',
+            border: '1px solid var(--gecko-border)',
+            borderRadius: 8,
+          }}>
+            <span style={{ width: 8, height: 8, borderRadius: '50%', background: `var(--gecko-${tone}-500)` }} />
+            <div>
+              <div style={{ fontSize: 12, fontWeight: 700, color: 'var(--gecko-text-primary)', fontFamily: 'var(--gecko-font-mono)' }}>
+                Day {s.fromDay} – {isLast ? `${s.toDay}+ (and after)` : s.toDay}
+              </div>
+              <div style={{ fontSize: 10, color: 'var(--gecko-text-secondary)', marginTop: 2 }}>
+                {isLast ? 'Rate continues for all days beyond this band' : `${s.toDay - s.fromDay + 1} days in this band`}
+              </div>
+            </div>
+            <div style={{ display: 'flex', alignItems: 'baseline', gap: 4 }}>
+              <span style={{ fontFamily: 'var(--gecko-font-mono)', fontSize: 18, fontWeight: 800, color: `var(--gecko-${tone}-700)` }}>
+                {s.ratePerDay === 0 ? 'FREE' : `฿${s.ratePerDay}`}
+              </span>
+              {s.ratePerDay > 0 && (
+                <span style={{ fontSize: 10, color: 'var(--gecko-text-secondary)', fontWeight: 700 }}>/ day / cont</span>
+              )}
+            </div>
+          </div>
+        );
+      })}
+    </div>
   );
 }
 

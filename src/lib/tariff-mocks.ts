@@ -68,9 +68,17 @@ export const SCHEDULES: Record<string, Schedule> = {
       },
     ],
     ladenStorage: { freeDays: 3, mode: 'PER_DAY_SLAB',
-      perDaySlab: { tier1: 80, tier2: 160, tier3: 240 }, fleetTeuBands: [] },
+      perDaySlabs: [
+        { id: 'ls1-a', fromDay: 1,  toDay: 5,  ratePerDay:  80 },
+        { id: 'ls1-b', fromDay: 6,  toDay: 10, ratePerDay: 160 },
+        { id: 'ls1-c', fromDay: 11, toDay: 30, ratePerDay: 240 },
+      ], fleetTeuBands: [] },
     emptyStorage: { freeDays: 14, mode: 'PER_DAY_SLAB',
-      perDaySlab: { tier1: 30, tier2: 60, tier3: 90 }, fleetTeuBands: [] },
+      perDaySlabs: [
+        { id: 'es1-a', fromDay: 1,  toDay: 5,  ratePerDay: 30 },
+        { id: 'es1-b', fromDay: 6,  toDay: 10, ratePerDay: 60 },
+        { id: 'es1-c', fromDay: 11, toDay: 60, ratePerDay: 90 },
+      ], fleetTeuBands: [] },
     ptiRates:     { '20RF': 850, '40RF': 1200, '40HC-RF': 1300 },
     precoolRates: { '20RF': 600, '40RF': 800,  '40HC-RF': 850 },
     freeTime: {
@@ -120,9 +128,17 @@ export const SCHEDULES: Record<string, Schedule> = {
       },
     ],
     ladenStorage: { freeDays: 5, mode: 'PER_DAY_SLAB',
-      perDaySlab: { tier1: 70, tier2: 140, tier3: 210 }, fleetTeuBands: [] },
+      perDaySlabs: [
+        { id: 'ls2-a', fromDay: 1,  toDay: 5,  ratePerDay:  70 },
+        { id: 'ls2-b', fromDay: 6,  toDay: 10, ratePerDay: 140 },
+        { id: 'ls2-c', fromDay: 11, toDay: 30, ratePerDay: 210 },
+      ], fleetTeuBands: [] },
     emptyStorage: { freeDays: 14, mode: 'PER_DAY_SLAB',
-      perDaySlab: { tier1: 25, tier2: 50, tier3: 80 }, fleetTeuBands: [] },
+      perDaySlabs: [
+        { id: 'es2-a', fromDay: 1,  toDay: 5,  ratePerDay: 25 },
+        { id: 'es2-b', fromDay: 6,  toDay: 10, ratePerDay: 50 },
+        { id: 'es2-c', fromDay: 11, toDay: 60, ratePerDay: 80 },
+      ], fleetTeuBands: [] },
     ptiRates:     { '20RF': 800, '40RF': 1100, '40HC-RF': 1200 },
     precoolRates: { '20RF': 550, '40RF': 750,  '40HC-RF': 800 },
     freeTime: {
@@ -166,9 +182,17 @@ export const SCHEDULES: Record<string, Schedule> = {
       },
     ],
     ladenStorage: { freeDays: 7, mode: 'PER_DAY_SLAB',
-      perDaySlab: { tier1: 60, tier2: 120, tier3: 180 }, fleetTeuBands: [] },
+      perDaySlabs: [
+        { id: 'ls3-a', fromDay: 1,  toDay: 7,  ratePerDay:  60 },
+        { id: 'ls3-b', fromDay: 8,  toDay: 14, ratePerDay: 120 },
+        { id: 'ls3-c', fromDay: 15, toDay: 30, ratePerDay: 180 },
+      ], fleetTeuBands: [] },
     emptyStorage: { freeDays: 21, mode: 'PER_DAY_SLAB',
-      perDaySlab: { tier1: 20, tier2: 40, tier3: 60 }, fleetTeuBands: [] },
+      perDaySlabs: [
+        { id: 'es3-a', fromDay: 1,  toDay: 7,  ratePerDay: 20 },
+        { id: 'es3-b', fromDay: 8,  toDay: 14, ratePerDay: 40 },
+        { id: 'es3-c', fromDay: 15, toDay: 60, ratePerDay: 60 },
+      ], fleetTeuBands: [] },
     ptiRates:     { '20RF': 750, '40RF': 1000, '40HC-RF': 1100 },
     precoolRates: { '20RF': 500, '40RF': 700,  '40HC-RF': 750 },
     freeTime: {
@@ -203,8 +227,18 @@ export const SCHEDULES: Record<string, Schedule> = {
     ],
     orderTypesInScope: ['exp-cy-cy', 'imp-cy-cy'],
     prices: [],
-    ladenStorage: { freeDays: 3, mode: 'PER_DAY_SLAB', perDaySlab: { tier1: 70, tier2: 140, tier3: 210 }, fleetTeuBands: [] },
-    emptyStorage: { freeDays: 14, mode: 'PER_DAY_SLAB', perDaySlab: { tier1: 25, tier2: 50, tier3: 80 }, fleetTeuBands: [] },
+    ladenStorage: { freeDays: 3, mode: 'PER_DAY_SLAB',
+      perDaySlabs: [
+        { id: 'ls4-a', fromDay: 1,  toDay: 5,  ratePerDay:  70 },
+        { id: 'ls4-b', fromDay: 6,  toDay: 10, ratePerDay: 140 },
+        { id: 'ls4-c', fromDay: 11, toDay: 30, ratePerDay: 210 },
+      ], fleetTeuBands: [] },
+    emptyStorage: { freeDays: 14, mode: 'PER_DAY_SLAB',
+      perDaySlabs: [
+        { id: 'es4-a', fromDay: 1,  toDay: 5,  ratePerDay: 25 },
+        { id: 'es4-b', fromDay: 6,  toDay: 10, ratePerDay: 50 },
+        { id: 'es4-c', fromDay: 11, toDay: 60, ratePerDay: 80 },
+      ], fleetTeuBands: [] },
     ptiRates:     { '20RF': 800, '40RF': 1100, '40HC-RF': 1200 },
     precoolRates: { '20RF': 550, '40RF': 750,  '40HC-RF': 800 },
     freeTime: {
@@ -242,8 +276,18 @@ export const SCHEDULES: Record<string, Schedule> = {
         ],
       },
     ],
-    ladenStorage: { freeDays: 3, mode: 'PER_DAY_SLAB', perDaySlab: { tier1: 80, tier2: 160, tier3: 240 }, fleetTeuBands: [] },
-    emptyStorage: { freeDays: 14, mode: 'PER_DAY_SLAB', perDaySlab: { tier1: 30, tier2: 60, tier3: 90 }, fleetTeuBands: [] },
+    ladenStorage: { freeDays: 3, mode: 'PER_DAY_SLAB',
+      perDaySlabs: [
+        { id: 'ls5-a', fromDay: 1,  toDay: 5,  ratePerDay:  80 },
+        { id: 'ls5-b', fromDay: 6,  toDay: 10, ratePerDay: 160 },
+        { id: 'ls5-c', fromDay: 11, toDay: 30, ratePerDay: 240 },
+      ], fleetTeuBands: [] },
+    emptyStorage: { freeDays: 14, mode: 'PER_DAY_SLAB',
+      perDaySlabs: [
+        { id: 'es5-a', fromDay: 1,  toDay: 5,  ratePerDay: 30 },
+        { id: 'es5-b', fromDay: 6,  toDay: 10, ratePerDay: 60 },
+        { id: 'es5-c', fromDay: 11, toDay: 60, ratePerDay: 90 },
+      ], fleetTeuBands: [] },
     ptiRates:     { '20RF': 850, '40RF': 1200, '40HC-RF': 1300 },
     precoolRates: { '20RF': 600, '40RF': 800,  '40HC-RF': 850 },
     freeTime: {

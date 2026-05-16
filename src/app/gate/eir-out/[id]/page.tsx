@@ -1,10 +1,11 @@
 "use client";
-import React, { useState } from 'react';
+import React, { useState, useMemo } from 'react';
 import { useParams } from 'next/navigation';
 import Link from 'next/link';
 import { Icon } from '@/components/ui/Icon';
 import { useToast } from '@/components/ui/Toast';
 import { PageToolbar, Field } from '@/components/ui/OpsPrimitives';
+import { useGatePrint, type GatePrintData, type GatePrintCharge } from '@/components/print/GatePrint';
 
 // ── Constants ─────────────────────────────────────────────────────────────────
 
@@ -1025,8 +1026,63 @@ export default function GateOutFormPage() {
 
   const goutRef = `GOUT-${visitId.replace('GIN-', '')}`;
 
+  // ── Print data assembly — derives a GatePrintData from the active move ──
+  const activeMove = moves.find(m => m.id === activeId) ?? moves[0];
+  const printData: GatePrintData = useMemo(() => {
+    const charges: GatePrintCharge[] = activeMove ? [
+      { code: 'SA001', desc: 'Admission Fee',  qty: 1,             unit: 'visit', amount: 250 },
+      { code: 'SC001', desc: 'Lift-On',        qty: activeMove.teu || 1, unit: 'lift',  amount: 850 },
+      ...(activeMove.cargoClass === 'REEFER'
+        ? [{ code: 'SR001', desc: 'Reefer plug-in (per day)', qty: 1, unit: 'day', amount: 220 }]
+        : []),
+      { code: 'SD001', desc: 'Documentation',  qty: 1,             unit: 'doc',   amount: 80  },
+    ] : [];
+    return {
+      documentType: 'EIR-OUT',
+      documentNo: goutRef,
+      visitId,
+      depotName: 'GECKO TOS · Laem Chabang ICD',
+      depotBranch: `${truck.lane ?? 'Lane —'}  ·  Yard A · Export`,
+      printedAt: new Date(),
+      cashierName: 'PRANEE C.',
+      gateClerkName: 'SOMSAK P.',
+      customer:  activeMove?.customer ?? '—',
+      agent:     activeMove?.agent ?? '—',
+      line:      activeMove?.line ?? '—',
+      haulier:   truck.haulier ?? '—',
+      truckPlate: truck.plate ?? '—',
+      trailerNo:  truck.trailer ?? undefined,
+      driverName: truck.driver ?? '—',
+      driverLicense: truck.license ?? '—',
+      driverMobile:  truck.mobile ?? '—',
+      containerNo:   activeMove?.ctrAssigned || activeMove?.ctrPlanned || '—',
+      iso:           activeMove?.isoReq ?? '—',
+      isLaden:       activeMove?.isLaden ?? false,
+      direction:     (activeMove?.direction ?? 'EXPORT') as GatePrintData['direction'],
+      cargoClass:    (activeMove?.cargoClass ?? 'NONE') as GatePrintData['cargoClass'],
+      bookingNo:     activeMove?.bookingNo,
+      edoNo:         activeMove?.edo,
+      vessel:        activeMove?.vessel,
+      voyage:        activeMove?.voyage,
+      yardSpot:      activeMove?.yardSpot,
+      linerSeal:     activeMove?.linerSeal || undefined,
+      shipperSeal:   activeMove?.shipperSeal || undefined,
+      tareKg:        activeMove?.tareKg ?? 0,
+      maxGrossKg:    activeMove?.maxGrossKg ?? 0,
+      vgmKg:         activeMove?.vgmKg ? Number(activeMove.vgmKg) : undefined,
+      cargoWeightKg: activeMove?.cargoWeightKg ?? undefined,
+      vgmMethod:     activeMove?.vgmMethod,
+      remarks:       activeMove?.notes || undefined,
+      charges,
+      taxRate: 0.07,
+    };
+  }, [activeMove, truck, visitId, goutRef]);
+
+  const { openOptions, PrintHost, print } = useGatePrint(printData);
+
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
+      <PrintHost />
       <PageToolbar
         title="Gate-Out · Truck Visit"
         subtitle={<>Container release · From queue visit <span style={{ fontFamily: 'var(--gecko-font-mono)', color: 'var(--gecko-text-primary)', fontWeight: 600 }}>{visitId}</span> · {truck.lane}</>}
@@ -1041,8 +1097,24 @@ export default function GateOutFormPage() {
               <Icon name="chevronLeft" size={13} />Back to Queue
             </Link>
             <button className="gecko-btn gecko-btn-outline gecko-btn-sm" onClick={() => toast({ variant: 'success', title: 'Draft saved', message: `EIR-Out ${visitId} draft preserved.` })}><Icon name="check" size={13} />Save Draft</button>
-            <button className="gecko-btn gecko-btn-primary gecko-btn-sm" disabled={errCount > 0 || moves.length === 0} onClick={() => { toast({ variant: 'success', title: 'EIR-Out committed', message: 'Gate pass printed — truck cleared to depart.' }); window.print(); }}>
-              <Icon name="print" size={13} />Commit · Print Gate Pass
+            <button
+              className="gecko-btn gecko-btn-outline gecko-btn-sm"
+              onClick={openOptions}
+              disabled={moves.length === 0}
+              title="Choose A4 EIR, dot-matrix gate slip, or 80mm thermal receipt"
+            >
+              <Icon name="print" size={13} />Print…
+            </button>
+            <button
+              className="gecko-btn gecko-btn-primary gecko-btn-sm"
+              disabled={errCount > 0 || moves.length === 0}
+              onClick={() => {
+                toast({ variant: 'success', title: 'EIR-Out committed', message: 'Gate pass printed — truck cleared to depart.' });
+                // Default commit flow prints the A4 EIR; clerks can re-print other formats from the Print… menu
+                print('eir');
+              }}
+            >
+              <Icon name="check" size={13} />Commit · Print EIR
             </button>
           </>
         }

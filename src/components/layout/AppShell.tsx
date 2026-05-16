@@ -5,6 +5,7 @@ import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { Icon } from '../ui/Icon';
 import { ToastProvider } from '../ui/Toast';
+import { autoSeedIfEmpty, seedDemoData } from '@/lib/demo-seed';
 
 // Page-title / breadcrumb derivation from the NAV tree. Single source of truth:
 // browser tab title and in-app header both come from here. Future pages added
@@ -128,6 +129,13 @@ const NAV = [
       // NAV entries hidden; routes preserved for deep-links and future admin views.
       // { id: 'rate-cards', label: 'Rate Cards', path: '/tariff/rate-cards' },
       // { id: 'free-time', label: 'Free Time & D&D Rules', path: '/tariff/free-time' },
+    ]
+  },
+  { id: 'reports', icon: 'fileText', label: 'Reports',
+    children: [
+      { id: 'reports-operational', label: 'Operational Reports', path: '/reports/operational' },
+      { id: 'reports-accounts',    label: 'Accounts Reports',    path: '/reports/accounts' },
+      { id: 'reports-schedule',    label: 'Auto-Schedule Reports', path: '/reports/schedule' },
     ]
   },
   { id: 'config', icon: 'settings', label: 'Configuration',
@@ -261,16 +269,46 @@ function Sidebar({ collapsed, onToggle }: { collapsed: boolean, onToggle: () => 
 
       <div className="gecko-sidebar-footer">
         {!collapsed ? (
-          <div style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '8px 4px' }}>
-            <div className="gecko-avatar gecko-avatar-accent">SK</div>
-            <div style={{ flex: 1, minWidth: 0 }}>
-              <div style={{ fontSize: 13, fontWeight: 600, color: 'var(--gecko-text-primary)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>Somchai K.</div>
-              <div style={{ fontSize: 11, color: 'var(--gecko-text-secondary)' }}>Terminal Supervisor · LCB</div>
-            </div>
-            <button className="gecko-btn gecko-btn-ghost gecko-btn-icon gecko-btn-sm" title="Sign out" style={{ color: 'var(--gecko-text-secondary)' }}>
-              <Icon name="logOut" size={15} />
+          <>
+            {/* Demo / reset row — subtle, only visible expanded */}
+            <button
+              onClick={() => {
+                const r = seedDemoData();
+                if (r.seeded) {
+                  // Soft-reload data-driven pages by triggering a route refresh-equivalent.
+                  // For the demo we just nudge with a discrete confirmation.
+                  if (typeof window !== 'undefined') {
+                    const banner = document.createElement('div');
+                    banner.textContent = '✓ Demo data reseeded — yard + sample data restored';
+                    banner.style.cssText = 'position:fixed;top:24px;left:50%;transform:translateX(-50%);background:#10b981;color:#fff;padding:10px 16px;border-radius:8px;font-size:13px;font-weight:600;font-family:system-ui;z-index:9999;box-shadow:0 8px 20px rgba(0,0,0,0.2);';
+                    document.body.appendChild(banner);
+                    setTimeout(() => banner.remove(), 2400);
+                  }
+                }
+              }}
+              title="Re-seed yard layout and sample data for demo purposes"
+              style={{
+                display: 'flex', alignItems: 'center', gap: 8,
+                width: '100%', padding: '6px 8px', marginBottom: 8,
+                background: 'transparent', border: '1px dashed var(--gecko-border)', borderRadius: 6,
+                color: 'var(--gecko-text-disabled)', fontSize: 10, fontFamily: 'inherit',
+                cursor: 'pointer', textAlign: 'left', letterSpacing: '0.04em', textTransform: 'uppercase', fontWeight: 600,
+              }}
+            >
+              <Icon name="refresh" size={11} />
+              Demo · reset data
             </button>
-          </div>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '8px 4px' }}>
+              <div className="gecko-avatar gecko-avatar-accent">SK</div>
+              <div style={{ flex: 1, minWidth: 0 }}>
+                <div style={{ fontSize: 13, fontWeight: 600, color: 'var(--gecko-text-primary)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>Somchai K.</div>
+                <div style={{ fontSize: 11, color: 'var(--gecko-text-secondary)' }}>Terminal Supervisor · LCB</div>
+              </div>
+              <button className="gecko-btn gecko-btn-ghost gecko-btn-icon gecko-btn-sm" title="Sign out" style={{ color: 'var(--gecko-text-secondary)' }}>
+                <Icon name="logOut" size={15} />
+              </button>
+            </div>
+          </>
         ) : (
           <div style={{ display: 'flex', justifyContent: 'center' }}>
             <div className="gecko-avatar gecko-avatar-accent">SK</div>
@@ -368,6 +406,10 @@ export function AppShell({ children }: { children: React.ReactNode }) {
       document.title = `${pageTitle} · Gecko TOS`;
     }
   }, [pageTitle]);
+
+  // Demo safety net — seed yard layout + sample data on first load if missing.
+  // Fresh browser / wiped storage shouldn't sink the demo.
+  useEffect(() => { autoSeedIfEmpty(); }, []);
 
   // Auth-shaped pages render bare — no sidebar, no header, no breadcrumbs.
   // Currently /login; future /forgot, /reset, /onboarding follow the same pattern.

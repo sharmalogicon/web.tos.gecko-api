@@ -4364,3 +4364,298 @@ input[type="checkbox"].gecko-toggle.gecko-toggle-sm:checked::after { transform: 
 }
 
 
+/* ------------------------------------------------------------
+   5.35 EXPANDABLE TABLE ROW
+   Pattern for tables where rows can drop down into an inline
+   detail panel. Used by booking container grid, unbilled bookings,
+   billing statements, etc.
+
+   Anatomy:
+     <tr class="gecko-table-row gecko-table-row-expandable">
+       <td><button class="gecko-table-expand-toggle">▶</button></td>
+       ...
+     </tr>
+     <tr class="gecko-table-row-expand-panel">
+       <td colspan="N"><div class="gecko-table-row-expand-body">...</div></td>
+     </tr>
+   ------------------------------------------------------------ */
+
+.gecko-table-row-expandable {
+  cursor: pointer;
+  transition: background var(--gecko-transition-fast);
+}
+
+.gecko-table-row-expandable:hover > td {
+  background: var(--gecko-primary-50);
+}
+
+.gecko-table-row-expandable[data-expanded="true"] > td {
+  background: var(--gecko-bg-subtle);
+  border-bottom-color: transparent;
+}
+
+.gecko-table-expand-toggle {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 22px;
+  height: 22px;
+  border: none;
+  background: transparent;
+  color: var(--gecko-text-secondary);
+  cursor: pointer;
+  border-radius: 4px;
+  transition: all var(--gecko-transition-fast);
+  font-family: inherit;
+  padding: 0;
+}
+
+.gecko-table-expand-toggle:hover {
+  background: var(--gecko-gray-100);
+  color: var(--gecko-text-primary);
+}
+
+.gecko-table-expand-toggle[data-expanded="true"] {
+  color: var(--gecko-primary-600);
+}
+
+.gecko-table-row-expand-panel > td {
+  padding: 0;
+  background: var(--gecko-bg-subtle);
+  border-bottom: 1px solid var(--gecko-border);
+}
+
+.gecko-table-row-expand-body {
+  padding: 14px 18px 18px 50px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+/* Movement chip strip — horizontal flow of movements with status */
+.gecko-mvmt-strip {
+  display: flex;
+  align-items: stretch;
+  gap: 0;
+  flex-wrap: wrap;
+}
+
+.gecko-mvmt-chip {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  min-width: 180px;
+  padding: 10px 12px;
+  background: var(--gecko-bg-surface);
+  border: 1px solid var(--gecko-border);
+  border-left-width: 3px;
+  border-radius: 8px;
+  flex-shrink: 0;
+}
+
+.gecko-mvmt-chip[data-status="done"]    { border-left-color: var(--gecko-success-500); }
+.gecko-mvmt-chip[data-status="pending"] { border-left-color: var(--gecko-warning-500); }
+.gecko-mvmt-chip[data-status="idle"]    { border-left-color: var(--gecko-gray-300);   }
+
+.gecko-mvmt-chip-head {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-family: var(--gecko-font-mono);
+  font-size: 11px;
+  font-weight: 700;
+  color: var(--gecko-text-primary);
+}
+
+.gecko-mvmt-chip-name {
+  font-size: 10px;
+  color: var(--gecko-text-secondary);
+  font-weight: 500;
+}
+
+.gecko-mvmt-chip-meta {
+  font-size: 10px;
+  color: var(--gecko-text-disabled);
+  font-family: var(--gecko-font-mono);
+  margin-top: 2px;
+  line-height: 1.4;
+}
+
+.gecko-mvmt-connector {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 18px;
+  color: var(--gecko-text-disabled);
+  flex-shrink: 0;
+}
+
+
+/* ------------------------------------------------------------
+   5.36 BULK ACTIONS DROPDOWN
+   Used by booking container grid (Add Multiple / Update Multiple /
+   Delete Multiple / Update VAS to selected / etc.) — mirrors the
+   WinForms context-menu pattern depot ops already know.
+   ------------------------------------------------------------ */
+
+.gecko-bulk-menu {
+  position: relative;
+  display: inline-block;
+}
+
+.gecko-bulk-menu-panel {
+  position: absolute;
+  top: calc(100% + 4px);
+  left: 0;
+  min-width: 260px;
+  background: var(--gecko-bg-surface);
+  border: 1px solid var(--gecko-border);
+  border-radius: 10px;
+  box-shadow: 0 12px 30px rgba(0, 0, 0, 0.14);
+  z-index: 150;
+  overflow: hidden;
+  padding: 4px 0;
+}
+
+.gecko-bulk-menu-item {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  width: 100%;
+  padding: 8px 14px;
+  border: none;
+  background: transparent;
+  font-family: inherit;
+  font-size: 12.5px;
+  color: var(--gecko-text-primary);
+  cursor: pointer;
+  text-align: left;
+  transition: background var(--gecko-transition-fast);
+}
+
+.gecko-bulk-menu-item:hover:not(:disabled) {
+  background: var(--gecko-bg-subtle);
+}
+
+.gecko-bulk-menu-item:disabled {
+  color: var(--gecko-text-disabled);
+  cursor: not-allowed;
+}
+
+.gecko-bulk-menu-item-danger {
+  color: var(--gecko-error-600);
+}
+
+.gecko-bulk-menu-item-danger:hover:not(:disabled) {
+  background: var(--gecko-error-50);
+}
+
+.gecko-bulk-menu-divider {
+  height: 1px;
+  background: var(--gecko-border);
+  margin: 4px 0;
+}
+
+
+/* ------------------------------------------------------------
+   5.37 REPORT CARD GRID
+   Cards used on /reports/operational and /reports/accounts —
+   grouped under section headers. Click → side drawer with
+   parameter form.
+
+   Anatomy:
+     <div class="gecko-report-group-header">Out-Bound Reports</div>
+     <div class="gecko-report-card-grid">
+       <button class="gecko-report-card">
+         <div class="gecko-report-card-icon">…</div>
+         <div class="gecko-report-card-title">Truck Control</div>
+         <div class="gecko-report-card-desc">…</div>
+         <div class="gecko-report-card-run">Run Report →</div>
+       </button>
+     </div>
+   ------------------------------------------------------------ */
+
+.gecko-report-group-header {
+  font-size: 11px;
+  font-weight: 700;
+  color: var(--gecko-text-secondary);
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  margin-bottom: 12px;
+  padding-left: 2px;
+}
+
+.gecko-report-card-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
+  gap: 14px;
+  margin-bottom: 8px;
+}
+
+.gecko-report-card {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 8px;
+  padding: 18px;
+  background: var(--gecko-bg-surface);
+  border: 1px solid var(--gecko-border);
+  border-radius: 12px;
+  font-family: inherit;
+  cursor: pointer;
+  text-align: left;
+  transition: all var(--gecko-transition-fast);
+  min-height: 168px;
+}
+
+.gecko-report-card:hover {
+  border-color: var(--gecko-primary-400);
+  box-shadow: 0 6px 20px rgba(15, 23, 42, 0.08);
+  transform: translateY(-1px);
+}
+
+.gecko-report-card-icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 32px;
+  height: 32px;
+  border-radius: 8px;
+  background: var(--gecko-primary-50);
+  color: var(--gecko-primary-600);
+  flex-shrink: 0;
+}
+
+.gecko-report-card:hover .gecko-report-card-icon {
+  background: var(--gecko-primary-100);
+}
+
+.gecko-report-card-title {
+  font-size: 14px;
+  font-weight: 700;
+  color: var(--gecko-text-primary);
+  line-height: 1.3;
+}
+
+.gecko-report-card-desc {
+  font-size: 12px;
+  color: var(--gecko-text-secondary);
+  line-height: 1.5;
+  flex: 1;
+}
+
+.gecko-report-card-run {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 12px;
+  font-weight: 700;
+  color: var(--gecko-primary-600);
+  margin-top: auto;
+}
+
+.gecko-report-card:hover .gecko-report-card-run {
+  color: var(--gecko-primary-700);
+}
+
+
