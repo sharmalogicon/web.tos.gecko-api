@@ -4,7 +4,7 @@ import { Icon } from '@/components/ui/Icon';
 
 // ── Types ──────────────────────────────────────────────────────────────────────
 
-type SectionId = 'general' | 'financial' | 'gate' | 'yard' | 'notifications' | 'integration';
+type SectionId = 'general' | 'financial' | 'gate' | 'yard' | 'reefer' | 'notifications' | 'integration';
 
 interface NavSection {
   id: SectionId;
@@ -15,12 +15,13 @@ interface NavSection {
 // ── Constants ──────────────────────────────────────────────────────────────────
 
 const NAV_SECTIONS: NavSection[] = [
-  { id: 'general',       label: 'General',         icon: 'globe'   },
-  { id: 'financial',     label: 'Financial',        icon: 'tag'     },
-  { id: 'gate',          label: 'Gate Operations',  icon: 'tool'    },
-  { id: 'yard',          label: 'Yard Management',  icon: 'layers'  },
-  { id: 'notifications', label: 'Notifications',    icon: 'bell'    },
-  { id: 'integration',   label: 'Integration',      icon: 'zap'     },
+  { id: 'general',       label: 'General',          icon: 'globe'       },
+  { id: 'financial',     label: 'Financial',        icon: 'tag'         },
+  { id: 'gate',          label: 'Gate Operations',  icon: 'tool'        },
+  { id: 'yard',          label: 'Yard Management',  icon: 'layers'      },
+  { id: 'reefer',        label: 'Reefer Operations', icon: 'thermometer' },
+  { id: 'notifications', label: 'Notifications',    icon: 'bell'        },
+  { id: 'integration',   label: 'Integration',      icon: 'zap'         },
 ];
 
 // ── Shared primitives ──────────────────────────────────────────────────────────
@@ -654,6 +655,113 @@ function YardSection({ onDirty }: { onDirty: () => void }) {
   );
 }
 
+// ── Section 4b — Reefer Operations ────────────────────────────────────────────
+
+function ReeferSection({ onDirty }: { onDirty: () => void }) {
+  // Cadence + grace
+  const [cadenceHrs,   setCadenceHrs]   = useState('4');
+  const [graceMins,    setGraceMins]    = useState('30');
+  const [devGraceMins, setDevGraceMins] = useState('30');
+  const [preCoolHrs,   setPreCoolHrs]   = useState('6');
+
+  // Tolerance bands (°C)
+  const [tolPharma,    setTolPharma]    = useState('0.5');
+  const [tolFood,      setTolFood]      = useState('2.0');
+  const [tolNonCrit,   setTolNonCrit]   = useState('5.0');
+
+  // PTI protocol
+  const [ptiProtocol,  setPtiProtocol]  = useState('V1');
+  const [ptiAutoOnPickup, setPtiAutoOnPickup] = useState(false);
+  const [ptiRequiredForExport, setPtiRequiredForExport] = useState(true);
+
+  // Auto pre-cool from booking
+  const [autoCreatePreCool, setAutoCreatePreCool] = useState(true);
+
+  const [savedMsg, setSavedMsg] = useState(false);
+
+  const d = (fn: (v: string) => void) => (v: string) => { fn(v); onDirty(); };
+  const save = () => { setSavedMsg(true); setTimeout(() => setSavedMsg(false), 2000); };
+
+  return (
+    <SectionWrap title="Reefer Operations" onSave={save} savedMsg={savedMsg}>
+      <Card>
+        <GroupLabel>Temperature Log Cadence</GroupLabel>
+        <FieldRow label="Logging interval (hours)" hint="How often crew records a reading on laden reefers. Default 4h.">
+          <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+            <TF value={cadenceHrs} onChange={d(setCadenceHrs)} type="number" mono />
+            <span style={{ fontSize: 13, color: 'var(--gecko-text-secondary)' }}>hours</span>
+          </div>
+        </FieldRow>
+        <FieldRow label="Grace period (minutes)" hint="Buffer after cadence elapses before NO_READING alarm fires">
+          <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+            <TF value={graceMins} onChange={d(setGraceMins)} type="number" mono />
+            <span style={{ fontSize: 13, color: 'var(--gecko-text-secondary)' }}>min</span>
+          </div>
+        </FieldRow>
+        <FieldRow label="Deviation grace (minutes)" hint="Minimum duration a temp must stay outside band before DEVIATION alarm fires">
+          <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+            <TF value={devGraceMins} onChange={d(setDevGraceMins)} type="number" mono />
+            <span style={{ fontSize: 13, color: 'var(--gecko-text-secondary)' }}>min</span>
+          </div>
+        </FieldRow>
+      </Card>
+
+      <Card>
+        <GroupLabel>Cargo Tolerance Bands</GroupLabel>
+        <FieldRow label="Pharma (± °C)" hint="Tightest band — temperature excursions outside this trigger DEVIATION alarms">
+          <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+            <TF value={tolPharma} onChange={d(setTolPharma)} type="number" mono />
+            <span style={{ fontSize: 13, color: 'var(--gecko-text-secondary)' }}>°C</span>
+          </div>
+        </FieldRow>
+        <FieldRow label="Food (± °C)" hint="Standard band for frozen / chilled foods">
+          <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+            <TF value={tolFood} onChange={d(setTolFood)} type="number" mono />
+            <span style={{ fontSize: 13, color: 'var(--gecko-text-secondary)' }}>°C</span>
+          </div>
+        </FieldRow>
+        <FieldRow label="Non-critical (± °C)" hint="Loose band for transit, ambient, or non-sensitive cargo">
+          <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+            <TF value={tolNonCrit} onChange={d(setTolNonCrit)} type="number" mono />
+            <span style={{ fontSize: 13, color: 'var(--gecko-text-secondary)' }}>°C</span>
+          </div>
+        </FieldRow>
+      </Card>
+
+      <Card>
+        <GroupLabel>Pre-Cool Defaults</GroupLabel>
+        <FieldRow label="Target hours before stuffing" hint="Pre-cool ETA — typically 6h for a 40RF from ambient to -18°C">
+          <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+            <TF value={preCoolHrs} onChange={d(setPreCoolHrs)} type="number" mono />
+            <span style={{ fontSize: 13, color: 'var(--gecko-text-secondary)' }}>hours</span>
+          </div>
+        </FieldRow>
+        <FieldRow label="Auto-create from booking" hint="When a reefer is assigned to an export booking with a target temp, auto-create the pre-cool task">
+          <Toggle on={autoCreatePreCool} onChange={v => { setAutoCreatePreCool(v); onDirty(); }} />
+        </FieldRow>
+      </Card>
+
+      <Card>
+        <GroupLabel>PTI (Pre-Trip Inspection)</GroupLabel>
+        <FieldRow label="Default protocol" hint="Generic 12-step checklist v1. Per-liner branches (Maersk / MSC / CMA) coming Phase 2.">
+          <Sel value={ptiProtocol} onChange={v => { setPtiProtocol(v); onDirty(); }} options={[
+            { v: 'V1',          l: 'Generic — Protocol v1 (12 steps)' },
+            { v: 'MAERSK_V25',  l: 'Maersk — Protocol v25 (Phase 2)' },
+            { v: 'MSC_V12',     l: 'MSC — Protocol v12 (Phase 2)' },
+            { v: 'CMA_V08',     l: 'CMA — Protocol v8 (Phase 2)' },
+          ]} />
+        </FieldRow>
+        <FieldRow label="Required for export" hint="Block gate-out for exports until PTI is passed">
+          <Toggle on={ptiRequiredForExport} onChange={v => { setPtiRequiredForExport(v); onDirty(); }} />
+        </FieldRow>
+        <FieldRow label="Auto-schedule on empty pickup" hint="Create a PTI task automatically when an empty is allocated to a haulier">
+          <Toggle on={ptiAutoOnPickup} onChange={v => { setPtiAutoOnPickup(v); onDirty(); }} />
+        </FieldRow>
+      </Card>
+    </SectionWrap>
+  );
+}
+
 // ── Section 5 — Notifications ─────────────────────────────────────────────────
 
 interface NotifRule {
@@ -999,7 +1107,7 @@ function IntegrationSection({ onDirty }: { onDirty: () => void }) {
 export default function SystemParamsPage() {
   const [activeSection, setActiveSection] = useState<SectionId>('general');
   const [dirtyMap, setDirtyMap] = useState<Record<SectionId, boolean>>({
-    general: false, financial: false, gate: false, yard: false, notifications: false, integration: false,
+    general: false, financial: false, gate: false, yard: false, reefer: false, notifications: false, integration: false,
   });
 
   const markDirty = useCallback((id: SectionId) => {
@@ -1019,6 +1127,7 @@ export default function SystemParamsPage() {
       case 'financial':     return <FinancialSection     onDirty={makeDirtyHandler('financial')}     />;
       case 'gate':          return <GateSection          onDirty={makeDirtyHandler('gate')}          />;
       case 'yard':          return <YardSection          onDirty={makeDirtyHandler('yard')}          />;
+      case 'reefer':        return <ReeferSection        onDirty={makeDirtyHandler('reefer')}        />;
       case 'notifications': return <NotificationsSection onDirty={makeDirtyHandler('notifications')} />;
       case 'integration':   return <IntegrationSection   onDirty={makeDirtyHandler('integration')}   />;
     }

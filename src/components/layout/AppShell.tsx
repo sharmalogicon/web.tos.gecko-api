@@ -96,6 +96,7 @@ const NAV = [
       { id: 'eir-in-v2', label: 'EIR-In V2 (HUD)', path: '/gate/eir-in-v2' },
       { id: 'eir-out', label: 'EIR-Out', path: '/gate/eir-out' },
       { id: 'yard-view', label: 'Yard Plan', path: '/gate/yard-view' },
+      { id: 'reefer-ops', label: 'Reefer Operations', path: '/gate/reefer-ops' },
       { id: 'moves-planner', label: 'Moves Planner', path: '/gate/moves-planner' },
     ]
   },

@@ -284,9 +284,67 @@ const INTENTS: Intent[] = [
         `• **Other blocks** — 16 reefer containers on incidental plug points\n\n` +
         `Next reefer event: PTI scheduled in 2 hours for 3 containers (MAEU/ONEU).`,
       ctas: [
+        { label: 'Open Reefer Operations', href: '/gate/reefer-ops' },
         { label: 'Open Yard at a Glance · Reefer lens', href: '/dashboard/yard-glance' },
       ],
-      followUps: ['Show today\'s PTI events', 'Show reefer charges this week'],
+      followUps: ['Show reefer alarms', 'Containers pending PTI'],
+    }),
+  },
+
+  /* ── 8a. Reefer alarms ────────────────────────────────────────────── */
+  {
+    id: 'reefer-alarms',
+    match: (q) => /(reefer|any|open).*alarm|alarm.*reefer|temperature.*deviat|deviation.*temp/.test(q),
+    handle: () => ({
+      text:
+        `**2 open reefer alarms** right now:\n\n` +
+        `• **OOLU8821443** — DEVIATION · supply 2.9°C vs set-pt 2°C (pharma band is ±0.5°C). ` +
+        `OOCL, Indorama booking. Crew dispatched.\n` +
+        `• **ONEU5582147** — NO_READING · last log 5.1h ago (cadence 4h). ONE, food band. ` +
+        `Plug shows healthy — likely missed scan.\n\n` +
+        `Plus 1 unit fault: **YMLU8014228** — compressor failed PTI, quarantined for M&R.`,
+      ctas: [
+        { label: 'Open Reefer Operations', href: '/gate/reefer-ops' },
+      ],
+      followUps: ['Containers pending PTI', 'Show reefer plug status'],
+    }),
+  },
+
+  /* ── 8b. PTI / pending inspections ────────────────────────────────── */
+  {
+    id: 'reefer-pti',
+    match: (q) => /pti|pre.?trip|pending.*inspect|inspection.*reefer|containers.*pti/.test(q),
+    handle: () => ({
+      text:
+        `**PTI status today:**\n\n` +
+        `• **1 pending**: MSKU7234561 (MAERSK) — awaiting tech assignment\n` +
+        `• **1 in progress**: HMMU4471992 (HMM) — Somchai K., 7 of 12 steps done\n` +
+        `• **1 passed**: WHLU5566108 (WAN HAI) — all 12 steps clean, cool-down rate excellent\n` +
+        `• **1 failed**: YMLU8014228 (YANG MING) — compressor fault, quarantined for M&R\n\n` +
+        `Protocol: generic v1 (12 steps). Per-liner branches arrive Phase 2.`,
+      ctas: [
+        { label: 'Open Reefer Operations · PTI tab', href: '/gate/reefer-ops' },
+      ],
+      followUps: ['Show pre-cool in progress', 'Show reefer alarms'],
+    }),
+  },
+
+  /* ── 8c. Pre-cool status ──────────────────────────────────────────── */
+  {
+    id: 'reefer-precool',
+    match: (q) => /pre.?cool|cooling.*progress|reefer.*cool/.test(q),
+    handle: () => ({
+      text:
+        `**Pre-cool tasks today:**\n\n` +
+        `• **2 in progress**: MAEU8842301 (3.5h run, food -18°C target), ` +
+        `CRSU3398472 (1.2h run, pharma 2°C target — Indorama)\n` +
+        `• **1 requested**: CMAU8843901 — awaiting plug assignment\n` +
+        `• **2 completed today**: TGHU9981233 (pharma -25°C), ONEU2113381 (food -18°C)\n\n` +
+        `All pre-cools auto-created from export bookings with declared target temps.`,
+      ctas: [
+        { label: 'Open Reefer Operations · Pre-Cool tab', href: '/gate/reefer-ops' },
+      ],
+      followUps: ['Show reefer alarms', 'Containers pending PTI'],
     }),
   },
 
@@ -321,6 +379,7 @@ const INTENTS: Intent[] = [
       const routes: { keywords: RegExp; label: string; href: string }[] = [
         { keywords: /yard.?(at.?)?(a.?)?glance|yard.?dashboard|aerial/, label: 'Yard at a Glance', href: '/dashboard/yard-glance' },
         { keywords: /yard.?view|yard.?plan|yard.?map|heatmap/,            label: 'Yard view',           href: '/gate/yard-view' },
+        { keywords: /reefer.?ops?|reefer.?operation|reefer.?manager|reefer.?workbench/, label: 'Reefer Operations',   href: '/gate/reefer-ops' },
         { keywords: /yard.?zones?|yard.?editor/,                          label: 'Yard editor',         href: '/config/yard-zones' },
         { keywords: /kiosk/,                                              label: 'Gate Kiosk',          href: '/gate/kiosk' },
         { keywords: /auto.?gate/,                                         label: 'Auto-Gate',           href: '/config/auto-gate' },

@@ -736,6 +736,39 @@
   flex-direction: column;
   z-index: var(--gecko-z-modal);
   animation: gecko-slide-in-drawer 250ms var(--gecko-ease-in-out) both;
+  position: fixed;
+  top: 0;
+  right: 0;
+  bottom: 0;
+}
+
+.gecko-drawer-scrim {
+  position: fixed;
+  inset: 0;
+  background: rgba(15, 23, 42, 0.32);
+  backdrop-filter: blur(1.5px);
+  z-index: calc(var(--gecko-z-modal) - 1);
+  animation: gecko-fade-in 180ms ease-out both;
+}
+
+@keyframes gecko-fade-in {
+  from { opacity: 0; }
+  to   { opacity: 1; }
+}
+
+.gecko-drawer-title {
+  font-size: 15px;
+  font-weight: 700;
+  color: var(--gecko-text-primary);
+  letter-spacing: -0.01em;
+  line-height: 1.2;
+}
+
+.gecko-drawer-subtitle {
+  font-size: 12px;
+  color: var(--gecko-text-secondary);
+  margin-top: 4px;
+  line-height: 1.4;
 }
 
 .gecko-drawer-lg { max-width: 640px; }
@@ -5084,5 +5117,637 @@ input[type="checkbox"].gecko-toggle.gecko-toggle-sm:checked::after { transform: 
   .gecko-ai-bubble {
     max-width: calc(100vw - 110px);
   }
+}
+
+
+/* ============================================================
+   SECTION 5.39 — REEFER OPERATIONS
+   ------------------------------------------------------------
+   Used by /gate/reefer-ops — the three-tab reefer workbench
+   (Pre-Cool, PTI, Monitoring). Also defines a small set of
+   generic primitives the page leans on:
+     - .gecko-page-container, .gecko-num, .gecko-mono
+     - .gecko-form-row, .gecko-form-row-full
+
+   These generic helpers stay general — other future pages
+   should reuse them rather than redefine.
+   ============================================================ */
+
+/* ── 5.39.a Generic primitives ───────────────────────────── */
+
+.gecko-page-container {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.gecko-num   { text-align: right; }
+.gecko-mono  { font-family: var(--gecko-font-mono); font-feature-settings: 'tnum'; }
+
+.gecko-form-row {
+  display: grid;
+  grid-template-columns: 140px 1fr;
+  gap: 12px;
+  align-items: center;
+  font-size: 13px;
+}
+
+.gecko-form-row > span:first-child {
+  font-weight: 500;
+  color: var(--gecko-text-secondary);
+}
+
+.gecko-form-row-full {
+  grid-column: 1 / -1;
+  grid-template-columns: 1fr;
+  align-items: start;
+}
+
+.gecko-form-row-full > span:first-child {
+  margin-bottom: 4px;
+  font-size: 12px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: var(--gecko-text-secondary);
+}
+
+/* ── 5.39.b Page header ──────────────────────────────────── */
+
+.gecko-reefer-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 4px;
+}
+
+.gecko-reefer-header-left {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.gecko-reefer-header-icon {
+  width: 38px;
+  height: 38px;
+  border-radius: 10px;
+  background: var(--gecko-primary-50);
+  color: var(--gecko-primary-700);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+.gecko-reefer-header-title {
+  margin: 0;
+  font-size: 20px;
+  font-weight: 700;
+  letter-spacing: -0.02em;
+  color: var(--gecko-text-primary);
+  line-height: 1.15;
+}
+
+.gecko-reefer-header-sub {
+  margin: 2px 0 0;
+  font-size: 12.5px;
+  color: var(--gecko-text-secondary);
+}
+
+/* ── 5.39.c KPI strip ────────────────────────────────────── */
+
+.gecko-reefer-kpi-strip {
+  display: grid;
+  grid-template-columns: repeat(5, minmax(0, 1fr));
+  gap: 10px;
+}
+
+@media (max-width: 1100px) {
+  .gecko-reefer-kpi-strip {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+}
+
+@media (max-width: 640px) {
+  .gecko-reefer-kpi-strip {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+/* ── 5.39.d Tabs ─────────────────────────────────────────── */
+
+.gecko-reefer-tabs {
+  margin-top: 4px;
+}
+
+.gecko-reefer-tab-count {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 20px;
+  padding: 0 6px;
+  height: 18px;
+  border-radius: 999px;
+  background: var(--gecko-bg-subtle);
+  color: var(--gecko-text-secondary);
+  font-size: 10.5px;
+  font-weight: 700;
+  margin-left: 2px;
+}
+
+.gecko-tab-active .gecko-reefer-tab-count {
+  background: var(--gecko-primary-100);
+  color: var(--gecko-primary-700);
+}
+
+/* ── 5.39.e Tab body ─────────────────────────────────────── */
+
+.gecko-reefer-body {
+  background: var(--gecko-bg-surface);
+  border: 1px solid var(--gecko-border);
+  border-radius: 12px;
+  overflow: hidden;
+}
+
+/* Match the dense ops-screen convention used in /billing/unbilled, /bookings,
+   /tariff/plans — 12px body, compact padding. The design-system default of
+   14px + 12/16px padding is right for masters / list pages but too loose for
+   high-density operational tables. */
+.gecko-reefer-body .gecko-table {
+  font-size: 12px;
+}
+
+.gecko-reefer-body .gecko-table th,
+.gecko-reefer-body .gecko-table td {
+  padding: 7px 12px;
+}
+
+.gecko-reefer-body .gecko-table th {
+  font-size: 10.5px;
+}
+
+.gecko-reefer-actions {
+  display: inline-flex;
+  gap: 6px;
+  align-items: center;
+}
+
+.gecko-reefer-trend-good {
+  color: var(--gecko-success-600);
+  margin-left: 4px;
+  vertical-align: middle;
+}
+
+.gecko-reefer-row-alarm td {
+  background: rgba(239, 68, 68, 0.04);
+}
+
+.gecko-reefer-row-alarm:hover td {
+  background: rgba(239, 68, 68, 0.08) !important;
+}
+
+.gecko-reefer-plug {
+  font-size: 12px;
+  color: var(--gecko-text-primary);
+}
+
+.gecko-reefer-overdue {
+  color: var(--gecko-error-700);
+  font-weight: 600;
+}
+
+/* ── 5.39.f Temperature reading drawer ───────────────────── */
+
+.gecko-reefer-form-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 14px 18px;
+}
+
+.gecko-reefer-form-grid > .gecko-form-row-full {
+  grid-column: 1 / -1;
+}
+
+.gecko-reefer-history {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.gecko-reefer-history-table th,
+.gecko-reefer-history-table td {
+  font-size: 11.5px;
+}
+
+/* ── 5.39.g PTI checklist ────────────────────────────────── */
+
+.gecko-pti-checklist {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+  background: var(--gecko-border);
+  border: 1px solid var(--gecko-border);
+  border-radius: 10px;
+  overflow: hidden;
+}
+
+.gecko-pti-item {
+  display: grid;
+  grid-template-columns: 32px 1fr auto;
+  gap: 12px;
+  padding: 12px 14px;
+  background: var(--gecko-bg-surface);
+  align-items: start;
+}
+
+.gecko-pti-step {
+  width: 24px;
+  height: 24px;
+  border-radius: 50%;
+  background: var(--gecko-bg-subtle);
+  color: var(--gecko-text-secondary);
+  font-size: 11px;
+  font-weight: 700;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+.gecko-pti-content {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  min-width: 0;
+}
+
+.gecko-pti-label {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--gecko-text-primary);
+  line-height: 1.3;
+}
+
+.gecko-pti-hint {
+  font-size: 11.5px;
+  color: var(--gecko-text-secondary);
+  line-height: 1.4;
+}
+
+.gecko-pti-note {
+  margin-top: 6px;
+  max-width: 320px;
+}
+
+.gecko-pti-actions {
+  display: flex;
+  align-items: center;
+}
+
+.gecko-pti-notes {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  margin-top: 4px;
+}
+
+/* ── 5.39.h PTI result picker (segmented control) ────────── */
+
+.gecko-pti-picker {
+  display: inline-flex;
+  border: 1px solid var(--gecko-border);
+  border-radius: 8px;
+  overflow: hidden;
+  background: var(--gecko-bg-surface);
+}
+
+.gecko-pti-pick {
+  border: none;
+  background: transparent;
+  padding: 6px 12px;
+  font-family: inherit;
+  font-size: 11.5px;
+  font-weight: 600;
+  color: var(--gecko-text-secondary);
+  cursor: pointer;
+  transition: background var(--gecko-transition-fast), color var(--gecko-transition-fast);
+  border-right: 1px solid var(--gecko-border);
+}
+
+.gecko-pti-pick:last-child {
+  border-right: none;
+}
+
+.gecko-pti-pick:hover:not(:disabled) {
+  background: var(--gecko-bg-subtle);
+  color: var(--gecko-text-primary);
+}
+
+.gecko-pti-pick:disabled {
+  cursor: not-allowed;
+  opacity: 0.55;
+}
+
+.gecko-pti-pick-ok.gecko-pti-pick-active {
+  background: var(--gecko-success-100);
+  color: var(--gecko-success-700);
+}
+
+.gecko-pti-pick-not-ok.gecko-pti-pick-active {
+  background: var(--gecko-error-100);
+  color: var(--gecko-error-700);
+}
+
+.gecko-pti-pick-na.gecko-pti-pick-active {
+  background: var(--gecko-gray-100);
+  color: var(--gecko-gray-700);
+}
+
+/* ── 5.39.i Pre-cool drawer ──────────────────────────────── */
+
+.gecko-reefer-precool-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 10px;
+}
+
+.gecko-reefer-stat {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  padding: 10px 12px;
+  background: var(--gecko-bg-subtle);
+  border-radius: 8px;
+}
+
+.gecko-reefer-stat-label {
+  font-size: 10.5px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--gecko-text-secondary);
+}
+
+.gecko-reefer-stat-value {
+  font-size: 14px;
+  font-weight: 700;
+  color: var(--gecko-text-primary);
+  font-family: var(--gecko-font-mono);
+}
+
+.gecko-reefer-progress {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.gecko-reefer-progress-bar {
+  height: 8px;
+  background: var(--gecko-bg-subtle);
+  border-radius: 4px;
+  overflow: hidden;
+}
+
+.gecko-reefer-progress-fill {
+  height: 100%;
+  background: linear-gradient(90deg, var(--gecko-primary-400), var(--gecko-primary-600));
+  transition: width 0.3s ease;
+}
+
+.gecko-reefer-progress-foot {
+  font-size: 11.5px;
+  color: var(--gecko-text-secondary);
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  flex-wrap: wrap;
+}
+
+/* ── 5.39.j New-task page (/gate/reefer-ops/new) ─────────── */
+
+.gecko-reefer-new-form {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  max-width: 880px;
+}
+
+.gecko-reefer-new-card {
+  background: var(--gecko-bg-surface);
+  border: 1px solid var(--gecko-border);
+  border-radius: 12px;
+  padding: 18px 22px;
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+/* Task-type picker — 3-up segmented cards */
+.gecko-reefer-task-picker {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 10px;
+}
+
+@media (max-width: 760px) {
+  .gecko-reefer-task-picker {
+    grid-template-columns: 1fr;
+  }
+}
+
+.gecko-reefer-task-pick {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  padding: 14px 14px;
+  border: 1px solid var(--gecko-border);
+  border-radius: 10px;
+  background: var(--gecko-bg-surface);
+  cursor: pointer;
+  font-family: inherit;
+  text-align: left;
+  transition: border-color var(--gecko-transition-fast),
+              background var(--gecko-transition-fast),
+              transform var(--gecko-transition-fast);
+  color: var(--gecko-text-secondary);
+}
+
+.gecko-reefer-task-pick:hover {
+  border-color: var(--gecko-primary-300);
+  background: var(--gecko-bg-subtle);
+  color: var(--gecko-text-primary);
+}
+
+.gecko-reefer-task-pick:active {
+  transform: translateY(1px);
+}
+
+.gecko-reefer-task-pick-active,
+.gecko-reefer-task-pick-active:hover {
+  border-color: var(--gecko-primary-600);
+  background: var(--gecko-primary-50);
+  color: var(--gecko-primary-700);
+  box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.10);
+}
+
+.gecko-reefer-task-pick-text {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  min-width: 0;
+}
+
+.gecko-reefer-task-pick-label {
+  font-size: 13.5px;
+  font-weight: 700;
+  color: var(--gecko-text-primary);
+  line-height: 1.2;
+}
+
+.gecko-reefer-task-pick-active .gecko-reefer-task-pick-label {
+  color: var(--gecko-primary-700);
+}
+
+.gecko-reefer-task-pick-hint {
+  font-size: 11.5px;
+  color: var(--gecko-text-secondary);
+  line-height: 1.4;
+}
+
+/* Container picker (typeahead) */
+.gecko-reefer-container-picker {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.gecko-reefer-typeahead {
+  position: relative;
+}
+
+.gecko-reefer-suggest {
+  position: absolute;
+  top: calc(100% + 4px);
+  left: 0;
+  right: 0;
+  background: var(--gecko-bg-surface);
+  border: 1px solid var(--gecko-border);
+  border-radius: 10px;
+  box-shadow: 0 10px 30px rgba(15, 23, 42, 0.10);
+  max-height: 280px;
+  overflow-y: auto;
+  z-index: 5;
+}
+
+.gecko-reefer-suggest-row {
+  width: 100%;
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 9px 14px;
+  background: transparent;
+  border: none;
+  font-family: inherit;
+  text-align: left;
+  cursor: pointer;
+  border-bottom: 1px solid var(--gecko-border);
+  color: var(--gecko-text-primary);
+  transition: background var(--gecko-transition-fast);
+}
+
+.gecko-reefer-suggest-row:last-child {
+  border-bottom: none;
+}
+
+.gecko-reefer-suggest-row:hover {
+  background: var(--gecko-bg-subtle);
+}
+
+.gecko-reefer-suggest-meta {
+  font-size: 11.5px;
+  color: var(--gecko-text-secondary);
+}
+
+/* Matched / info / warn card under the container input */
+.gecko-reefer-matched-card {
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+  padding: 9px 12px;
+  border-radius: 8px;
+  background: var(--gecko-success-50);
+  color: var(--gecko-success-700);
+  font-size: 12px;
+  line-height: 1.5;
+}
+
+.gecko-reefer-matched-info {
+  background: var(--gecko-info-50);
+  color: var(--gecko-info-700);
+}
+
+.gecko-reefer-matched-warn {
+  background: var(--gecko-warning-50);
+  color: var(--gecko-warning-700);
+}
+
+.gecko-reefer-matched-icon {
+  flex-shrink: 0;
+  margin-top: 2px;
+}
+
+.gecko-reefer-matched-text {
+  flex: 1;
+}
+
+.gecko-reefer-matched-text strong {
+  font-weight: 700;
+}
+
+/* Inline checkbox row */
+.gecko-reefer-inline-check {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 13px;
+  color: var(--gecko-text-primary);
+  cursor: pointer;
+}
+
+.gecko-reefer-inline-check input[type="checkbox"] {
+  accent-color: var(--gecko-primary-600);
+  width: 15px;
+  height: 15px;
+  margin: 0;
+}
+
+/* ETA / hint card at bottom of workflow section */
+.gecko-reefer-eta-card {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 9px 12px;
+  border-radius: 8px;
+  background: var(--gecko-info-50);
+  color: var(--gecko-info-700);
+  font-size: 12px;
+  line-height: 1.5;
+}
+
+.gecko-reefer-eta-card-warn {
+  background: var(--gecko-warning-50);
+  color: var(--gecko-warning-700);
+}
+
+/* Footer (Cancel · Create) */
+.gecko-reefer-new-footer {
+  display: flex;
+  justify-content: flex-end;
+  gap: 10px;
+  padding-top: 4px;
 }
 
