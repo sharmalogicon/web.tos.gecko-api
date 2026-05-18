@@ -5,7 +5,7 @@ import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { Icon } from '../ui/Icon';
 import { ToastProvider } from '../ui/Toast';
-import { AskGeckoWidget } from '../ai/AskGeckoWidget';
+import { AskGeckoProvider, AskGeckoTrigger } from '../ai/AskGeckoWidget';
 import { autoSeedIfEmpty, seedDemoData } from '@/lib/demo-seed';
 
 // Page-title / breadcrumb derivation from the NAV tree. Single source of truth:
@@ -97,6 +97,7 @@ const NAV = [
       { id: 'eir-out', label: 'EIR-Out', path: '/gate/eir-out' },
       { id: 'yard-view', label: 'Yard Plan', path: '/gate/yard-view' },
       { id: 'reefer-ops', label: 'Reefer Operations', path: '/gate/reefer-ops' },
+      { id: 'container-status', label: 'Container Status Update', path: '/gate/container-status' },
       { id: 'moves-planner', label: 'Moves Planner', path: '/gate/moves-planner' },
     ]
   },
@@ -164,6 +165,7 @@ const NAV = [
       { id: 'container-types', label: 'ISO Container Types', path: '/masters/container-types' },
       { id: 'order-types', label: 'Work Order Types', path: '/masters/order-types' },
       { id: 'charge-codes', label: 'Charge Codes', path: '/masters/charge-codes' },
+      { id: 'seal-series', label: 'Seal Series', path: '/masters/seal-series' },
       // HIDDEN 2026-05-13 — facility & yard hierarchy is now owned by the
       // visual editor at Configuration → Yard Zones & Blocks, which covers
       // both the registry and the spatial layout. Page file kept on disk.
@@ -359,6 +361,8 @@ function Header({ collapsed, onToggleSidebar, pageTitle = "Dashboard", breadcrum
       </div>
 
       <div style={{ marginLeft: 'auto', display: 'flex', alignItems: 'center', gap: 6 }}>
+        <AskGeckoTrigger />
+
         {/* Tenant → Facility → Yard switcher */}
         <button style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '5px 10px 5px 8px', background: 'var(--gecko-bg-surface)', border: '1px solid var(--gecko-border)', borderRadius: 8, fontSize: 12, cursor: 'pointer', fontFamily: 'inherit' }}>
           <div style={{ width: 26, height: 26, borderRadius: 5, background: 'var(--gecko-primary-600)', color: '#fff', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 10, fontWeight: 700, letterSpacing: '0.04em' }}>GK</div>
@@ -422,29 +426,30 @@ export function AppShell({ children }: { children: React.ReactNode }) {
 
   return (
     <ToastProvider>
-      <div className="gecko-app" style={{ position: 'relative', minHeight: '100vh', background: 'var(--gecko-bg-subtle)' }}>
-        <Sidebar
-          collapsed={collapsed}
-          onToggle={() => setCollapsed(c => !c)}
-        />
-        <div className={`gecko-main ${collapsed ? 'gecko-main-collapsed' : ''}`} style={{
-          marginLeft: collapsed ? 'var(--gecko-sidebar-width-collapsed)' : 'var(--gecko-sidebar-width)',
-          minHeight: '100vh',
-          display: 'flex',
-          flexDirection: 'column'
-        }}>
-          <Header
+      <AskGeckoProvider>
+        <div className="gecko-app" style={{ position: 'relative', minHeight: '100vh', background: 'var(--gecko-bg-subtle)' }}>
+          <Sidebar
             collapsed={collapsed}
-            onToggleSidebar={() => setCollapsed(c => !c)}
-            pageTitle={pageTitle}
-            breadcrumbs={breadcrumbs}
+            onToggle={() => setCollapsed(c => !c)}
           />
-          <main className="gecko-content" style={{ flex: 1, padding: 'var(--gecko-space-6)', overflowX: 'auto' }}>
-            {children}
-          </main>
+          <div className={`gecko-main ${collapsed ? 'gecko-main-collapsed' : ''}`} style={{
+            marginLeft: collapsed ? 'var(--gecko-sidebar-width-collapsed)' : 'var(--gecko-sidebar-width)',
+            minHeight: '100vh',
+            display: 'flex',
+            flexDirection: 'column'
+          }}>
+            <Header
+              collapsed={collapsed}
+              onToggleSidebar={() => setCollapsed(c => !c)}
+              pageTitle={pageTitle}
+              breadcrumbs={breadcrumbs}
+            />
+            <main className="gecko-content" style={{ flex: 1, padding: 'var(--gecko-space-6)', overflowX: 'auto' }}>
+              {children}
+            </main>
+          </div>
         </div>
-        <AskGeckoWidget />
-      </div>
+      </AskGeckoProvider>
     </ToastProvider>
   );
 }
