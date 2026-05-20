@@ -6470,3 +6470,443 @@ input[type="checkbox"].gecko-toggle.gecko-toggle-sm:checked::after { transform: 
   font-weight: 600;
 }
 
+
+/* ============================================================
+   SECTION 7 — ATOMIC TEXT PATTERNS
+   ------------------------------------------------------------
+   Frozen contract. Semantic single-purpose classes that
+   collapse the most-repeated inline style combinations across
+   the app into named primitives. Documented in STYLE-CATALOG.md.
+
+   NAMING IS LOCKED. Class names committed here are not renamed.
+   New patterns are added with new §7.x section numbers; old
+   ones may be deprecated with a comment but never renamed.
+   Other Gecko apps (MNR, Trucking, My-portal) import these.
+   ============================================================ */
+
+/* §7.1 — Identifier link */
+.gecko-id-link {
+  font-family: var(--gecko-font-mono);
+  font-size: 12px;
+  font-weight: 700;
+  color: var(--gecko-primary-600);
+  letter-spacing: 0.01em;
+  text-decoration: none;
+}
+.gecko-id-link:hover { color: var(--gecko-primary-700); }
+
+[data-theme="dark"] .gecko-id-link { color: var(--gecko-primary-400); }
+[data-theme="dark"] .gecko-id-link:hover { color: var(--gecko-primary-300); }
+
+/* §7.2 — Primary cell value */
+.gecko-cell-primary {
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--gecko-text-primary);
+}
+
+/* §7.3 — Cell sub-line, mono identifier */
+.gecko-cell-sub {
+  font-family: var(--gecko-font-mono);
+  font-size: 10px;
+  color: var(--gecko-text-disabled);
+  margin-top: 2px;
+  font-weight: 500;
+}
+
+/* §7.4 — Cell meta, non-mono */
+.gecko-cell-meta {
+  font-size: 11px;
+  color: var(--gecko-text-secondary);
+  margin-top: 2px;
+}
+
+/* §7.5 — Eyebrow (small-caps section label) */
+.gecko-eyebrow {
+  font-size: 10px;
+  font-weight: 700;
+  color: var(--gecko-text-secondary);
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+}
+
+/* §7.6 — Page title h1 */
+.gecko-page-title {
+  font-size: 22px;
+  font-weight: 700;
+  color: var(--gecko-text-primary);
+  letter-spacing: -0.02em;
+  margin: 0;
+  line-height: 1.15;
+}
+
+/* §7.7 — Page title h1 (large, dashboards only) */
+.gecko-page-title-lg {
+  font-size: 26px;
+  font-weight: 700;
+  color: var(--gecko-text-primary);
+  letter-spacing: -0.02em;
+  margin: 0;
+  line-height: 1.1;
+}
+
+/* §7.8 — Page subtitle */
+.gecko-page-subtitle {
+  font-size: 13px;
+  color: var(--gecko-text-secondary);
+  line-height: 1.5;
+  max-width: 720px;
+  margin: 0;
+}
+
+/* §7.9 — Card title */
+.gecko-card-title {
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--gecko-text-primary);
+  line-height: 1.3;
+}
+
+/* §7.10 — Card subtitle */
+.gecko-card-subtitle {
+  font-size: 11px;
+  color: var(--gecko-text-secondary);
+  line-height: 1.4;
+  margin-top: 2px;
+}
+
+/* §7.11 — Stat number (KPI value) */
+.gecko-stat-num {
+  font-size: 26px;
+  font-weight: 700;
+  color: var(--gecko-text-primary);
+  line-height: 1;
+  letter-spacing: -0.02em;
+  font-variant-numeric: tabular-nums;
+}
+.gecko-stat-num-sm { font-size: 20px; }
+.gecko-stat-num-lg { font-size: 32px; }
+
+/* §7.11.tones — value tone modifiers (apply alongside .gecko-stat-num) */
+.gecko-tone-primary { color: var(--gecko-primary-600); }
+.gecko-tone-success { color: var(--gecko-success-600); }
+.gecko-tone-warning { color: var(--gecko-warning-600); }
+.gecko-tone-error,
+.gecko-tone-danger  { color: var(--gecko-error-600); }
+.gecko-tone-info    { color: var(--gecko-info-600); }
+.gecko-tone-accent  { color: var(--gecko-accent-600); }
+.gecko-tone-neutral { color: var(--gecko-text-secondary); }
+
+/* §7.12 — Stat label (small caps) */
+.gecko-stat-label {
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--gecko-text-secondary);
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+}
+
+/* §7.13 — Money cell (currency amount, right-aligned) */
+.gecko-money {
+  font-family: var(--gecko-font-mono);
+  font-variant-numeric: tabular-nums;
+  font-weight: 700;
+  text-align: right;
+  color: var(--gecko-text-primary);
+}
+.gecko-money-sm { font-size: 12px; }
+.gecko-money-md { font-size: 13px; }
+.gecko-money-lg { font-size: 14px; font-weight: 800; }
+
+/* §7.14 — Tabular numeric (right-aligned mono) */
+.gecko-num-tabular {
+  font-family: var(--gecko-font-mono);
+  font-variant-numeric: tabular-nums;
+  text-align: right;
+}
+
+/* §7.15 — Mono identifier, non-link */
+.gecko-mono-strong {
+  font-family: var(--gecko-font-mono);
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--gecko-text-primary);
+}
+
+/* §7.16 — Truncating text */
+.gecko-truncate {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* §7.17 — Form helper / hint text */
+.gecko-helper-text {
+  font-size: 11px;
+  color: var(--gecko-text-disabled);
+  margin-top: 4px;
+  line-height: 1.4;
+}
+
+/* §7.18 — Form label */
+.gecko-form-label {
+  font-size: 13px;
+  font-weight: 500;
+  color: var(--gecko-text-primary);
+  line-height: 1.4;
+}
+.gecko-form-label-required::after {
+  content: ' *';
+  color: var(--gecko-error-600);
+}
+
+/* §7.19 — Plain semantic link */
+.gecko-link {
+  color: var(--gecko-primary-600);
+  font-weight: 500;
+  text-decoration: none;
+}
+.gecko-link:hover {
+  color: var(--gecko-primary-700);
+  text-decoration: underline;
+}
+
+/* §7.20 — Muted link */
+.gecko-link-muted {
+  color: var(--gecko-text-secondary);
+  font-weight: 500;
+  text-decoration: none;
+}
+.gecko-link-muted:hover { color: var(--gecko-text-primary); }
+
+
+/* ============================================================
+   SECTION 8 — LAYOUT HELPERS
+   ------------------------------------------------------------
+   Small set of flex/grid utility classes. NOT a Tailwind clone —
+   covers the top ~80% of repeated layout inline-style violations.
+   Anything more bespoke goes into a named §9 composed pattern.
+   ============================================================ */
+
+/* §8.1 — Stack (vertical flex) */
+.gecko-stack    { display: flex; flex-direction: column; gap: 12px; }
+.gecko-stack-xs { gap: 4px; }
+.gecko-stack-sm { gap: 8px; }
+.gecko-stack-md { gap: 12px; }
+.gecko-stack-lg { gap: 16px; }
+.gecko-stack-xl { gap: 24px; }
+
+/* §8.2 — Row (horizontal flex) */
+.gecko-row          { display: flex; align-items: center; gap: 8px; }
+.gecko-row-baseline { align-items: baseline; }
+.gecko-row-start    { align-items: flex-start; }
+.gecko-row-end      { align-items: flex-end; }
+.gecko-row-between  { justify-content: space-between; }
+.gecko-row-right    { justify-content: flex-end; }
+.gecko-row-wrap    { flex-wrap: wrap; }
+
+/* Row gap modifiers reuse the stack scale via shared utility classes
+   when applied alongside .gecko-row. */
+.gecko-row.gecko-stack-xs { gap: 4px; }
+.gecko-row.gecko-stack-sm { gap: 8px; }
+.gecko-row.gecko-stack-md { gap: 12px; }
+.gecko-row.gecko-stack-lg { gap: 16px; }
+.gecko-row.gecko-stack-xl { gap: 24px; }
+
+/* §8.3 — Grids */
+.gecko-grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+.gecko-grid-3 { display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px; }
+.gecko-grid-4 { display: grid; grid-template-columns: repeat(4, 1fr); gap: 12px; }
+.gecko-grid-5 { display: grid; grid-template-columns: repeat(5, 1fr); gap: 12px; }
+
+@media (max-width: 1100px) {
+  .gecko-grid-5, .gecko-grid-4 { grid-template-columns: repeat(3, 1fr); }
+}
+@media (max-width: 760px) {
+  .gecko-grid-5, .gecko-grid-4, .gecko-grid-3 { grid-template-columns: repeat(2, 1fr); }
+}
+@media (max-width: 480px) {
+  .gecko-grid-2 { grid-template-columns: 1fr; }
+}
+
+/* §8.4 — Flex utilities */
+.gecko-flex-1        { flex: 1; min-width: 0; }
+.gecko-flex-none     { flex: none; }
+.gecko-flex-grow     { flex-grow: 1; }
+.gecko-flex-shrink-0 { flex-shrink: 0; }
+.gecko-min-w-0       { min-width: 0; }
+.gecko-ml-auto       { margin-left: auto; }
+
+/* §8.5 — Inline row (for inline-flex icon+text combos) */
+.gecko-inline-row {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+
+
+/* ============================================================
+   SECTION 9 — COMPOSED ELEMENTS
+   ------------------------------------------------------------
+   Named patterns built from §7 + §8 primitives. Use as-is; do
+   not compose §7/§8 to reinvent these.
+   ============================================================ */
+
+/* §9.1 — Page header (h1 + subtitle + actions toolbar) */
+.gecko-page-header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 16px;
+  flex-wrap: wrap;
+}
+.gecko-page-header-left {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  min-width: 0;
+}
+.gecko-page-header-actions {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+/* §9.2 — Mini-icon container (32–38px square, rounded, tinted) */
+.gecko-mini-icon {
+  width: 32px;
+  height: 32px;
+  border-radius: 8px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+.gecko-mini-icon-lg { width: 38px; height: 38px; border-radius: 10px; }
+
+.gecko-mini-icon-primary { background: var(--gecko-primary-50); color: var(--gecko-primary-700); }
+.gecko-mini-icon-success { background: var(--gecko-success-50); color: var(--gecko-success-700); }
+.gecko-mini-icon-warning { background: var(--gecko-warning-50); color: var(--gecko-warning-700); }
+.gecko-mini-icon-error,
+.gecko-mini-icon-danger  { background: var(--gecko-error-50);   color: var(--gecko-error-700); }
+.gecko-mini-icon-info    { background: var(--gecko-info-50);    color: var(--gecko-info-700); }
+.gecko-mini-icon-accent  { background: var(--gecko-accent-50);  color: var(--gecko-accent-700); }
+.gecko-mini-icon-neutral { background: var(--gecko-bg-subtle);  color: var(--gecko-text-secondary); }
+.gecko-mini-icon-solid   { background: var(--gecko-primary-600); color: #fff; }
+
+/* §9.3 — Cell two-line (primary + sub) */
+.gecko-cell-two-line {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+}
+
+/* §9.4 — Stat card (standalone metric inside drawers / side panels) */
+.gecko-stat-card-v2 {
+  background: var(--gecko-bg-surface);
+  border: 1px solid var(--gecko-border);
+  border-radius: 10px;
+  padding: 14px 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+/* §9.5 — KPI strip wrapper */
+.gecko-kpi-strip {
+  display: grid;
+  grid-template-columns: repeat(var(--gecko-kpi-cols, 4), 1fr);
+  gap: 1px;
+  background: var(--gecko-border);
+  border: 1px solid var(--gecko-border);
+  border-radius: 12px;
+  overflow: hidden;
+}
+.gecko-kpi-strip-3 { --gecko-kpi-cols: 3; }
+.gecko-kpi-strip-5 { --gecko-kpi-cols: 5; }
+
+@media (max-width: 1100px) {
+  .gecko-kpi-strip,
+  .gecko-kpi-strip-5 { --gecko-kpi-cols: 3; }
+}
+@media (max-width: 760px) {
+  .gecko-kpi-strip,
+  .gecko-kpi-strip-5 { --gecko-kpi-cols: 2; }
+}
+
+.gecko-kpi-cell {
+  background: var(--gecko-bg-surface);
+  padding: 16px 18px;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+/* §9.6 — Card padding modifiers (works alongside existing .gecko-card) */
+.gecko-card-flush   { padding: 0; }
+.gecko-card-tight   { padding: 12px 14px; }
+.gecko-card-padded  { padding: 20px 22px; }
+
+/* §9.7 — Section divider */
+.gecko-section-divider {
+  height: 1px;
+  background: var(--gecko-border);
+  margin: 6px 0;
+  border: none;
+}
+.gecko-section-divider-dashed {
+  border-top: 1px dashed var(--gecko-border);
+  background: transparent;
+  height: 0;
+  margin: 6px 0;
+}
+
+/* §9.8 — Action toolbar (right-aligned action row) */
+.gecko-action-toolbar {
+  display: flex;
+  justify-content: flex-end;
+  gap: 8px;
+}
+.gecko-action-toolbar-between { justify-content: space-between; }
+.gecko-action-toolbar-start   { justify-content: flex-start; }
+
+/* §9.9 — Empty card (in-section empty state) */
+.gecko-empty-card {
+  padding: 16px;
+  background: var(--gecko-bg-subtle);
+  border-radius: 8px;
+  font-size: 12.5px;
+  color: var(--gecko-text-secondary);
+  text-align: center;
+}
+
+/* §9.10 — Table card (standard wrapper around .gecko-table) */
+.gecko-table-card {
+  background: var(--gecko-bg-surface);
+  border: 1px solid var(--gecko-border);
+  border-radius: 12px;
+  overflow: hidden;
+  box-shadow: var(--gecko-shadow-sm);
+}
+
+
+/* ============================================================
+   SECTION 10 — SPACING UTILITIES
+   ------------------------------------------------------------
+   Use sparingly. Prefer .gecko-stack / .gecko-row with gap
+   modifiers. Vertical-only — horizontal spacing always achieved
+   with flex/grid gap.
+   ============================================================ */
+
+.gecko-mt-1 { margin-top: 4px; }
+.gecko-mt-2 { margin-top: 8px; }
+.gecko-mt-3 { margin-top: 12px; }
+.gecko-mt-4 { margin-top: 16px; }
+.gecko-mt-5 { margin-top: 24px; }
+
+.gecko-mb-1 { margin-bottom: 4px; }
+.gecko-mb-2 { margin-bottom: 8px; }
+.gecko-mb-3 { margin-bottom: 12px; }
+.gecko-mb-4 { margin-bottom: 16px; }
+.gecko-mb-5 { margin-bottom: 24px; }
+
