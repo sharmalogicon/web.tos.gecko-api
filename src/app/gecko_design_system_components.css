@@ -6910,3 +6910,299 @@ input[type="checkbox"].gecko-toggle.gecko-toggle-sm:checked::after { transform: 
 .gecko-mb-4 { margin-bottom: 16px; }
 .gecko-mb-5 { margin-bottom: 24px; }
 
+
+/* ============================================================
+   SECTION 11 — APP SHELL CHROME (shared across Gecko apps)
+   ------------------------------------------------------------
+   Composed components used in the sidebar/header chrome by
+   AppShell.tsx (TOS) and the equivalent shells in MNR / Trucking
+   / My-portal. Lifted here so all Gecko products share the
+   same brand wordmark + facility switcher + footer-avatar shape.
+   ============================================================ */
+
+/* §11.1 — Brand wordmark (sidebar) — GECKO + product line */
+.gecko-brand-wordmark {
+  display: flex;
+  flex-direction: column;
+  line-height: 1.1;
+}
+.gecko-brand-wordmark-line {
+  font-size: 10px;
+  color: var(--gecko-text-secondary);
+  font-weight: 500;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+}
+
+/* §11.2 — Sidebar demo-data reset button (ops chrome) */
+.gecko-sidebar-demo-btn {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  width: 100%;
+  padding: 6px 8px;
+  margin-bottom: 8px;
+  background: transparent;
+  border: 1px dashed var(--gecko-border);
+  border-radius: 6px;
+  color: var(--gecko-text-disabled);
+  font-size: 10px;
+  font-family: inherit;
+  font-weight: 600;
+  cursor: pointer;
+  text-align: left;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+.gecko-sidebar-demo-btn:hover {
+  border-color: var(--gecko-border-strong);
+  color: var(--gecko-text-secondary);
+}
+
+/* §11.3 — Sidebar footer user row */
+.gecko-sidebar-user-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 8px 4px;
+}
+.gecko-sidebar-user-name {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--gecko-text-primary);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.gecko-sidebar-user-role {
+  font-size: 11px;
+  color: var(--gecko-text-secondary);
+}
+
+/* §11.4 — Facility / tenant switcher in the top header */
+.gecko-facility-switcher {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 5px 10px 5px 8px;
+  background: var(--gecko-bg-surface);
+  border: 1px solid var(--gecko-border);
+  border-radius: 8px;
+  font-size: 12px;
+  cursor: pointer;
+  font-family: inherit;
+}
+.gecko-facility-switcher:hover { background: var(--gecko-bg-subtle); }
+
+.gecko-facility-switcher-mark {
+  width: 26px;
+  height: 26px;
+  border-radius: 5px;
+  background: var(--gecko-primary-600);
+  color: #fff;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+}
+.gecko-facility-switcher-text {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  line-height: 1.15;
+}
+.gecko-facility-switcher-eyebrow {
+  font-size: 10px;
+  color: var(--gecko-text-secondary);
+  font-weight: 500;
+}
+.gecko-facility-switcher-line {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--gecko-text-primary);
+}
+.gecko-facility-switcher-sep {
+  color: var(--gecko-text-disabled);
+  font-weight: 400;
+}
+.gecko-facility-switcher-sub {
+  color: var(--gecko-text-secondary);
+  font-weight: 500;
+}
+
+/* §11.5 — Header search input wrapper */
+.gecko-header-search {
+  flex: 1;
+  max-width: 420px;
+  margin-left: 32px;
+  position: relative;
+}
+.gecko-header-search-icon {
+  position: absolute;
+  left: 12px;
+  top: 50%;
+  transform: translateY(-50%);
+  color: var(--gecko-text-disabled);
+  pointer-events: none;
+}
+.gecko-header-search-input {
+  padding-left: 36px;
+  padding-right: 56px;
+  height: 34px;
+}
+.gecko-header-search-kbd {
+  position: absolute;
+  right: 8px;
+  top: 50%;
+  transform: translateY(-50%);
+}
+
+/* §11.6 — Header locale button */
+.gecko-header-locale-btn {
+  height: 34px;
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--gecko-text-secondary);
+  padding: 0 8px;
+}
+
+/* §11.7 — Header title block (breadcrumb + page title) */
+.gecko-header-title-block {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+}
+.gecko-header-page-title {
+  font-size: 15px;
+  font-weight: 600;
+  color: var(--gecko-text-primary);
+}
+.gecko-header-breadcrumb { font-size: 11px; }
+.gecko-header-breadcrumb .gecko-breadcrumb-current,
+.gecko-header-breadcrumb .gecko-breadcrumb-item { font-size: 11px; }
+
+/* §11.8 — Nav item label (alignment for sidebar) */
+.gecko-nav-item-label { text-align: left; }
+
+/* §11.9 — Header notification button (relative for the dot) */
+.gecko-header-notif-btn { position: relative; }
+
+/* §11.10 — Misc text/icon colour helpers used by the shell */
+.gecko-text-secondary-btn  { color: var(--gecko-text-secondary); }
+.gecko-text-secondary-icon { color: var(--gecko-text-secondary); margin-left: 4px; }
+
+
+/* ============================================================
+   SECTION 12 — SHARED COMPOSITES (OpsPrimitives, FilterBar)
+   ------------------------------------------------------------
+   Classes for the shared UI kit in src/components/ui/OpsPrimitives.tsx.
+   These compositions are used across multiple pages.
+   ============================================================ */
+
+/* §12.1 — Badge size modifier (existing .gecko-badge + size) */
+.gecko-badge-xs { font-size: 10px; padding: 1px 6px; }
+
+/* §12.2 — Filter bar */
+.gecko-filter-bar {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 12px;
+  background: var(--gecko-bg-surface);
+  border: 1px solid var(--gecko-border);
+  border-radius: 8px;
+  flex-wrap: wrap;
+}
+
+.gecko-filter-bar-search {
+  position: relative;
+  flex: 1 1 240px;
+  max-width: 320px;
+}
+.gecko-filter-bar-search-icon {
+  position: absolute;
+  left: 10px;
+  top: 50%;
+  transform: translateY(-50%);
+  color: var(--gecko-text-disabled);
+}
+.gecko-filter-bar-search-input {
+  padding-left: 32px;
+  height: 32px;
+}
+
+.gecko-filter-bar-pill {
+  height: 32px;
+  font-size: 12px;
+  font-weight: 500;
+}
+.gecko-filter-bar-pill-label  { color: var(--gecko-text-secondary); }
+.gecko-filter-bar-pill-value  { font-weight: 600; }
+.gecko-filter-bar-pill-chevron { opacity: 0.6; }
+
+.gecko-filter-bar-add {
+  height: 32px;
+  font-size: 12px;
+  color: var(--gecko-text-secondary);
+}
+
+/* §12.3 — Mini status dot */
+.gecko-status-dot-mini {
+  display: inline-block;
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  margin-right: 6px;
+  flex-shrink: 0;
+}
+.gecko-tone-success-bg { background: var(--gecko-success-500); }
+.gecko-tone-warning-bg { background: var(--gecko-warning-500); }
+.gecko-tone-error-bg,
+.gecko-tone-danger-bg  { background: var(--gecko-error-500); }
+.gecko-tone-info-bg    { background: var(--gecko-info-500); }
+.gecko-tone-gray-bg    { background: var(--gecko-gray-400); }
+.gecko-tone-primary-bg { background: var(--gecko-primary-500); }
+
+/* §12.4 — Stat block (used by Stat component) */
+.gecko-stat-block        { display: block; }
+.gecko-stat-block-left   { text-align: left; }
+.gecko-stat-block-center { text-align: center; }
+.gecko-stat-block-right  { text-align: right; }
+.gecko-stat-block-sub    {
+  font-size: 11px;
+  color: var(--gecko-text-secondary);
+}
+
+/* §12.5 — Form section (label column + fields column) */
+.gecko-form-section {
+  display: grid;
+  grid-template-columns: 260px 1fr;
+  gap: 28px;
+  padding-bottom: 24px;
+  border-bottom: 1px solid var(--gecko-border);
+  margin-bottom: 24px;
+}
+.gecko-form-section-title { font-size: 13px; font-weight: 600; }
+.gecko-form-section-desc {
+  font-size: 11px;
+  color: var(--gecko-text-secondary);
+  margin-top: 4px;
+  line-height: 1.5;
+}
+.gecko-form-section-fields { display: grid; gap: 14px; }
+.gecko-form-section-cols-1 { grid-template-columns: 1fr; }
+.gecko-form-section-cols-2 { grid-template-columns: 1fr 1fr; }
+.gecko-form-section-cols-3 { grid-template-columns: repeat(3, 1fr); }
+
+@media (max-width: 760px) {
+  .gecko-form-section { grid-template-columns: 1fr; gap: 16px; }
+  .gecko-form-section-cols-2,
+  .gecko-form-section-cols-3 { grid-template-columns: 1fr; }
+}
+

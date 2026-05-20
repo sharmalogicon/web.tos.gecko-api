@@ -208,9 +208,9 @@ function Sidebar({ collapsed, onToggle }: { collapsed: boolean, onToggle: () => 
           </svg>
         </div>
         {!collapsed && (
-          <div style={{ display: 'flex', flexDirection: 'column', lineHeight: 1.1 }}>
-            <span className="gecko-logo-text" style={{ fontSize: 15 }}>GECKO</span>
-            <span style={{ fontSize: 10, color: 'var(--gecko-text-secondary)', fontWeight: 500, letterSpacing: '0.1em' }}>TOS · ICD + CFS</span>
+          <div className="gecko-brand-wordmark">
+            <span className="gecko-logo-text">GECKO</span>
+            <span className="gecko-brand-wordmark-line">TOS · ICD + CFS</span>
           </div>
         )}
       </div>
@@ -231,7 +231,7 @@ function Sidebar({ collapsed, onToggle }: { collapsed: boolean, onToggle: () => 
                 <Icon name={mod.icon} size={18} />
                 {!collapsed && (
                   <>
-                    <span style={{ flex: 1, textAlign: 'left' }}>{mod.label}</span>
+                    <span className="gecko-flex-1 gecko-nav-item-label">{mod.label}</span>
                     {mod.children && (
                       <Icon name="chevronDown" size={14} className="gecko-nav-chevron" />
                     )}
@@ -291,30 +291,24 @@ function Sidebar({ collapsed, onToggle }: { collapsed: boolean, onToggle: () => 
                 }
               }}
               title="Re-seed yard layout and sample data for demo purposes"
-              style={{
-                display: 'flex', alignItems: 'center', gap: 8,
-                width: '100%', padding: '6px 8px', marginBottom: 8,
-                background: 'transparent', border: '1px dashed var(--gecko-border)', borderRadius: 6,
-                color: 'var(--gecko-text-disabled)', fontSize: 10, fontFamily: 'inherit',
-                cursor: 'pointer', textAlign: 'left', letterSpacing: '0.04em', textTransform: 'uppercase', fontWeight: 600,
-              }}
+              className="gecko-sidebar-demo-btn"
             >
               <Icon name="refresh" size={11} />
               Demo · reset data
             </button>
-            <div style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '8px 4px' }}>
+            <div className="gecko-sidebar-user-row">
               <div className="gecko-avatar gecko-avatar-accent">SK</div>
-              <div style={{ flex: 1, minWidth: 0 }}>
-                <div style={{ fontSize: 13, fontWeight: 600, color: 'var(--gecko-text-primary)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>Somchai K.</div>
-                <div style={{ fontSize: 11, color: 'var(--gecko-text-secondary)' }}>Terminal Supervisor · LCB</div>
+              <div className="gecko-flex-1 gecko-min-w-0">
+                <div className="gecko-sidebar-user-name">Somchai K.</div>
+                <div className="gecko-sidebar-user-role">Terminal Supervisor · LCB</div>
               </div>
-              <button className="gecko-btn gecko-btn-ghost gecko-btn-icon gecko-btn-sm" title="Sign out" style={{ color: 'var(--gecko-text-secondary)' }}>
+              <button className="gecko-btn gecko-btn-ghost gecko-btn-icon gecko-btn-sm gecko-text-secondary-btn" title="Sign out">
                 <Icon name="logOut" size={15} />
               </button>
             </div>
           </>
         ) : (
-          <div style={{ display: 'flex', justifyContent: 'center' }}>
+          <div className="gecko-row" style={{ justifyContent: 'center' }}>
             <div className="gecko-avatar gecko-avatar-accent">SK</div>
           </div>
         )}
@@ -338,53 +332,51 @@ function Header({ collapsed, onToggleSidebar, pageTitle = "Dashboard", breadcrum
         <Icon name="menu" size={18} />
       </button>
 
-      <div style={{ display: 'flex', flexDirection: 'column', gap: 2, minWidth: 0 }}>
-        <nav className="gecko-breadcrumb" aria-label="Breadcrumb" style={{ fontSize: 11 }}>
+      <div className="gecko-header-title-block">
+        <nav className="gecko-breadcrumb gecko-header-breadcrumb" aria-label="Breadcrumb">
           {breadcrumbs.map((b: string, i: number) => (
             <React.Fragment key={i}>
               {i > 0 && <span className="gecko-breadcrumb-sep" />}
               {i === breadcrumbs.length - 1
-                ? <span className="gecko-breadcrumb-current" style={{ fontSize: 11 }}>{b}</span>
-                : <span className="gecko-breadcrumb-item" style={{ fontSize: 11 }}>{b}</span>
+                ? <span className="gecko-breadcrumb-current">{b}</span>
+                : <span className="gecko-breadcrumb-item">{b}</span>
               }
             </React.Fragment>
           ))}
         </nav>
-        <div style={{ fontSize: 15, fontWeight: 600, color: 'var(--gecko-text-primary)' }}>{pageTitle}</div>
+        <div className="gecko-header-page-title">{pageTitle}</div>
       </div>
 
       {/* Search */}
-      <div style={{ flex: 1, maxWidth: 420, marginLeft: 32, position: 'relative' }}>
-        <Icon name="search" size={16} style={{ position: 'absolute', left: 12, top: '50%', transform: 'translateY(-50%)', color: 'var(--gecko-text-disabled)', pointerEvents: 'none' }} />
-        <input className="gecko-input gecko-input-sm" placeholder="Search unit, booking, EDO, invoice…" style={{ paddingLeft: 36, paddingRight: 56, height: 34 }} />
-        <kbd className="gecko-kbd" style={{ position: 'absolute', right: 8, top: '50%', transform: 'translateY(-50%)' }}>⌘K</kbd>
+      <div className="gecko-header-search">
+        <Icon name="search" size={16} className="gecko-header-search-icon" />
+        <input className="gecko-input gecko-input-sm gecko-header-search-input" placeholder="Search unit, booking, EDO, invoice…" />
+        <kbd className="gecko-kbd gecko-header-search-kbd">⌘K</kbd>
       </div>
 
-      <div style={{ marginLeft: 'auto', display: 'flex', alignItems: 'center', gap: 6 }}>
+      <div className="gecko-ml-auto gecko-row" style={{ gap: 6 }}>
         <AskGeckoTrigger />
 
         {/* Tenant → Facility → Yard switcher */}
-        <button style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '5px 10px 5px 8px', background: 'var(--gecko-bg-surface)', border: '1px solid var(--gecko-border)', borderRadius: 8, fontSize: 12, cursor: 'pointer', fontFamily: 'inherit' }}>
-          <div style={{ width: 26, height: 26, borderRadius: 5, background: 'var(--gecko-primary-600)', color: '#fff', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 10, fontWeight: 700, letterSpacing: '0.04em' }}>GK</div>
-          <div style={{ display: 'flex', alignItems: 'center', gap: 4, lineHeight: 1.15 }}>
-            <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-start' }}>
-              <span style={{ fontSize: 10, color: 'var(--gecko-text-secondary)', fontWeight: 500 }}>GECKO</span>
-              <div style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 12, fontWeight: 600, color: 'var(--gecko-text-primary)' }}>
-                <span>Laem Chabang ICD</span>
-                <span style={{ color: 'var(--gecko-text-disabled)', fontWeight: 400 }}>/</span>
-                <span style={{ color: 'var(--gecko-text-secondary)', fontWeight: 500 }}>Import Yard</span>
-              </div>
+        <button className="gecko-facility-switcher">
+          <div className="gecko-facility-switcher-mark">GK</div>
+          <div className="gecko-facility-switcher-text">
+            <span className="gecko-facility-switcher-eyebrow">GECKO</span>
+            <div className="gecko-facility-switcher-line">
+              <span>Laem Chabang ICD</span>
+              <span className="gecko-facility-switcher-sep">/</span>
+              <span className="gecko-facility-switcher-sub">Import Yard</span>
             </div>
           </div>
-          <Icon name="chevronDown" size={12} style={{ color: 'var(--gecko-text-secondary)', marginLeft: 4 }} />
+          <Icon name="chevronDown" size={12} className="gecko-text-secondary-icon" />
         </button>
 
         {/* Locale */}
-        <button className="gecko-btn gecko-btn-ghost gecko-btn-sm" style={{ height: 34, fontSize: 11, fontWeight: 600, color: 'var(--gecko-text-secondary)', padding: '0 8px' }} title="Language">
+        <button className="gecko-btn gecko-btn-ghost gecko-btn-sm gecko-header-locale-btn" title="Language">
           <Icon name="globe" size={14} /> EN
         </button>
 
-        <button className="gecko-btn gecko-btn-ghost gecko-btn-icon gecko-btn-sm" title="Notifications" style={{ position: 'relative' }}>
+        <button className="gecko-btn gecko-btn-ghost gecko-btn-icon gecko-btn-sm gecko-header-notif-btn" title="Notifications">
           <Icon name="bell" size={17} />
           <span className="gecko-notification-dot" />
         </button>
