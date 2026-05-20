@@ -325,13 +325,13 @@ export default function IntegrationsPage() {
   if (!loaded) return null;
 
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', gap: 14, paddingBottom: isDirty ? 80 : 0 }}>
+    <div className="gecko-stack" style={{ gap: 14, paddingBottom: isDirty ? 80 : 0 }}>
 
       {/* ── Top toolbar ─────────────────────────────────────────────────── */}
-      <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: 12, flexWrap: 'wrap' }}>
-        <div>
-          <div style={{ display: 'flex', alignItems: 'center', gap: 10, flexWrap: 'wrap' }}>
-            <h1 style={{ fontSize: 20, fontWeight: 700, color: 'var(--gecko-text-primary)', margin: 0 }}>Notifications</h1>
+      <div className="gecko-page-header">
+        <div className="gecko-page-header-left">
+          <div className="gecko-row gecko-row-wrap" style={{ gap: 10 }}>
+            <h1 className="gecko-page-title" style={{ fontSize: 20 }}>Notifications</h1>
             {isDirty && (
               <span className="gecko-pill gecko-pill-warning">Unsaved changes</span>
             )}
@@ -339,12 +339,12 @@ export default function IntegrationsPage() {
               <span className="gecko-pill gecko-pill-success">Saved {new Date(config.savedAt).toLocaleTimeString()}</span>
             )}
           </div>
-          <div style={{ fontSize: 12, color: 'var(--gecko-text-secondary)', marginTop: 3 }}>
+          <div className="gecko-page-subtitle" style={{ fontSize: 12, marginTop: 3 }}>
             Configure how Gecko reaches your customers, truckers, and ops team — Laem Chabang ICD
           </div>
         </div>
 
-        <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
+        <div className="gecko-page-header-actions">
           <button onClick={onExport} className="gecko-btn gecko-btn-outline gecko-btn-sm">
             <Icon name="download" size={13} />Export JSON
           </button>
@@ -360,7 +360,7 @@ export default function IntegrationsPage() {
       </div>
 
       {/* ── Quick stats strip ───────────────────────────────────────────── */}
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 10 }}>
+      <div className="gecko-grid-4" style={{ gap: 10 }}>
         <StatTile icon="bell"  label="Active channels"  value={stats.activeChannels} tone="primary" />
         <StatTile icon="zap"   label="Active triggers"  value={stats.activeTriggers} tone="success" />
         <StatTile icon="clock" label="Delivery mode"    value="Realtime"             tone="info" />
@@ -479,10 +479,10 @@ function ChannelsTab({ config, updateChannel, updateChannelField, expandedChanne
   const teamChannels     = (Object.keys(CHANNEL_META) as ChannelId[]).filter(id => CHANNEL_META[id].group === 'team');
 
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
+    <div className="gecko-stack" style={{ gap: 16 }}>
 
       <SectionHeader title="Customer Notification Channels" subtitle="How customers, shippers, and truckers hear from Gecko" />
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: 10, alignItems: 'start' }}>
+      <div className="gecko-grid-2" style={{ gap: 10, alignItems: 'start' }}>
         {customerChannels.map(id => (
           <div key={id} style={{ minWidth: 0 }}>
             <ChannelCard
@@ -621,7 +621,7 @@ function ChannelBrandIcon({ channel }: { channel: ChannelId }) {
 function EmailForm({ state, update, onTest }: { state: ChannelState | undefined; update: (p: Partial<EmailConfig>) => void; onTest: () => void }) {
   const cfg = state?.email!;
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
+    <div className="gecko-stack" style={{ gap: 14 }}>
       <div style={{ display: 'grid', gridTemplateColumns: '2fr 1fr', gap: 12 }}>
         <Field label="SMTP host" required>
           <input className="gecko-input gecko-input-sm" value={cfg.host} onChange={e => update({ host: e.target.value })} placeholder="smtp.gmail.com" />
@@ -630,7 +630,7 @@ function EmailForm({ state, update, onTest }: { state: ChannelState | undefined;
           <input className="gecko-input gecko-input-sm" type="number" value={cfg.port} onChange={e => update({ port: parseInt(e.target.value, 10) || 0 })} />
         </Field>
       </div>
-      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
+      <div className="gecko-grid-2" style={{ gap: 12 }}>
         <Field label="Username" required>
           <input className="gecko-input gecko-input-sm" value={cfg.username} onChange={e => update({ username: e.target.value })} placeholder="your-email@example.com" />
         </Field>
@@ -662,7 +662,7 @@ function EmailForm({ state, update, onTest }: { state: ChannelState | undefined;
           style={{ fontFamily: 'var(--gecko-font-mono)', fontSize: 12, resize: 'vertical' }}
         />
       </Field>
-      <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 8 }}>
+      <div className="gecko-action-toolbar">
         <button onClick={onTest} className="gecko-btn gecko-btn-outline gecko-btn-sm">
           <Icon name="mail" size={13} />Send test email
         </button>
@@ -674,8 +674,8 @@ function EmailForm({ state, update, onTest }: { state: ChannelState | undefined;
 function LineForm({ state, update, onTest, brand }: { state: ChannelState | undefined; update: (p: Partial<LineConfig>) => void; onTest: () => void; brand: ChannelMeta }) {
   const cfg = state?.line!;
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
-      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
+    <div className="gecko-stack" style={{ gap: 14 }}>
+      <div className="gecko-grid-2" style={{ gap: 12 }}>
         <Field label="Channel access token" required hint="From LINE Developers Console → Messaging API channel">
           <input className="gecko-input gecko-input-sm" type="password" value={cfg.channelAccessToken} onChange={e => update({ channelAccessToken: e.target.value })} placeholder="••••••••••••••••" />
         </Field>
@@ -711,7 +711,7 @@ function LineForm({ state, update, onTest, brand }: { state: ChannelState | unde
           </div>
         </div>
       )}
-      <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 8 }}>
+      <div className="gecko-action-toolbar">
         <button onClick={onTest} className="gecko-btn gecko-btn-sm" style={{ background: brand.brandColor, color: '#fff', border: 'none' }}>
           <Icon name="check" size={13} />Connect &amp; send test
         </button>
@@ -723,8 +723,8 @@ function LineForm({ state, update, onTest, brand }: { state: ChannelState | unde
 function WhatsAppForm({ state, update, onTest }: { state: ChannelState | undefined; update: (p: Partial<WhatsAppConfig>) => void; onTest: () => void }) {
   const cfg = state?.whatsapp!;
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
-      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
+    <div className="gecko-stack" style={{ gap: 14 }}>
+      <div className="gecko-grid-2" style={{ gap: 12 }}>
         <Field label="Phone number ID" required hint="WhatsApp Business API · from Meta Business Suite">
           <input className="gecko-input gecko-input-sm" value={cfg.phoneNumberId} onChange={e => update({ phoneNumberId: e.target.value })} placeholder="123456789012345" style={{ fontFamily: 'var(--gecko-font-mono)' }} />
         </Field>
@@ -732,7 +732,7 @@ function WhatsAppForm({ state, update, onTest }: { state: ChannelState | undefin
           <input className="gecko-input gecko-input-sm" type="password" value={cfg.accessToken} onChange={e => update({ accessToken: e.target.value })} placeholder="••••••••••••" />
         </Field>
       </div>
-      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
+      <div className="gecko-grid-2" style={{ gap: 12 }}>
         <Field label="Business display name">
           <input className="gecko-input gecko-input-sm" value={cfg.businessName} onChange={e => update({ businessName: e.target.value })} placeholder="Your business name" />
         </Field>
@@ -740,7 +740,7 @@ function WhatsAppForm({ state, update, onTest }: { state: ChannelState | undefin
           <input className="gecko-input gecko-input-sm" value={cfg.verifiedNumber} onChange={e => update({ verifiedNumber: e.target.value })} placeholder="+66 38 408 408" style={{ fontFamily: 'var(--gecko-font-mono)' }} />
         </Field>
       </div>
-      <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 8 }}>
+      <div className="gecko-action-toolbar">
         <button onClick={onTest} className="gecko-btn gecko-btn-sm" style={{ background: '#25D366', color: '#fff', border: 'none' }}>
           <Icon name="check" size={13} />Verify &amp; send test
         </button>
@@ -752,14 +752,14 @@ function WhatsAppForm({ state, update, onTest }: { state: ChannelState | undefin
 function SlackForm({ state, update, onTest }: { state: ChannelState | undefined; update: (p: Partial<SlackConfig>) => void; onTest: () => void }) {
   const cfg = state?.slack!;
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
+    <div className="gecko-stack" style={{ gap: 14 }}>
       <Field label="Workspace name">
         <input className="gecko-input gecko-input-sm" value={cfg.workspaceName} onChange={e => update({ workspaceName: e.target.value })} placeholder="your-workspace" />
       </Field>
       <Field label="Incoming webhook URL" required hint="Slack Apps → Incoming Webhooks → Add to workspace">
         <input className="gecko-input gecko-input-sm" value={cfg.webhookUrl} onChange={e => update({ webhookUrl: e.target.value })} placeholder="https://hooks.slack.com/services/T.../B.../..." style={{ fontFamily: 'var(--gecko-font-mono)', fontSize: 11.5 }} />
       </Field>
-      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
+      <div className="gecko-grid-2" style={{ gap: 12 }}>
         <Field label="Bot user OAuth token (optional)" hint="Only if you want rich Block Kit replies">
           <input className="gecko-input gecko-input-sm" type="password" value={cfg.botToken} onChange={e => update({ botToken: e.target.value })} placeholder="xoxb-..." />
         </Field>
@@ -767,7 +767,7 @@ function SlackForm({ state, update, onTest }: { state: ChannelState | undefined;
           <input className="gecko-input gecko-input-sm" value={cfg.defaultChannel} onChange={e => update({ defaultChannel: e.target.value })} placeholder="#gecko-alerts" style={{ fontFamily: 'var(--gecko-font-mono)' }} />
         </Field>
       </div>
-      <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 8 }}>
+      <div className="gecko-action-toolbar">
         <button onClick={onTest} className="gecko-btn gecko-btn-sm" style={{ background: '#4A154B', color: '#fff', border: 'none' }}>
           <Icon name="check" size={13} />Send test to {cfg.defaultChannel || 'channel'}
         </button>
@@ -787,7 +787,7 @@ function TriggersTab({ config, toggleTrigger }: { config: IntegrationsConfig; to
 
   return (
     <section className="gecko-card" style={{ padding: 0, overflow: 'hidden' }}>
-      <div style={{ padding: '14px 18px', borderBottom: '1px solid var(--gecko-border)', background: 'var(--gecko-bg-subtle)', display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: 12, flexWrap: 'wrap' }}>
+      <div className="gecko-row gecko-row-start gecko-row-between gecko-row-wrap" style={{ padding: '14px 18px', borderBottom: '1px solid var(--gecko-border)', background: 'var(--gecko-bg-subtle)', gap: 12 }}>
         <div>
           <div style={{ fontSize: 13, fontWeight: 700, color: 'var(--gecko-text-primary)' }}>Event triggers</div>
           <div style={{ fontSize: 11, color: 'var(--gecko-text-secondary)', marginTop: 2 }}>
@@ -905,10 +905,10 @@ function PreviewsTab({ config }: { config: IntegrationsConfig }) {
   const template = TEMPLATES[eventId]?.[locale];
 
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
+    <div className="gecko-stack" style={{ gap: 14 }}>
 
       <section className="gecko-card" style={{ padding: 14 }}>
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 12 }}>
+        <div className="gecko-grid-3" style={{ gap: 12 }}>
           <Field label="Channel">
             <select className="gecko-input gecko-input-sm" value={channel} onChange={e => setChannel(e.target.value as PreviewChannel)}>
               <option value="line">LINE Official Account</option>

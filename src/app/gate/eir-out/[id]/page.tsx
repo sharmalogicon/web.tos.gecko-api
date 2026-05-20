@@ -110,7 +110,7 @@ function StatusDot({ kind }: { kind: string }) {
 function SubBlock({ title, desc, children }: { title: string; desc?: string; children: React.ReactNode }) {
   return (
     <div>
-      <div style={{ display: 'flex', alignItems: 'baseline', gap: 10, marginBottom: 10 }}>
+      <div className="gecko-row gecko-row-baseline gecko-mb-3" style={{ gap: 10 }}>
         <div style={{ fontSize: 11.5, fontWeight: 700, color: 'var(--gecko-text-primary)', letterSpacing: '0.04em', textTransform: 'uppercase' }}>{title}</div>
         {desc && <div style={{ fontSize: 11, color: 'var(--gecko-text-secondary)' }}>{desc}</div>}
       </div>
@@ -165,7 +165,7 @@ function ValidationLine({ ok, label, kind }: { ok: boolean; label: string; kind:
     : kind === 'warning' ? 'var(--gecko-warning-600)'
     : 'var(--gecko-success-600)';
   return (
-    <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+    <div className="gecko-row" style={{ gap: 6 }}>
       <Icon name={ok ? 'check' : 'warning'} size={12} style={{ color: c, flexShrink: 0 }} />
       <span style={{ fontSize: 11.5, color: ok ? 'var(--gecko-text-secondary)' : 'var(--gecko-text-primary)' }}>{label}</span>
     </div>
@@ -218,9 +218,9 @@ function CapacityBar({ teuUsed, cap }: { teuUsed: number; cap: number }) {
 
 function ContextRow({ label, value, mono }: { label: string; value: React.ReactNode; mono?: boolean }) {
   return (
-    <div style={{ display: 'flex', gap: 6, fontSize: 11.5, alignItems: 'baseline' }}>
+    <div className="gecko-row gecko-row-baseline" style={{ gap: 6, fontSize: 11.5 }}>
       <span style={{ color: 'var(--gecko-text-secondary)', minWidth: 88, flexShrink: 0 }}>{label}</span>
-      <span style={{ color: 'var(--gecko-text-primary)', fontWeight: 600, fontFamily: mono ? 'var(--gecko-font-mono)' : undefined, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{value}</span>
+      <span className="gecko-truncate" style={{ color: 'var(--gecko-text-primary)', fontWeight: 600, fontFamily: mono ? 'var(--gecko-font-mono)' : undefined }}>{value}</span>
     </div>
   );
 }
@@ -235,14 +235,14 @@ function AutoFillContext({ move }: { move: ReleaseMove }) {
 
   return (
     <div style={{ background: 'var(--gecko-bg-subtle)', border: '1px solid var(--gecko-border)', borderRadius: 8, padding: '12px 14px' }}>
-      <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 10 }}>
+      <div className="gecko-row gecko-mb-3" style={{ gap: 8 }}>
         <span style={{ fontSize: 10, fontWeight: 700, color: 'var(--gecko-text-secondary)', letterSpacing: '0.06em', textTransform: 'uppercase' }}>From booking</span>
         <span style={{ display: 'inline-flex', alignItems: 'center', padding: '2px 7px', fontSize: 9.5, fontWeight: 700, letterSpacing: '0.05em', borderRadius: 4, background: directionPill.bg, color: directionPill.fg }}>{directionPill.l}</span>
         {move.cargoClass === 'REEFER' && <span style={{ display: 'inline-flex', alignItems: 'center', padding: '2px 7px', fontSize: 9.5, fontWeight: 700, borderRadius: 4, background: 'var(--gecko-info-50)', color: 'var(--gecko-info-700)' }}>REEFER</span>}
         {move.cargoClass === 'HAZ'    && <span className="gecko-pill gecko-pill-warning">HAZ · IMO {move.hazImoClass}</span>}
       </div>
 
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: '6px 18px' }}>
+      <div className="gecko-grid-2" style={{ gap: '6px 18px' }}>
         <ContextRow label="Booking / BL" value={move.bookingNo} mono />
         <ContextRow label="Order type"   value={move.orderTypeDesc} />
         <ContextRow label="Customer"     value={move.customer} />
@@ -298,13 +298,13 @@ function ReleaseForm({ move, onChange }: { move: ReleaseMove; onChange: (p: Part
   const [exceptionsOpen, setExceptionsOpen] = useState(false);
 
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', gap: 18 }}>
+    <div className="gecko-stack" style={{ gap: 18 }}>
 
       {/* Auto-filled context */}
       <AutoFillContext move={move} />
 
       <SubBlock title="Container verification" desc="Scan or type the container number off the unit; confirm it matches the yard plan.">
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 12 }}>
+        <div className="gecko-grid-4">
           <Field label="Planned (yard system)">
             <input className="gecko-input gecko-input-sm" value={move.ctrPlanned} readOnly style={{ fontFamily: 'var(--gecko-font-mono)', fontWeight: 700, background: 'var(--gecko-bg-subtle)' }} />
           </Field>
@@ -331,7 +331,7 @@ function ReleaseForm({ move, onChange }: { move: ReleaseMove; onChange: (p: Part
           </Field>
         </div>
         {move.ctrAssigned && move.ctrPlanned && !ctrMatches && (
-          <div style={{ marginTop: 8, padding: 8, background: 'var(--gecko-error-50)', color: 'var(--gecko-error-700)', borderRadius: 6, fontSize: 11, display: 'flex', alignItems: 'center', gap: 6 }}>
+          <div className="gecko-row gecko-mt-2" style={{ padding: 8, background: 'var(--gecko-error-50)', color: 'var(--gecko-error-700)', borderRadius: 6, fontSize: 11, gap: 6 }}>
             <Icon name="warning" size={13} />
             Container number does not match the yard plan. Confirm with yard supervisor before releasing.
           </div>
@@ -341,7 +341,7 @@ function ReleaseForm({ move, onChange }: { move: ReleaseMove; onChange: (p: Part
       {/* Seals — laden only */}
       {move.isLaden && (
         <SubBlock title="Seals" desc="Verify the seals already on the container and key in the numbers exactly as shown.">
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: 12 }}>
+          <div className="gecko-grid-2">
             <SealField label="Liner Seal"   value={move.linerSeal}   onChange={v => onChange({ linerSeal: v.toUpperCase() })}   placeholder="e.g. ML-4421988" required />
             <SealField label="Shipper Seal" value={move.shipperSeal} onChange={v => onChange({ shipperSeal: v.toUpperCase() })} placeholder="e.g. SH-99201" required />
           </div>
@@ -351,7 +351,7 @@ function ReleaseForm({ move, onChange }: { move: ReleaseMove; onChange: (p: Part
       {/* VGM — laden export only */}
       {isLadenExport && (
         <SubBlock title="VGM (Verified Gross Mass)" desc="Required for laden export per IMO SOLAS Ch.VI Reg.2.">
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 12 }}>
+          <div className="gecko-grid-4">
             <Field label="VGM weight" required>
               <div style={{ position: 'relative' }}>
                 <input
@@ -387,7 +387,7 @@ function ReleaseForm({ move, onChange }: { move: ReleaseMove; onChange: (p: Part
       )}
 
       <SubBlock title="Condition" desc="Visual inspection at the gate.">
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 12 }}>
+        <div className="gecko-grid-4">
           <Field label="Condition Out" required>
             <SegToggle
               value={move.condition}
@@ -418,7 +418,7 @@ function ReleaseForm({ move, onChange }: { move: ReleaseMove; onChange: (p: Part
           )}
         </div>
         {move.condition === 'damaged' && (
-          <div style={{ marginTop: 8, padding: 8, background: 'var(--gecko-warning-50)', color: 'var(--gecko-warning-700)', borderRadius: 6, fontSize: 11, display: 'flex', alignItems: 'center', gap: 6 }}>
+          <div className="gecko-row gecko-mt-2" style={{ padding: 8, background: 'var(--gecko-warning-50)', color: 'var(--gecko-warning-700)', borderRadius: 6, fontSize: 11, gap: 6 }}>
             <Icon name="warning" size={13} />
             Container will be released; M&amp;R work order auto-created for detailed assessment + line chargeback.
           </div>
@@ -448,7 +448,7 @@ function ReleaseForm({ move, onChange }: { move: ReleaseMove; onChange: (p: Part
         </button>
 
         {exceptionsOpen && (
-          <div style={{ marginTop: 10, padding: 14, background: 'var(--gecko-bg-subtle)', borderRadius: 8, display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 12 }}>
+          <div className="gecko-grid-4" style={{ marginTop: 10, padding: 14, background: 'var(--gecko-bg-subtle)', borderRadius: 8 }}>
             <Field label="Pre-trip inspection">
               <SegToggle
                 value={move.preTripPass ? 'pass' : 'fail'}
@@ -513,8 +513,8 @@ function MoveRow({ move, index, open, issues, onToggle, onRemove, onChange }: {
         </div>
 
         {/* Summary */}
-        <div style={{ minWidth: 0 }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 2, flexWrap: 'wrap' }}>
+        <div className="gecko-min-w-0">
+          <div className="gecko-row gecko-row-wrap" style={{ gap: 10, marginBottom: 2 }}>
             <span style={{ fontFamily: 'var(--gecko-font-mono)', fontSize: 14, fontWeight: 700, color: 'var(--gecko-text-primary)' }}>
               {move.ctrAssigned || move.ctrPlanned || '— verify container —'}
             </span>
@@ -526,7 +526,7 @@ function MoveRow({ move, index, open, issues, onToggle, onRemove, onChange }: {
             {move.cargoClass === 'REEFER' && <MoveStatusBadge code="REF" />}
             {move.statusCode === 'DMG'    && <MoveStatusBadge code="DMG" />}
           </div>
-          <div style={{ fontSize: 11, color: 'var(--gecko-text-secondary)', display: 'flex', gap: 8, fontFamily: 'var(--gecko-font-mono)' }}>
+          <div className="gecko-row" style={{ fontSize: 11, color: 'var(--gecko-text-secondary)', gap: 8, fontFamily: 'var(--gecko-font-mono)' }}>
             <span>EDO {move.edo || '—'}</span>
             <span>·</span>
             <span>{move.line || 'line —'}{move.agentCode ? ` (${move.agentCode})` : ''}</span>
@@ -535,7 +535,7 @@ function MoveRow({ move, index, open, issues, onToggle, onRemove, onChange }: {
         </div>
 
         {/* Validation badges */}
-        <div style={{ display: 'flex', gap: 5 }}>
+        <div className="gecko-row" style={{ gap: 5 }}>
           {errCount  > 0 && <span className="gecko-pill gecko-pill-danger"><Icon name="warning" size={10} />{errCount}</span>}
           {warnCount > 0 && <span className="gecko-pill gecko-pill-warning"><Icon name="warning" size={10} />{warnCount}</span>}
           {errCount === 0 && warnCount === 0 && <span className="gecko-pill gecko-pill-success"><Icon name="check" size={10} />OK</span>}
@@ -554,8 +554,8 @@ function MoveRow({ move, index, open, issues, onToggle, onRemove, onChange }: {
       {open && (
         <div style={{ padding: '18px 22px 22px', background: '#fff', borderTop: `1px solid ${accent}`, borderLeft: `3px solid ${accent}` }}>
           <ReleaseForm move={move} onChange={onChange} />
-          <div style={{ display: 'flex', alignItems: 'center', gap: 10, paddingTop: 16, marginTop: 18, borderTop: '1px solid var(--gecko-border)' }}>
-            <div style={{ flex: 1, fontSize: 11, color: 'var(--gecko-text-secondary)' }}>
+          <div className="gecko-row" style={{ gap: 10, paddingTop: 16, marginTop: 18, borderTop: '1px solid var(--gecko-border)' }}>
+            <div className="gecko-flex-1" style={{ fontSize: 11, color: 'var(--gecko-text-secondary)' }}>
               Container <strong style={{ color: 'var(--gecko-text-primary)' }}>#{index}</strong> · Release · auto-saved
             </div>
             <button className="gecko-btn gecko-btn-ghost gecko-btn-sm" onClick={onRemove} style={{ color: 'var(--gecko-error-600)' }}>
@@ -581,10 +581,10 @@ function ReleasesCard({ moves, activeId, setActiveId, addMove, removeMove, updat
 
   return (
     <section className="gecko-card" style={{ padding: 0, overflow: 'hidden' }}>
-      <div style={{ display: 'flex', alignItems: 'center', gap: 12, padding: '14px 18px', borderBottom: '1px solid var(--gecko-border)', background: 'var(--gecko-bg-subtle)' }}>
-        <div style={{ width: 26, height: 26, borderRadius: 8, background: 'var(--gecko-primary-600)', color: '#fff', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 12, fontWeight: 700, flexShrink: 0 }}>2</div>
+      <div className="gecko-row" style={{ gap: 12, padding: '14px 18px', borderBottom: '1px solid var(--gecko-border)', background: 'var(--gecko-bg-subtle)' }}>
+        <div className="gecko-mini-icon gecko-mini-icon-solid" style={{ width: 26, height: 26, fontSize: 12, fontWeight: 700 }}>2</div>
         <Icon name="box" size={15} style={{ color: 'var(--gecko-text-secondary)' }} />
-        <div style={{ flex: 1 }}>
+        <div className="gecko-flex-1">
           <div style={{ fontSize: 13, fontWeight: 700 }}>Container Releases</div>
           <div style={{ fontSize: 11, color: 'var(--gecko-text-secondary)' }}>
             {moves.length} container{moves.length !== 1 ? 's' : ''} · {teuUsed} TEU out · cap {teuCap} TEU
@@ -619,7 +619,7 @@ function ReleasesCard({ moves, activeId, setActiveId, addMove, removeMove, updat
 
         {moves.length === 0 && (
           <div style={{ padding: '40px 24px', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 16, background: '#fff' }}>
-            <div style={{ width: 48, height: 48, borderRadius: 12, background: 'var(--gecko-primary-50)', color: 'var(--gecko-primary-600)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+            <div className="gecko-mini-icon gecko-mini-icon-primary" style={{ width: 48, height: 48, borderRadius: 12 }}>
               <Icon name="box" size={22} />
             </div>
             <div style={{ textAlign: 'center' }}>
@@ -643,10 +643,10 @@ function ReleasesCard({ moves, activeId, setActiveId, addMove, removeMove, updat
 function TruckHeaderCard({ truck }: { truck: any }) {
   return (
     <section className="gecko-card" style={{ padding: 0, overflow: 'hidden' }}>
-      <div style={{ display: 'flex', alignItems: 'center', gap: 12, padding: '14px 18px', borderBottom: '1px solid var(--gecko-border)', background: 'var(--gecko-bg-subtle)' }}>
-        <div style={{ width: 26, height: 26, borderRadius: 8, background: 'var(--gecko-primary-600)', color: '#fff', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 12, fontWeight: 700, flexShrink: 0 }}>1</div>
+      <div className="gecko-row" style={{ gap: 12, padding: '14px 18px', borderBottom: '1px solid var(--gecko-border)', background: 'var(--gecko-bg-subtle)' }}>
+        <div className="gecko-mini-icon gecko-mini-icon-solid" style={{ width: 26, height: 26, fontSize: 12, fontWeight: 700 }}>1</div>
         <Icon name="truck" size={15} style={{ color: 'var(--gecko-text-secondary)' }} />
-        <div style={{ flex: 1 }}>
+        <div className="gecko-flex-1">
           <div style={{ fontSize: 13, fontWeight: 700 }}>Truck &amp; Driver</div>
           <div style={{ fontSize: 11, color: 'var(--gecko-text-secondary)' }}>Arrived {truck.arrivedAt} · waiting {truck.waitMins} min · {truck.lane}</div>
         </div>
@@ -664,7 +664,7 @@ function TruckHeaderCard({ truck }: { truck: any }) {
         </div>
       </div>
 
-      <div style={{ padding: 18, display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 14 }}>
+      <div className="gecko-grid-4" style={{ padding: 18, gap: 14 }}>
         <Field label="Truck Plate" required>
           <div style={{ position: 'relative' }}>
             <input className="gecko-input gecko-input-sm" defaultValue={truck.plate} style={{ fontFamily: 'var(--gecko-font-mono)', fontWeight: 700, paddingRight: 30 }} />
@@ -743,7 +743,7 @@ function VisitSummaryRail({ moves, teuUsed, teuCap, teuRemaining, errCount, warn
     <aside className="gecko-card" style={{ padding: 0, overflow: 'hidden', position: 'sticky', top: 80, alignSelf: 'flex-start' }}>
       {/* Header */}
       <div style={{ padding: '14px 16px', borderBottom: '1px solid var(--gecko-border)', background: 'var(--gecko-bg-subtle)' }}>
-        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+        <div className="gecko-row gecko-row-between">
           <div>
             <div style={{ fontSize: 13, fontWeight: 700 }}>Visit Summary</div>
             <div style={{ fontSize: 11, color: 'var(--gecko-text-secondary)' }}>Live · auto-saved</div>
@@ -766,7 +766,7 @@ function VisitSummaryRail({ moves, teuUsed, teuCap, teuRemaining, errCount, warn
 
       {/* Capacity */}
       <div style={{ padding: '12px 16px', borderBottom: '1px solid var(--gecko-border)' }}>
-        <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 10, fontWeight: 600, color: 'var(--gecko-text-secondary)', letterSpacing: '0.06em', textTransform: 'uppercase', marginBottom: 6 }}>
+        <div className="gecko-row gecko-row-between gecko-mb-2" style={{ fontSize: 10, fontWeight: 600, color: 'var(--gecko-text-secondary)', letterSpacing: '0.06em', textTransform: 'uppercase' }}>
           <span>Truck capacity</span>
           <span>{teuUsed} / {teuCap} TEU</span>
         </div>
@@ -783,7 +783,7 @@ function VisitSummaryRail({ moves, teuUsed, teuCap, teuRemaining, errCount, warn
 
       {/* Validation */}
       <div style={{ padding: '12px 16px', borderBottom: '1px solid var(--gecko-border)' }}>
-        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 6 }}>
+        <div className="gecko-row gecko-row-between gecko-mb-2">
           <div style={{ fontSize: 10, fontWeight: 700, color: 'var(--gecko-text-secondary)', letterSpacing: '0.06em', textTransform: 'uppercase' }}>Validation</div>
           {hasIssues && (
             <button
@@ -798,7 +798,7 @@ function VisitSummaryRail({ moves, teuUsed, teuCap, teuRemaining, errCount, warn
           )}
         </div>
 
-        <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
+        <div className="gecko-stack" style={{ gap: 4 }}>
           <ValidationLine ok={count > 0}       label={count === 0 ? 'No containers added' : `${count} container${count > 1 ? 's' : ''} added`} kind="error" />
           <ValidationLine ok={errCount === 0}   label={`${errCount} error${errCount === 1 ? '' : 's'} blocking commit`}                          kind="error" />
           <ValidationLine ok={warnCount === 0}  label={`${warnCount} warning${warnCount === 1 ? '' : 's'} (override allowed)`}                   kind="warning" />
@@ -806,7 +806,7 @@ function VisitSummaryRail({ moves, teuUsed, teuCap, teuRemaining, errCount, warn
         </div>
 
         {showIssues && hasIssues && (
-          <div style={{ marginTop: 10, padding: '8px 10px', background: 'var(--gecko-bg-subtle)', borderRadius: 6, border: '1px solid var(--gecko-border)', display: 'flex', flexDirection: 'column', gap: 8 }}>
+          <div className="gecko-stack gecko-stack-sm" style={{ marginTop: 10, padding: '8px 10px', background: 'var(--gecko-bg-subtle)', borderRadius: 6, border: '1px solid var(--gecko-border)' }}>
             {moves.map((m, idx) => {
               const moveIssues = issues.filter(i => i.moveId === m.id);
               if (moveIssues.length === 0) return null;
@@ -1081,7 +1081,7 @@ export default function GateOutFormPage() {
   const { openOptions, PrintHost, print } = useGatePrint(printData);
 
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
+    <div className="gecko-stack" style={{ gap: 14 }}>
       <PrintHost />
       <PageToolbar
         title="Gate-Out · Truck Visit"
@@ -1121,7 +1121,7 @@ export default function GateOutFormPage() {
       />
 
       <div style={{ display: 'grid', gridTemplateColumns: '1fr 340px', gap: 14, alignItems: 'flex-start' }}>
-        <div style={{ display: 'flex', flexDirection: 'column', gap: 14, minWidth: 0 }}>
+        <div className="gecko-stack gecko-min-w-0" style={{ gap: 14 }}>
           <TruckHeaderCard truck={truck} />
           <ReleasesCard
             moves={moves}

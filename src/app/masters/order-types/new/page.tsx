@@ -219,14 +219,14 @@ const STEPS = ['Identity', 'Workflow', 'Charges', 'Review'];
 
 function StepIndicator({ current }: { current: number }) {
   return (
-    <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'center', gap: 0, marginBottom: 32 }}>
+    <div className="gecko-row gecko-row-start" style={{ justifyContent: 'center', gap: 0, marginBottom: 32 }}>
       {STEPS.map((label, i) => {
         const n = i + 1;
         const done = n < current;
         const active = n === current;
         return (
           <React.Fragment key={label}>
-            <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 6, minWidth: 80 }}>
+            <div className="gecko-stack gecko-stack-sm" style={{ alignItems: 'center', gap: 6, minWidth: 80 }}>
               <div style={{
                 width: 36, height: 36, borderRadius: '50%', fontSize: 14, fontWeight: 700,
                 background: done ? '#16A34A' : active ? 'var(--gecko-primary-600)' : 'var(--gecko-bg-subtle)',
@@ -256,15 +256,15 @@ function Step1({ state, onChange }: { state: WizardState; onChange: (patch: Part
   const bt = BTYPE[state.bookingType];
   return (
     <div style={{ display: 'grid', gridTemplateColumns: '1fr 340px', gap: 24, animation: 'geckoFadeIn 220ms ease' }}>
-      <div style={{ background: 'var(--gecko-bg-surface)', border: '1px solid var(--gecko-border)', borderRadius: 14, padding: 24, display: 'flex', flexDirection: 'column', gap: 20 }}>
-        <h3 style={{ margin: 0, fontSize: 15, fontWeight: 700 }}>Order Type Identity</h3>
-        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16 }}>
+      <div className="gecko-card gecko-stack gecko-stack-xl" style={{ borderRadius: 14, padding: 24 }}>
+        <h3 className="gecko-card-title" style={{ margin: 0, fontSize: 15, fontWeight: 700 }}>Order Type Identity</h3>
+        <div className="gecko-grid-2" style={{ gap: 16 }}>
           <div className="gecko-form-group">
             <label className="gecko-label gecko-label-required">Order Type Code</label>
             <input className="gecko-input" placeholder="e.g. EXP CY/CY" value={state.code}
               onChange={e => onChange({ code: e.target.value.toUpperCase() })}
               style={{ fontFamily: 'var(--gecko-font-mono)', fontWeight: 700, letterSpacing: '0.02em' }} />
-            <div style={{ fontSize: 10, color: 'var(--gecko-text-disabled)', marginTop: 3 }}>Short unique identifier, uppercase</div>
+            <div className="gecko-helper-text">Short unique identifier, uppercase</div>
           </div>
           <div className="gecko-form-group">
             <label className="gecko-label gecko-label-required">Description</label>
@@ -272,7 +272,7 @@ function Step1({ state, onChange }: { state: WizardState; onChange: (patch: Part
               onChange={e => onChange({ description: e.target.value })} />
           </div>
         </div>
-        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 16 }}>
+        <div className="gecko-grid-3" style={{ gap: 16 }}>
           <div className="gecko-form-group">
             <label className="gecko-label gecko-label-required">Booking Type</label>
             <select className="gecko-input" value={state.bookingType} onChange={e => onChange({ bookingType: e.target.value as any })}>
@@ -293,8 +293,8 @@ function Step1({ state, onChange }: { state: WizardState; onChange: (patch: Part
           </div>
         </div>
         <div>
-          <div style={{ fontSize: 13, fontWeight: 700, marginBottom: 12 }}>Operational Rules</div>
-          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10 }}>
+          <div className="gecko-mb-3" style={{ fontSize: 13, fontWeight: 700 }}>Operational Rules</div>
+          <div className="gecko-grid-2" style={{ gap: 10 }}>
             {([
               { key: 'allowReleaseDamaged', label: 'Allow Release of Damaged Units', desc: 'Gate out units with damage flag set' },
               { key: 'checkMaxWeight',      label: 'Enforce Max Weight Check',        desc: 'Validate VGM against container limit' },
@@ -303,12 +303,12 @@ function Step1({ state, onChange }: { state: WizardState; onChange: (patch: Part
             ] as const).map(r => {
               const val = state.rules[r.key];
               return (
-                <label key={r.key} style={{ display: 'flex', alignItems: 'flex-start', gap: 10, padding: '12px 14px', background: val ? 'var(--gecko-primary-50)' : 'var(--gecko-bg-subtle)', border: `1px solid ${val ? 'var(--gecko-primary-200)' : 'var(--gecko-border)'}`, borderRadius: 10, cursor: 'pointer' }}>
+                <label key={r.key} className="gecko-row gecko-row-start" style={{ gap: 10, padding: '12px 14px', background: val ? 'var(--gecko-primary-50)' : 'var(--gecko-bg-subtle)', border: `1px solid ${val ? 'var(--gecko-primary-200)' : 'var(--gecko-border)'}`, borderRadius: 10, cursor: 'pointer' }}>
                   <input type="checkbox" className="gecko-toggle gecko-toggle-sm" checked={val}
                     onChange={e => onChange({ rules: { ...state.rules, [r.key]: e.target.checked } })} style={{ marginTop: 1 }} />
                   <div>
                     <div style={{ fontSize: 12, fontWeight: 600, color: val ? 'var(--gecko-primary-800)' : 'var(--gecko-text-secondary)' }}>{r.label}</div>
-                    <div style={{ fontSize: 10, color: 'var(--gecko-text-disabled)', marginTop: 1 }}>{r.desc}</div>
+                    <div className="gecko-helper-text" style={{ marginTop: 1 }}>{r.desc}</div>
                   </div>
                 </label>
               );
@@ -316,18 +316,18 @@ function Step1({ state, onChange }: { state: WizardState; onChange: (patch: Part
           </div>
         </div>
       </div>
-      <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
-        <div style={{ background: 'var(--gecko-bg-surface)', border: '1px solid var(--gecko-border)', borderRadius: 14, padding: 20 }}>
-          <div style={{ fontSize: 11, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.06em', color: 'var(--gecko-text-secondary)', marginBottom: 14 }}>Preview</div>
-          <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 8 }}>
+      <div className="gecko-stack gecko-stack-lg">
+        <div className="gecko-card" style={{ borderRadius: 14, padding: 20 }}>
+          <div className="gecko-eyebrow gecko-mb-4">Preview</div>
+          <div className="gecko-row gecko-mb-2">
             <span style={{ fontFamily: 'var(--gecko-font-mono)', fontSize: 18, fontWeight: 800 }}>{state.code || <span style={{ color: 'var(--gecko-text-disabled)' }}>CODE</span>}</span>
             <span style={{ fontSize: 10, fontWeight: 700, padding: '3px 8px', borderRadius: 4, background: bt.bg, color: bt.text }}>{state.bookingType}</span>
             <span style={{ fontSize: 10, fontWeight: 600, padding: '3px 8px', borderRadius: 4, background: 'var(--gecko-bg-subtle)', color: 'var(--gecko-text-secondary)', border: '1px solid var(--gecko-border)' }}>{state.bookingMode}</span>
           </div>
-          <div style={{ fontSize: 13, color: 'var(--gecko-text-secondary)', marginBottom: 12 }}>
+          <div className="gecko-page-subtitle gecko-mb-3">
             {state.description || <span style={{ color: 'var(--gecko-text-disabled)', fontStyle: 'italic' }}>Description will appear here</span>}
           </div>
-          <div style={{ display: 'flex', gap: 5, flexWrap: 'wrap' }}>
+          <div className="gecko-row gecko-row-wrap" style={{ gap: 5 }}>
             {Object.entries(state.rules).filter(([, v]) => v).map(([k]) => (
               <span key={k} style={{ fontSize: 9, fontWeight: 600, padding: '2px 7px', borderRadius: 4, background: 'var(--gecko-success-50)', color: 'var(--gecko-success-700)', border: '1px solid var(--gecko-success-200)' }}>
                 ✓ {k === 'allowReleaseDamaged' ? 'Rel. Damaged' : k === 'checkMaxWeight' ? 'Max Wgt' : k === 'checkSealNumber' ? 'Seal No' : 'Skip EDI'}
@@ -335,7 +335,7 @@ function Step1({ state, onChange }: { state: WizardState; onChange: (patch: Part
             ))}
           </div>
         </div>
-        <div style={{ background: 'var(--gecko-info-50)', border: '1px solid var(--gecko-info-200)', borderRadius: 10, padding: 14, display: 'flex', gap: 10 }}>
+        <div className="gecko-row gecko-row-start" style={{ background: 'var(--gecko-info-50)', border: '1px solid var(--gecko-info-200)', borderRadius: 10, padding: 14, gap: 10 }}>
           <Icon name="info" size={15} style={{ color: 'var(--gecko-info-600)', flexShrink: 0, marginTop: 1 }} />
           <div style={{ fontSize: 12, color: 'var(--gecko-info-800)', lineHeight: 1.5 }}>
             The order type code is used across bookings, gate operations, and billing. Use a short, memorable code that reflects the flow direction and mode.
@@ -477,12 +477,12 @@ function WorkflowCanvas({
     <div style={{ display: 'grid', gridTemplateColumns: '200px 1fr', gap: 16, animation: 'geckoFadeIn 220ms ease' }}>
 
       {/* Catalog panel */}
-      <div style={{ background: 'var(--gecko-bg-surface)', border: '1px solid var(--gecko-border)', borderRadius: 14, overflow: 'hidden', display: 'flex', flexDirection: 'column' }}>
+      <div className="gecko-stack" style={{ background: 'var(--gecko-bg-surface)', border: '1px solid var(--gecko-border)', borderRadius: 14, overflow: 'hidden', gap: 0 }}>
         <div style={{ padding: '12px 14px', borderBottom: '1px solid var(--gecko-border)', background: 'var(--gecko-bg-subtle)' }}>
           <div style={{ fontSize: 12, fontWeight: 700, color: 'var(--gecko-text-primary)' }}>Movement Catalog</div>
           <div style={{ fontSize: 10, color: 'var(--gecko-text-secondary)', marginTop: 2 }}>Drag cards onto the canvas →</div>
         </div>
-        <div style={{ padding: '8px 8px 8px', overflowY: 'auto', flex: 1 }}>
+        <div className="gecko-flex-1" style={{ padding: '8px 8px 8px', overflowY: 'auto' }}>
           {CATALOG_GROUPS.map(grp => {
             const items = MOVEMENT_CATALOG.filter(m => m.cat === grp.label);
             if (!items.length) return null;
@@ -514,11 +514,11 @@ function WorkflowCanvas({
       </div>
 
       {/* Canvas panel */}
-      <div style={{ background: 'var(--gecko-bg-surface)', border: '1px solid var(--gecko-border)', borderRadius: 14, overflow: 'hidden', display: 'flex', flexDirection: 'column' }}>
+      <div className="gecko-stack" style={{ background: 'var(--gecko-bg-surface)', border: '1px solid var(--gecko-border)', borderRadius: 14, overflow: 'hidden', gap: 0 }}>
         {/* Toolbar */}
-        <div style={{ padding: '9px 14px', borderBottom: '1px solid var(--gecko-border)', background: 'var(--gecko-bg-subtle)', display: 'flex', alignItems: 'center', gap: 10 }}>
+        <div className="gecko-row" style={{ padding: '9px 14px', borderBottom: '1px solid var(--gecko-border)', background: 'var(--gecko-bg-subtle)', gap: 10 }}>
           <Icon name="info" size={13} style={{ color: 'var(--gecko-info-500)', flexShrink: 0 }} />
-          <span style={{ fontSize: 11, color: 'var(--gecko-text-secondary)', flex: 1 }}>
+          <span className="gecko-flex-1" style={{ fontSize: 11, color: 'var(--gecko-text-secondary)' }}>
             Drop movements onto the canvas · Connect by dragging from the{' '}
             <span style={{ display: 'inline-block', width: 9, height: 9, borderRadius: '50%', background: 'var(--gecko-primary-600)', verticalAlign: 'middle' }} />{' '}
             output port · Click a connector to delete it
@@ -688,7 +688,7 @@ function WorkflowCanvas({
 
           {/* Empty state */}
           {canvasNodes.length === 0 && (
-            <div style={{ position: 'absolute', inset: 0, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 10, pointerEvents: 'none' }}>
+            <div className="gecko-stack" style={{ position: 'absolute', inset: 0, alignItems: 'center', justifyContent: 'center', gap: 10, pointerEvents: 'none' }}>
               <Icon name="activity" size={44} style={{ color: '#CBD5E1' }} />
               <div style={{ fontSize: 14, color: 'var(--gecko-text-disabled)', fontStyle: 'italic' }}>Drag movement cards from the catalog onto this canvas</div>
               <div style={{ fontSize: 12, color: 'var(--gecko-text-disabled)' }}>Then connect them by dragging from the colored output ports →</div>
@@ -747,8 +747,8 @@ function Step2({ state, onChange }: { state: WizardState; onChange: (patch: Part
 
   if (state.advancedMode) {
     return (
-      <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
-        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+      <div className="gecko-stack">
+        <div className="gecko-row gecko-row-between">
           <div>
             <span style={{ fontSize: 13, fontWeight: 700, color: 'var(--gecko-text-primary)' }}>Advanced — Visual Workflow Builder</span>
             <span style={{ fontSize: 11, color: 'var(--gecko-text-secondary)', marginLeft: 10 }}>Drag movements, draw connectors, build any flow shape</span>
@@ -795,9 +795,9 @@ function Step2({ state, onChange }: { state: WizardState; onChange: (patch: Part
     onChange({ movements: state.movements.map(m => m.tempId === tempId ? { ...m, [flag]: val } : m) });
 
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', gap: 12, animation: 'geckoFadeIn 220ms ease' }}>
+    <div className="gecko-stack" style={{ animation: 'geckoFadeIn 220ms ease' }}>
       {/* Mode toggle header */}
-      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+      <div className="gecko-row gecko-row-between">
         <div>
           <span style={{ fontSize: 13, fontWeight: 700, color: 'var(--gecko-text-primary)' }}>Movement Sequence</span>
           <span style={{ fontSize: 11, color: 'var(--gecko-text-secondary)', marginLeft: 10 }}>Click to add legs, use ↑↓ to reorder</span>
@@ -811,8 +811,8 @@ function Step2({ state, onChange }: { state: WizardState; onChange: (patch: Part
         {/* Catalog */}
         <div style={{ background: 'var(--gecko-bg-surface)', border: '1px solid var(--gecko-border)', borderRadius: 14, overflow: 'hidden' }}>
           <div style={{ padding: '14px 16px', borderBottom: '1px solid var(--gecko-border)', background: 'var(--gecko-bg-subtle)' }}>
-            <div style={{ fontSize: 12, fontWeight: 700, color: 'var(--gecko-text-primary)', marginBottom: 2 }}>Movement Catalog</div>
-            <div style={{ fontSize: 11, color: 'var(--gecko-text-secondary)' }}>Click to add to sequence →</div>
+            <div className="gecko-card-title gecko-mb-1" style={{ fontSize: 12, fontWeight: 700 }}>Movement Catalog</div>
+            <div className="gecko-cell-meta" style={{ marginTop: 0, fontSize: 11 }}>Click to add to sequence →</div>
           </div>
           <div style={{ padding: '8px 10px', overflowY: 'auto', maxHeight: 560 }}>
             {CATALOG_GROUPS.map(grp => {
@@ -848,7 +848,7 @@ function Step2({ state, onChange }: { state: WizardState; onChange: (patch: Part
 
         {/* Sequence builder */}
         <div style={{ background: 'var(--gecko-bg-surface)', border: '1px solid var(--gecko-border)', borderRadius: 14, overflow: 'hidden' }}>
-          <div style={{ padding: '14px 16px', borderBottom: '1px solid var(--gecko-border)', background: 'var(--gecko-bg-subtle)', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+          <div className="gecko-row gecko-row-between" style={{ padding: '14px 16px', borderBottom: '1px solid var(--gecko-border)', background: 'var(--gecko-bg-subtle)' }}>
             <div>
               <div style={{ fontSize: 12, fontWeight: 700, color: 'var(--gecko-text-primary)' }}>Movement Sequence</div>
               <div style={{ fontSize: 11, color: 'var(--gecko-text-secondary)', marginTop: 1 }}>Configure flags per leg · reorder with ↑↓</div>
@@ -857,9 +857,9 @@ function Step2({ state, onChange }: { state: WizardState; onChange: (patch: Part
               {state.movements.length} leg{state.movements.length !== 1 ? 's' : ''}
             </span>
           </div>
-          <div style={{ padding: 14, minHeight: 200, display: 'flex', flexDirection: 'column', gap: 8 }}>
+          <div className="gecko-stack gecko-stack-sm" style={{ padding: 14, minHeight: 200 }}>
             {state.movements.length === 0 ? (
-              <div style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 10, padding: '40px 0', color: 'var(--gecko-text-disabled)' }}>
+              <div className="gecko-stack gecko-flex-1" style={{ alignItems: 'center', justifyContent: 'center', gap: 10, padding: '40px 0', color: 'var(--gecko-text-disabled)' }}>
                 <Icon name="layers" size={32} style={{ opacity: 0.4 }} />
                 <div style={{ fontSize: 13, fontStyle: 'italic' }}>No movements added yet</div>
                 <div style={{ fontSize: 11 }}>← Click movements from the catalog to add them</div>
@@ -869,16 +869,16 @@ function Step2({ state, onChange }: { state: WizardState; onChange: (patch: Part
                 const col = SEQ_COLORS[(mov.seq - 1) % SEQ_COLORS.length];
                 return (
                   <div key={mov.tempId} style={{ animation: 'geckoSlideIn 180ms ease', border: `1.5px solid ${col.border}`, borderRadius: 12, overflow: 'hidden', background: col.light }}>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '10px 14px' }}>
-                      <div style={{ width: 28, height: 28, borderRadius: 8, background: col.bg, color: '#fff', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 13, fontWeight: 800, flexShrink: 0 }}>{mov.seq}</div>
-                      <div style={{ width: 30, height: 30, borderRadius: 8, background: '#fff', border: `1px solid ${col.border}`, display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+                    <div className="gecko-row" style={{ gap: 10, padding: '10px 14px' }}>
+                      <div className="gecko-flex-shrink-0" style={{ width: 28, height: 28, borderRadius: 8, background: col.bg, color: '#fff', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 13, fontWeight: 800 }}>{mov.seq}</div>
+                      <div className="gecko-flex-shrink-0" style={{ width: 30, height: 30, borderRadius: 8, background: '#fff', border: `1px solid ${col.border}`, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
                         <Icon name={mov.icon} size={14} style={{ color: col.bg }} />
                       </div>
-                      <div style={{ flex: 1, minWidth: 0 }}>
+                      <div className="gecko-flex-1">
                         <div style={{ fontFamily: 'var(--gecko-font-mono)', fontSize: 12, fontWeight: 800, color: col.bg }}>{mov.code}</div>
                         <div style={{ fontSize: 10, color: 'var(--gecko-text-secondary)' }}>{mov.name}</div>
                       </div>
-                      <div style={{ display: 'flex', gap: 4 }}>
+                      <div className="gecko-row" style={{ gap: 4 }}>
                         <button onClick={() => moveUp(idx)} disabled={idx === 0} style={{ width: 26, height: 26, borderRadius: 6, border: '1px solid var(--gecko-border)', background: idx === 0 ? 'transparent' : '#fff', cursor: idx === 0 ? 'default' : 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', opacity: idx === 0 ? 0.3 : 1 }}>
                           <Icon name="chevronUp" size={13} style={{ color: 'var(--gecko-text-secondary)' }} />
                         </button>
@@ -954,14 +954,15 @@ function Step3({ state, onChange }: { state: WizardState; onChange: (patch: Part
   );
 
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', gap: 16, animation: 'geckoFadeIn 220ms ease' }}>
-      <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>
+    <div className="gecko-stack gecko-stack-lg" style={{ animation: 'geckoFadeIn 220ms ease' }}>
+      <div className="gecko-row gecko-row-wrap" style={{ gap: 6 }}>
         {state.movements.map((m, i) => {
           const c = SEQ_COLORS[(m.seq - 1) % SEQ_COLORS.length];
           const isActive = i === activeTab;
           return (
             <button key={m.tempId} onClick={() => { setActiveTab(i); setChargeSearch(''); setVasSearch(''); }}
-              style={{ display: 'flex', alignItems: 'center', gap: 7, padding: '7px 14px', borderRadius: 8, border: `1.5px solid ${isActive ? c.bg : 'var(--gecko-border)'}`, background: isActive ? c.light : 'var(--gecko-bg-surface)', cursor: 'pointer', fontFamily: 'inherit', fontSize: 12, fontWeight: isActive ? 700 : 500, color: isActive ? c.bg : 'var(--gecko-text-secondary)', transition: 'all 150ms' }}>
+              className="gecko-row"
+              style={{ gap: 7, padding: '7px 14px', borderRadius: 8, border: `1.5px solid ${isActive ? c.bg : 'var(--gecko-border)'}`, background: isActive ? c.light : 'var(--gecko-bg-surface)', cursor: 'pointer', fontFamily: 'inherit', fontSize: 12, fontWeight: isActive ? 700 : 500, color: isActive ? c.bg : 'var(--gecko-text-secondary)', transition: 'all 150ms' }}>
               <div style={{ width: 20, height: 20, borderRadius: 5, background: isActive ? c.bg : 'var(--gecko-bg-subtle)', color: isActive ? '#fff' : 'var(--gecko-text-disabled)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 11, fontWeight: 800 }}>{m.seq}</div>
               <span style={{ fontFamily: 'var(--gecko-font-mono)' }}>{m.code}</span>
               <span style={{ fontSize: 10, opacity: 0.8 }}>({m.charges.length + m.vasCharges.length})</span>
@@ -970,17 +971,17 @@ function Step3({ state, onChange }: { state: WizardState; onChange: (patch: Part
         })}
       </div>
 
-      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16 }}>
+      <div className="gecko-grid-2" style={{ gap: 16 }}>
         {/* Regular Charges */}
         <div style={{ background: 'var(--gecko-bg-surface)', border: '1px solid var(--gecko-border)', borderRadius: 14, overflow: 'hidden' }}>
-          <div style={{ padding: '12px 16px', borderBottom: '1px solid var(--gecko-border)', background: col.light, display: 'flex', alignItems: 'center', gap: 8 }}>
+          <div className="gecko-row" style={{ padding: '12px 16px', borderBottom: '1px solid var(--gecko-border)', background: col.light }}>
             <Icon name="fileText" size={14} style={{ color: col.bg }} />
-            <span style={{ fontSize: 13, fontWeight: 700 }}>Regular Charges</span>
-            <span style={{ marginLeft: 'auto', fontSize: 11, fontWeight: 700, color: col.bg, background: '#fff', padding: '1px 8px', borderRadius: 10 }}>{mov.charges.length} added</span>
+            <span className="gecko-card-title" style={{ fontSize: 13, fontWeight: 700 }}>Regular Charges</span>
+            <span className="gecko-ml-auto" style={{ fontSize: 11, fontWeight: 700, color: col.bg, background: '#fff', padding: '1px 8px', borderRadius: 10 }}>{mov.charges.length} added</span>
           </div>
           {mov.charges.length > 0 && (
-            <div style={{ padding: '10px 12px', borderBottom: '1px solid var(--gecko-border)', display: 'flex', flexDirection: 'column', gap: 6 }}>
-              <div style={{ fontSize: 10, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.05em', color: 'var(--gecko-text-secondary)', marginBottom: 2 }}>Configured</div>
+            <div className="gecko-stack gecko-stack-sm" style={{ padding: '10px 12px', borderBottom: '1px solid var(--gecko-border)' }}>
+              <div className="gecko-eyebrow gecko-mb-1">Configured</div>
               {mov.charges.map(c => (
                 <div key={c.tempId} style={{ display: 'grid', gridTemplateColumns: '1fr 70px 100px 52px 24px', gap: 6, alignItems: 'center', padding: '7px 10px', background: col.light, border: `1px solid ${col.border}`, borderRadius: 8 }}>
                   <div>
@@ -1001,20 +1002,20 @@ function Step3({ state, onChange }: { state: WizardState; onChange: (patch: Part
             </div>
           )}
           <div style={{ padding: '10px 12px' }}>
-            <div style={{ fontSize: 10, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.05em', color: 'var(--gecko-text-secondary)', marginBottom: 8 }}>Add from Catalog</div>
-            <div style={{ position: 'relative', marginBottom: 8 }}>
+            <div className="gecko-eyebrow gecko-mb-2">Add from Catalog</div>
+            <div className="gecko-mb-2" style={{ position: 'relative' }}>
               <Icon name="search" size={12} style={{ position: 'absolute', left: 8, top: '50%', transform: 'translateY(-50%)', color: 'var(--gecko-text-disabled)', pointerEvents: 'none' }} />
               <input className="gecko-input gecko-input-sm" placeholder="Search charge codes..." value={chargeSearch} onChange={e => setChargeSearch(e.target.value)} style={{ paddingLeft: 26 }} />
             </div>
-            <div style={{ maxHeight: 240, overflowY: 'auto', display: 'flex', flexDirection: 'column', gap: 3 }}>
+            <div className="gecko-stack" style={{ maxHeight: 240, overflowY: 'auto', gap: 3 }}>
               {filteredCharges.map(cat => (
-                <div key={cat.code + cat.defaultTerm} style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '6px 8px', borderRadius: 7, border: '1px solid var(--gecko-border)', background: 'var(--gecko-bg-subtle)' }}>
-                  <div style={{ flex: 1, minWidth: 0 }}>
+                <div key={cat.code + cat.defaultTerm} className="gecko-row" style={{ padding: '6px 8px', borderRadius: 7, border: '1px solid var(--gecko-border)', background: 'var(--gecko-bg-subtle)' }}>
+                  <div className="gecko-flex-1">
                     <span style={{ fontFamily: 'var(--gecko-font-mono)', fontSize: 10, fontWeight: 700 }}>{cat.code}</span>
                     <span style={{ fontSize: 10, color: 'var(--gecko-text-secondary)', marginLeft: 6 }}>{cat.description}</span>
                   </div>
-                  <span style={{ fontSize: 9, fontWeight: 700, padding: '1.5px 5px', borderRadius: 3, background: cat.defaultTerm === 'CASH' ? '#D1FAE5' : '#DBEAFE', color: cat.defaultTerm === 'CASH' ? '#065F46' : '#1D4ED8', flexShrink: 0 }}>{cat.defaultTerm}</span>
-                  <button onClick={() => addCharge(cat)} style={{ width: 22, height: 22, borderRadius: 6, background: 'var(--gecko-primary-600)', color: '#fff', border: 'none', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+                  <span className="gecko-flex-shrink-0" style={{ fontSize: 9, fontWeight: 700, padding: '1.5px 5px', borderRadius: 3, background: cat.defaultTerm === 'CASH' ? '#D1FAE5' : '#DBEAFE', color: cat.defaultTerm === 'CASH' ? '#065F46' : '#1D4ED8' }}>{cat.defaultTerm}</span>
+                  <button onClick={() => addCharge(cat)} className="gecko-flex-shrink-0" style={{ width: 22, height: 22, borderRadius: 6, background: 'var(--gecko-primary-600)', color: '#fff', border: 'none', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
                     <Icon name="plus" size={11} />
                   </button>
                 </div>
@@ -1025,14 +1026,14 @@ function Step3({ state, onChange }: { state: WizardState; onChange: (patch: Part
 
         {/* VAS Charges */}
         <div style={{ background: 'var(--gecko-bg-surface)', border: '1px solid var(--gecko-border)', borderRadius: 14, overflow: 'hidden' }}>
-          <div style={{ padding: '12px 16px', borderBottom: '1px solid var(--gecko-border)', background: '#FFF7ED', display: 'flex', alignItems: 'center', gap: 8 }}>
+          <div className="gecko-row" style={{ padding: '12px 16px', borderBottom: '1px solid var(--gecko-border)', background: '#FFF7ED' }}>
             <Icon name="tag" size={14} style={{ color: 'var(--gecko-accent-600)' }} />
-            <span style={{ fontSize: 13, fontWeight: 700 }}>VAS Charges</span>
-            <span style={{ marginLeft: 'auto', fontSize: 11, fontWeight: 700, color: 'var(--gecko-accent-700)', background: '#fff', padding: '1px 8px', borderRadius: 10 }}>{mov.vasCharges.length} added</span>
+            <span className="gecko-card-title" style={{ fontSize: 13, fontWeight: 700 }}>VAS Charges</span>
+            <span className="gecko-ml-auto" style={{ fontSize: 11, fontWeight: 700, color: 'var(--gecko-accent-700)', background: '#fff', padding: '1px 8px', borderRadius: 10 }}>{mov.vasCharges.length} added</span>
           </div>
           {mov.vasCharges.length > 0 && (
-            <div style={{ padding: '10px 12px', borderBottom: '1px solid var(--gecko-border)', display: 'flex', flexDirection: 'column', gap: 6 }}>
-              <div style={{ fontSize: 10, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.05em', color: 'var(--gecko-text-secondary)', marginBottom: 2 }}>Configured</div>
+            <div className="gecko-stack gecko-stack-sm" style={{ padding: '10px 12px', borderBottom: '1px solid var(--gecko-border)' }}>
+              <div className="gecko-eyebrow gecko-mb-1">Configured</div>
               {mov.vasCharges.map(v => (
                 <div key={v.tempId} style={{ display: 'grid', gridTemplateColumns: '1fr 70px 100px 52px 24px', gap: 6, alignItems: 'center', padding: '7px 10px', background: '#FFF7ED', border: '1px solid #FED7AA', borderRadius: 8 }}>
                   <div>
@@ -1053,20 +1054,20 @@ function Step3({ state, onChange }: { state: WizardState; onChange: (patch: Part
             </div>
           )}
           <div style={{ padding: '10px 12px' }}>
-            <div style={{ fontSize: 10, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.05em', color: 'var(--gecko-text-secondary)', marginBottom: 8 }}>Add from VAS Catalog</div>
-            <div style={{ position: 'relative', marginBottom: 8 }}>
+            <div className="gecko-eyebrow gecko-mb-2">Add from VAS Catalog</div>
+            <div className="gecko-mb-2" style={{ position: 'relative' }}>
               <Icon name="search" size={12} style={{ position: 'absolute', left: 8, top: '50%', transform: 'translateY(-50%)', color: 'var(--gecko-text-disabled)', pointerEvents: 'none' }} />
               <input className="gecko-input gecko-input-sm" placeholder="Search VAS codes..." value={vasSearch} onChange={e => setVasSearch(e.target.value)} style={{ paddingLeft: 26 }} />
             </div>
-            <div style={{ maxHeight: 240, overflowY: 'auto', display: 'flex', flexDirection: 'column', gap: 3 }}>
+            <div className="gecko-stack" style={{ maxHeight: 240, overflowY: 'auto', gap: 3 }}>
               {filteredVAS.map(cat => (
-                <div key={cat.code + cat.defaultTerm} style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '6px 8px', borderRadius: 7, border: '1px solid var(--gecko-border)', background: 'var(--gecko-bg-subtle)' }}>
-                  <div style={{ flex: 1, minWidth: 0 }}>
+                <div key={cat.code + cat.defaultTerm} className="gecko-row" style={{ padding: '6px 8px', borderRadius: 7, border: '1px solid var(--gecko-border)', background: 'var(--gecko-bg-subtle)' }}>
+                  <div className="gecko-flex-1">
                     <span style={{ fontFamily: 'var(--gecko-font-mono)', fontSize: 10, fontWeight: 700 }}>{cat.code}</span>
                     <span style={{ fontSize: 10, color: 'var(--gecko-text-secondary)', marginLeft: 6 }}>{cat.description}</span>
                   </div>
-                  <span style={{ fontSize: 9, fontWeight: 700, padding: '1.5px 5px', borderRadius: 3, background: cat.defaultTerm === 'CASH' ? '#D1FAE5' : '#DBEAFE', color: cat.defaultTerm === 'CASH' ? '#065F46' : '#1D4ED8', flexShrink: 0 }}>{cat.defaultTerm}</span>
-                  <button onClick={() => addVAS(cat)} style={{ width: 22, height: 22, borderRadius: 6, background: 'var(--gecko-accent-600)', color: '#fff', border: 'none', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+                  <span className="gecko-flex-shrink-0" style={{ fontSize: 9, fontWeight: 700, padding: '1.5px 5px', borderRadius: 3, background: cat.defaultTerm === 'CASH' ? '#D1FAE5' : '#DBEAFE', color: cat.defaultTerm === 'CASH' ? '#065F46' : '#1D4ED8' }}>{cat.defaultTerm}</span>
+                  <button onClick={() => addVAS(cat)} className="gecko-flex-shrink-0" style={{ width: 22, height: 22, borderRadius: 6, background: 'var(--gecko-accent-600)', color: '#fff', border: 'none', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
                     <Icon name="plus" size={11} />
                   </button>
                 </div>
@@ -1086,32 +1087,32 @@ function Step4({ state }: { state: WizardState }) {
   const totalVAS     = state.movements.reduce((s, m) => s + m.vasCharges.length, 0);
 
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', gap: 20, animation: 'geckoFadeIn 220ms ease' }}>
-      <div style={{ background: 'var(--gecko-bg-surface)', border: '1px solid var(--gecko-border)', borderRadius: 14, padding: '20px 24px' }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 10 }}>
+    <div className="gecko-stack gecko-stack-lg" style={{ animation: 'geckoFadeIn 220ms ease' }}>
+      <div className="gecko-card" style={{ borderRadius: 14, padding: '20px 24px' }}>
+        <div className="gecko-row gecko-mb-3" style={{ gap: 12 }}>
           <h2 style={{ margin: 0, fontFamily: 'var(--gecko-font-mono)', fontSize: 22, fontWeight: 800 }}>{state.code || '—'}</h2>
           <span style={{ fontSize: 10, fontWeight: 700, padding: '3px 8px', borderRadius: 4, background: bt.bg, color: bt.text }}>{state.bookingType}</span>
           <span style={{ fontSize: 10, fontWeight: 600, padding: '3px 8px', borderRadius: 4, background: 'var(--gecko-bg-subtle)', color: 'var(--gecko-text-secondary)', border: '1px solid var(--gecko-border)' }}>{state.bookingMode}</span>
-          <div style={{ marginLeft: 'auto', display: 'flex', gap: 6 }}>
+          <div className="gecko-row gecko-ml-auto" style={{ gap: 6 }}>
             <div style={{ width: 8, height: 8, borderRadius: '50%', background: 'var(--gecko-success-500)', alignSelf: 'center' }} />
             <span style={{ fontSize: 12, fontWeight: 600, color: 'var(--gecko-success-700)' }}>{state.status}</span>
           </div>
         </div>
-        <div style={{ fontSize: 14, color: 'var(--gecko-text-secondary)', marginBottom: 14 }}>{state.description}</div>
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 1, background: 'var(--gecko-border)', border: '1px solid var(--gecko-border)', borderRadius: 10, overflow: 'hidden' }}>
+        <div className="gecko-page-subtitle gecko-mb-4" style={{ fontSize: 14 }}>{state.description}</div>
+        <div className="gecko-grid-4" style={{ gap: 1, background: 'var(--gecko-border)', border: '1px solid var(--gecko-border)', borderRadius: 10, overflow: 'hidden' }}>
           {[
             { label: 'Movements',       value: state.movements.length,                             icon: 'activity',  color: 'var(--gecko-primary-600)', bg: 'var(--gecko-primary-50)' },
             { label: 'Regular Charges', value: totalCharges,                                       icon: 'fileText',  color: 'var(--gecko-success-600)', bg: 'var(--gecko-success-50)' },
             { label: 'VAS Charges',     value: totalVAS,                                           icon: 'tag',       color: 'var(--gecko-accent-600)',  bg: 'var(--gecko-accent-50)'  },
             { label: 'EDI Messages',    value: state.movements.filter(m => m.ediEnabled).length,   icon: 'send',      color: 'var(--gecko-info-600)',    bg: 'var(--gecko-info-50)'    },
           ].map(s => (
-            <div key={s.label} style={{ background: 'var(--gecko-bg-surface)', padding: '14px 18px', display: 'flex', alignItems: 'center', gap: 12 }}>
-              <div style={{ width: 34, height: 34, borderRadius: 8, background: s.bg, display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+            <div key={s.label} className="gecko-row" style={{ background: 'var(--gecko-bg-surface)', padding: '14px 18px', gap: 12 }}>
+              <div className="gecko-mini-icon" style={{ width: 34, height: 34, background: s.bg }}>
                 <Icon name={s.icon} size={16} style={{ color: s.color }} />
               </div>
               <div>
-                <div style={{ fontSize: 20, fontWeight: 800, lineHeight: 1 }}>{s.value}</div>
-                <div style={{ fontSize: 10, color: 'var(--gecko-text-secondary)', marginTop: 2 }}>{s.label}</div>
+                <div className="gecko-stat-num gecko-stat-num-sm">{s.value}</div>
+                <div className="gecko-cell-meta" style={{ fontSize: 10 }}>{s.label}</div>
               </div>
             </div>
           ))}
@@ -1120,9 +1121,9 @@ function Step4({ state }: { state: WizardState }) {
 
       {/* Workflow preview */}
       <div style={{ background: 'var(--gecko-bg-surface)', border: '1px solid var(--gecko-border)', borderRadius: 14, overflow: 'hidden' }}>
-        <div style={{ padding: '13px 20px', borderBottom: '1px solid var(--gecko-border)', display: 'flex', alignItems: 'center', gap: 8 }}>
+        <div className="gecko-row" style={{ padding: '13px 20px', borderBottom: '1px solid var(--gecko-border)' }}>
           <Icon name="activity" size={15} style={{ color: 'var(--gecko-primary-600)' }} />
-          <span style={{ fontSize: 13, fontWeight: 700 }}>Workflow Preview</span>
+          <span className="gecko-card-title" style={{ fontSize: 13, fontWeight: 700 }}>Workflow Preview</span>
         </div>
         <div style={{ padding: '24px 24px 20px', overflowX: 'auto', background: 'var(--gecko-bg-subtle)' }}>
           {state.movements.length === 0 ? (
@@ -1176,7 +1177,7 @@ function Step4({ state }: { state: WizardState }) {
           const col = SEQ_COLORS[(mov.seq - 1) % SEQ_COLORS.length];
           return (
             <div key={mov.tempId} style={{ background: 'var(--gecko-bg-surface)', border: `1px solid ${col.border}`, borderRadius: 12, padding: '14px 16px' }}>
-              <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 10 }}>
+              <div className="gecko-row gecko-mb-3">
                 <div style={{ width: 22, height: 22, borderRadius: 6, background: col.bg, color: '#fff', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 11, fontWeight: 800 }}>{mov.seq}</div>
                 <span style={{ fontFamily: 'var(--gecko-font-mono)', fontSize: 12, fontWeight: 700, color: col.bg }}>{mov.code}</span>
                 <span style={{ fontSize: 10, color: 'var(--gecko-text-secondary)' }}>{mov.name}</span>
@@ -1184,16 +1185,16 @@ function Step4({ state }: { state: WizardState }) {
               {mov.charges.length === 0 && mov.vasCharges.length === 0 ? (
                 <div style={{ fontSize: 11, color: 'var(--gecko-text-disabled)', fontStyle: 'italic' }}>No charges configured</div>
               ) : (
-                <div style={{ display: 'flex', flexDirection: 'column', gap: 3 }}>
+                <div className="gecko-stack" style={{ gap: 3 }}>
                   {mov.charges.map(c => (
-                    <div key={c.tempId} style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 10 }}>
+                    <div key={c.tempId} className="gecko-row" style={{ gap: 6, fontSize: 10 }}>
                       <span style={{ fontFamily: 'var(--gecko-font-mono)', fontWeight: 600 }}>{c.code}</span>
                       <span style={{ fontSize: 9, padding: '1px 5px', borderRadius: 3, background: c.paymentTerm === 'CASH' ? '#D1FAE5' : '#DBEAFE', color: c.paymentTerm === 'CASH' ? '#065F46' : '#1D4ED8', fontWeight: 600 }}>{c.paymentTerm}</span>
                       <span style={{ fontSize: 9, color: 'var(--gecko-text-disabled)' }}>{c.billedTo}</span>
                     </div>
                   ))}
                   {mov.vasCharges.map(v => (
-                    <div key={v.tempId} style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 10 }}>
+                    <div key={v.tempId} className="gecko-row" style={{ gap: 6, fontSize: 10 }}>
                       <span style={{ fontFamily: 'var(--gecko-font-mono)', fontWeight: 600, color: 'var(--gecko-accent-700)' }}>{v.code}</span>
                       <span style={{ fontSize: 9, padding: '1px 5px', borderRadius: 3, background: '#FEF3C7', color: '#92400E', fontWeight: 600 }}>VAS</span>
                       <span style={{ fontSize: 9, color: 'var(--gecko-text-disabled)' }}>{v.paymentTo}</span>
@@ -1283,7 +1284,7 @@ export default function NewOrderTypePage() {
             <span className="gecko-breadcrumb-sep" />
             <span className="gecko-breadcrumb-current">New Order Type</span>
           </nav>
-          <h1 style={{ fontSize: 22, fontWeight: 700, margin: '6px 0 0', color: 'var(--gecko-text-primary)' }}>Create Order Type</h1>
+          <h1 className="gecko-page-title" style={{ margin: '6px 0 0' }}>Create Order Type</h1>
         </div>
         <Link href="/masters/order-types" className="gecko-btn gecko-btn-ghost gecko-btn-sm">
           <Icon name="xCircle" size={15} /> Cancel
@@ -1298,17 +1299,17 @@ export default function NewOrderTypePage() {
       {step === 4 && <Step4 state={state} />}
 
       {errors.length > 0 && (
-        <div style={{ marginTop: 16, padding: '12px 16px', background: 'var(--gecko-error-50)', border: '1px solid var(--gecko-error-200)', borderRadius: 10, display: 'flex', gap: 10, alignItems: 'flex-start' }}>
+        <div className="gecko-row gecko-row-start" style={{ marginTop: 16, padding: '12px 16px', background: 'var(--gecko-error-50)', border: '1px solid var(--gecko-error-200)', borderRadius: 10, gap: 10 }}>
           <Icon name="alertTriangle" size={15} style={{ color: 'var(--gecko-error-500)', marginTop: 1, flexShrink: 0 }} />
           <div>{errors.map(e => <div key={e} style={{ fontSize: 13, color: 'var(--gecko-error-700)', fontWeight: 500 }}>{e}</div>)}</div>
         </div>
       )}
 
-      <div style={{ marginTop: 24, display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '16px 0', borderTop: '1px solid var(--gecko-border)' }}>
+      <div className="gecko-row gecko-row-between gecko-mt-5" style={{ padding: '16px 0', borderTop: '1px solid var(--gecko-border)' }}>
         <button onClick={back} disabled={step === 1} className="gecko-btn gecko-btn-ghost" style={{ opacity: step === 1 ? 0 : 1, pointerEvents: step === 1 ? 'none' : 'auto' }}>
           <Icon name="chevronLeft" size={16} /> Back
         </button>
-        <div style={{ display: 'flex', gap: 6 }}>
+        <div className="gecko-row" style={{ gap: 6 }}>
           {[1, 2, 3, 4].map(i => (
             <div key={i} style={{ width: i === step ? 20 : 6, height: 6, borderRadius: 3, background: i < step ? '#16A34A' : i === step ? 'var(--gecko-primary-600)' : 'var(--gecko-border)', transition: 'all 250ms' }} />
           ))}

@@ -28,11 +28,10 @@ const NAV_SECTIONS: NavSection[] = [
 
 function GroupLabel({ children }: { children: React.ReactNode }) {
   return (
-    <div style={{
-      fontSize: 10, fontWeight: 700, letterSpacing: '0.09em', textTransform: 'uppercase',
-      color: 'var(--gecko-text-secondary)', marginBottom: 12, paddingBottom: 6,
-      borderBottom: '1px solid var(--gecko-border)',
-    }}>
+    <div
+      className="gecko-eyebrow"
+      style={{ marginBottom: 12, paddingBottom: 6, borderBottom: '1px solid var(--gecko-border)' }}
+    >
       {children}
     </div>
   );
@@ -42,10 +41,10 @@ function FieldRow({ label, hint, children }: { label: string; hint?: string; chi
   return (
     <div style={{ display: 'grid', gridTemplateColumns: '220px 1fr', gap: 16, alignItems: 'start', marginBottom: 14 }}>
       <div>
-        <div style={{ fontSize: 13, fontWeight: 500, color: 'var(--gecko-text-primary)', lineHeight: 1.4 }}>{label}</div>
-        {hint && <div style={{ fontSize: 11, color: 'var(--gecko-text-secondary)', marginTop: 2 }}>{hint}</div>}
+        <div className="gecko-form-label">{label}</div>
+        {hint && <div className="gecko-helper-text">{hint}</div>}
       </div>
-      <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>{children}</div>
+      <div className="gecko-row">{children}</div>
     </div>
   );
 }
@@ -130,12 +129,12 @@ function SectionWrap({ title, onSave, savedMsg, children }: {
   title: string; onSave: () => void; savedMsg: boolean; children: React.ReactNode;
 }) {
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', gap: 28 }}>
-      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 4 }}>
+    <div className="gecko-stack" style={{ gap: 28 }}>
+      <div className="gecko-row gecko-row-between" style={{ marginBottom: 4 }}>
         <h2 style={{ fontSize: 18, fontWeight: 700, color: 'var(--gecko-text-primary)', margin: 0 }}>{title}</h2>
-        <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+        <div className="gecko-row" style={{ gap: 12 }}>
           {savedMsg && (
-            <span style={{ fontSize: 12, fontWeight: 600, color: 'var(--gecko-success-600)', display: 'flex', alignItems: 'center', gap: 5 }}>
+            <span className="gecko-row" style={{ fontSize: 12, fontWeight: 600, color: 'var(--gecko-success-600)', gap: 5 }}>
               <Icon name="checkCircle" size={14} /> Saved
             </span>
           )}
@@ -152,10 +151,7 @@ function SectionWrap({ title, onSave, savedMsg, children }: {
 
 function Card({ children }: { children: React.ReactNode }) {
   return (
-    <div style={{
-      background: 'var(--gecko-bg-surface)', border: '1px solid var(--gecko-border)',
-      borderRadius: 10, padding: '18px 22px',
-    }}>
+    <div className="gecko-card gecko-card-padded">
       {children}
     </div>
   );
@@ -999,7 +995,7 @@ function IntegrationSection({ onDirty }: { onDirty: () => void }) {
                   </td>
                   <td style={{ padding: '10px 12px' }}>{statusBadge(wh.status)}</td>
                   <td style={{ padding: '10px 12px' }}>
-                    <div style={{ display: 'flex', gap: 6 }}>
+                    <div className="gecko-row" style={{ gap: 6 }}>
                       <button className="gecko-btn gecko-btn-ghost gecko-btn-icon gecko-btn-sm" title="Edit webhook">
                         <Icon name="edit" size={14} />
                       </button>
@@ -1027,7 +1023,7 @@ function IntegrationSection({ onDirty }: { onDirty: () => void }) {
         <GroupLabel>External Systems</GroupLabel>
 
         {/* CargoWise */}
-        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+        <div className="gecko-row gecko-row-between" style={{
           padding: '12px 0', borderBottom: '1px solid var(--gecko-border)' }}>
           <div>
             <div style={{ fontSize: 13, fontWeight: 600, color: 'var(--gecko-text-primary)' }}>CargoWise Integration</div>
@@ -1044,7 +1040,7 @@ function IntegrationSection({ onDirty }: { onDirty: () => void }) {
         </div>
 
         {/* PCS */}
-        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+        <div className="gecko-row gecko-row-between" style={{
           padding: '12px 0', borderBottom: '1px solid var(--gecko-border)' }}>
           <div>
             <div style={{ fontSize: 13, fontWeight: 600, color: 'var(--gecko-text-primary)' }}>Port Community System (PCS)</div>
@@ -1063,7 +1059,7 @@ function IntegrationSection({ onDirty }: { onDirty: () => void }) {
         </div>
 
         {/* Thai Customs */}
-        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+        <div className="gecko-row gecko-row-between" style={{
           padding: '12px 0', borderBottom: '1px solid var(--gecko-border)' }}>
           <div>
             <div style={{ fontSize: 13, fontWeight: 600, color: 'var(--gecko-text-primary)' }}>Customs API (Thai Customs)</div>
@@ -1083,7 +1079,7 @@ function IntegrationSection({ onDirty }: { onDirty: () => void }) {
         </div>
 
         {/* Lloyd's */}
-        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '12px 0' }}>
+        <div className="gecko-row gecko-row-between" style={{ padding: '12px 0' }}>
           <div>
             <div style={{ fontSize: 13, fontWeight: 600, color: 'var(--gecko-text-primary)' }}>{"Lloyd's Register API"}</div>
             <div style={{ fontSize: 11, color: 'var(--gecko-text-secondary)', marginTop: 2 }}>
@@ -1134,26 +1130,25 @@ export default function SystemParamsPage() {
   };
 
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', gap: 0 }}>
+    <div className="gecko-stack" style={{ gap: 0 }}>
       {/* ── Page Header ── */}
       <div style={{ marginBottom: 24 }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 4 }}>
-          <div style={{ width: 32, height: 32, borderRadius: 8, background: 'var(--gecko-primary-600)',
-            display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+        <div className="gecko-row" style={{ gap: 10, marginBottom: 4 }}>
+          <div className="gecko-mini-icon gecko-mini-icon-solid">
             <Icon name="settings" size={18} style={{ color: '#fff' }} />
           </div>
-          <h1 style={{ fontSize: 22, fontWeight: 700, margin: 0, letterSpacing: '-0.02em', color: 'var(--gecko-text-primary)' }}>
+          <h1 className="gecko-page-title">
             System Parameters
           </h1>
           <span className="gecko-badge gecko-badge-info" style={{ fontSize: 10 }}>Super User</span>
         </div>
-        <p style={{ margin: 0, fontSize: 13, color: 'var(--gecko-text-secondary)', paddingLeft: 42 }}>
+        <p className="gecko-page-subtitle" style={{ margin: 0, paddingLeft: 42 }}>
           Global facility settings, operational defaults, and integration parameters
         </p>
       </div>
 
       {/* ── Two-panel layout ── */}
-      <div style={{ display: 'flex', gap: 20, alignItems: 'flex-start' }}>
+      <div className="gecko-row gecko-row-start" style={{ gap: 20 }}>
 
         {/* ── Left Navigation ── */}
         <div style={{

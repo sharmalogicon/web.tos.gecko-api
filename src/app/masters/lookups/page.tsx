@@ -275,7 +275,7 @@ function EntryModal({ entry, isNew, catMeta, groupColor, groupBg, onClose }: Ent
                 : `Edit · ${entry.code} · Last saved by ${entry.modifiedBy || '—'} on ${entry.modifiedOn || '—'}`}
             </div>
           </div>
-          <button onClick={onClose} className="gecko-mini-icon gecko-mini-icon-neutral" style={{ border: '1px solid var(--gecko-border)', borderRadius: 7, background: 'var(--gecko-bg-surface)', color: 'var(--gecko-text-secondary)', fontSize: 17, cursor: 'pointer', fontFamily: 'inherit' }}>×</button>
+          <button onClick={onClose} className="gecko-mini-icon gecko-mini-icon-neutral" style={{ border: '1px solid var(--gecko-border)', borderRadius: 7, background: 'var(--gecko-bg-surface)', fontSize: 17, cursor: 'pointer', fontFamily: 'inherit' }}>×</button>
         </div>
 
         {/* ── System lock notice ── */}
@@ -315,14 +315,14 @@ function EntryModal({ entry, isNew, catMeta, groupColor, groupBg, onClose }: Ent
           {/* Section 2 — External Code Mappings */}
           <div>
             {sectionHead('External Code Mappings')}
-            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 14 }}>
+            <div className="gecko-grid-2">
               {[
                 { field: 'smdgCode',    label: 'SMDG Code',    badge: 'SMDG',    badgeBg: 'var(--gecko-primary-100)', badgeClr: 'var(--gecko-primary-700)', ph: 'e.g. GTIN', hint: 'SMDG Edifact Message Standard' },
                 { field: 'edifactCode', label: 'EDIFACT Code', badge: 'EDIFACT', badgeBg: 'var(--gecko-warning-100)', badgeClr: 'var(--gecko-warning-700)', ph: 'e.g. IF',   hint: 'UN/EDIFACT Annex qualifier'    },
                 { field: 'isoCode',     label: 'ISO Code',     badge: 'ISO',     badgeBg: 'var(--gecko-info-100)',    badgeClr: 'var(--gecko-info-700)',    ph: 'e.g. TEU',  hint: 'ISO reference identifier'      },
                 { field: 'customsCode', label: 'Customs Code', badge: null,      badgeBg: '',                        badgeClr: '',                        ph: 'e.g. CBM',  hint: 'Local customs / BoC code'      },
               ].map(f => (
-                <div key={f.field} style={{ display: 'flex', flexDirection: 'column', gap: 3 }}>
+                <div key={f.field} className="gecko-stack gecko-stack-xs">
                   <label className="gecko-label gecko-row" style={{ gap: 6 }}>
                     {f.label}
                     {f.badge && <span style={{ fontSize: 9, fontWeight: 800, letterSpacing: '0.04em', padding: '1px 5px', borderRadius: 3, background: f.badgeBg, color: f.badgeClr }}>{f.badge}</span>}
@@ -361,7 +361,7 @@ function EntryModal({ entry, isNew, catMeta, groupColor, groupBg, onClose }: Ent
                 <input className="gecko-input gecko-text-mono" type="number" value={form.sortOrder} onChange={set('sortOrder')} />
               </div>
             </div>
-            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 14 }}>
+            <div className="gecko-grid-2">
               <div className="gecko-stack" style={{ gap: 3 }}>
                 <label className="gecko-label">Effective From</label>
                 <DateField value={form.effectiveFrom} onChange={v => setForm(p => ({ ...p, effectiveFrom: v }))} placeholder="dd mmm yyyy" />
@@ -597,11 +597,11 @@ export default function LookupMasterPage() {
           {/* Table */}
           <div className="gecko-flex-1" style={{ overflowX: 'auto', overflowY: 'auto' }}>
             {rawEntries.length === 0 ? (
-              <div className="gecko-stack" style={{ alignItems: 'center', justifyContent: 'center', padding: '60px 20px', color: 'var(--gecko-text-secondary)' }}>
+              <div className="gecko-stack" style={{ alignItems: 'center', justifyContent: 'center', padding: '60px 20px' }}>
                 <Icon name="database" size={36} style={{ color: 'var(--gecko-text-disabled)', marginBottom: 12 }} />
-                <div style={{ fontSize: 14, fontWeight: 600 }}>No entries yet</div>
-                <div style={{ fontSize: 12, marginTop: 4 }}>This category has no lookup values. Add the first one.</div>
-                <button className="gecko-btn gecko-btn-primary gecko-btn-sm" style={{ marginTop: 16 }} onClick={openNew}><Icon name="plus" size={13} /> Add First Entry</button>
+                <div className="gecko-card-title">No entries yet</div>
+                <div className="gecko-cell-meta">This category has no lookup values. Add the first one.</div>
+                <button className="gecko-btn gecko-btn-primary gecko-btn-sm gecko-mt-4" onClick={openNew}><Icon name="plus" size={13} /> Add First Entry</button>
               </div>
             ) : (
               <table className="gecko-table gecko-table-comfortable" style={{ fontSize: 12.5, minWidth: 900 }}>

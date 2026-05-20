@@ -109,17 +109,17 @@ function nextClosureDate(holidays: PublicHoliday[], schedule: DaySchedule[]): st
 
 function KpiCard({ label, value, sub, accent }: { label: string; value: string | number; sub?: string; accent?: string }) {
   return (
-    <div style={{
-      flex: 1, minWidth: 150, padding: '14px 20px',
-      background: 'var(--gecko-bg-surface)',
-      border: '1px solid var(--gecko-border)',
-      borderRadius: 10,
-      borderTop: `3px solid ${accent ?? 'var(--gecko-primary-500)'}`,
-    }}>
-      <div style={{ fontSize: 10, fontWeight: 600, letterSpacing: '0.08em', textTransform: 'uppercase', color: 'var(--gecko-text-secondary)', marginBottom: 6 }}>
+    <div
+      className="gecko-card"
+      style={{
+        flex: 1, minWidth: 150, padding: '14px 20px',
+        borderTop: `3px solid ${accent ?? 'var(--gecko-primary-500)'}`,
+      }}
+    >
+      <div className="gecko-eyebrow" style={{ marginBottom: 6 }}>
         {label}
       </div>
-      <div style={{ fontSize: 26, fontWeight: 700, lineHeight: 1, color: 'var(--gecko-text-primary)' }}>
+      <div className="gecko-stat-num">
         {value}
       </div>
       {sub && <div style={{ fontSize: 11, color: 'var(--gecko-text-secondary)', marginTop: 4 }}>{sub}</div>}
@@ -176,17 +176,14 @@ function WeeklyScheduleTab() {
   }, [schedule]);
 
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
+    <div className="gecko-stack" style={{ gap: 16 }}>
 
       {/* Controls bar */}
-      <div style={{
-        display: 'flex', alignItems: 'center', gap: 10, flexWrap: 'wrap',
-        padding: '10px 16px',
-        background: 'var(--gecko-bg-surface)',
-        border: '1px solid var(--gecko-border)',
-        borderRadius: 10,
-      }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: 7 }}>
+      <div
+        className="gecko-card gecko-row gecko-row-wrap"
+        style={{ gap: 10, padding: '10px 16px' }}
+      >
+        <div className="gecko-row" style={{ gap: 7 }}>
           <Icon name="calendar" size={14} style={{ color: 'var(--gecko-primary-500)' }} />
           <span style={{ fontSize: 12, color: 'var(--gecko-text-secondary)' }}>Effective from:</span>
           <span style={{ fontSize: 13, fontWeight: 700, color: 'var(--gecko-text-primary)' }}>01 May 2026</span>
@@ -195,31 +192,28 @@ function WeeklyScheduleTab() {
         <div style={{ width: 1, height: 24, background: 'var(--gecko-border)', margin: '0 4px' }} />
 
         <button
-          className="gecko-btn gecko-btn-ghost gecko-btn-sm"
-          onClick={copyWeekdayToWeekend}
-          style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+          className="gecko-btn gecko-btn-ghost gecko-btn-sm gecko-inline-row"
+          onClick={copyWeekdayToWeekend}>
           <Icon name="copy" size={13} />
           Copy weekday pattern to weekend
         </button>
 
         <button
-          className="gecko-btn gecko-btn-ghost gecko-btn-sm"
-          onClick={applyToAllDays}
-          style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+          className="gecko-btn gecko-btn-ghost gecko-btn-sm gecko-inline-row"
+          onClick={applyToAllDays}>
           <Icon name="refresh" size={13} />
           Apply to all days
         </button>
 
-        <div style={{ marginLeft: 'auto', display: 'flex', gap: 8, alignItems: 'center' }}>
+        <div className="gecko-row" style={{ marginLeft: 'auto' }}>
           {savedMsg && (
-            <span style={{ fontSize: 12, color: 'var(--gecko-success-600)', fontWeight: 600, display: 'flex', alignItems: 'center', gap: 5 }}>
+            <span className="gecko-inline-row" style={{ fontSize: 12, color: 'var(--gecko-success-600)', fontWeight: 600 }}>
               <Icon name="checkCircle" size={13} /> {savedMsg}
             </span>
           )}
           <button
-            className="gecko-btn gecko-btn-primary gecko-btn-sm"
-            onClick={handleSave}
-            style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+            className="gecko-btn gecko-btn-primary gecko-btn-sm gecko-inline-row"
+            onClick={handleSave}>
             <Icon name="save" size={13} />
             Save Changes
           </button>
@@ -227,20 +221,15 @@ function WeeklyScheduleTab() {
       </div>
 
       {/* Schedule table */}
-      <div style={{
-        background: 'var(--gecko-bg-surface)',
-        border: '1px solid var(--gecko-border)',
-        borderRadius: 10, overflow: 'hidden',
-      }}>
+      <div className="gecko-card" style={{ padding: 0, overflow: 'hidden' }}>
         <div style={{ overflowX: 'auto' }}>
           <table style={{ width: '100%', borderCollapse: 'collapse' }}>
             <thead>
               <tr style={{ borderBottom: '1px solid var(--gecko-border)', background: 'var(--gecko-bg-subtle)' }}>
                 {['Day', 'Status', 'Opening Time', 'Closing Time', 'Lunch Break', 'Total Hours', 'Actions'].map(col => (
-                  <th key={col} style={{
+                  <th key={col} className="gecko-eyebrow" style={{
                     padding: '9px 14px', textAlign: 'left',
-                    fontSize: 10, fontWeight: 700, letterSpacing: '0.07em', textTransform: 'uppercase',
-                    color: 'var(--gecko-text-secondary)', whiteSpace: 'nowrap',
+                    whiteSpace: 'nowrap',
                   }}>
                     {col}
                   </th>
@@ -261,7 +250,7 @@ function WeeklyScheduleTab() {
                   >
                     {/* Day */}
                     <td style={{ padding: '12px 14px', whiteSpace: 'nowrap' }}>
-                      <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                      <div className="gecko-row">
                         <span style={{
                           width: 28, height: 28, borderRadius: 6, flexShrink: 0,
                           background: isWeekend ? 'var(--gecko-warning-100)' : 'var(--gecko-primary-100)',
@@ -331,7 +320,7 @@ function WeeklyScheduleTab() {
                     {/* Lunch break */}
                     <td style={{ padding: '12px 14px' }}>
                       {day.open ? (
-                        <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+                        <div className="gecko-row" style={{ gap: 6 }}>
                           <input
                             type="time"
                             value={day.breakStart}
@@ -383,32 +372,32 @@ function WeeklyScheduleTab() {
         </div>
 
         {/* Weekly summary bar */}
-        <div style={{
+        <div className="gecko-row gecko-row-wrap" style={{
           borderTop: '2px solid var(--gecko-border)',
           padding: '12px 16px',
           background: 'var(--gecko-bg-subtle)',
-          display: 'flex', gap: 28, flexWrap: 'wrap', alignItems: 'center',
+          gap: 28,
         }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: 7 }}>
+          <div className="gecko-row" style={{ gap: 7 }}>
             <Icon name="clock" size={14} style={{ color: 'var(--gecko-primary-500)' }} />
             <span style={{ fontSize: 11, color: 'var(--gecko-text-secondary)' }}>Total operating hours this week:</span>
             <span style={{ fontSize: 13, fontWeight: 700, color: 'var(--gecko-text-primary)' }}>
               {summary.totalHours % 1 === 0 ? `${summary.totalHours} hrs` : `${summary.totalHours.toFixed(1)} hrs`}
             </span>
           </div>
-          <div style={{ display: 'flex', alignItems: 'center', gap: 7 }}>
+          <div className="gecko-row" style={{ gap: 7 }}>
             <Icon name="checkCircle" size={14} style={{ color: 'var(--gecko-success-500)' }} />
             <span style={{ fontSize: 11, color: 'var(--gecko-text-secondary)' }}>Days open:</span>
             <span style={{ fontSize: 13, fontWeight: 700, color: 'var(--gecko-text-primary)' }}>
               {summary.daysOpen} / 7 days
             </span>
           </div>
-          <div style={{ display: 'flex', alignItems: 'center', gap: 7 }}>
+          <div className="gecko-row" style={{ gap: 7 }}>
             <Icon name="arrowUp" size={13} style={{ color: 'var(--gecko-success-600)' }} />
             <span style={{ fontSize: 11, color: 'var(--gecko-text-secondary)' }}>Earliest open:</span>
             <span style={{ fontSize: 13, fontWeight: 700, color: 'var(--gecko-text-primary)' }}>{summary.earliest}</span>
           </div>
-          <div style={{ display: 'flex', alignItems: 'center', gap: 7 }}>
+          <div className="gecko-row" style={{ gap: 7 }}>
             <Icon name="arrowDown" size={13} style={{ color: 'var(--gecko-warning-600)' }} />
             <span style={{ fontSize: 11, color: 'var(--gecko-text-secondary)' }}>Latest close:</span>
             <span style={{ fontSize: 13, fontWeight: 700, color: 'var(--gecko-text-primary)' }}>{summary.latest}</span>
@@ -472,29 +461,23 @@ function PublicHolidaysTab() {
   };
 
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
+    <div className="gecko-stack" style={{ gap: 16 }}>
 
       {/* Table card */}
-      <div style={{
-        background: 'var(--gecko-bg-surface)',
-        border: '1px solid var(--gecko-border)',
-        borderRadius: 10, overflow: 'hidden',
-      }}>
+      <div className="gecko-card" style={{ padding: 0, overflow: 'hidden' }}>
         {/* Table header */}
-        <div style={{
+        <div className="gecko-row gecko-row-between" style={{
           padding: '12px 16px',
           borderBottom: '1px solid var(--gecko-border)',
-          display: 'flex', alignItems: 'center', justifyContent: 'space-between',
         }}>
-          <div style={{ fontSize: 13, fontWeight: 700, color: 'var(--gecko-text-primary)', display: 'flex', alignItems: 'center', gap: 8 }}>
+          <div className="gecko-row" style={{ fontSize: 13, fontWeight: 700, color: 'var(--gecko-text-primary)' }}>
             <Icon name="calendar" size={15} style={{ color: 'var(--gecko-primary-500)' }} />
             Public Holidays — Laem Chabang ICD
             <span className="gecko-badge gecko-badge-gray" style={{ fontSize: 10 }}>{holidays.length} holidays</span>
           </div>
           <button
-            className="gecko-btn gecko-btn-primary gecko-btn-sm"
-            onClick={() => { setShowAddForm(s => !s); setEditId(null); }}
-            style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+            className="gecko-btn gecko-btn-primary gecko-btn-sm gecko-inline-row"
+            onClick={() => { setShowAddForm(s => !s); setEditId(null); }}>
             <Icon name="plus" size={13} />
             Add Holiday
           </button>
@@ -507,12 +490,12 @@ function PublicHolidaysTab() {
             background: 'var(--gecko-primary-50)',
             borderBottom: '1px solid var(--gecko-primary-100)',
           }}>
-            <div style={{ fontSize: 12, fontWeight: 700, color: 'var(--gecko-primary-700)', marginBottom: 10, display: 'flex', alignItems: 'center', gap: 6 }}>
+            <div className="gecko-row" style={{ fontSize: 12, fontWeight: 700, color: 'var(--gecko-primary-700)', marginBottom: 10, gap: 6 }}>
               <Icon name="plus" size={13} /> New Holiday
             </div>
-            <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap', alignItems: 'flex-end' }}>
-              <label style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
-                <span style={{ fontSize: 10, fontWeight: 700, color: 'var(--gecko-text-secondary)', textTransform: 'uppercase', letterSpacing: '0.06em' }}>Date *</span>
+            <div className="gecko-row gecko-row-wrap gecko-row-end" style={{ gap: 10 }}>
+              <label className="gecko-stack" style={{ gap: 4 }}>
+                <span className="gecko-eyebrow">Date *</span>
                 <input
                   type="date"
                   value={draft.date}
@@ -521,8 +504,8 @@ function PublicHolidaysTab() {
                   style={{ width: 150 }}
                 />
               </label>
-              <label style={{ display: 'flex', flexDirection: 'column', gap: 4, flex: '1 1 180px' }}>
-                <span style={{ fontSize: 10, fontWeight: 700, color: 'var(--gecko-text-secondary)', textTransform: 'uppercase', letterSpacing: '0.06em' }}>Holiday Name *</span>
+              <label className="gecko-stack" style={{ gap: 4, flex: '1 1 180px' }}>
+                <span className="gecko-eyebrow">Holiday Name *</span>
                 <input
                   type="text"
                   value={draft.name}
@@ -532,8 +515,8 @@ function PublicHolidaysTab() {
                   style={{ minWidth: 180 }}
                 />
               </label>
-              <label style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
-                <span style={{ fontSize: 10, fontWeight: 700, color: 'var(--gecko-text-secondary)', textTransform: 'uppercase', letterSpacing: '0.06em' }}>Type</span>
+              <label className="gecko-stack" style={{ gap: 4 }}>
+                <span className="gecko-eyebrow">Type</span>
                 <select
                   value={draft.type}
                   onChange={e => setDraft(d => ({ ...d, type: e.target.value as HolidayType }))}
@@ -542,8 +525,8 @@ function PublicHolidaysTab() {
                   {TYPE_OPTIONS.map(t => <option key={t}>{t}</option>)}
                 </select>
               </label>
-              <label style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
-                <span style={{ fontSize: 10, fontWeight: 700, color: 'var(--gecko-text-secondary)', textTransform: 'uppercase', letterSpacing: '0.06em' }}>Scope</span>
+              <label className="gecko-stack" style={{ gap: 4 }}>
+                <span className="gecko-eyebrow">Scope</span>
                 <select
                   value={draft.scope}
                   onChange={e => setDraft(d => ({ ...d, scope: e.target.value as HolidayScope }))}
@@ -552,8 +535,8 @@ function PublicHolidaysTab() {
                   {SCOPE_OPTIONS.map(s => <option key={s}>{s}</option>)}
                 </select>
               </label>
-              <label style={{ display: 'flex', flexDirection: 'column', gap: 4, flex: '1 1 160px' }}>
-                <span style={{ fontSize: 10, fontWeight: 700, color: 'var(--gecko-text-secondary)', textTransform: 'uppercase', letterSpacing: '0.06em' }}>Notes</span>
+              <label className="gecko-stack" style={{ gap: 4, flex: '1 1 160px' }}>
+                <span className="gecko-eyebrow">Notes</span>
                 <input
                   type="text"
                   value={draft.notes}
@@ -563,11 +546,10 @@ function PublicHolidaysTab() {
                   style={{ minWidth: 160 }}
                 />
               </label>
-              <div style={{ display: 'flex', gap: 6, paddingBottom: 1 }}>
+              <div className="gecko-row" style={{ gap: 6, paddingBottom: 1 }}>
                 <button
-                  className="gecko-btn gecko-btn-primary gecko-btn-sm"
-                  onClick={handleAddSubmit}
-                  style={{ display: 'flex', alignItems: 'center', gap: 5 }}>
+                  className="gecko-btn gecko-btn-primary gecko-btn-sm gecko-inline-row"
+                  onClick={handleAddSubmit}>
                   <Icon name="check" size={13} /> Add
                 </button>
                 <button
@@ -586,10 +568,9 @@ function PublicHolidaysTab() {
             <thead>
               <tr style={{ borderBottom: '1px solid var(--gecko-border)', background: 'var(--gecko-bg-subtle)' }}>
                 {['Date', 'Holiday Name', 'Type', 'Scope', 'Notes', 'Status', 'Actions'].map(col => (
-                  <th key={col} style={{
+                  <th key={col} className="gecko-eyebrow" style={{
                     padding: '9px 14px', textAlign: 'left',
-                    fontSize: 10, fontWeight: 700, letterSpacing: '0.07em', textTransform: 'uppercase',
-                    color: 'var(--gecko-text-secondary)', whiteSpace: 'nowrap',
+                    whiteSpace: 'nowrap',
                   }}>
                     {col}
                   </th>
@@ -674,7 +655,7 @@ function PublicHolidaysTab() {
                           {SCOPE_OPTIONS.map(s => <option key={s}>{s}</option>)}
                         </select>
                       ) : (
-                        <div style={{ display: 'flex', alignItems: 'center', gap: 5 }}>
+                        <div className="gecko-row" style={{ gap: 5 }}>
                           {h.scope === 'All Yards'
                             ? <Icon name="globe" size={12} style={{ color: 'var(--gecko-primary-500)' }} />
                             : <Icon name="settings" size={12} style={{ color: 'var(--gecko-text-secondary)' }} />
@@ -715,11 +696,11 @@ function PublicHolidaysTab() {
                     {/* Actions */}
                     <td style={{ padding: '11px 14px' }}>
                       {isEdit ? (
-                        <div style={{ display: 'flex', gap: 5 }}>
+                        <div className="gecko-row" style={{ gap: 5 }}>
                           <button
-                            className="gecko-btn gecko-btn-primary gecko-btn-sm"
+                            className="gecko-btn gecko-btn-primary gecko-btn-sm gecko-inline-row"
                             onClick={handleEditSave}
-                            style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
+                            style={{ gap: 4 }}>
                             <Icon name="check" size={12} /> Save
                           </button>
                           <button
@@ -729,7 +710,7 @@ function PublicHolidaysTab() {
                           </button>
                         </div>
                       ) : (
-                        <div style={{ display: 'flex', gap: 4 }}>
+                        <div className="gecko-row" style={{ gap: 4 }}>
                           <button
                             className="gecko-btn gecko-btn-ghost gecko-btn-icon gecko-btn-sm"
                             onClick={() => handleEditStart(h)}
@@ -778,7 +759,7 @@ export default function GateHoursPage() {
   }, []);
 
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--gecko-space-4)' }}>
+    <div className="gecko-stack" style={{ gap: 'var(--gecko-space-4)' }}>
 
       {/* Toolbar */}
       <PageToolbar
@@ -787,10 +768,10 @@ export default function GateHoursPage() {
         badges={[{ label: 'Config', kind: 'info' }]}
         actions={
           <>
-            <button className="gecko-btn gecko-btn-outline gecko-btn-sm" style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+            <button className="gecko-btn gecko-btn-outline gecko-btn-sm gecko-inline-row">
               <Icon name="download" size={13} /> Export Schedule
             </button>
-            <button className="gecko-btn gecko-btn-outline gecko-btn-sm" style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+            <button className="gecko-btn gecko-btn-outline gecko-btn-sm gecko-inline-row">
               <Icon name="copy" size={13} /> Clone to Next Period
             </button>
           </>
@@ -798,7 +779,7 @@ export default function GateHoursPage() {
       />
 
       {/* KPI strip */}
-      <div style={{ display: 'flex', gap: 12, flexWrap: 'wrap' }}>
+      <div className="gecko-row gecko-row-wrap" style={{ gap: 12 }}>
         <KpiCard
           label="Operating Days / Week"
           value={`${kpiData.openDays} / 7`}
@@ -870,12 +851,12 @@ export default function GateHoursPage() {
       </div>
 
       {/* Info footer */}
-      <div style={{
+      <div className="gecko-row gecko-row-start" style={{
         padding: '12px 16px',
         background: 'var(--gecko-primary-50)',
         border: '1px solid var(--gecko-primary-100)',
         borderRadius: 8,
-        display: 'flex', gap: 12, alignItems: 'flex-start',
+        gap: 12,
       }}>
         <Icon name="info" size={16} style={{ color: 'var(--gecko-primary-600)', flexShrink: 0, marginTop: 1 }} />
         <div style={{ fontSize: 12, color: 'var(--gecko-primary-800)', lineHeight: 1.6 }}>

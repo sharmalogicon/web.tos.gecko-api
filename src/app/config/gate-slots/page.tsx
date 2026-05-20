@@ -141,11 +141,13 @@ function UtilBar({ pct, status }: { pct: number; status: SlotStatus }) {
 
 function KpiCard({ label, value, sub, accent }: { label: string; value: string | number; sub?: string; accent?: string }) {
   return (
-    <div style={{ flex: 1, minWidth: 150, padding: '14px 20px', background: 'var(--gecko-bg-surface)',
-      border: '1px solid var(--gecko-border)', borderRadius: 10,
-      borderTop: accent ? `3px solid ${accent}` : '3px solid var(--gecko-primary-500)' }}>
-      <div style={{ fontSize: 10, fontWeight: 600, letterSpacing: '0.08em', textTransform: 'uppercase', color: 'var(--gecko-text-secondary)', marginBottom: 6 }}>{label}</div>
-      <div style={{ fontSize: 26, fontWeight: 700, lineHeight: 1, color: 'var(--gecko-text-primary)' }}>{value}</div>
+    <div
+      className="gecko-card"
+      style={{ flex: 1, minWidth: 150, padding: '14px 20px',
+        borderTop: accent ? `3px solid ${accent}` : '3px solid var(--gecko-primary-500)' }}
+    >
+      <div className="gecko-eyebrow" style={{ marginBottom: 6 }}>{label}</div>
+      <div className="gecko-stat-num">{value}</div>
       {sub && <div style={{ fontSize: 11, color: 'var(--gecko-text-secondary)', marginTop: 4 }}>{sub}</div>}
     </div>
   );
@@ -153,7 +155,7 @@ function KpiCard({ label, value, sub, accent }: { label: string; value: string |
 
 function NumInput({ label, value, onChange, disabled }: { label: string; value: number; onChange: (v: number) => void; disabled?: boolean }) {
   return (
-    <label style={{ display: 'flex', flexDirection: 'column', gap: 3, flex: 1 }}>
+    <label className="gecko-stack" style={{ gap: 3, flex: 1 }}>
       <span style={{ fontSize: 11, fontWeight: 600, color: 'var(--gecko-text-secondary)' }}>{label}</span>
       <input
         type="number" min={0} max={999}
@@ -257,29 +259,29 @@ export default function GateSlotConfigPage() {
   const panelOpen = selected !== null && draft !== null;
 
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--gecko-space-4)' }}>
+    <div className="gecko-stack" style={{ gap: 'var(--gecko-space-4)' }}>
 
       {/* ── Toolbar ── */}
-      <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: 12, flexWrap: 'wrap' }}>
-        <div>
-          <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 4 }}>
-            <h1 style={{ fontSize: 22, fontWeight: 700, margin: 0, letterSpacing: '-0.02em' }}>Gate Slot Capacity</h1>
+      <div className="gecko-page-header">
+        <div className="gecko-page-header-left">
+          <div className="gecko-row" style={{ gap: 10, marginBottom: 4 }}>
+            <h1 className="gecko-page-title">Gate Slot Capacity</h1>
             <span className="gecko-badge gecko-badge-info" style={{ fontSize: 10 }}>Super User</span>
           </div>
-          <div style={{ fontSize: 12, color: 'var(--gecko-text-secondary)' }}>
+          <div className="gecko-page-subtitle">
             Configure appointment capacity windows per yard — controls how many trucks can be processed per time slot.
           </div>
         </div>
-        <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', alignItems: 'center' }}>
+        <div className="gecko-page-header-actions">
           {savedMsg && (
-            <span style={{ fontSize: 12, color: 'var(--gecko-success-600)', fontWeight: 600, display: 'flex', alignItems: 'center', gap: 5 }}>
+            <span className="gecko-inline-row" style={{ fontSize: 12, color: 'var(--gecko-success-600)', fontWeight: 600 }}>
               <Icon name="checkCircle" size={14} /> {savedMsg}
             </span>
           )}
-          <button className="gecko-btn gecko-btn-outline gecko-btn-sm" onClick={() => {}} style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+          <button className="gecko-btn gecko-btn-outline gecko-btn-sm gecko-inline-row" onClick={() => {}}>
             <Icon name="copy" size={14} /> Copy to Next Week
           </button>
-          <button className="gecko-btn gecko-btn-outline gecko-btn-sm" onClick={() => {}} style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+          <button className="gecko-btn gecko-btn-outline gecko-btn-sm gecko-inline-row" onClick={() => {}}>
             <Icon name="download" size={14} /> Export
           </button>
         </div>
@@ -400,7 +402,7 @@ export default function GateSlotConfigPage() {
       </div>
 
       {/* ── KPI Strip ── */}
-      <div style={{ display: 'flex', gap: 12, flexWrap: 'wrap' }}>
+      <div className="gecko-row gecko-row-wrap" style={{ gap: 12 }}>
         <KpiCard
           label="Total Slot Capacity"
           value={kpi.totalCap.toLocaleString()}
@@ -428,7 +430,7 @@ export default function GateSlotConfigPage() {
       </div>
 
       {/* ── Main layout: grid + edit panel ── */}
-      <div style={{ display: 'flex', gap: 16, alignItems: 'flex-start' }}>
+      <div className="gecko-row gecko-row-start" style={{ gap: 16 }}>
 
         {/* ── Slot Grid ── */}
         <div style={{ flex: 1, minWidth: 0, background: 'var(--gecko-bg-surface)',
@@ -607,8 +609,7 @@ export default function GateSlotConfigPage() {
 
               {/* Status */}
               <div>
-                <label style={{ fontSize: 11, fontWeight: 700, letterSpacing: '0.06em', textTransform: 'uppercase',
-                  color: 'var(--gecko-text-secondary)', display: 'block', marginBottom: 6 }}>
+                <label className="gecko-eyebrow" style={{ display: 'block', marginBottom: 6 }}>
                   Slot Status
                 </label>
                 <div style={{ display: 'flex', flexDirection: 'column', gap: 5 }}>
@@ -636,7 +637,7 @@ export default function GateSlotConfigPage() {
               {(draft.status === 'open' || draft.status === 'restricted') && (
                 <>
                   <div>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 8 }}>
+                    <div className="gecko-row" style={{ marginBottom: 8 }}>
                       <span style={{ width: 28, height: 28, borderRadius: 6, background: 'var(--gecko-primary-100)',
                         color: 'var(--gecko-primary-700)', display: 'flex', alignItems: 'center', justifyContent: 'center',
                         fontSize: 9, fontWeight: 800, letterSpacing: '0.05em', flexShrink: 0 }}>IN</span>
@@ -658,7 +659,7 @@ export default function GateSlotConfigPage() {
 
                   {/* Gate-OUT capacity */}
                   <div>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 8 }}>
+                    <div className="gecko-row" style={{ marginBottom: 8 }}>
                       <span style={{ width: 28, height: 28, borderRadius: 6, background: 'var(--gecko-success-100)',
                         color: 'var(--gecko-success-700)', display: 'flex', alignItems: 'center', justifyContent: 'center',
                         fontSize: 9, fontWeight: 800, letterSpacing: '0.05em', flexShrink: 0 }}>OUT</span>
@@ -709,8 +710,7 @@ export default function GateSlotConfigPage() {
 
               {/* Notes */}
               <div>
-                <label style={{ fontSize: 11, fontWeight: 700, letterSpacing: '0.06em', textTransform: 'uppercase',
-                  color: 'var(--gecko-text-secondary)', display: 'block', marginBottom: 6 }}>
+                <label className="gecko-eyebrow" style={{ display: 'block', marginBottom: 6 }}>
                   Notes / Reason
                 </label>
                 <textarea
@@ -725,15 +725,14 @@ export default function GateSlotConfigPage() {
             </div>
 
             {/* Panel footer actions */}
-            <div style={{ padding: '12px 16px', borderTop: '1px solid var(--gecko-border)',
-              display: 'flex', gap: 8, justifyContent: 'flex-end', background: 'var(--gecko-bg-subtle)' }}>
+            <div className="gecko-action-toolbar" style={{ padding: '12px 16px', borderTop: '1px solid var(--gecko-border)',
+              background: 'var(--gecko-bg-subtle)' }}>
               <button className="gecko-btn gecko-btn-ghost gecko-btn-sm" onClick={handleClosePanel}>
                 Cancel
               </button>
               <button
-                className="gecko-btn gecko-btn-primary gecko-btn-sm"
-                onClick={handleSaveSlot}
-                style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+                className="gecko-btn gecko-btn-primary gecko-btn-sm gecko-inline-row"
+                onClick={handleSaveSlot}>
                 <Icon name="save" size={13} /> Save Slot
               </button>
             </div>

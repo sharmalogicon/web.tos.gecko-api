@@ -296,14 +296,14 @@ function UnbilledFilterPopover({
           background: 'var(--gecko-bg-surface)', border: '1px solid var(--gecko-border)', borderRadius: 10,
           boxShadow: '0 8px 28px rgba(0,0,0,0.13)', zIndex: 50, fontFamily: 'var(--gecko-font-sans)', fontSize: 12,
         }}>
-          <div style={{ padding: '11px 16px 10px', borderBottom: '1px solid var(--gecko-border)', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-            <span style={{ fontSize: 11, fontWeight: 700, color: 'var(--gecko-text-secondary)', textTransform: 'uppercase', letterSpacing: '0.06em' }}>Filter Unbilled Services</span>
+          <div className="gecko-row gecko-row-between" style={{ padding: '11px 16px 10px', borderBottom: '1px solid var(--gecko-border)' }}>
+            <span className="gecko-eyebrow">Filter Unbilled Services</span>
             <button onClick={() => setOpen(false)} style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--gecko-text-disabled)', padding: 2, lineHeight: 1 }}><Icon name="x" size={14} /></button>
           </div>
-          <div style={{ padding: '14px 16px', display: 'flex', flexDirection: 'column', gap: 16 }}>
+          <div className="gecko-stack gecko-stack-lg" style={{ padding: '14px 16px' }}>
             <div>
               <div className="gecko-filter-section-label" style={{ paddingInline: 0, marginBottom: 8 }}>Entity Codes</div>
-              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 10 }}>
+              <div className="gecko-grid-4" style={{ gap: 10 }}>
                 <div><div style={lbl}>Agent Code</div><TInput fk="agentCode" ph="e.g. OOCL" /></div>
                 <div><div style={lbl}>Forwarder Code</div><TInput fk="forwarderCode" ph="e.g. DHL" /></div>
                 <div><div style={lbl}>Customer Code</div><TInput fk="customerCode" ph="e.g. C-00142" /></div>
@@ -405,7 +405,7 @@ function BookingRow({ b, selected, expanded, onToggleSelect, onToggleExpand }: {
         <td style={{ padding: '10px 12px', fontFamily: 'var(--gecko-font-mono)', fontSize: 12, fontWeight: 700, color: 'var(--gecko-primary-700)' }}>
           {b.bookingBLNo}
           {b.subBLNo !== b.bookingBLNo && (
-            <div style={{ fontSize: 10, color: 'var(--gecko-text-disabled)', marginTop: 2, fontWeight: 500 }}>
+            <div className="gecko-cell-sub">
               Sub-BL: {b.subBLNo}
             </div>
           )}
@@ -422,10 +422,10 @@ function BookingRow({ b, selected, expanded, onToggleSelect, onToggleExpand }: {
           {b.orderType}
         </td>
         <td style={{ padding: '10px 12px' }}>
-          <div style={{ fontSize: 12, fontWeight: 600, color: 'var(--gecko-text-primary)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', maxWidth: 220 }}>
+          <div className="gecko-cell-primary gecko-truncate" style={{ maxWidth: 220 }}>
             {b.customerName}
           </div>
-          <div style={{ fontSize: 10, color: 'var(--gecko-text-disabled)', fontFamily: 'var(--gecko-font-mono)' }}>
+          <div className="gecko-cell-sub">
             {b.customerCode}
           </div>
         </td>
@@ -433,18 +433,18 @@ function BookingRow({ b, selected, expanded, onToggleSelect, onToggleExpand }: {
           {b.agentCode}
         </td>
         <td style={{ padding: '10px 12px' }}>
-          <div style={{ fontSize: 12, fontWeight: 600, color: 'var(--gecko-text-primary)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', maxWidth: 140 }}>
+          <div className="gecko-cell-primary gecko-truncate" style={{ maxWidth: 140 }}>
             {b.vessel}
           </div>
-          <div style={{ fontSize: 10, color: 'var(--gecko-text-disabled)', fontFamily: 'var(--gecko-font-mono)' }}>
+          <div className="gecko-cell-sub">
             {b.voyageNo} · {b.wharf}
           </div>
         </td>
         <td style={{ padding: '10px 12px', textAlign: 'center', fontFamily: 'var(--gecko-font-mono)', fontWeight: 600, color: 'var(--gecko-text-secondary)' }}>
           {b.charges.length}
         </td>
-        <td style={{ padding: '10px 12px', textAlign: 'right' }}>
-          <div style={{ fontFamily: 'var(--gecko-font-mono)', fontSize: 14, fontWeight: 800, color: 'var(--gecko-text-primary)' }}>
+        <td style={{ padding: '10px 12px' }}>
+          <div className="gecko-money gecko-money-lg">
             ฿{fmtTHB(total)}
           </div>
         </td>
@@ -464,9 +464,9 @@ function BookingRow({ b, selected, expanded, onToggleSelect, onToggleExpand }: {
               borderRadius: 8,
               overflow: 'hidden',
             }}>
-              <div style={{ padding: '10px 14px', borderBottom: '1px solid var(--gecko-border)', display: 'flex', alignItems: 'center', gap: 10 }}>
+              <div className="gecko-row" style={{ padding: '10px 14px', borderBottom: '1px solid var(--gecko-border)', gap: 10 }}>
                 <Icon name="fileText" size={13} style={{ color: 'var(--gecko-primary-600)' }} />
-                <span style={{ fontSize: 11, fontWeight: 700, color: 'var(--gecko-text-secondary)', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
+                <span className="gecko-eyebrow">
                   Charges details — {b.charges.length} line item{b.charges.length === 1 ? '' : 's'}
                 </span>
               </div>
@@ -591,7 +591,7 @@ function SendToMenu({ disabled, onPick }: {
 function MenuSection({ label, children }: { label: string; children: React.ReactNode }) {
   return (
     <div style={{ padding: '6px 0', borderBottom: '1px solid var(--gecko-border)' }}>
-      <div style={{ padding: '6px 14px 4px', fontSize: 10, fontWeight: 700, color: 'var(--gecko-text-disabled)', textTransform: 'uppercase', letterSpacing: '0.06em' }}>{label}</div>
+      <div className="gecko-eyebrow" style={{ padding: '6px 14px 4px', color: 'var(--gecko-text-disabled)' }}>{label}</div>
       {children}
     </div>
   );
@@ -601,16 +601,17 @@ function MenuItem({ icon, label, sub, onClick }: { icon: string; label: string; 
   return (
     <button
       onClick={onClick}
+      className="gecko-row"
       style={{
         width: '100%', padding: '8px 14px',
         background: 'transparent', border: 'none', cursor: 'pointer',
         textAlign: 'left', fontFamily: 'inherit',
-        display: 'flex', alignItems: 'center', gap: 10,
+        gap: 10,
       }}
       onMouseEnter={e => (e.currentTarget.style.background = 'var(--gecko-bg-subtle)')}
       onMouseLeave={e => (e.currentTarget.style.background = 'transparent')}
     >
-      <div style={{ width: 28, height: 28, borderRadius: 7, background: 'var(--gecko-primary-50)', color: 'var(--gecko-primary-700)', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+      <div className="gecko-mini-icon gecko-mini-icon-primary" style={{ width: 28, height: 28, borderRadius: 7 }}>
         <Icon name={icon} size={13} />
       </div>
       <div style={{ flex: 1 }}>
@@ -638,7 +639,7 @@ function NewInvoiceModal({ open, action, count, total, onCancel, onConfirm }: {
   const draftInvoiceNo = `INV-${new Date().getFullYear()}-${String(Math.floor(Math.random() * 9000 + 1000))}`;
   return (
     <ModalShell onClose={onCancel} title="Create new invoice" subtitle={`A draft ${action.term.toLowerCase()} invoice will be created with the selected bookings.`}>
-      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12, marginBottom: 14 }}>
+      <div className="gecko-grid-2" style={{ marginBottom: 14 }}>
         <ReadonlyField label="Draft invoice no." value={draftInvoiceNo} mono />
         <ReadonlyField label="Payment term" value={action.term} />
         <ReadonlyField label="Bookings included" value={String(count)} />
@@ -654,7 +655,7 @@ function NewInvoiceModal({ open, action, count, total, onCancel, onConfirm }: {
           onChange={e => setNote(e.target.value)}
         />
       </div>
-      <div style={{ marginTop: 16, padding: 10, background: 'var(--gecko-info-50)', border: '1px solid var(--gecko-info-200)', borderRadius: 8, fontSize: 11, color: 'var(--gecko-info-700)', display: 'flex', gap: 8 }}>
+      <div className="gecko-row" style={{ marginTop: 16, padding: 10, background: 'var(--gecko-info-50)', border: '1px solid var(--gecko-info-200)', borderRadius: 8, fontSize: 11, color: 'var(--gecko-info-700)' }}>
         <Icon name="info" size={14} style={{ flexShrink: 0, marginTop: 1 }} />
         <div>Only charges with <strong>payment term = {action.term}</strong> from the selected bookings will be included. Other-term charges remain unbilled.</div>
       </div>
@@ -703,7 +704,7 @@ function ExistingInvoiceModal({ open, action, count, total, onCancel, onConfirm 
         </div>
       </div>
 
-      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
+      <div className="gecko-grid-2">
         <ReadonlyField label="Payment term" value={action.term} />
         <ReadonlyField label="Bookings to add" value={String(count)} />
         <ReadonlyField label="Charges to add" value={`@ ${action.term}-only`} />
@@ -734,11 +735,11 @@ function ModalShell({ children, title, subtitle, onClose }: {
         boxShadow: '0 24px 60px rgba(15, 23, 42, 0.32)',
         overflow: 'hidden',
       }}>
-        <div style={{ padding: '16px 20px', borderBottom: '1px solid var(--gecko-border)', display: 'flex', alignItems: 'center', gap: 10 }}>
+        <div className="gecko-row" style={{ padding: '16px 20px', borderBottom: '1px solid var(--gecko-border)', gap: 10 }}>
           <Icon name="send" size={16} style={{ color: 'var(--gecko-primary-600)' }} />
           <div style={{ flex: 1 }}>
-            <div style={{ fontSize: 15, fontWeight: 700, color: 'var(--gecko-text-primary)' }}>{title}</div>
-            <div style={{ fontSize: 12, color: 'var(--gecko-text-secondary)', marginTop: 2 }}>{subtitle}</div>
+            <div className="gecko-card-title">{title}</div>
+            <div className="gecko-card-subtitle">{subtitle}</div>
           </div>
           <button onClick={onClose} className="gecko-btn gecko-btn-ghost gecko-btn-sm gecko-btn-icon">
             <Icon name="x" size={14} />
@@ -752,7 +753,7 @@ function ModalShell({ children, title, subtitle, onClose }: {
 
 function ModalFooter({ children }: { children: React.ReactNode }) {
   return (
-    <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 8, marginTop: 18 }}>
+    <div className="gecko-action-toolbar" style={{ marginTop: 18 }}>
       {children}
     </div>
   );
@@ -912,18 +913,18 @@ export default function UnbilledPage() {
   }, [selectedBookings]);
 
   return (
-    <div style={{ maxWidth: 'var(--gecko-container-max)', margin: '0 auto', display: 'flex', flexDirection: 'column', gap: 16, paddingBottom: 40 }}>
+    <div className="gecko-stack gecko-stack-lg" style={{ maxWidth: 'var(--gecko-container-max)', margin: '0 auto', gap: 16, paddingBottom: 40 }}>
 
       {/* Page header */}
       <div className="gecko-page-actions">
         <div className="gecko-page-actions-left">
-          <div style={{ display: 'flex', alignItems: 'baseline', gap: 12 }}>
-            <h1 style={{ fontSize: 24, fontWeight: 700, margin: 0, color: 'var(--gecko-text-primary)' }}>Unbilled Services</h1>
+          <div className="gecko-row gecko-row-baseline" style={{ gap: 12 }}>
+            <h1 className="gecko-page-title">Unbilled Services</h1>
             <span className="gecko-pill gecko-pill-warning" style={{ fontSize: 11 }}>
               ฿{fmtTHB(filteredAggregates.total)} pending
             </span>
           </div>
-          <div style={{ fontSize: 13, color: 'var(--gecko-text-secondary)', marginTop: 4 }}>
+          <div className="gecko-page-subtitle" style={{ marginTop: 4 }}>
             Completed bookings + their charges waiting to be consolidated into invoices. Bulk-select and send to a new or existing invoice.
           </div>
         </div>
@@ -938,7 +939,7 @@ export default function UnbilledPage() {
       </div>
 
       {/* KPI strip */}
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 12 }}>
+      <div className="gecko-grid-4">
         <div className="gecko-kpi-tile">
           <div className="gecko-kpi-tile-icon gecko-kpi-tile-icon-primary"><Icon name="fileText" size={16} /></div>
           <div className="gecko-kpi-tile-value">{filteredAggregates.count}</div>
@@ -962,8 +963,8 @@ export default function UnbilledPage() {
       </div>
 
       {/* Search + selection toolbar */}
-      <div style={{
-        display: 'flex', alignItems: 'center', gap: 10, flexWrap: 'wrap',
+      <div className="gecko-row gecko-row-wrap" style={{
+        gap: 10,
         padding: '10px 14px',
         background: 'var(--gecko-bg-surface)',
         border: '1px solid var(--gecko-border)',
@@ -984,7 +985,7 @@ export default function UnbilledPage() {
 
         {/* Selection state */}
         {selectedMetrics.count > 0 ? (
-          <div style={{ display: 'flex', alignItems: 'center', gap: 10, fontSize: 12, color: 'var(--gecko-text-primary)' }}>
+          <div className="gecko-row" style={{ gap: 10, fontSize: 12, color: 'var(--gecko-text-primary)' }}>
             <span style={{ fontWeight: 700 }}>
               {selectedMetrics.count} booking{selectedMetrics.count === 1 ? '' : 's'} selected
             </span>
@@ -1017,7 +1018,7 @@ export default function UnbilledPage() {
       </div>
 
       {/* Main table */}
-      <div style={{ background: 'var(--gecko-bg-surface)', border: '1px solid var(--gecko-border)', borderRadius: 12, overflow: 'hidden' }}>
+      <div className="gecko-table-card" style={{ boxShadow: 'none' }}>
         <div style={{ overflowX: 'auto' }}>
           <table className="gecko-table" style={{ fontSize: 12, minWidth: 1100 }}>
             <thead>
