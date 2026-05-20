@@ -154,13 +154,13 @@ function ContainerDrawer({ container, onClose, onDuplicate, onDelete }: {
 
         {/* Drawer header */}
         <div style={{ padding: '16px 20px', background: 'var(--gecko-primary-600)', flexShrink: 0 }}>
-          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-            <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+          <div className="gecko-row gecko-row-between">
+            <div className="gecko-row" style={{ gap: 10 }}>
               <div style={{ fontSize: 18, fontWeight: 800, color: '#fff', fontFamily: 'var(--gecko-font-mono)', letterSpacing: '0.04em' }}>{form.containerNo || <span style={{ opacity: 0.5, fontSize: 14 }}>TBA</span>}</div>
               <div style={{ fontSize: 11, padding: '2px 8px', borderRadius: 12, background: 'rgba(255,255,255,0.2)', color: '#fff', fontWeight: 700 }}>{form.size}{form.type}</div>
               <div style={{ fontSize: 11, padding: '2px 8px', borderRadius: 12, background: 'rgba(255,255,255,0.15)', color: '#fff', fontWeight: 600 }}>{form.containerMode}</div>
               {isReefer && (
-                <div style={{ fontSize: 10, padding: '2px 8px', borderRadius: 12, background: 'rgba(255,255,255,0.18)', color: '#fff', fontWeight: 700, display: 'inline-flex', alignItems: 'center', gap: 3 }}>
+                <div className="gecko-inline-row" style={{ fontSize: 10, padding: '2px 8px', borderRadius: 12, background: 'rgba(255,255,255,0.18)', color: '#fff', fontWeight: 700, gap: 3 }}>
                   <Icon name="thermometer" size={10} /> REEFER
                 </div>
               )}
@@ -176,19 +176,19 @@ function ContainerDrawer({ container, onClose, onDuplicate, onDelete }: {
 
           {/* ── Container Info ── */}
           <div style={{ paddingTop: 20 }}>
-            <div style={{ fontSize: 10, fontWeight: 800, textTransform: 'uppercase', letterSpacing: '0.08em', color: 'var(--gecko-text-disabled)', marginBottom: 14 }}>Container Info</div>
+            <div className="gecko-eyebrow gecko-mb-3">Container Info</div>
 
             {/* Container No (full width) */}
-            <div className="gecko-form-group" style={{ marginBottom: 12 }}>
+            <div className="gecko-form-group gecko-mb-3">
               <label className="gecko-label">Container No <span style={{ fontSize: 10, color: 'var(--gecko-text-disabled)' }}>(leave blank if not yet nominated)</span></label>
               <input className="gecko-input gecko-text-mono" value={form.containerNo} onChange={e => set('containerNo', e.target.value)} placeholder="e.g. EITU9845677" />
             </div>
 
             {/* Type-Size + P/U Mode */}
-            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
+            <div className="gecko-grid-2">
               <div className="gecko-form-group">
                 <label className="gecko-label gecko-label-required">Type — Size</label>
-                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 6 }}>
+                <div className="gecko-grid-2" style={{ gap: 6 }}>
                   <select className="gecko-input" value={form.size} onChange={e => set('size', e.target.value)}>
                     {['20', '40', '45'].map(s => <option key={s}>{s}</option>)}
                   </select>
@@ -207,7 +207,7 @@ function ContainerDrawer({ container, onClose, onDuplicate, onDelete }: {
             </div>
 
             {/* Container Class + Cargo Cat */}
-            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12, marginTop: 12 }}>
+            <div className="gecko-grid-2 gecko-mt-3">
               <div className="gecko-form-group">
                 <label className="gecko-label">Container Class</label>
                 <select className="gecko-input" value={form.grade} onChange={e => set('grade', e.target.value)}>
@@ -223,7 +223,7 @@ function ContainerDrawer({ container, onClose, onDuplicate, onDelete }: {
             </div>
 
             {/* IMO/UN No (always visible — required when DG, optional otherwise) */}
-            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12, marginTop: 12 }}>
+            <div className="gecko-grid-2 gecko-mt-3">
               <div className="gecko-form-group">
                 <label className={`gecko-label ${isDG ? 'gecko-label-required' : ''}`}>IMO / UN No</label>
                 <div style={{ display: 'grid', gridTemplateColumns: '90px 1fr', gap: 6 }}>
@@ -253,10 +253,10 @@ function ContainerDrawer({ container, onClose, onDuplicate, onDelete }: {
             </div>
 
             {/* Weight / Volume + Pickup Date */}
-            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12, marginTop: 12 }}>
+            <div className="gecko-grid-2 gecko-mt-3">
               <div className="gecko-form-group">
                 <label className="gecko-label">Weight / Vol</label>
-                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 6 }}>
+                <div className="gecko-grid-2" style={{ gap: 6 }}>
                   <input
                     className="gecko-input gecko-text-mono" type="number" min="0" step="0.01"
                     value={form.weight || ''} onChange={e => set('weight', parseFloat(e.target.value) || 0)}
@@ -278,7 +278,7 @@ function ContainerDrawer({ container, onClose, onDuplicate, onDelete }: {
 
           {/* ── Parameters · Temperature (reefer-only) + Vent / Humidity / Pre-Cool (always editable) ── */}
           <div style={{ marginTop: 20, paddingTop: 16, borderTop: '1px dashed var(--gecko-border)' }}>
-            <div style={{ fontSize: 10, fontWeight: 800, textTransform: 'uppercase', letterSpacing: '0.08em', color: 'var(--gecko-text-disabled)', marginBottom: 12, display: 'flex', alignItems: 'center', gap: 6 }}>
+            <div className="gecko-eyebrow gecko-row gecko-mb-3" style={{ gap: 6 }}>
               <Icon name="thermometer" size={12} />
               Container Parameters
             </div>
@@ -286,7 +286,7 @@ function ContainerDrawer({ container, onClose, onDuplicate, onDelete }: {
             {/* Temperature — gated on reefer */}
             <div style={{ display: 'grid', gridTemplateColumns: '1fr 80px', gap: 10 }}>
               <div className="gecko-form-group">
-                <label className="gecko-label" style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+                <label className="gecko-label gecko-row" style={{ gap: 6 }}>
                   Temperature
                   {!isReefer && <span style={{ fontSize: 9, fontWeight: 500, color: 'var(--gecko-text-disabled)' }}>(reefer types only)</span>}
                 </label>

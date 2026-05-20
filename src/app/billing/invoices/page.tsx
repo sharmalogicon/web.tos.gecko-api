@@ -30,10 +30,10 @@ const INV_SORT_OPTIONS: SortOption[] = [
 ];
 
 function StatusBadge({ status }: { status: string }) {
-  if (status === 'Draft') return <span style={{ background: 'var(--gecko-gray-100)', color: 'var(--gecko-text-secondary)', padding: '2px 8px', borderRadius: 12, fontSize: 11, fontWeight: 700 }}>Draft</span>;
-  if (status === 'Final') return <span style={{ background: 'var(--gecko-info-100)', color: 'var(--gecko-info-700)', padding: '2px 8px', borderRadius: 12, fontSize: 11, fontWeight: 700 }}>Final</span>;
-  if (status === 'Overdue') return <span style={{ background: 'var(--gecko-error-100)', color: 'var(--gecko-error-700)', padding: '2px 8px', borderRadius: 12, fontSize: 11, fontWeight: 700 }}>Overdue</span>;
-  if (status === 'Paid') return <span style={{ background: 'var(--gecko-success-100)', color: 'var(--gecko-success-700)', padding: '2px 8px', borderRadius: 12, fontSize: 11, fontWeight: 700 }}>Paid</span>;
+  if (status === 'Draft') return <span className="gecko-badge gecko-badge-gray">Draft</span>;
+  if (status === 'Final') return <span className="gecko-badge gecko-badge-info">Final</span>;
+  if (status === 'Overdue') return <span className="gecko-badge gecko-badge-error">Overdue</span>;
+  if (status === 'Paid') return <span className="gecko-badge gecko-badge-success">Paid</span>;
   return null;
 }
 
@@ -47,11 +47,11 @@ export default function InvoicesPage() {
       {/* Header */}
       <div className="gecko-page-actions">
         <div className="gecko-page-actions-left">
-          <div style={{ display: 'flex', alignItems: 'baseline', gap: 12 }}>
-            <h1 style={{ fontSize: 24, fontWeight: 700, margin: 0, color: 'var(--gecko-text-primary)' }}>Invoices</h1>
+          <div className="gecko-row gecko-row-baseline gecko-stack-md">
+            <h1 className="gecko-page-title">Invoices</h1>
             <span className="gecko-count-badge">7 shown of 14,208</span>
           </div>
-          <div style={{ fontSize: 13, color: 'var(--gecko-text-secondary)' }}>Consolidated bills for customers. Includes both cash and credit terms.</div>
+          <div className="gecko-page-subtitle">Consolidated bills for customers. Includes both cash and credit terms.</div>
         </div>
         <div className="gecko-toolbar">
           <ExportButton resource="Invoices" iconSize={16} />
@@ -73,7 +73,7 @@ export default function InvoicesPage() {
       </div>
 
       {/* Table */}
-      <div style={{ background: 'var(--gecko-bg-surface)', border: '1px solid var(--gecko-border)', borderRadius: 12, overflow: 'hidden', boxShadow: 'var(--gecko-shadow-sm)' }}>
+      <div className="gecko-table-card">
         <table className="gecko-table gecko-table-comfortable" style={{ fontSize: 13 }}>
           <thead>
             <tr>
@@ -91,18 +91,20 @@ export default function InvoicesPage() {
           <tbody>
             {INVOICES.map((inv) => (
               <tr key={inv.id}>
-                <td className="gecko-text-mono" style={{ fontWeight: 700, color: 'var(--gecko-primary-600)' }}>
-                  <Link href={`/billing/invoices/${inv.id}`}>{inv.id}</Link>
+                <td>
+                  <Link href={`/billing/invoices/${inv.id}`} className="gecko-id-link">{inv.id}</Link>
                 </td>
                 <td style={{ color: 'var(--gecko-text-secondary)' }}>{inv.date}</td>
                 <td style={{ color: inv.status === 'Overdue' ? 'var(--gecko-error-600)' : 'var(--gecko-text-secondary)', fontWeight: inv.status === 'Overdue' ? 600 : 400 }}>{inv.dueDate}</td>
                 <td>
-                  <div style={{ fontWeight: 600, color: 'var(--gecko-text-primary)' }}>{inv.custName}</div>
-                  <div style={{ fontSize: 11, color: 'var(--gecko-text-disabled)', fontFamily: 'var(--gecko-font-mono)' }}>{inv.customer}</div>
+                  <div className="gecko-cell-two-line">
+                    <div className="gecko-cell-primary gecko-truncate">{inv.custName}</div>
+                    <div className="gecko-cell-sub">{inv.customer}</div>
+                  </div>
                 </td>
-                <td className="gecko-text-mono" style={{ textAlign: 'right' }}>{inv.amount}</td>
-                <td className="gecko-text-mono" style={{ textAlign: 'right', color: 'var(--gecko-text-secondary)' }}>{inv.vat}</td>
-                <td className="gecko-text-mono" style={{ textAlign: 'right', fontWeight: 800, color: 'var(--gecko-text-primary)' }}>{inv.total}</td>
+                <td className="gecko-money gecko-money-md">{inv.amount}</td>
+                <td className="gecko-money gecko-money-md" style={{ color: 'var(--gecko-text-secondary)' }}>{inv.vat}</td>
+                <td className="gecko-money gecko-money-lg">{inv.total}</td>
                 <td>
                   <StatusBadge status={inv.status} />
                 </td>

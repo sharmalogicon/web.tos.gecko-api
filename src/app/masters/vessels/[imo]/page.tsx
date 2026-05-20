@@ -156,8 +156,8 @@ function StatusBadge({ status }: { status: string }) {
 function SectionHead({ title, sub }: { title: string; sub?: string }) {
   return (
     <div style={{ marginBottom: 18, paddingBottom: 10, borderBottom: '1px solid var(--gecko-border)' }}>
-      <h3 style={{ fontSize: 14, fontWeight: 700, margin: 0, color: 'var(--gecko-text-primary)' }}>{title}</h3>
-      {sub && <div style={{ fontSize: 12, color: 'var(--gecko-text-secondary)', marginTop: 3 }}>{sub}</div>}
+      <h3 className="gecko-card-title">{title}</h3>
+      {sub && <div className="gecko-card-subtitle">{sub}</div>}
     </div>
   );
 }
@@ -165,8 +165,8 @@ function SectionHead({ title, sub }: { title: string; sub?: string }) {
 function FillBar({ pct }: { pct: number }) {
   const color = pct >= 90 ? 'var(--gecko-success-600)' : pct >= 70 ? 'var(--gecko-warning-600)' : 'var(--gecko-info-600)';
   return (
-    <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-      <div style={{ flex: 1, height: 6, background: 'var(--gecko-bg-subtle)', borderRadius: 3, overflow: 'hidden' }}>
+    <div className="gecko-row">
+      <div className="gecko-flex-1" style={{ height: 6, background: 'var(--gecko-bg-subtle)', borderRadius: 3, overflow: 'hidden' }}>
         <div style={{ width: `${pct}%`, height: '100%', background: color, borderRadius: 3 }} />
       </div>
       <span style={{ fontSize: 11, fontWeight: 700, color, fontFamily: 'var(--gecko-font-mono)', minWidth: 32, textAlign: 'right' }}>{pct}%</span>
@@ -232,10 +232,10 @@ export default function VesselDetailPage() {
   });
 
   return (
-    <div style={{ maxWidth: 'var(--gecko-container-max)', margin: '0 auto', display: 'flex', flexDirection: 'column', gap: 24, paddingBottom: 40 }}>
+    <div className="gecko-stack gecko-stack-xl" style={{ maxWidth: 'var(--gecko-container-max)', margin: '0 auto', paddingBottom: 40 }}>
 
       {/* Breadcrumb + actions */}
-      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+      <div className="gecko-row gecko-row-between">
         <nav className="gecko-breadcrumb" aria-label="Breadcrumb">
           <Link href="/masters" className="gecko-breadcrumb-item">Masters</Link>
           <span className="gecko-breadcrumb-sep" />
@@ -243,7 +243,7 @@ export default function VesselDetailPage() {
           <span className="gecko-breadcrumb-sep" />
           <span className="gecko-breadcrumb-current">{vessel.imo} — {vessel.name}</span>
         </nav>
-        <div style={{ display: 'flex', gap: 10 }}>
+        <div className="gecko-row" style={{ gap: 10 }}>
           <button className="gecko-btn gecko-btn-ghost gecko-btn-sm" onClick={() => toast({ variant: 'success', title: 'Vessel cloned', message: `Copy of IMO ${imo} created as a draft.` })}><Icon name="copy" size={15} /> Clone</button>
           <ExportButton resource="Vessel" iconSize={15} />
           {editMode ? (
@@ -264,15 +264,15 @@ export default function VesselDetailPage() {
       </div>
 
       {/* Title row */}
-      <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', paddingBottom: 20, borderBottom: '1px solid var(--gecko-border)' }}>
+      <div className="gecko-row gecko-row-between gecko-row-start" style={{ paddingBottom: 20, borderBottom: '1px solid var(--gecko-border)' }}>
         <div>
-          <div style={{ display: 'flex', alignItems: 'center', gap: 14, flexWrap: 'wrap' }}>
+          <div className="gecko-row gecko-row-wrap" style={{ gap: 14 }}>
             <Icon name="anchor" size={24} style={{ color: 'var(--gecko-info-500)' }} />
-            <h1 style={{ fontSize: 24, fontWeight: 700, margin: 0, color: 'var(--gecko-text-primary)', letterSpacing: '0.01em' }}>{vessel.name}</h1>
+            <h1 className="gecko-page-title-lg">{vessel.name}</h1>
             <StatusBadge status={vessel.status} />
-            <span style={{ fontSize: 12, fontFamily: 'var(--gecko-font-mono)', color: 'var(--gecko-text-secondary)', fontWeight: 600 }}>IMO {vessel.imo}</span>
+            <span className="gecko-mono-strong" style={{ fontSize: 12, color: 'var(--gecko-text-secondary)' }}>IMO {vessel.imo}</span>
           </div>
-          <div style={{ fontSize: 13, color: 'var(--gecko-text-secondary)', marginTop: 8 }}>
+          <div className="gecko-page-subtitle gecko-mt-2">
             {vessel.line} · {vessel.class} · Flag {vessel.flag} · Built {vessel.built}
           </div>
         </div>

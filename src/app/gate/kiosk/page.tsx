@@ -282,18 +282,17 @@ export default function GateKioskPage() {
       />
 
       {/* Top bar */}
-      <div style={{
+      <div className="gecko-row gecko-row-between" style={{
         padding: '20px 36px',
-        display: 'flex', alignItems: 'center', justifyContent: 'space-between',
         borderBottom: '1px solid #1e293b',
         background: 'rgba(2, 6, 23, 0.6)',
         backdropFilter: 'blur(8px)',
       }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: 14 }}>
-          <div style={{
+        <div className="gecko-row" style={{ gap: 14 }}>
+          <div className="gecko-row" style={{
             width: 42, height: 42, borderRadius: 10,
             background: 'linear-gradient(135deg, #3b82f6, #1d4ed8)',
-            display: 'flex', alignItems: 'center', justifyContent: 'center',
+            justifyContent: 'center',
             fontWeight: 800, fontSize: 18, color: '#fff',
           }}>
             G

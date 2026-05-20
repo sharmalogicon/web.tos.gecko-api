@@ -226,14 +226,14 @@ export default function YardViewPage() {
   if (blocks.length === 0) {
     return (
       <div style={{ maxWidth: 'var(--gecko-container-max)', margin: '0 auto', padding: '60px 24px', textAlign: 'center' }}>
-        <div style={{ width: 64, height: 64, borderRadius: 16, background: 'var(--gecko-primary-50)', color: 'var(--gecko-primary-600)', display: 'inline-flex', alignItems: 'center', justifyContent: 'center', marginBottom: 18 }}>
+        <div className="gecko-mini-icon gecko-mini-icon-primary" style={{ width: 64, height: 64, borderRadius: 16, marginBottom: 18 }}>
           <Icon name="grid" size={32} />
         </div>
-        <h2 style={{ fontSize: 22, fontWeight: 700, color: 'var(--gecko-text-primary)', margin: 0, marginBottom: 8 }}>No yard layout configured</h2>
-        <p style={{ color: 'var(--gecko-text-secondary)', fontSize: 14, maxWidth: 480, margin: '0 auto 24px' }}>
+        <h2 className="gecko-page-title gecko-mb-2">No yard layout configured</h2>
+        <p className="gecko-page-subtitle" style={{ maxWidth: 480, margin: '0 auto 24px' }}>
           Build the yard layout in Configuration first. Drop blocks on the canvas, set their type and capacity, and they&apos;ll appear here with live occupancy.
         </p>
-        <Link href="/config/yard-zones" className="gecko-btn gecko-btn-primary gecko-btn-sm" style={{ textDecoration: 'none', display: 'inline-flex', alignItems: 'center', gap: 6 }}>
+        <Link href="/config/yard-zones" className="gecko-btn gecko-btn-primary gecko-btn-sm gecko-inline-row">
           <Icon name="settings" size={13} />Open Yard Configuration
         </Link>
       </div>
@@ -241,13 +241,13 @@ export default function YardViewPage() {
   }
 
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
+    <div className="gecko-stack">
 
       {/* Toolbar */}
-      <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: 12, flexWrap: 'wrap' }}>
-        <div>
-          <div style={{ display: 'flex', alignItems: 'center', gap: 10, flexWrap: 'wrap' }}>
-            <h1 style={{ fontSize: 20, fontWeight: 700, color: 'var(--gecko-text-primary)', margin: 0 }}>Yard Plan</h1>
+      <div className="gecko-page-header">
+        <div className="gecko-page-header-left">
+          <div className="gecko-row gecko-row-wrap">
+            <h1 className="gecko-page-title">Yard Plan</h1>
             <span style={{ fontSize: 10.5, fontWeight: 600, padding: '2px 8px', borderRadius: 20, background: 'var(--gecko-primary-50)', color: 'var(--gecko-primary-700)', border: '1px solid var(--gecko-primary-200)' }}>
               {blocks.length} blocks · {stats.totalCells} stacks · {stats.totalCap} TEU
             </span>
@@ -260,12 +260,12 @@ export default function YardViewPage() {
               {Math.round(stats.pct * 100)}% · {stats.totalOccupied} / {stats.totalCap} TEU
             </span>
           </div>
-          <div style={{ fontSize: 12, color: 'var(--gecko-text-secondary)', marginTop: 3 }}>
+          <p className="gecko-page-subtitle">
             Live yard occupancy — Laem Chabang ICD · Import Yard · {template?.savedAt ? `template saved ${new Date(template.savedAt).toLocaleString()}` : ''}
-          </div>
+          </p>
         </div>
 
-        <div style={{ display: 'flex', gap: 8, alignItems: 'center', flexWrap: 'wrap' }}>
+        <div className="gecko-page-header-actions">
           <div className="gecko-segctrl">
             {(['occupancy', 'type'] as const).map(m => (
               <button key={m} onClick={() => setColorMode(m)} className={`gecko-segctrl-btn${colorMode === m ? ' gecko-segctrl-btn-active' : ''}`}>
@@ -274,14 +274,14 @@ export default function YardViewPage() {
             ))}
           </div>
           <ZoomControl zoom={zoom} setZoom={setZoom} />
-          <Link href="/config/yard-zones" className="gecko-btn gecko-btn-outline gecko-btn-sm" style={{ textDecoration: 'none', display: 'inline-flex', alignItems: 'center', gap: 6 }}>
+          <Link href="/config/yard-zones" className="gecko-btn gecko-btn-outline gecko-btn-sm gecko-inline-row">
             <Icon name="edit" size={13} />Edit layout
           </Link>
         </div>
       </div>
 
       {/* KPI strip — cell-level bands */}
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(5, 1fr)', gap: 10 }}>
+      <div className="gecko-grid-5">
         <KpiCard label="Empty (0%)"        value={stats.cellBands.empty}    tone="neutral" />
         <KpiCard label="Low (1–30%)"       value={stats.cellBands.low}      tone="info" />
         <KpiCard label="Moderate (30–60%)" value={stats.cellBands.moderate} tone="success" />
@@ -293,7 +293,7 @@ export default function YardViewPage() {
       <div style={{ display: 'grid', gridTemplateColumns: selectedCell ? '1fr 360px' : '1fr', gap: 12, alignItems: 'flex-start' }}>
 
         {/* Canvas (read-only with cell-level grid) */}
-        <section className="gecko-card" style={{ padding: 0, overflow: 'hidden' }}>
+        <section className="gecko-card gecko-card-flush" style={{ overflow: 'hidden' }}>
           <div style={{ overflow: 'auto', maxHeight: '72vh', background: '#f9fafb' }}>
             <svg
               width={CANVAS_W * zoom}
@@ -381,7 +381,7 @@ export default function YardViewPage() {
         )}
       </div>
 
-      <div style={{ fontSize: 11, color: 'var(--gecko-text-secondary)', textAlign: 'center', paddingTop: 4 }}>
+      <div className="gecko-helper-text" style={{ textAlign: 'center' }}>
         Hover any stack for quick stats · click for the cross-section (vertical tier view) · all occupancy data is mocked for demo (real-time feed wires up in Phase 2)
       </div>
     </div>
@@ -536,17 +536,17 @@ function CellDetail({ block, bay, row, onClose }: {
   const positionEnd   = `${block.code}-${bayLabel(bay)}-${rowLabel(row)}-${String(block.tiers).padStart(2, '0')}`;
 
   return (
-    <section className="gecko-card" style={{ padding: 14, display: 'flex', flexDirection: 'column', gap: 12, position: 'sticky', top: 80, alignSelf: 'flex-start' }}>
+    <section className="gecko-card gecko-card-tight gecko-stack" style={{ position: 'sticky', top: 80, alignSelf: 'flex-start' }}>
 
       {/* Header */}
-      <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: 8 }}>
+      <div className="gecko-row gecko-row-between gecko-row-start">
         <div>
-          <div style={{ fontSize: 10, fontWeight: 700, color: 'var(--gecko-text-secondary)', letterSpacing: '0.06em', textTransform: 'uppercase' }}>Stack cross-section</div>
-          <div style={{ fontSize: 18, fontWeight: 700, color: 'var(--gecko-text-primary)', fontFamily: 'var(--gecko-font-mono)', display: 'flex', alignItems: 'center', gap: 8, marginTop: 4 }}>
+          <div className="gecko-eyebrow">Stack cross-section</div>
+          <div className="gecko-row gecko-mt-1" style={{ fontSize: 18, fontWeight: 700, color: 'var(--gecko-text-primary)', fontFamily: 'var(--gecko-font-mono)' }}>
             <span style={{ width: 12, height: 12, borderRadius: 3, background: meta.stroke }} />
             {block.code}-{bayLabel(bay)}-{rowLabel(row)}
           </div>
-          <div style={{ fontSize: 11.5, color: 'var(--gecko-text-secondary)', marginTop: 2 }}>
+          <div className="gecko-cell-meta">
             <span style={{ color: meta.stroke, fontWeight: 600 }}>{meta.label}</span> · {ALLOCATION_LABEL[block.allocation]}{block.reservedParty ? ` · ${block.reservedParty}` : ''}
           </div>
         </div>
@@ -556,7 +556,7 @@ function CellDetail({ block, bay, row, onClose }: {
       </div>
 
       {/* Stack summary */}
-      <div style={{ padding: 10, background: 'var(--gecko-bg-subtle)', borderRadius: 6, display: 'flex', justifyContent: 'space-between', alignItems: 'baseline' }}>
+      <div className="gecko-row gecko-row-between gecko-row-baseline" style={{ padding: 10, background: 'var(--gecko-bg-subtle)', borderRadius: 6 }}>
         <span style={{ fontSize: 11, color: 'var(--gecko-text-secondary)' }}>Stack height</span>
         <span>
           <span style={{ fontSize: 20, fontWeight: 700, fontFamily: 'var(--gecko-font-mono)', color: 'var(--gecko-text-primary)' }}>{cell.filledTiers}</span>
@@ -567,7 +567,7 @@ function CellDetail({ block, bay, row, onClose }: {
 
       {/* Cross-section view */}
       <div style={{ background: 'linear-gradient(180deg, #fafafa 0%, #f3f4f6 100%)', border: '1px solid var(--gecko-border)', borderRadius: 6, padding: 10 }}>
-        <div style={{ display: 'flex', flexDirection: 'column', gap: 4, alignItems: 'center' }}>
+        <div className="gecko-stack gecko-stack-xs" style={{ alignItems: 'center' }}>
           {tierRows.map(({ tierNum, isFilled, container }) => (
             <TierRow
               key={tierNum}
@@ -579,7 +579,7 @@ function CellDetail({ block, bay, row, onClose }: {
             />
           ))}
           {/* Ground indicator */}
-          <div style={{ width: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6, marginTop: 4, fontSize: 9, color: 'var(--gecko-text-disabled)', letterSpacing: '0.08em', fontWeight: 700 }}>
+          <div className="gecko-row gecko-mt-1" style={{ width: '100%', justifyContent: 'center', gap: 6, fontSize: 9, color: 'var(--gecko-text-disabled)', letterSpacing: '0.08em', fontWeight: 700 }}>
             <span style={{ flex: 1, height: 1, background: '#9ca3af' }} />
             <span>GROUND · YARD SURFACE</span>
             <span style={{ flex: 1, height: 1, background: '#9ca3af' }} />
@@ -589,8 +589,8 @@ function CellDetail({ block, bay, row, onClose }: {
 
       {/* Position footer */}
       <div style={{ padding: '8px 10px', background: 'var(--gecko-bg-subtle)', borderRadius: 6, fontSize: 11 }}>
-        <div style={{ fontSize: 9, fontWeight: 700, color: 'var(--gecko-text-secondary)', letterSpacing: '0.06em', textTransform: 'uppercase', marginBottom: 3 }}>Position</div>
-        <div style={{ display: 'flex', alignItems: 'baseline', gap: 6, fontFamily: 'var(--gecko-font-mono)' }}>
+        <div className="gecko-eyebrow gecko-mb-1">Position</div>
+        <div className="gecko-row gecko-row-baseline" style={{ gap: 6, fontFamily: 'var(--gecko-font-mono)' }}>
           <span style={{ color: 'var(--gecko-text-primary)', fontWeight: 700 }}>{positionStart}</span>
           <span style={{ color: 'var(--gecko-text-disabled)' }}>→</span>
           <span style={{ color: 'var(--gecko-text-primary)', fontWeight: 700 }}>{positionEnd}</span>

@@ -132,7 +132,7 @@ export default function GateOutQueuePage() {
   const lanes = ['Lane 1', 'Lane 2', 'Lane 3', 'Lane 4'];
 
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
+    <div className="gecko-stack gecko-stack-lg">
       <PageToolbar
         title="Gate-Out · Truck Queue"
         subtitle="Live list of trucks waiting in the yard for container release · refresh every 60 s"
@@ -144,7 +144,7 @@ export default function GateOutQueuePage() {
           <>
             <RefreshButton resource="EIR-Out queue" variant="ghost" iconSize={13} />
             <button className="gecko-btn gecko-btn-outline gecko-btn-sm" onClick={() => window.print()}><Icon name="print" size={13} />Print Queue</button>
-            <Link href="/gate/eir-in" className="gecko-btn gecko-btn-primary gecko-btn-sm" style={{ textDecoration: 'none', display: 'inline-flex', alignItems: 'center', gap: 6 }}>
+            <Link href="/gate/eir-in" className="gecko-btn gecko-btn-primary gecko-btn-sm gecko-inline-row">
               <Icon name="plus" size={13} />New Gate-In
             </Link>
           </>
@@ -152,38 +152,37 @@ export default function GateOutQueuePage() {
       />
 
       {/* KPI strip */}
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 12 }}>
+      <div className="gecko-grid-4">
         {[
           { label: 'Trucks in queue',  value: QUEUE.length,  sub: `${totalCtr} containers total`,     icon: 'truck',   tone: 'primary' },
           { label: 'On time (≤ 30m)', value: onTimeCount,  sub: 'within SLA',                        icon: 'check',   tone: 'success' },
           { label: 'Overdue (> 30m)', value: overdueCount, sub: 'exceeding dwell SLA',               icon: 'warning', tone: 'error'   },
           { label: 'Avg wait',         value: `${avgWait}m`, sub: 'across all trucks today',          icon: 'clock',   tone: overdueCount > 0 ? 'warning' : 'success' },
         ].map(k => (
-          <div key={k.label} className="gecko-card" style={{ padding: '14px 16px', display: 'flex', alignItems: 'center', gap: 12 }}>
-            <div style={{ width: 36, height: 36, borderRadius: 8, background: `var(--gecko-${k.tone}-50)`, color: `var(--gecko-${k.tone}-600)`, display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+          <div key={k.label} className="gecko-card gecko-card-tight gecko-row">
+            <div className={`gecko-mini-icon gecko-mini-icon-lg gecko-mini-icon-${k.tone}`}>
               <Icon name={k.icon} size={17} />
             </div>
             <div>
               <div style={{ fontSize: 20, fontWeight: 700, fontFamily: 'var(--gecko-font-mono)', lineHeight: 1, color: `var(--gecko-${k.tone}-700)` }}>{k.value}</div>
-              <div style={{ fontSize: 11, color: 'var(--gecko-text-secondary)', marginTop: 3 }}>{k.label}</div>
-              <div style={{ fontSize: 10, color: 'var(--gecko-text-disabled)', marginTop: 1 }}>{k.sub}</div>
+              <div className="gecko-stat-label gecko-mt-1">{k.label}</div>
+              <div className="gecko-cell-sub">{k.sub}</div>
             </div>
           </div>
         ))}
       </div>
 
       {/* Table card */}
-      <div className="gecko-card" style={{ padding: 0, overflow: 'hidden' }}>
+      <div className="gecko-card gecko-card-flush" style={{ overflow: 'hidden' }}>
         {/* Toolbar */}
-        <div style={{ padding: '12px 16px', borderBottom: '1px solid var(--gecko-border)', display: 'flex', alignItems: 'center', gap: 10, flexWrap: 'wrap' }}>
-          <div style={{ position: 'relative', flex: '1 1 260px', maxWidth: 360 }}>
-            <Icon name="search" size={13} style={{ position: 'absolute', left: 10, top: '50%', transform: 'translateY(-50%)', color: 'var(--gecko-text-disabled)' }} />
+        <div className="gecko-row gecko-row-wrap" style={{ padding: '12px 16px', borderBottom: '1px solid var(--gecko-border)' }}>
+          <div className="gecko-filter-bar-search">
+            <Icon name="search" size={13} className="gecko-filter-bar-search-icon" />
             <input
-              className="gecko-input gecko-input-sm"
+              className="gecko-input gecko-input-sm gecko-filter-bar-search-input"
               placeholder="Search plate, driver, haulier, EDO, or container…"
               value={query}
               onChange={e => setQuery(e.target.value)}
-              style={{ paddingLeft: 32 }}
             />
           </div>
 
@@ -198,15 +197,15 @@ export default function GateOutQueuePage() {
             {lanes.map(l => <option key={l} value={l}>{l}</option>)}
           </select>
 
-          <div style={{ marginLeft: 'auto', fontSize: 11, color: 'var(--gecko-text-secondary)', flexShrink: 0 }}>
+          <div className="gecko-ml-auto gecko-flex-shrink-0" style={{ fontSize: 11, color: 'var(--gecko-text-secondary)' }}>
             {filtered.length} of {QUEUE.length} trucks
           </div>
         </div>
 
         {/* Overdue callout */}
         {overdueCount > 0 && (
-          <div style={{ padding: '8px 16px', background: 'var(--gecko-error-50)', borderBottom: '1px solid var(--gecko-error-200)', display: 'flex', alignItems: 'center', gap: 8, fontSize: 12 }}>
-            <Icon name="warning" size={14} style={{ color: 'var(--gecko-error-600)', flexShrink: 0 }} />
+          <div className="gecko-row" style={{ padding: '8px 16px', background: 'var(--gecko-error-50)', borderBottom: '1px solid var(--gecko-error-200)', fontSize: 12 }}>
+            <Icon name="warning" size={14} className="gecko-flex-shrink-0" style={{ color: 'var(--gecko-error-600)' }} />
             <span style={{ color: 'var(--gecko-error-700)', fontWeight: 600 }}>{overdueCount} truck{overdueCount > 1 ? 's' : ''} waiting over 30 minutes</span>
             <span style={{ color: 'var(--gecko-error-600)' }}>— rows highlighted in red. Process these first.</span>
           </div>
@@ -214,11 +213,11 @@ export default function GateOutQueuePage() {
 
         {/* Table */}
         <div style={{ overflowX: 'auto' }}>
-          <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 12 }}>
+          <table className="gecko-table">
             <thead>
-              <tr style={{ background: 'var(--gecko-bg-subtle)', borderBottom: '1px solid var(--gecko-border)' }}>
+              <tr>
                 {['GIN Ref', 'Truck · Driver', 'Haulier', 'Containers', 'Lane', 'Arrived', 'Waiting', 'Status', ''].map(h => (
-                  <th key={h} style={{ padding: '10px 14px', textAlign: 'left', fontSize: 11, fontWeight: 700, color: 'var(--gecko-text-secondary)', letterSpacing: '0.06em', textTransform: 'uppercase', whiteSpace: 'nowrap' }}>{h}</th>
+                  <th key={h}>{h}</th>
                 ))}
               </tr>
             </thead>
@@ -246,37 +245,37 @@ export default function GateOutQueuePage() {
                     }}
                   >
                     {/* GIN Ref */}
-                    <td style={{ padding: '12px 14px', whiteSpace: 'nowrap' }}>
+                    <td style={{ whiteSpace: 'nowrap' }}>
                       <span style={{ fontFamily: 'var(--gecko-font-mono)', fontSize: 11, fontWeight: 700, color: overdue ? 'var(--gecko-error-700)' : 'var(--gecko-text-primary)' }}>{r.id}</span>
                     </td>
 
                     {/* Truck · Driver */}
-                    <td style={{ padding: '12px 14px' }}>
-                      <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                        <div style={{ width: 30, height: 30, borderRadius: 7, background: overdue ? 'var(--gecko-error-100)' : 'var(--gecko-primary-50)', color: overdue ? 'var(--gecko-error-600)' : 'var(--gecko-primary-600)', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+                    <td>
+                      <div className="gecko-row">
+                        <div className="gecko-mini-icon" style={{ background: overdue ? 'var(--gecko-error-100)' : 'var(--gecko-primary-50)', color: overdue ? 'var(--gecko-error-600)' : 'var(--gecko-primary-600)' }}>
                           <Icon name="truck" size={14} />
                         </div>
                         <div>
                           <div style={{ fontFamily: 'var(--gecko-font-mono)', fontWeight: 700, fontSize: 13, color: overdue ? 'var(--gecko-error-700)' : 'var(--gecko-text-primary)' }}>{r.plate}</div>
-                          <div style={{ fontSize: 11, color: 'var(--gecko-text-secondary)', marginTop: 1 }}>{r.driver}</div>
+                          <div className="gecko-cell-meta">{r.driver}</div>
                         </div>
                       </div>
                     </td>
 
                     {/* Haulier */}
-                    <td style={{ padding: '12px 14px' }}>
-                      <div style={{ fontSize: 12, color: 'var(--gecko-text-primary)', whiteSpace: 'nowrap' }}>{r.haulier}</div>
-                      <div style={{ fontSize: 10, color: 'var(--gecko-text-disabled)', fontFamily: 'var(--gecko-font-mono)', marginTop: 1 }}>
+                    <td>
+                      <div style={{ whiteSpace: 'nowrap' }}>{r.haulier}</div>
+                      <div className="gecko-cell-sub">
                         {r.appt.startsWith('APT') ? r.appt : <span style={{ color: 'var(--gecko-warning-600)', fontWeight: 600 }}>Walk-in</span>}
                       </div>
                     </td>
 
                     {/* Containers */}
-                    <td style={{ padding: '12px 14px', minWidth: 220 }}>
-                      <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
+                    <td style={{ minWidth: 220 }}>
+                      <div className="gecko-stack gecko-stack-xs">
                         {r.containers.map(c => (
-                          <div key={c.edo} style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-                            <span style={{ fontFamily: 'var(--gecko-font-mono)', fontSize: 11, fontWeight: 700, color: 'var(--gecko-text-primary)' }}>{c.ctr}</span>
+                          <div key={c.edo} className="gecko-row" style={{ gap: 6 }}>
+                            <span className="gecko-mono-strong">{c.ctr}</span>
                             <span style={{ fontFamily: 'var(--gecko-font-mono)', fontSize: 10, padding: '1px 5px', background: 'var(--gecko-bg-subtle)', border: '1px solid var(--gecko-border)', borderRadius: 3, color: 'var(--gecko-text-secondary)' }}>{c.iso}</span>
                             <span style={{ fontSize: 10, color: 'var(--gecko-text-disabled)' }}>{c.edo} · {c.line}</span>
                           </div>
@@ -285,39 +284,38 @@ export default function GateOutQueuePage() {
                     </td>
 
                     {/* Lane */}
-                    <td style={{ padding: '12px 14px', whiteSpace: 'nowrap' }}>
+                    <td style={{ whiteSpace: 'nowrap' }}>
                       <span style={{ fontSize: 11, fontWeight: 600, padding: '2px 8px', background: 'var(--gecko-primary-50)', color: 'var(--gecko-primary-700)', borderRadius: 4, fontFamily: 'var(--gecko-font-mono)' }}>{r.lane}</span>
                     </td>
 
                     {/* Arrived */}
-                    <td style={{ padding: '12px 14px', whiteSpace: 'nowrap' }}>
+                    <td style={{ whiteSpace: 'nowrap' }}>
                       <span style={{ fontFamily: 'var(--gecko-font-mono)', fontSize: 12, fontWeight: 600, color: overdue ? 'var(--gecko-error-700)' : 'var(--gecko-text-primary)' }}>{r.arrivedAt}</span>
                     </td>
 
                     {/* Waiting */}
-                    <td style={{ padding: '12px 14px', whiteSpace: 'nowrap' }}>
+                    <td style={{ whiteSpace: 'nowrap' }}>
                       <WaitBadge mins={r.arrivedMinsAgo} />
                     </td>
 
                     {/* Status */}
-                    <td style={{ padding: '12px 14px', whiteSpace: 'nowrap' }}>
+                    <td style={{ whiteSpace: 'nowrap' }}>
                       {overdue
-                        ? <span className="gecko-badge gecko-badge-error" style={{ fontSize: 10 }}>Overdue</span>
+                        ? <span className="gecko-badge gecko-badge-error gecko-badge-xs">Overdue</span>
                         : r.arrivedMinsAgo <= 5
-                          ? <span className="gecko-badge gecko-badge-info" style={{ fontSize: 10 }}>Just arrived</span>
-                          : <span className="gecko-badge gecko-badge-success" style={{ fontSize: 10 }}>Waiting</span>
+                          ? <span className="gecko-badge gecko-badge-info gecko-badge-xs">Just arrived</span>
+                          : <span className="gecko-badge gecko-badge-success gecko-badge-xs">Waiting</span>
                       }
                     </td>
 
                     {/* Action */}
-                    <td style={{ padding: '12px 14px', whiteSpace: 'nowrap' }}>
+                    <td style={{ whiteSpace: 'nowrap' }}>
                       <Link
                         href={`/gate/eir-out/${r.id}`}
-                        className="gecko-btn gecko-btn-sm"
+                        className="gecko-btn gecko-btn-sm gecko-inline-row"
                         style={{
-                          textDecoration: 'none', display: 'inline-flex', alignItems: 'center', gap: 6,
                           background: overdue ? 'var(--gecko-error-600)' : 'var(--gecko-primary-600)',
-                          color: '#fff', border: 'none', fontSize: 12, fontWeight: 700, padding: '6px 14px', borderRadius: 6,
+                          color: '#fff', border: 'none',
                         }}
                       >
                         <Icon name="arrowRight" size={13} />Open EIR-Out

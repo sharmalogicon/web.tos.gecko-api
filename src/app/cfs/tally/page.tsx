@@ -29,8 +29,8 @@ const TALLY_SORT_OPTIONS: SortOption[] = [
 ];
 
 function StatusBadge({ status }: { status: string }) {
-  if (status === 'In Progress') return <span style={{ background: 'var(--gecko-warning-100)', color: 'var(--gecko-warning-700)', padding: '2px 8px', borderRadius: 12, fontSize: 11, fontWeight: 700 }}>In Progress</span>;
-  if (status === 'Completed') return <span style={{ background: 'var(--gecko-success-100)', color: 'var(--gecko-success-700)', padding: '2px 8px', borderRadius: 12, fontSize: 11, fontWeight: 700 }}>Completed</span>;
+  if (status === 'In Progress') return <span className="gecko-badge gecko-badge-warning">In Progress</span>;
+  if (status === 'Completed') return <span className="gecko-badge gecko-badge-success">Completed</span>;
   return null;
 }
 
@@ -46,11 +46,11 @@ export default function TallyListsPage() {
       {/* Header */}
       <div className="gecko-page-actions">
         <div className="gecko-page-actions-left">
-          <div style={{ display: 'flex', alignItems: 'baseline', gap: 12 }}>
-            <h1 style={{ fontSize: 24, fontWeight: 700, margin: 0, color: 'var(--gecko-text-primary)' }}>Cargo Tally</h1>
+          <div className="gecko-row gecko-row-baseline gecko-stack-md">
+            <h1 className="gecko-page-title">Cargo Tally</h1>
             <span className="gecko-count-badge">5 shown</span>
           </div>
-          <div style={{ fontSize: 13, color: 'var(--gecko-text-secondary)' }}>Master ledger of all CFS stuffing and stripping operations.</div>
+          <p className="gecko-page-subtitle">Master ledger of all CFS stuffing and stripping operations.</p>
         </div>
         <div className="gecko-toolbar">
           <ExportButton resource="Tally" iconSize={16} />
@@ -65,14 +65,14 @@ export default function TallyListsPage() {
             sortValue={sortBy}
             onSortChange={setSortBy}
           />
-          <Link href="/cfs/stuffing" className="gecko-btn gecko-btn-primary gecko-btn-sm" style={{ textDecoration: 'none' }}>
+          <Link href="/cfs/stuffing" className="gecko-btn gecko-btn-primary gecko-btn-sm">
             <Icon name="plus" size={16} /> New Stuffing Tally
           </Link>
         </div>
       </div>
 
       {/* Table */}
-      <div style={{ background: 'var(--gecko-bg-surface)', border: '1px solid var(--gecko-border)', borderRadius: 12, overflow: 'hidden', boxShadow: 'var(--gecko-shadow-sm)' }}>
+      <div className="gecko-table-card">
         <table className="gecko-table gecko-table-comfortable" style={{ fontSize: 13 }}>
           <thead>
             <tr>
@@ -90,20 +90,20 @@ export default function TallyListsPage() {
           <tbody>
             {TALLY_LISTS.map((tl) => (
               <tr key={tl.id} style={scannedId && (tl.id === scannedId || tl.container.toLowerCase().includes(scannedId.toLowerCase())) ? { background: 'var(--gecko-primary-50)', borderLeft: '3px solid var(--gecko-primary-500)' } : undefined}>
-                <td className="gecko-text-mono" style={{ fontWeight: 700, color: 'var(--gecko-primary-600)' }}>
-                  <a href="#" style={{ color: 'inherit', textDecoration: 'none' }}>{tl.id}</a>
+                <td>
+                  <a href="#" className="gecko-id-link">{tl.id}</a>
                 </td>
                 <td style={{ color: 'var(--gecko-text-secondary)' }}>{tl.date}</td>
                 <td>
                   {tl.type === 'Stuffing'
-                    ? <span style={{ display: 'flex', alignItems: 'center', gap: 6, fontWeight: 600, color: 'var(--gecko-primary-700)' }}><Icon name="chevronRight" size={14} /> Stuffing</span>
-                    : <span style={{ display: 'flex', alignItems: 'center', gap: 6, fontWeight: 600, color: 'var(--gecko-error-700)' }}><Icon name="chevronLeft" size={14} /> Stripping</span>
+                    ? <span className="gecko-inline-row" style={{ fontWeight: 600, color: 'var(--gecko-primary-700)' }}><Icon name="chevronRight" size={14} /> Stuffing</span>
+                    : <span className="gecko-inline-row" style={{ fontWeight: 600, color: 'var(--gecko-error-700)' }}><Icon name="chevronLeft" size={14} /> Stripping</span>
                   }
                 </td>
                 <td className="gecko-text-mono" style={{ fontWeight: 600, color: 'var(--gecko-text-primary)' }}>{tl.container}</td>
                 <td style={{ color: 'var(--gecko-text-secondary)' }}>{tl.clerk}</td>
                 <td style={{ textAlign: 'right', fontWeight: 600 }}>{tl.items}</td>
-                <td className="gecko-text-mono" style={{ textAlign: 'right' }}>{tl.weight}</td>
+                <td className="gecko-num-tabular">{tl.weight}</td>
                 <td>
                   <StatusBadge status={tl.status} />
                 </td>
@@ -122,7 +122,7 @@ export default function TallyListsPage() {
                   >
                     <Icon name="printer" size={13} />
                   </button>
-                  <button style={{ background: 'transparent', border: 'none', color: 'var(--gecko-text-disabled)', cursor: 'pointer' }}><Icon name="moreHorizontal" size={16} /></button>
+                  <button className="gecko-btn gecko-btn-ghost gecko-btn-icon gecko-btn-sm"><Icon name="moreHorizontal" size={16} /></button>
                 </td>
               </tr>
             ))}

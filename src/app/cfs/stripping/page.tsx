@@ -52,11 +52,11 @@ export default function StrippingPage() {
       {/* Header */}
       <div className="gecko-page-actions" style={{ flexShrink: 0 }}>
         <div className="gecko-page-actions-left">
-          <div style={{ display: 'flex', alignItems: 'baseline', gap: 12 }}>
-            <h1 style={{ fontSize: 24, fontWeight: 700, margin: 0, color: 'var(--gecko-text-primary)' }}>CFS Stripping</h1>
-            <span style={{ fontSize: 12, fontWeight: 600, color: 'var(--gecko-warning-700)', background: 'var(--gecko-warning-100)', padding: '2px 8px', borderRadius: 12 }}>Active Tally</span>
+          <div className="gecko-row gecko-row-baseline gecko-stack-md">
+            <h1 className="gecko-page-title">CFS Stripping</h1>
+            <span className="gecko-badge gecko-badge-warning">Active Tally</span>
           </div>
-          <div style={{ fontSize: 13, color: 'var(--gecko-text-secondary)' }}>Unload inbound LCL cargo from a container into the warehouse.</div>
+          <p className="gecko-page-subtitle">Unload inbound LCL cargo from a container into the warehouse.</p>
         </div>
         <div className="gecko-toolbar">
           <button className="gecko-btn gecko-btn-outline gecko-btn-sm" onClick={() => window.print()}><Icon name="printer" size={16} /> Print Receipt</button>
@@ -71,17 +71,17 @@ export default function StrippingPage() {
 
           {/* Container Header */}
           <div style={{ padding: '20px 24px', borderBottom: '1px solid var(--gecko-border)', background: '#fff' }}>
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 16 }}>
+            <div className="gecko-row gecko-row-between gecko-row-start gecko-mb-3">
               <div>
-                <div style={{ fontSize: 11, fontWeight: 700, color: 'var(--gecko-text-secondary)', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Inbound Container</div>
-                <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginTop: 4 }}>
+                <div className="gecko-eyebrow">Inbound Container</div>
+                <div className="gecko-row gecko-stack-md gecko-mt-1">
                   <h2 style={{ fontSize: 24, fontWeight: 800, margin: 0, fontFamily: 'var(--gecko-font-mono)', color: 'var(--gecko-primary-700)' }}>CMAU 441922-1</h2>
-                  <span style={{ background: 'var(--gecko-gray-100)', color: 'var(--gecko-text-secondary)', padding: '2px 8px', borderRadius: 6, fontSize: 12, fontWeight: 700 }}>40HC</span>
+                  <span className="gecko-badge gecko-badge-gray">40HC</span>
                 </div>
               </div>
               <div style={{ textAlign: 'right' }}>
-                <div style={{ fontSize: 11, fontWeight: 700, color: 'var(--gecko-text-secondary)', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Manifest (EDO)</div>
-                <div style={{ fontSize: 14, fontWeight: 700, fontFamily: 'var(--gecko-font-mono)', marginTop: 4 }}>EDO-2026-1142</div>
+                <div className="gecko-eyebrow">Manifest (EDO)</div>
+                <div className="gecko-mt-1" style={{ fontSize: 14, fontWeight: 700, fontFamily: 'var(--gecko-font-mono)' }}>EDO-2026-1142</div>
               </div>
             </div>
 

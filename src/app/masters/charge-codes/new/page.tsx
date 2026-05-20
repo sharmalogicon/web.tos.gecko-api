@@ -60,13 +60,12 @@ const STEPS = [
 ];
 
 function StepHeader({ step, form }: { step: number; form: FormState }) {
-  const pct = ((step - 1) / (STEPS.length - 1)) * 100;
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', gap: 20 }}>
-      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+    <div className="gecko-stack gecko-stack-xl">
+      <div className="gecko-row gecko-row-between">
         {STEPS.map((s, i) => (
           <React.Fragment key={s.id}>
-            <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 8 }}>
+            <div className="gecko-stack gecko-stack-sm" style={{ alignItems: 'center' }}>
               <div style={{
                 width: 38, height: 38, borderRadius: '50%',
                 background: step > s.id ? 'var(--gecko-success-600)' : step === s.id ? 'var(--gecko-primary-600)' : 'var(--gecko-bg-subtle)',
@@ -79,7 +78,7 @@ function StepHeader({ step, form }: { step: number; form: FormState }) {
               <span style={{ fontSize: 11, fontWeight: step === s.id ? 700 : 500, color: step === s.id ? 'var(--gecko-primary-600)' : 'var(--gecko-text-secondary)', whiteSpace: 'nowrap' }}>{s.label}</span>
             </div>
             {i < STEPS.length - 1 && (
-              <div style={{ flex: 1, height: 2, background: 'var(--gecko-border)', margin: '0 8px', marginBottom: 26, position: 'relative' }}>
+              <div className="gecko-flex-1" style={{ height: 2, background: 'var(--gecko-border)', margin: '0 8px', marginBottom: 26, position: 'relative' }}>
                 <div style={{ position: 'absolute', inset: 0, background: 'var(--gecko-primary-600)', width: step > s.id ? '100%' : '0%', transition: 'width 0.3s' }} />
               </div>
             )}
@@ -95,7 +94,7 @@ function Field({ label, required, hint, children, span }: { label: string; requi
     <div className="gecko-form-group" style={{ gridColumn: span ? `span ${span}` : undefined }}>
       <label className={`gecko-label${required ? ' gecko-label-required' : ''}`}>{label}</label>
       {children}
-      {hint && <div style={{ fontSize: 11, color: 'var(--gecko-text-secondary)', marginTop: 4 }}>{hint}</div>}
+      {hint && <div className="gecko-helper-text">{hint}</div>}
     </div>
   );
 }
@@ -115,11 +114,11 @@ function ToggleChip({ value, checked, color, onChange }: { value: string; checke
 
 function Step1({ form, set }: { form: FormState; set: (f: Partial<FormState>) => void }) {
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', gap: 28 }}>
+    <div className="gecko-stack gecko-stack-xl">
       <div>
-        <div style={{ fontSize: 14, fontWeight: 700, color: 'var(--gecko-text-primary)', marginBottom: 4 }}>Identity</div>
-        <div style={{ fontSize: 12, color: 'var(--gecko-text-secondary)', marginBottom: 18 }}>The charge code and description appear on all invoices and tariff plans that reference it.</div>
-        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 18 }}>
+        <div className="gecko-card-title gecko-mb-1">Identity</div>
+        <div className="gecko-card-subtitle gecko-mb-3">The charge code and description appear on all invoices and tariff plans that reference it.</div>
+        <div className="gecko-grid-2">
           <Field label="Charge Code" required hint="Uppercase, hyphenated. e.g. GATE-IN, RF-PLUG">
             <input className="gecko-input gecko-text-mono" placeholder="e.g. LIFT-ON" value={form.code} onChange={e => set({ code: e.target.value.toUpperCase() })} style={{ textTransform: 'uppercase' }} />
           </Field>
@@ -133,9 +132,9 @@ function Step1({ form, set }: { form: FormState; set: (f: Partial<FormState>) =>
       </div>
 
       <div>
-        <div style={{ fontSize: 14, fontWeight: 700, color: 'var(--gecko-text-primary)', marginBottom: 4 }}>Classification</div>
-        <div style={{ fontSize: 12, color: 'var(--gecko-text-secondary)', marginBottom: 18 }}>Module and category drive GL routing, rate matrix dimensions, and report grouping.</div>
-        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 18 }}>
+        <div className="gecko-card-title gecko-mb-1">Classification</div>
+        <div className="gecko-card-subtitle gecko-mb-3">Module and category drive GL routing, rate matrix dimensions, and report grouping.</div>
+        <div className="gecko-grid-2">
           <Field label="Module" required>
             <select className="gecko-input" value={form.module} onChange={e => set({ module: e.target.value as ChargeModule })}>
               <option value="">— select —</option>
@@ -158,7 +157,7 @@ function Step1({ form, set }: { form: FormState; set: (f: Partial<FormState>) =>
             </select>
           </Field>
           <Field label="Charge Type" required>
-            <div style={{ display: 'flex', gap: 10 }}>
+            <div className="gecko-row">
               {(['Revenue', 'Cost', 'Pass-through'] as ChargeType[]).map(t => {
                 const on = form.chargeType === t;
                 const colors: Record<ChargeType, string> = { Revenue: 'var(--gecko-success-600)', Cost: 'var(--gecko-danger-600)', 'Pass-through': 'var(--gecko-warning-600)' };
@@ -186,8 +185,8 @@ function Step1({ form, set }: { form: FormState; set: (f: Partial<FormState>) =>
       </div>
 
       <div>
-        <div style={{ fontSize: 14, fontWeight: 700, color: 'var(--gecko-text-primary)', marginBottom: 18 }}>Effective Date</div>
-        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 18 }}>
+        <div className="gecko-card-title gecko-mb-3">Effective Date</div>
+        <div className="gecko-grid-2">
           <Field label="Effective From">
             <DateField value={form.effectiveFrom} onChange={v => set({ effectiveFrom: v })} />
           </Field>
@@ -202,11 +201,11 @@ function Step1({ form, set }: { form: FormState; set: (f: Partial<FormState>) =>
 
 function Step2({ form, set }: { form: FormState; set: (f: Partial<FormState>) => void }) {
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', gap: 28 }}>
+    <div className="gecko-stack gecko-stack-xl">
       <div>
-        <div style={{ fontSize: 14, fontWeight: 700, color: 'var(--gecko-text-primary)', marginBottom: 4 }}>Rate Configuration</div>
-        <div style={{ fontSize: 12, color: 'var(--gecko-text-secondary)', marginBottom: 18 }}>Unit of measure and basis determine how the rate engine calculates the invoice amount.</div>
-        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 18 }}>
+        <div className="gecko-card-title gecko-mb-1">Rate Configuration</div>
+        <div className="gecko-card-subtitle gecko-mb-3">Unit of measure and basis determine how the rate engine calculates the invoice amount.</div>
+        <div className="gecko-grid-2">
           <Field label="Billing Unit (UoM)" required>
             <select className="gecko-input" value={form.billingUnit} onChange={e => set({ billingUnit: e.target.value })}>
               <option value="">— select —</option>
@@ -251,8 +250,8 @@ function Step2({ form, set }: { form: FormState; set: (f: Partial<FormState>) =>
       </div>
 
       <div>
-        <div style={{ fontSize: 14, fontWeight: 700, color: 'var(--gecko-text-primary)', marginBottom: 18 }}>Thresholds</div>
-        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 18 }}>
+        <div className="gecko-card-title gecko-mb-3">Thresholds</div>
+        <div className="gecko-grid-3">
           <Field label="Minimum Charge" hint="Floor — charge never falls below this">
             <input className="gecko-input gecko-text-mono" placeholder="= Base Rate" value={form.minCharge} onChange={e => set({ minCharge: e.target.value })} />
           </Field>
@@ -266,9 +265,9 @@ function Step2({ form, set }: { form: FormState; set: (f: Partial<FormState>) =>
       </div>
 
       <div>
-        <div style={{ fontSize: 14, fontWeight: 700, color: 'var(--gecko-text-primary)', marginBottom: 4 }}>Size Differentiation</div>
-        <div style={{ fontSize: 12, color: 'var(--gecko-text-secondary)', marginBottom: 18 }}>Override base rate per container ISO size. Leave blank to inherit base rate.</div>
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 16 }}>
+        <div className="gecko-card-title gecko-mb-1">Size Differentiation</div>
+        <div className="gecko-card-subtitle gecko-mb-3">Override base rate per container ISO size. Leave blank to inherit base rate.</div>
+        <div className="gecko-grid-4">
           {["20' (TEU)", "40' (FEU)", "40' HC", "45'"].map(s => (
             <Field key={s} label={s}>
               <input className="gecko-input gecko-text-mono" placeholder="= Base" />

@@ -150,14 +150,14 @@ export default function EdiInquiryPage() {
   ];
 
   return (
-    <div className="gecko-stack" style={{ gap: 14 }}>
+    <div className="gecko-stack">
 
       {/* ── Header ── */}
       <div className="gecko-page-header">
         <div className="gecko-page-header-left">
-          <div className="gecko-row" style={{ gap: 10 }}>
+          <div className="gecko-row gecko-row-baseline">
             <h1 className="gecko-page-title">EDI Event Inquiry</h1>
-            <span style={{ fontSize: 10.5, fontWeight: 600, padding: '2px 8px', borderRadius: 20, background: 'var(--gecko-primary-50)', color: 'var(--gecko-primary-700)', border: '1px solid var(--gecko-primary-200)' }}>
+            <span className="gecko-count-badge">
               {filtered.length} of {EVENTS.length}
             </span>
           </div>
@@ -168,26 +168,26 @@ export default function EdiInquiryPage() {
         <div className="gecko-page-header-actions">
           <ExportButton resource="EDI events" iconSize={13} />
           <RefreshButton resource="EDI events" iconSize={13} />
-          <Link href="/dashboard/edi" className="gecko-btn gecko-btn-outline gecko-btn-sm" style={{ textDecoration: 'none' }}>
+          <Link href="/dashboard/edi" className="gecko-btn gecko-btn-outline gecko-btn-sm">
             <Icon name="zap" size={13} /> EDI Dashboard
           </Link>
         </div>
       </div>
 
       {/* ── KPI Strip ── */}
-      <div className="gecko-grid-4" style={{ gap: 10 }}>
+      <div className="gecko-grid-4">
         {[
           { label: 'Today',   value: kpi.today,   icon: 'clock',         tone: 'primary' as const },
           { label: 'Acked',   value: kpi.acked,   icon: 'check',         tone: 'success' as const },
           { label: 'Pending', value: kpi.pending, icon: 'clock',         tone: 'warning' as const },
           { label: 'Errors',  value: kpi.error,   icon: 'alertTriangle', tone: 'error'   as const },
         ].map(k => (
-          <div key={k.label} className="gecko-card gecko-row" style={{ padding: '12px 14px', gap: 12 }}>
+          <div key={k.label} className="gecko-card gecko-card-tight gecko-row">
             <div className={`gecko-mini-icon gecko-mini-icon-lg gecko-mini-icon-${k.tone}`}>
               <Icon name={k.icon} size={17} />
             </div>
             <div>
-              <div className="gecko-stat-num gecko-stat-num-sm" style={{ fontFamily: 'var(--gecko-font-mono)' }}>{k.value}</div>
+              <div className="gecko-stat-num gecko-stat-num-sm gecko-mono">{k.value}</div>
               <div className="gecko-cell-meta">{k.label}</div>
             </div>
           </div>
@@ -239,28 +239,28 @@ export default function EdiInquiryPage() {
               return (
                 <tr key={e.id} style={{ background: e.status === 'Error' ? 'rgba(239, 68, 68, 0.04)' : undefined }}>
                   <td className="gecko-text-mono" style={{ fontSize: 11.5 }}>{fmtDateTime(e.ts)}</td>
-                  <td><div style={{ fontSize: 12, fontWeight: 700, fontFamily: 'var(--gecko-font-mono)', color: 'var(--gecko-text-primary)' }}>{e.partner}</div></td>
+                  <td><div className="gecko-mono-strong">{e.partner}</div></td>
                   <td>
                     <span className="gecko-badge gecko-badge-info gecko-text-mono" title={MSG_DESC[e.messageType] ?? ''}>{e.messageType}</span>
                   </td>
                   <td>
-                    <span style={{ fontSize: 11, fontWeight: 700, padding: '2px 7px', borderRadius: 4, background: e.direction === 'IN' ? 'var(--gecko-info-50)' : 'var(--gecko-primary-50)', color: e.direction === 'IN' ? 'var(--gecko-info-700)' : 'var(--gecko-primary-700)' }}>
+                    <span className={`gecko-badge ${e.direction === 'IN' ? 'gecko-badge-info' : 'gecko-badge-primary'}`}>
                       {e.direction === 'IN' ? '↓ IN' : '↑ OUT'}
                     </span>
                   </td>
                   <td>
-                    <div className="gecko-row" style={{ gap: 8 }}>
+                    <div className="gecko-row">
                       <span className="gecko-eyebrow" style={{ minWidth: 64 }}>{e.referenceType}</span>
-                      <span className="gecko-mono-strong" style={{ fontSize: 12 }}>{e.reference}</span>
+                      <span className="gecko-mono-strong">{e.reference}</span>
                     </div>
                   </td>
                   <td className="gecko-text-mono" style={{ fontSize: 11, color: 'var(--gecko-text-secondary)' }}>{e.msgRef}</td>
-                  <td style={{ textAlign: 'right', fontFamily: 'var(--gecko-font-mono)', fontSize: 11.5 }}>{e.segments}</td>
+                  <td className="gecko-num-tabular" style={{ fontSize: 11.5 }}>{e.segments}</td>
                   <td>
                     <span className={`gecko-badge ${status.badge}`}>{e.status}</span>
                   </td>
                   <td>
-                    <button onClick={() => setSelectedEvent(e)} className="gecko-btn gecko-btn-ghost gecko-btn-sm" style={{ fontSize: 11 }}>
+                    <button onClick={() => setSelectedEvent(e)} className="gecko-btn gecko-btn-ghost gecko-btn-sm">
                       <Icon name="fileText" size={11} /> Details
                     </button>
                   </td>
@@ -299,17 +299,17 @@ function EventDetailModal({ event, onClose, onResend }: { event: EdiEvent; onClo
   const status = STATUS_META[event.status];
   return (
     <div className="gecko-overlay" onClick={onClose}>
-      <div className="gecko-modal gecko-modal-lg" style={{ display: 'flex', flexDirection: 'column' }} onClick={e => e.stopPropagation()}>
+      <div className="gecko-modal gecko-modal-lg gecko-stack" onClick={e => e.stopPropagation()}>
         <div className="gecko-modal-header">
           <div>
-            <div className="gecko-row" style={{ gap: 10 }}>
+            <div className="gecko-row">
               <span className="gecko-badge gecko-badge-info gecko-text-mono">{event.messageType}</span>
-              <span style={{ fontSize: 11, fontWeight: 700, padding: '2px 7px', borderRadius: 4, background: event.direction === 'IN' ? 'var(--gecko-info-50)' : 'var(--gecko-primary-50)', color: event.direction === 'IN' ? 'var(--gecko-info-700)' : 'var(--gecko-primary-700)' }}>
+              <span className={`gecko-badge ${event.direction === 'IN' ? 'gecko-badge-info' : 'gecko-badge-primary'}`}>
                 {event.direction === 'IN' ? '↓ IN' : '↑ OUT'}
               </span>
               <span className={`gecko-badge ${status.badge}`}>{event.status}</span>
             </div>
-            <div className="gecko-modal-title" style={{ marginTop: 8 }}>{MSG_DESC[event.messageType] ?? event.messageType}</div>
+            <div className="gecko-modal-title gecko-mt-2">{MSG_DESC[event.messageType] ?? event.messageType}</div>
             <div className="gecko-modal-description">{event.partner} · {fmtDateTime(event.ts)}</div>
           </div>
           <button className="gecko-btn gecko-btn-ghost gecko-btn-icon gecko-btn-sm" onClick={onClose} aria-label="Close" type="button">
@@ -318,7 +318,7 @@ function EventDetailModal({ event, onClose, onResend }: { event: EdiEvent; onClo
         </div>
 
         <div className="gecko-modal-body">
-          <div className="gecko-grid-2" style={{ gap: 16 }}>
+          <div className="gecko-grid-2 gecko-stack-lg">
             <Kv label="Event ID"   value={event.id}   mono />
             <Kv label="Partner"    value={event.partner} mono />
             <Kv label="Reference"  value={`${event.referenceType} · ${event.reference}`} mono />
@@ -328,14 +328,14 @@ function EventDetailModal({ event, onClose, onResend }: { event: EdiEvent; onClo
           </div>
 
           {event.errorDetail && (
-            <div style={{ marginTop: 16, padding: 12, background: 'var(--gecko-error-50)', border: '1px solid var(--gecko-error-200)', borderRadius: 8 }}>
-              <div className="gecko-eyebrow" style={{ color: 'var(--gecko-error-700)', marginBottom: 6 }}>Error Detail</div>
+            <div className="gecko-mt-4" style={{ padding: 12, background: 'var(--gecko-error-50)', border: '1px solid var(--gecko-error-200)', borderRadius: 8 }}>
+              <div className="gecko-eyebrow gecko-mb-2" style={{ color: 'var(--gecko-error-700)' }}>Error Detail</div>
               <div style={{ fontSize: 13, color: 'var(--gecko-error-700)' }}>{event.errorDetail}</div>
             </div>
           )}
 
-          <div style={{ marginTop: 16 }}>
-            <div className="gecko-eyebrow" style={{ marginBottom: 6 }}>Payload (preview)</div>
+          <div className="gecko-mt-4">
+            <div className="gecko-eyebrow gecko-mb-2">Payload (preview)</div>
             <pre style={{ fontSize: 11, fontFamily: 'var(--gecko-font-mono)', background: 'var(--gecko-bg-subtle)', border: '1px solid var(--gecko-border)', borderRadius: 8, padding: 12, overflow: 'auto', maxHeight: 220, margin: 0 }}>
 {`UNH+${event.msgRef}+${event.messageType}:D:00B:UN'
 BGM+12+${event.id}+9'
@@ -364,8 +364,8 @@ UNT+${event.segments}+${event.msgRef}'`}
 function Kv({ label, value, mono }: { label: string; value: string; mono?: boolean }) {
   return (
     <div>
-      <div style={{ fontSize: 10.5, color: 'var(--gecko-text-disabled)', marginBottom: 2 }}>{label}</div>
-      <div style={{ fontSize: 12.5, fontWeight: 600, color: 'var(--gecko-text-primary)', fontFamily: mono ? 'var(--gecko-font-mono)' : 'inherit' }}>{value}</div>
+      <div className="gecko-eyebrow gecko-mb-1">{label}</div>
+      <div className={`gecko-cell-primary${mono ? ' gecko-mono' : ''}`}>{value}</div>
     </div>
   );
 }

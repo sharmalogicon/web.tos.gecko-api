@@ -29,10 +29,10 @@ const LCL_SORT_OPTIONS: SortOption[] = [
 ];
 
 function StatusBadge({ status }: { status: string }) {
-  if (status.includes('Ready for Stuffing')) return <span style={{ background: 'var(--gecko-info-100)', color: 'var(--gecko-info-700)', padding: '2px 8px', borderRadius: 12, fontSize: 11, fontWeight: 700 }}>Ready (Stuff)</span>;
-  if (status.includes('Ready for Pickup')) return <span style={{ background: 'var(--gecko-success-100)', color: 'var(--gecko-success-700)', padding: '2px 8px', borderRadius: 12, fontSize: 11, fontWeight: 700 }}>Ready (Pickup)</span>;
-  if (status.includes('Hold')) return <span style={{ background: 'var(--gecko-error-100)', color: 'var(--gecko-error-700)', padding: '2px 8px', borderRadius: 12, fontSize: 11, fontWeight: 700 }}>{status}</span>;
-  if (status === 'Stuffed') return <span style={{ background: 'var(--gecko-gray-200)', color: 'var(--gecko-text-secondary)', padding: '2px 8px', borderRadius: 12, fontSize: 11, fontWeight: 700 }}>Stuffed</span>;
+  if (status.includes('Ready for Stuffing')) return <span className="gecko-badge gecko-badge-info">Ready (Stuff)</span>;
+  if (status.includes('Ready for Pickup')) return <span className="gecko-badge gecko-badge-success">Ready (Pickup)</span>;
+  if (status.includes('Hold')) return <span className="gecko-badge gecko-badge-error">{status}</span>;
+  if (status === 'Stuffed') return <span className="gecko-badge gecko-badge-gray">Stuffed</span>;
   return null;
 }
 
@@ -47,11 +47,11 @@ export default function LclCargoPage() {
       {/* Header */}
       <div className="gecko-page-actions">
         <div className="gecko-page-actions-left">
-          <div style={{ display: 'flex', alignItems: 'baseline', gap: 12 }}>
-            <h1 style={{ fontSize: 24, fontWeight: 700, margin: 0, color: 'var(--gecko-text-primary)' }}>LCL Cargo Register</h1>
+          <div className="gecko-row gecko-row-baseline gecko-stack-md">
+            <h1 className="gecko-page-title">LCL Cargo Register</h1>
             <span className="gecko-count-badge">6 shown of 842</span>
           </div>
-          <div style={{ fontSize: 13, color: 'var(--gecko-text-secondary)' }}>Live inventory of all loose cargo currently in the CFS warehouse.</div>
+          <p className="gecko-page-subtitle">Live inventory of all loose cargo currently in the CFS warehouse.</p>
         </div>
         <div className="gecko-toolbar">
           <ExportButton resource="LCL cargo" iconSize={16} />
@@ -70,7 +70,7 @@ export default function LclCargoPage() {
       </div>
 
       {/* Table */}
-      <div style={{ background: 'var(--gecko-bg-surface)', border: '1px solid var(--gecko-border)', borderRadius: 12, overflow: 'hidden', boxShadow: 'var(--gecko-shadow-sm)' }}>
+      <div className="gecko-table-card">
         <table className="gecko-table gecko-table-comfortable" style={{ fontSize: 13 }}>
           <thead>
             <tr>
@@ -87,8 +87,8 @@ export default function LclCargoPage() {
           <tbody>
             {LCL_CARGO.map((item) => (
               <tr key={item.id}>
-                <td className="gecko-text-mono" style={{ fontWeight: 700, color: 'var(--gecko-primary-700)' }}>
-                  <a href="#" style={{ color: 'inherit', textDecoration: 'none' }}>{item.id}</a>
+                <td>
+                  <a href="#" className="gecko-id-link">{item.id}</a>
                 </td>
                 <td className="gecko-text-mono" style={{ color: 'var(--gecko-text-secondary)', fontWeight: 600 }}>{item.bkg}</td>
                 <td>{item.desc}</td>
@@ -105,7 +105,7 @@ export default function LclCargoPage() {
                   <StatusBadge status={item.status} />
                 </td>
                 <td style={{ textAlign: 'right' }}>
-                  <button style={{ background: 'transparent', border: 'none', color: 'var(--gecko-text-disabled)', cursor: 'pointer' }}><Icon name="moreHorizontal" size={16} /></button>
+                  <button className="gecko-btn gecko-btn-ghost gecko-btn-icon gecko-btn-sm"><Icon name="moreHorizontal" size={16} /></button>
                 </td>
               </tr>
             ))}

@@ -185,23 +185,23 @@ export default function GateAppointmentsPage() {
   };
 
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
+    <div className="gecko-stack gecko-stack-lg">
 
       {/* ── Toolbar ── */}
-      <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: 12 }}>
-        <div>
-          <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-            <h1 style={{ fontSize: 20, fontWeight: 700, color: 'var(--gecko-text-primary)', margin: 0 }}>Gate Appointments</h1>
+      <div className="gecko-page-header">
+        <div className="gecko-page-header-left">
+          <div className="gecko-row">
+            <h1 className="gecko-page-title">Gate Appointments</h1>
             <span className="gecko-pill gecko-pill-primary">{filtered.length} of {scoped.length}</span>
           </div>
-          <div style={{ fontSize: 12, color: 'var(--gecko-text-secondary)', marginTop: 3 }}>
+          <p className="gecko-page-subtitle">
             Time-slot bookings for trucker arrivals — Laem Chabang ICD · Import Yard
-          </div>
+          </p>
         </div>
-        <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
+        <div className="gecko-page-header-actions">
           <ExportButton resource="Appointments" iconSize={13} />
           <RefreshButton resource="Appointments" iconSize={13} />
-          <Link href="#new-appointment" onClick={(e) => { e.preventDefault(); alert('New appointment flow arrives in Phase 4.5 (VBS module).'); }} className="gecko-btn gecko-btn-primary gecko-btn-sm" style={{ textDecoration: 'none', display: 'inline-flex', alignItems: 'center', gap: 6 }}>
+          <Link href="#new-appointment" onClick={(e) => { e.preventDefault(); alert('New appointment flow arrives in Phase 4.5 (VBS module).'); }} className="gecko-btn gecko-btn-primary gecko-btn-sm gecko-inline-row">
             <Icon name="plus" size={13} />New Appointment
           </Link>
         </div>
@@ -222,7 +222,7 @@ export default function GateAppointmentsPage() {
               <Icon name={k.icon} size={17} />
             </div>
             <div>
-              <div className="gecko-kpi-tile-value" style={{ fontSize: 22 }}>{k.value}</div>
+              <div className="gecko-kpi-tile-value">{k.value}</div>
               <div className="gecko-kpi-tile-label">{k.label}</div>
             </div>
           </div>
@@ -230,7 +230,7 @@ export default function GateAppointmentsPage() {
       </div>
 
       {/* ── Filters + Search ── */}
-      <div style={{ display: 'flex', gap: 10, alignItems: 'center', flexWrap: 'wrap' }}>
+      <div className="gecko-row gecko-row-wrap">
         {/* Date scope toggle */}
         <div className="gecko-segctrl">
           {([
@@ -265,11 +265,11 @@ export default function GateAppointmentsPage() {
         </select>
 
         {/* Search */}
-        <div style={{ flex: 1, maxWidth: 380, position: 'relative' }}>
-          <Icon name="search" size={14} style={{ position: 'absolute', left: 10, top: '50%', transform: 'translateY(-50%)', color: 'var(--gecko-text-disabled)', pointerEvents: 'none' }} />
-          <input className="gecko-input gecko-input-sm" placeholder="Search appt #, container, trucker, plate, booking…"
+        <div className="gecko-filter-bar-search" style={{ maxWidth: 380 }}>
+          <Icon name="search" size={14} className="gecko-filter-bar-search-icon" />
+          <input className="gecko-input gecko-input-sm gecko-filter-bar-search-input" placeholder="Search appt #, container, trucker, plate, booking…"
             value={search} onChange={e => setSearch(e.target.value)}
-            style={{ paddingLeft: 32, paddingRight: search ? 30 : 10 }} />
+            style={{ paddingRight: search ? 30 : 10 }} />
           {search && (
             <button onClick={() => setSearch('')} style={{ position: 'absolute', right: 8, top: '50%', transform: 'translateY(-50%)', background: 'none', border: 'none', cursor: 'pointer', color: 'var(--gecko-text-disabled)', padding: 0, lineHeight: 1 }}>
               <Icon name="x" size={13} />
@@ -279,21 +279,15 @@ export default function GateAppointmentsPage() {
       </div>
 
       {/* ── Table ── */}
-      <div style={{ background: 'var(--gecko-bg-surface)', border: '1px solid var(--gecko-border)', borderRadius: 10, overflow: 'hidden' }}>
+      <div className="gecko-table-card">
         <div style={{ overflowX: 'auto' }}>
-          <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 12.5 }}>
+          <table className="gecko-table">
             <thead>
-              <tr style={{ background: 'var(--gecko-bg-subtle)', borderBottom: '1px solid var(--gecko-border)' }}>
+              <tr>
                 {[
                   'Slot', 'Status', 'Direction', 'Container', 'Movement', 'Trucker', 'Vehicle', 'Carrier', 'Customer', '',
                 ].map((h, i) => (
-                  <th key={i} style={{
-                    textAlign: 'left', padding: '10px 12px',
-                    fontSize: 11, fontWeight: 600,
-                    color: 'var(--gecko-text-secondary)',
-                    textTransform: 'uppercase', letterSpacing: '0.04em',
-                    whiteSpace: 'nowrap',
-                  }}>{h}</th>
+                  <th key={i}>{h}</th>
                 ))}
               </tr>
             </thead>
@@ -302,7 +296,7 @@ export default function GateAppointmentsPage() {
                 <tr>
                   <td colSpan={10} style={{ textAlign: 'center', padding: '40px 12px', color: 'var(--gecko-text-secondary)' }}>
                     <Icon name="search" size={18} />
-                    <div style={{ marginTop: 8 }}>No appointments match the current filters.</div>
+                    <div className="gecko-mt-2">No appointments match the current filters.</div>
                   </td>
                 </tr>
               )}
@@ -313,26 +307,22 @@ export default function GateAppointmentsPage() {
                   <tr key={a.id}
                     onClick={() => onRowClick(a.id)}
                     style={{
-                      borderBottom: '1px solid var(--gecko-border)',
                       cursor: 'pointer',
-                      transition: 'background 120ms',
                       opacity: isPast ? 0.72 : 1,
                     }}
-                    onMouseEnter={(e) => { (e.currentTarget as HTMLTableRowElement).style.background = 'var(--gecko-bg-subtle)'; }}
-                    onMouseLeave={(e) => { (e.currentTarget as HTMLTableRowElement).style.background = 'transparent'; }}
                   >
                     {/* Slot */}
-                    <td style={{ padding: '10px 12px', verticalAlign: 'top' }}>
-                      <div style={{ fontWeight: 600, color: 'var(--gecko-text-primary)', fontFamily: 'var(--gecko-font-mono)' }}>
+                    <td style={{ verticalAlign: 'top' }}>
+                      <div className="gecko-mono-strong">
                         {a.slotStart}–{a.slotEnd}
                       </div>
-                      <div style={{ fontSize: 11, color: 'var(--gecko-text-secondary)', marginTop: 2 }}>
+                      <div className="gecko-cell-meta">
                         {shortDay(a.slotDate)} · {formatDate(a.slotDate)}
                       </div>
                     </td>
 
                     {/* Status */}
-                    <td style={{ padding: '10px 12px', verticalAlign: 'top' }}>
+                    <td style={{ verticalAlign: 'top' }}>
                       <span style={{
                         display: 'inline-flex', alignItems: 'center', gap: 4,
                         fontSize: 11, fontWeight: 600,
@@ -347,9 +337,8 @@ export default function GateAppointmentsPage() {
                     </td>
 
                     {/* Direction */}
-                    <td style={{ padding: '10px 12px', verticalAlign: 'top' }}>
-                      <div style={{
-                        display: 'inline-flex', alignItems: 'center', gap: 5,
+                    <td style={{ verticalAlign: 'top' }}>
+                      <div className="gecko-inline-row" style={{
                         fontWeight: 600, fontSize: 12,
                         color: a.direction === 'GATE_IN' ? 'var(--gecko-info-700)' : 'var(--gecko-primary-700)',
                       }}>
@@ -359,47 +348,47 @@ export default function GateAppointmentsPage() {
                     </td>
 
                     {/* Container */}
-                    <td style={{ padding: '10px 12px', verticalAlign: 'top' }}>
+                    <td style={{ verticalAlign: 'top' }}>
                       {a.containerNo ? (
-                        <div style={{ fontWeight: 600, color: 'var(--gecko-text-primary)', fontFamily: 'var(--gecko-font-mono)' }}>{a.containerNo}</div>
+                        <div className="gecko-cell-primary" style={{ fontFamily: 'var(--gecko-font-mono)' }}>{a.containerNo}</div>
                       ) : (
                         <div style={{ color: 'var(--gecko-text-disabled)', fontStyle: 'italic' }}>—</div>
                       )}
-                      <div style={{ fontSize: 11, color: 'var(--gecko-text-secondary)', marginTop: 2 }}>
+                      <div className="gecko-cell-meta">
                         {a.containerType}{a.bookingNo ? ` · ${a.bookingNo}` : ''}
                       </div>
                     </td>
 
                     {/* Movement */}
-                    <td style={{ padding: '10px 12px', verticalAlign: 'top' }}>
-                      <div style={{ color: 'var(--gecko-text-primary)' }}>{MOVEMENT_LABEL[a.movement]}</div>
+                    <td style={{ verticalAlign: 'top' }}>
+                      <div>{MOVEMENT_LABEL[a.movement]}</div>
                     </td>
 
                     {/* Trucker */}
-                    <td style={{ padding: '10px 12px', verticalAlign: 'top' }}>
-                      <div style={{ color: 'var(--gecko-text-primary)' }}>{a.truckerName}</div>
-                      <div style={{ fontSize: 11, color: 'var(--gecko-text-secondary)', marginTop: 2 }}>{a.truckerCompany}</div>
+                    <td style={{ verticalAlign: 'top' }}>
+                      <div>{a.truckerName}</div>
+                      <div className="gecko-cell-meta">{a.truckerCompany}</div>
                     </td>
 
                     {/* Vehicle */}
-                    <td style={{ padding: '10px 12px', verticalAlign: 'top' }}>
-                      <div style={{ color: 'var(--gecko-text-primary)', fontFamily: 'var(--gecko-font-mono)' }}>{a.vehiclePlate}</div>
-                      <div style={{ fontSize: 11, color: 'var(--gecko-text-secondary)', marginTop: 2 }}>{a.vehicleType}</div>
+                    <td style={{ verticalAlign: 'top' }}>
+                      <div className="gecko-mono">{a.vehiclePlate}</div>
+                      <div className="gecko-cell-meta">{a.vehicleType}</div>
                     </td>
 
                     {/* Carrier */}
-                    <td style={{ padding: '10px 12px', verticalAlign: 'top' }}>
-                      <div style={{ color: 'var(--gecko-text-primary)', fontSize: 12 }}>{a.carrierLine}</div>
+                    <td style={{ verticalAlign: 'top' }}>
+                      <div>{a.carrierLine}</div>
                     </td>
 
                     {/* Customer */}
-                    <td style={{ padding: '10px 12px', verticalAlign: 'top' }}>
-                      <div style={{ color: 'var(--gecko-text-primary)', fontSize: 12, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', maxWidth: 220 }} title={a.customer}>{a.customer}</div>
-                      <div style={{ fontSize: 11, color: 'var(--gecko-text-secondary)', marginTop: 2, fontFamily: 'var(--gecko-font-mono)' }}>{a.apptNo}</div>
+                    <td style={{ verticalAlign: 'top' }}>
+                      <div className="gecko-truncate" style={{ maxWidth: 220 }} title={a.customer}>{a.customer}</div>
+                      <div className="gecko-cell-sub">{a.apptNo}</div>
                     </td>
 
                     {/* Chevron */}
-                    <td style={{ padding: '10px 12px', verticalAlign: 'middle', textAlign: 'right' }}>
+                    <td style={{ textAlign: 'right' }}>
                       <Icon name="chevronRight" size={14} style={{ color: 'var(--gecko-text-disabled)' }} />
                     </td>
                   </tr>
@@ -411,7 +400,7 @@ export default function GateAppointmentsPage() {
       </div>
 
       {/* Helper hint */}
-      <div style={{ fontSize: 11, color: 'var(--gecko-text-secondary)', textAlign: 'center', marginTop: 4 }}>
+      <div className="gecko-helper-text" style={{ textAlign: 'center' }}>
         Click any appointment row to open the gate-in workflow for that truck.
       </div>
     </div>

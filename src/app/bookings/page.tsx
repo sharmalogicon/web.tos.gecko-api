@@ -80,7 +80,7 @@ function formatDate(iso: string) {
 function ProgressPip({ total, done, label }: { total: number; done: number; label: string }) {
   const pct = total > 0 ? Math.round((done / total) * 100) : 0;
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', gap: 2, minWidth: 44 }}>
+    <div className="gecko-stack gecko-stack-xs" style={{ minWidth: 44 }}>
       <div style={{ fontSize: 9.5, color: 'var(--gecko-text-disabled)', textAlign: 'center' }}>{label}</div>
       <div style={{ height: 4, borderRadius: 2, background: 'var(--gecko-border)', overflow: 'hidden' }}>
         <div style={{ width: `${pct}%`, height: '100%', background: pct === 100 ? 'var(--gecko-success-500)' : 'var(--gecko-primary-500)', borderRadius: 2, transition: 'width 300ms' }} />
@@ -160,52 +160,52 @@ export default function BookingRegisterPage() {
   const draftCount   = BOOKINGS.filter(b => b.status === 'DRAFT').length;
 
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
+    <div className="gecko-stack" style={{ gap: 14 }}>
 
       {/* ── Toolbar ── */}
-      <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: 12 }}>
-        <div>
-          <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-            <h1 style={{ fontSize: 20, fontWeight: 700, color: 'var(--gecko-text-primary)', margin: 0 }}>Booking Register</h1>
+      <div className="gecko-page-header">
+        <div className="gecko-page-header-left">
+          <div className="gecko-row" style={{ gap: 10 }}>
+            <h1 className="gecko-page-title">Booking Register</h1>
             <span style={{ fontSize: 10.5, fontWeight: 600, padding: '2px 8px', borderRadius: 20, background: 'var(--gecko-primary-50)', color: 'var(--gecko-primary-700)', border: '1px solid var(--gecko-primary-200)' }}>
               {filtered.length} of {BOOKINGS.length}
             </span>
           </div>
-          <div style={{ fontSize: 12, color: 'var(--gecko-text-secondary)', marginTop: 3 }}>
+          <p className="gecko-page-subtitle">
             Gate-to-vessel lifecycle tracker — Laem Chabang ICD · Import Yard
-          </div>
+          </p>
         </div>
-        <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
+        <div className="gecko-page-header-actions gecko-row">
           <ExportButton resource="Bookings" iconSize={13} />
           <RefreshButton resource="Bookings" iconSize={13} />
-          <Link href="/bookings/new" className="gecko-btn gecko-btn-primary gecko-btn-sm" style={{ textDecoration: 'none', display: 'inline-flex', alignItems: 'center', gap: 6 }}>
+          <Link href="/bookings/new" className="gecko-btn gecko-btn-primary gecko-btn-sm gecko-inline-row" style={{ textDecoration: 'none' }}>
             <Icon name="plus" size={13} />New Booking
           </Link>
         </div>
       </div>
 
       {/* ── KPI Strip ── */}
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 10 }}>
+      <div className="gecko-grid-4" style={{ gap: 10 }}>
         {[
-          { label: 'Active Bookings',    value: totalActive,   icon: 'clipboardList', color: 'var(--gecko-primary-700)',  bg: 'var(--gecko-primary-50)' },
-          { label: 'Total Containers',   value: totalCtrs,     icon: 'box',           color: 'var(--gecko-info-700)',    bg: 'var(--gecko-info-50)'    },
-          { label: 'Pending Gate-In',    value: pendingFullIn, icon: 'truck',         color: 'var(--gecko-warning-700)', bg: 'var(--gecko-warning-50)' },
-          { label: 'Draft Bookings',     value: draftCount,    icon: 'layers',        color: 'var(--gecko-text-secondary)', bg: 'var(--gecko-bg-subtle)' },
+          { label: 'Active Bookings',    value: totalActive,   icon: 'clipboardList', tone: 'primary' },
+          { label: 'Total Containers',   value: totalCtrs,     icon: 'box',           tone: 'info'    },
+          { label: 'Pending Gate-In',    value: pendingFullIn, icon: 'truck',         tone: 'warning' },
+          { label: 'Draft Bookings',     value: draftCount,    icon: 'layers',        tone: 'neutral' },
         ].map(k => (
-          <div key={k.label} style={{ padding: '12px 14px', background: 'var(--gecko-bg-surface)', border: '1px solid var(--gecko-border)', borderRadius: 10, display: 'flex', alignItems: 'center', gap: 12 }}>
-            <div style={{ width: 36, height: 36, borderRadius: 8, background: k.bg, color: k.color, display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+          <div key={k.label} className="gecko-card gecko-card-tight gecko-row" style={{ gap: 12 }}>
+            <div className={`gecko-mini-icon gecko-mini-icon-lg gecko-mini-icon-${k.tone}`}>
               <Icon name={k.icon} size={17} />
             </div>
             <div>
               <div style={{ fontSize: 22, fontWeight: 700, fontFamily: 'var(--gecko-font-mono)', letterSpacing: '-0.02em', lineHeight: 1, color: 'var(--gecko-text-primary)' }}>{k.value}</div>
-              <div style={{ fontSize: 11, color: 'var(--gecko-text-secondary)', marginTop: 2 }}>{k.label}</div>
+              <div className="gecko-stat-block-sub" style={{ marginTop: 2 }}>{k.label}</div>
             </div>
           </div>
         ))}
       </div>
 
       {/* ── Filters + Search ── */}
-      <div style={{ display: 'flex', gap: 10, alignItems: 'center', flexWrap: 'wrap' }}>
+      <div className="gecko-row gecko-row-wrap" style={{ gap: 10 }}>
         <BarcodeScanInput
           onScan={v => setSearch(v)}
           placeholder="Scan booking no…"
@@ -213,7 +213,7 @@ export default function BookingRegisterPage() {
           style={{ width: 200 }}
         />
         {/* Direction toggle */}
-        <div style={{ display: 'flex', background: 'var(--gecko-bg-subtle)', borderRadius: 8, padding: 2, border: '1px solid var(--gecko-border)' }}>
+        <div className="gecko-row" style={{ gap: 0, background: 'var(--gecko-bg-subtle)', borderRadius: 8, padding: 2, border: '1px solid var(--gecko-border)' }}>
           {(['ALL', 'EXPORT', 'IMPORT'] as const).map(d => (
             <button key={d} onClick={() => setDirFilter(d)} style={{
               padding: '4px 12px', borderRadius: 6, fontSize: 11.5, fontWeight: 600, cursor: 'pointer', border: 'none', fontFamily: 'inherit',
@@ -263,9 +263,9 @@ export default function BookingRegisterPage() {
 
       {/* ── Bulk Actions ── */}
       {selected.size > 0 && (
-        <div style={{ padding: '10px 14px', background: 'var(--gecko-primary-50)', border: '1px solid var(--gecko-primary-200)', borderRadius: 8, display: 'flex', alignItems: 'center', gap: 12 }}>
+        <div className="gecko-row" style={{ padding: '10px 14px', background: 'var(--gecko-primary-50)', border: '1px solid var(--gecko-primary-200)', borderRadius: 8, gap: 12 }}>
           <span style={{ fontSize: 12, fontWeight: 600, color: 'var(--gecko-primary-700)' }}>{selected.size} booking{selected.size > 1 ? 's' : ''} selected</span>
-          <div style={{ display: 'flex', gap: 6 }}>
+          <div className="gecko-row" style={{ gap: 6 }}>
             <ExportButton label="Export Selected" resource="Selected bookings" variant="outline" iconSize={12} />
             <button className="gecko-btn gecko-btn-outline gecko-btn-sm" onClick={() => toast({ variant: 'info', title: 'Bulk Transfer', message: `${selected.size} booking(s) — workflow under construction.` })}><Icon name="transferH" size={12} />Bulk Transfer</button>
             <button className="gecko-btn gecko-btn-ghost gecko-btn-sm" style={{ color: 'var(--gecko-danger-600)' }} onClick={() => toast({ variant: 'warning', title: 'Cancel Selected', message: `${selected.size} booking(s) cancellation — confirmation flow under construction.` })}><Icon name="close" size={12} />Cancel Selected</button>
@@ -275,7 +275,7 @@ export default function BookingRegisterPage() {
       )}
 
       {/* ── Table ── */}
-      <div style={{ background: 'var(--gecko-bg-surface)', border: '1px solid var(--gecko-border)', borderRadius: 10, overflow: 'hidden' }}>
+      <div className="gecko-table-card">
         <table className="gecko-table" style={{ tableLayout: 'fixed', width: '100%' }}>
           <colgroup>
             <col style={{ width: 36 }} />
@@ -303,11 +303,11 @@ export default function BookingRegisterPage() {
               <th>Agent</th>
               <th>Vessel</th>
               <th style={{ cursor: 'pointer', userSelect: 'none' }} onClick={() => toggleSort('etd')}>
-                <span style={{ display: 'inline-flex', alignItems: 'center' }}>ETD / CY Cut-off <SortIcon col="etd" /></span>
+                <span className="gecko-inline-row">ETD / CY Cut-off <SortIcon col="etd" /></span>
               </th>
               <th>Containers</th>
               <th style={{ cursor: 'pointer', userSelect: 'none' }} onClick={() => toggleSort('createdOn')}>
-                <span style={{ display: 'inline-flex', alignItems: 'center' }}>Booking Date <SortIcon col="createdOn" /></span>
+                <span className="gecko-inline-row">Booking Date <SortIcon col="createdOn" /></span>
               </th>
               <th style={{ width: 64 }}></th>
             </tr>

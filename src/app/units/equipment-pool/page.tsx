@@ -147,14 +147,14 @@ export default function EquipmentPoolPage() {
   ];
 
   return (
-    <div className="gecko-stack" style={{ gap: 14 }}>
+    <div className="gecko-stack">
 
       {/* ── Header ── */}
       <div className="gecko-page-header">
         <div className="gecko-page-header-left">
-          <div className="gecko-row" style={{ gap: 10 }}>
+          <div className="gecko-row gecko-row-baseline">
             <h1 className="gecko-page-title">Equipment Pool</h1>
-            <span style={{ fontSize: 10.5, fontWeight: 600, padding: '2px 8px', borderRadius: 20, background: 'var(--gecko-primary-50)', color: 'var(--gecko-primary-700)', border: '1px solid var(--gecko-primary-200)' }}>
+            <span className="gecko-count-badge">
               {filtered.length} of {POOLS.length} pools
             </span>
           </div>
@@ -175,7 +175,7 @@ export default function EquipmentPoolPage() {
       </div>
 
       {/* ── KPI Strip ── */}
-      <div className="gecko-grid-5" style={{ gap: 10 }}>
+      <div className="gecko-grid-5">
         {[
           { label: 'Available',      value: kpi.available,      icon: 'check',         tone: 'success' as const },
           { label: 'Damaged',        value: kpi.damaged,        icon: 'alertTriangle', tone: 'error'   as const },
@@ -183,12 +183,12 @@ export default function EquipmentPoolPage() {
           { label: 'Reserved',       value: kpi.reserved,       icon: 'lock',          tone: 'info'    as const },
           { label: 'Outside Depot',  value: kpi.outsideDepot,   icon: 'truck',         tone: 'neutral' as const },
         ].map(k => (
-          <div key={k.label} className="gecko-card gecko-row" style={{ padding: '12px 14px', gap: 12 }}>
+          <div key={k.label} className="gecko-card gecko-card-tight gecko-row">
             <div className={`gecko-mini-icon gecko-mini-icon-lg gecko-mini-icon-${k.tone}`}>
               <Icon name={k.icon} size={17} />
             </div>
             <div>
-              <div className="gecko-stat-num gecko-stat-num-sm" style={{ fontFamily: 'var(--gecko-font-mono)' }}>{k.value.toLocaleString()}</div>
+              <div className="gecko-stat-num gecko-stat-num-sm gecko-mono">{k.value.toLocaleString()}</div>
               <div className="gecko-cell-meta">{k.label}</div>
             </div>
           </div>
@@ -243,11 +243,11 @@ export default function EquipmentPoolPage() {
               return (
                 <tr key={`${p.line}-${p.size}${p.type}-${p.grade}-${i}`}>
                   <td>
-                    <div className="gecko-mono-strong" style={{ fontSize: 12.5 }}>{p.line}</div>
+                    <div className="gecko-mono-strong">{p.line}</div>
                   </td>
                   <td>
-                    <div className="gecko-row" style={{ gap: 8 }}>
-                      <span className="gecko-mono-strong" style={{ fontSize: 12.5 }}>{p.size}{p.type}</span>
+                    <div className="gecko-row gecko-stack-sm">
+                      <span className="gecko-mono-strong">{p.size}{p.type}</span>
                       <span style={{ fontSize: 11, color: TYPE_META[p.type]?.color ?? 'var(--gecko-text-secondary)' }}>{TYPE_META[p.type]?.label ?? p.type}</span>
                     </div>
                   </td>
@@ -256,26 +256,25 @@ export default function EquipmentPoolPage() {
                       {p.grade === 'NEW' ? 'New' : `Grade ${p.grade}`}
                     </span>
                   </td>
-                  <td style={{ textAlign: 'right', fontFamily: 'var(--gecko-font-mono)', fontWeight: 700, color: 'var(--gecko-success-700)' }}>{p.available}</td>
-                  <td style={{ textAlign: 'right', fontFamily: 'var(--gecko-font-mono)', color: p.damaged > 0 ? 'var(--gecko-error-700)' : 'var(--gecko-text-disabled)' }}>{p.damaged}</td>
-                  <td style={{ textAlign: 'right', fontFamily: 'var(--gecko-font-mono)', color: p.surveyPending > 0 ? 'var(--gecko-warning-700)' : 'var(--gecko-text-disabled)' }}>{p.surveyPending}</td>
-                  <td style={{ textAlign: 'right', fontFamily: 'var(--gecko-font-mono)' }}>{p.reserved}</td>
-                  <td style={{ textAlign: 'right', fontFamily: 'var(--gecko-font-mono)' }}>{p.outsideDepot}</td>
-                  <td style={{ textAlign: 'right', fontFamily: 'var(--gecko-font-mono)', fontWeight: 700 }}>{t}</td>
+                  <td className="gecko-num-tabular" style={{ fontWeight: 700, color: 'var(--gecko-success-700)' }}>{p.available}</td>
+                  <td className="gecko-num-tabular" style={{ color: p.damaged > 0 ? 'var(--gecko-error-700)' : 'var(--gecko-text-disabled)' }}>{p.damaged}</td>
+                  <td className="gecko-num-tabular" style={{ color: p.surveyPending > 0 ? 'var(--gecko-warning-700)' : 'var(--gecko-text-disabled)' }}>{p.surveyPending}</td>
+                  <td className="gecko-num-tabular">{p.reserved}</td>
+                  <td className="gecko-num-tabular">{p.outsideDepot}</td>
+                  <td className="gecko-num-tabular" style={{ fontWeight: 700 }}>{t}</td>
                   <td>
-                    <div className="gecko-row" style={{ gap: 6 }}>
-                      <div style={{ flex: 1, height: 6, borderRadius: 3, background: 'var(--gecko-bg-subtle)', overflow: 'hidden' }}>
-                        <div style={{
-                          width: `${util}%`, height: '100%',
-                          background: util > 80 ? 'var(--gecko-error-500)' : util > 60 ? 'var(--gecko-warning-500)' : 'var(--gecko-success-500)',
-                          transition: 'width 300ms',
-                        }} />
+                    <div className="gecko-row gecko-stack-sm">
+                      <div className="gecko-progress gecko-flex-1">
+                        <div
+                          className={`gecko-progress-bar ${util > 80 ? 'gecko-progress-error' : util > 60 ? 'gecko-progress-warning' : 'gecko-progress-success'}`}
+                          style={{ width: `${util}%` }}
+                        />
                       </div>
-                      <span style={{ fontSize: 11, fontFamily: 'var(--gecko-font-mono)', fontWeight: 600, minWidth: 28, textAlign: 'right' }}>{util}%</span>
+                      <span className="gecko-mono" style={{ fontSize: 11, fontWeight: 600, minWidth: 28, textAlign: 'right' }}>{util}%</span>
                     </div>
                   </td>
                   <td>
-                    <Link href="/units/unit-inquiry" className="gecko-btn gecko-btn-ghost gecko-btn-icon gecko-btn-sm" title="Drill into containers" style={{ textDecoration: 'none' }}>
+                    <Link href="/units/unit-inquiry" className="gecko-btn gecko-btn-ghost gecko-btn-icon gecko-btn-sm" title="Drill into containers">
                       <Icon name="arrowRight" size={13} />
                     </Link>
                   </td>
