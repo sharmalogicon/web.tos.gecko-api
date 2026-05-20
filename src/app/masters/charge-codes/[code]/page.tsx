@@ -18,8 +18,8 @@ const TABS = [
 function SectionHead({ title, sub }: { title: string; sub?: string }) {
   return (
     <div style={{ marginBottom: 20, paddingBottom: 12, borderBottom: '1px solid var(--gecko-border)' }}>
-      <h3 style={{ fontSize: 15, fontWeight: 700, margin: 0, color: 'var(--gecko-text-primary)' }}>{title}</h3>
-      {sub && <div style={{ fontSize: 12, color: 'var(--gecko-text-secondary)', marginTop: 3 }}>{sub}</div>}
+      <h3 className="gecko-card-title" style={{ fontSize: 15, margin: 0 }}>{title}</h3>
+      {sub && <div className="gecko-card-subtitle">{sub}</div>}
     </div>
   );
 }
@@ -35,10 +35,10 @@ function Field({ label, children, required, span = 1 }: { label: string; childre
 
 function TabGeneral({ edit }: { edit: boolean }) {
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', gap: 28 }}>
+    <div className="gecko-stack" style={{ gap: 28 }}>
       <div>
         <SectionHead title="Identity" sub="Core code reference used in tariffs, EIR, and invoices." />
-        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 18 }}>
+        <div className="gecko-grid-2" style={{ gap: 18 }}>
           <Field label="Charge Code" required>
             <input className="gecko-input" defaultValue="LIFT-ON" readOnly={!edit} style={edit ? {} : { background: 'var(--gecko-bg-subtle)' }} />
           </Field>
@@ -61,7 +61,7 @@ function TabGeneral({ edit }: { edit: boolean }) {
 
       <div>
         <SectionHead title="Classification" sub="Category and type drive GL routing and tariff matrix dimensions." />
-        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 18 }}>
+        <div className="gecko-grid-2" style={{ gap: 18 }}>
           <Field label="Category" required>
             <select className="gecko-input" disabled={!edit}>
               <option>Yard &amp; Handling</option>
@@ -98,7 +98,7 @@ function TabGeneral({ edit }: { edit: boolean }) {
 
       <div>
         <SectionHead title="Validity Window" sub="Leave blank to indicate no expiry." />
-        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 18 }}>
+        <div className="gecko-grid-3" style={{ gap: 18 }}>
           <Field label="Effective From">
             <input className="gecko-input" defaultValue="01-01-2024" readOnly={!edit} />
           </Field>
@@ -116,10 +116,10 @@ function TabGeneral({ edit }: { edit: boolean }) {
 
 function TabBilling({ edit }: { edit: boolean }) {
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', gap: 28 }}>
+    <div className="gecko-stack" style={{ gap: 28 }}>
       <div>
         <SectionHead title="Rate Configuration" sub="Defines how price is computed per occurrence." />
-        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 18 }}>
+        <div className="gecko-grid-2" style={{ gap: 18 }}>
           <Field label="Billing Unit (UoM)" required>
             <select className="gecko-input" disabled={!edit}>
               <option>Per move / lift</option>
@@ -162,7 +162,7 @@ function TabBilling({ edit }: { edit: boolean }) {
 
       <div>
         <SectionHead title="Thresholds" sub="Min/Max cap and free quantity before charge triggers." />
-        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 18 }}>
+        <div className="gecko-grid-3" style={{ gap: 18 }}>
           <Field label="Minimum Charge">
             <input className="gecko-input gecko-text-mono" defaultValue="850.00" readOnly={!edit} />
           </Field>
@@ -177,7 +177,7 @@ function TabBilling({ edit }: { edit: boolean }) {
 
       <div>
         <SectionHead title="Size Differentiation" sub="Override base rate per container ISO size class." />
-        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr 1fr', gap: 18 }}>
+        <div className="gecko-grid-4" style={{ gap: 18 }}>
           {["20' (TEU)", "40' (FEU)", "40' HC", "45'"].map(size => (
             <Field key={size} label={size}>
               <input className="gecko-input gecko-text-mono" placeholder="= Base" readOnly={!edit} />
@@ -188,7 +188,7 @@ function TabBilling({ edit }: { edit: boolean }) {
 
       <div>
         <SectionHead title="Round-up Rule" />
-        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 18 }}>
+        <div className="gecko-grid-2" style={{ gap: 18 }}>
           <Field label="Rounding Method">
             <select className="gecko-input" disabled={!edit}>
               <option>Round up to nearest whole unit</option>
@@ -212,10 +212,10 @@ function TabBilling({ edit }: { edit: boolean }) {
 function TabPayment({ edit }: { edit: boolean }) {
   const [payTerm, setPayTerm] = useState('Cash');
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', gap: 28 }}>
+    <div className="gecko-stack" style={{ gap: 28 }}>
       <div>
         <SectionHead title="Charge & Payment Terms" />
-        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 18 }}>
+        <div className="gecko-grid-2" style={{ gap: 18 }}>
           <Field label="Charge Term" required>
             <select className="gecko-input" disabled={!edit}>
               <option>Prepaid — shipper pays before departure</option>
@@ -240,7 +240,7 @@ function TabPayment({ edit }: { edit: boolean }) {
 
       <div>
         <SectionHead title="Invoice Grouping" sub="Controls how events are consolidated on invoices." />
-        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 18 }}>
+        <div className="gecko-grid-2" style={{ gap: 18 }}>
           <Field label="Grouping Level">
             <select className="gecko-input" disabled={!edit}>
               <option>Per container (one line per box)</option>
@@ -266,10 +266,10 @@ function TabPayment({ edit }: { edit: boolean }) {
 
 function TabTax({ edit }: { edit: boolean }) {
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', gap: 28 }}>
+    <div className="gecko-stack" style={{ gap: 28 }}>
       <div>
         <SectionHead title="Tax Classification" sub="Controls which tax rules apply when the code is invoiced." />
-        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 18 }}>
+        <div className="gecko-grid-2" style={{ gap: 18 }}>
           <Field label="Tax Category" required>
             <select className="gecko-input" disabled={!edit}>
               <option>Standard rate (7% Thai VAT)</option>
@@ -306,7 +306,7 @@ function TabTax({ edit }: { edit: boolean }) {
 
       <div>
         <SectionHead title="Withholding Tax" />
-        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 18 }}>
+        <div className="gecko-grid-2" style={{ gap: 18 }}>
           <Field label="WHT Applicable">
             <select className="gecko-input" disabled={!edit}>
               <option>No</option>
@@ -325,10 +325,10 @@ function TabTax({ edit }: { edit: boolean }) {
 
 function TabGL({ edit }: { edit: boolean }) {
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', gap: 28 }}>
+    <div className="gecko-stack" style={{ gap: 28 }}>
       <div>
         <SectionHead title="General Ledger Mapping" sub="Revenue and cost postings when the code is invoiced or accrued." />
-        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 18 }}>
+        <div className="gecko-grid-2" style={{ gap: 18 }}>
           <Field label="Revenue GL Account" required>
             <div style={{ position: 'relative' }}>
               <input className="gecko-input gecko-text-mono" defaultValue="4120 — Yard Handling Revenue" readOnly={!edit} />
@@ -348,7 +348,7 @@ function TabGL({ edit }: { edit: boolean }) {
 
       <div>
         <SectionHead title="Cost & Revenue Centre" sub="Used for management reporting and P&L allocation." />
-        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 18 }}>
+        <div className="gecko-grid-3" style={{ gap: 18 }}>
           <Field label="Revenue Stream">
             <select className="gecko-input" disabled={!edit}>
               <option>Handling &amp; Moves</option>
@@ -378,7 +378,7 @@ function TabGL({ edit }: { edit: boolean }) {
 
       <div>
         <SectionHead title="EDI / Interface Codes" sub="Code mapping for carrier EDI, customs systems, and TradeLens." />
-        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 18 }}>
+        <div className="gecko-grid-3" style={{ gap: 18 }}>
           <Field label="SMDG Charge Code">
             <input className="gecko-input gecko-text-mono" placeholder="e.g. THC, LFT" readOnly={!edit} />
           </Field>
@@ -396,7 +396,7 @@ function TabGL({ edit }: { edit: boolean }) {
 
 function CheckGroup({ items, selected, color }: { items: string[]; selected: string[]; color: string }) {
   return (
-    <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8 }}>
+    <div className="gecko-row gecko-row-wrap" style={{ gap: 8 }}>
       {items.map(item => {
         const on = selected.includes(item);
         return (
@@ -419,7 +419,7 @@ function CheckGroup({ items, selected, color }: { items: string[]; selected: str
 
 function TabApplicability() {
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', gap: 28 }}>
+    <div className="gecko-stack" style={{ gap: 28 }}>
       <div>
         <SectionHead title="Trade Direction" sub="Which flow types this charge applies to." />
         <CheckGroup
@@ -467,7 +467,7 @@ function TabApplicability() {
 
       <div>
         <SectionHead title="Rate Override Policy" />
-        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 18 }}>
+        <div className="gecko-grid-2" style={{ gap: 18 }}>
           <div className="gecko-form-group">
             <label className="gecko-label">Override in Tariff Schedule</label>
             <select className="gecko-input">
@@ -505,20 +505,20 @@ function TabUsage() {
     { date: 'Apr 25 09:55', ctr: 'TGHU2118840', type: "40'",   customer: 'Indorama',    invoice: 'INV-26042191', amt: '฿850' },
   ];
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', gap: 28 }}>
+    <div className="gecko-stack" style={{ gap: 28 }}>
 
       {/* Usage KPIs */}
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 1, background: 'var(--gecko-border)', border: '1px solid var(--gecko-border)', borderRadius: 10, overflow: 'hidden' }}>
+      <div className="gecko-kpi-strip">
         {[
           { label: 'Events (30d)',   value: '820',     sub: 'lift-on occurrences' },
           { label: 'Revenue (30d)', value: '฿696k',   sub: '+11% vs prior period' },
           { label: 'YTD Revenue',   value: '฿8.24M',  sub: 'Jan – Apr 2026' },
           { label: 'Tariff Schedules',  value: '14',   sub: 'schedules referencing code' },
         ].map(k => (
-          <div key={k.label} style={{ background: 'var(--gecko-bg-surface)', padding: '16px 20px' }}>
-            <div style={{ fontSize: 10, fontWeight: 700, color: 'var(--gecko-text-secondary)', textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: 6 }}>{k.label}</div>
+          <div key={k.label} className="gecko-kpi-cell">
+            <div className="gecko-eyebrow">{k.label}</div>
             <div style={{ fontSize: 22, fontWeight: 800, color: 'var(--gecko-text-primary)' }}>{k.value}</div>
-            <div style={{ fontSize: 11, color: 'var(--gecko-text-disabled)', marginTop: 3 }}>{k.sub}</div>
+            <div className="gecko-cell-meta">{k.sub}</div>
           </div>
         ))}
       </div>
@@ -584,13 +584,13 @@ function TabUsage() {
       {/* Change Log */}
       <div>
         <SectionHead title="Change Log" />
-        <div style={{ display: 'flex', flexDirection: 'column', gap: 0 }}>
+        <div className="gecko-stack" style={{ gap: 0 }}>
           {[
             { date: '2026-01-15 09:30', user: 'Somchai K.', action: 'Updated base rate', detail: '฿780 → ฿850 (annual review)' },
             { date: '2025-07-01 14:12', user: 'Apirak P.',  action: 'Added 45\' size override', detail: '฿850 (same as base)' },
             { date: '2024-01-01 00:00', user: 'System',     action: 'Code created', detail: 'Migrated from legacy TMS v2.1' },
           ].map((log, i, arr) => (
-            <div key={log.date} style={{ display: 'flex', gap: 16, padding: '14px 0', borderBottom: i < arr.length - 1 ? '1px solid var(--gecko-border)' : 'none' }}>
+            <div key={log.date} className="gecko-row gecko-row-start" style={{ gap: 16, padding: '14px 0', borderBottom: i < arr.length - 1 ? '1px solid var(--gecko-border)' : 'none' }}>
               <div style={{ width: 140, flexShrink: 0, fontSize: 11, color: 'var(--gecko-text-disabled)', fontFamily: 'var(--gecko-font-mono)' }}>{log.date}</div>
               <div style={{ width: 100, flexShrink: 0, fontSize: 12, fontWeight: 600, color: 'var(--gecko-text-secondary)' }}>{log.user}</div>
               <div>
@@ -622,10 +622,10 @@ export default function ChargeCodeDetailPage({ params }: { params: { code: strin
   };
 
   return (
-    <div style={{ maxWidth: 'var(--gecko-container-max)', margin: '0 auto', display: 'flex', flexDirection: 'column', gap: 24 }}>
+    <div className="gecko-stack" style={{ maxWidth: 'var(--gecko-container-max)', margin: '0 auto', gap: 24 }}>
 
       {/* Breadcrumb + Actions */}
-      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+      <div className="gecko-row gecko-row-between">
         <nav className="gecko-breadcrumb" aria-label="Breadcrumb">
           <Link href="/masters" className="gecko-breadcrumb-item">Master Data</Link>
           <span className="gecko-breadcrumb-sep" />
@@ -633,7 +633,7 @@ export default function ChargeCodeDetailPage({ params }: { params: { code: strin
           <span className="gecko-breadcrumb-sep" />
           <span className="gecko-breadcrumb-current">{code}</span>
         </nav>
-        <div style={{ display: 'flex', gap: 10 }}>
+        <div className="gecko-row" style={{ gap: 10 }}>
           <button className="gecko-btn gecko-btn-ghost gecko-btn-sm" onClick={() => toast({ variant: 'success', title: 'Charge code cloned', message: `Copy of ${code} created as a draft.` })}><Icon name="copy" size={15} /> Clone</button>
           <ExportButton resource="Charge code" iconSize={15} />
           {editing ? (
@@ -648,10 +648,10 @@ export default function ChargeCodeDetailPage({ params }: { params: { code: strin
       </div>
 
       {/* Title + Status */}
-      <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', paddingBottom: 20, borderBottom: '1px solid var(--gecko-border)' }}>
+      <div className="gecko-row gecko-row-between gecko-row-start" style={{ paddingBottom: 20, borderBottom: '1px solid var(--gecko-border)' }}>
         <div>
-          <div style={{ display: 'flex', alignItems: 'center', gap: 14, flexWrap: 'wrap' }}>
-            <h1 style={{ fontSize: 24, fontWeight: 700, margin: 0, color: 'var(--gecko-text-primary)', fontFamily: 'var(--gecko-font-mono)' }}>{code}</h1>
+          <div className="gecko-row gecko-row-wrap" style={{ gap: 14 }}>
+            <h1 className="gecko-page-title" style={{ fontFamily: 'var(--gecko-font-mono)' }}>{code}</h1>
             <span style={{ background: 'var(--gecko-success-100)', color: 'var(--gecko-success-700)', padding: '2px 10px', borderRadius: 12, fontSize: 11, fontWeight: 700 }}>Active</span>
             <span style={{ background: 'var(--gecko-info-100)', color: 'var(--gecko-info-700)', padding: '2px 10px', borderRadius: 12, fontSize: 11, fontWeight: 700 }}>TOS</span>
             <span style={{ background: 'var(--gecko-primary-100)', color: 'var(--gecko-primary-700)', padding: '2px 10px', borderRadius: 12, fontSize: 11, fontWeight: 700 }}>Revenue</span>
@@ -666,10 +666,10 @@ export default function ChargeCodeDetailPage({ params }: { params: { code: strin
       </div>
 
       {/* Main Grid */}
-      <div style={{ display: 'flex', gap: 32, alignItems: 'flex-start' }}>
+      <div className="gecko-row gecko-row-start" style={{ gap: 32 }}>
 
         {/* Left: Tabs */}
-        <div style={{ flex: 1, minWidth: 0 }}>
+        <div className="gecko-flex-1">
           {/* Tab bar */}
           <div style={{ display: 'flex', gap: 4, borderBottom: '1px solid var(--gecko-border)', marginBottom: 28, overflowX: 'auto' }}>
             {TABS.map(tab => (
@@ -698,10 +698,10 @@ export default function ChargeCodeDetailPage({ params }: { params: { code: strin
 
         {/* Right: Quick Facts */}
         <div style={{ width: 290, flexShrink: 0 }}>
-          <div style={{ background: 'var(--gecko-bg-surface)', border: '1px solid var(--gecko-border)', borderRadius: 12, padding: 22, position: 'sticky', top: 20 }}>
-            <h3 style={{ fontSize: 13, fontWeight: 700, margin: '0 0 18px 0' }}>Quick Facts</h3>
+          <div className="gecko-card gecko-card-padded" style={{ position: 'sticky', top: 20 }}>
+            <h3 className="gecko-card-title gecko-mb-4" style={{ fontSize: 13, margin: '0 0 18px 0' }}>Quick Facts</h3>
 
-            <div style={{ display: 'flex', flexDirection: 'column', gap: 0 }}>
+            <div className="gecko-stack" style={{ gap: 0 }}>
               {[
                 { icon: 'tag',       color: 'var(--gecko-primary-500)',  bg: 'var(--gecko-primary-50)',  label: 'CATEGORY',        value: 'Yard & Handling',      sub: 'Sub: Container Moves' },
                 { icon: 'invoice',   color: 'var(--gecko-info-600)',     bg: 'var(--gecko-info-50)',     label: 'BILLING UNIT',    value: 'Per lift / move',      sub: 'Basis: Flat rate' },
@@ -709,16 +709,16 @@ export default function ChargeCodeDetailPage({ params }: { params: { code: strin
                 { icon: 'layers',    color: 'var(--gecko-success-600)',  bg: 'var(--gecko-success-50)',  label: 'TARIFF PLANS',    value: '14 plans',             sub: 'Last: Standard LCB-2026' },
                 { icon: 'activity',  color: 'var(--gecko-warning-600)',  bg: 'var(--gecko-warning-50)',  label: 'YTD REVENUE',     value: '฿8.24M',               sub: '820 events in last 30d' },
               ].map((fact, i, arr) => (
-                <div key={fact.label} style={{
-                  display: 'flex', alignItems: 'flex-start', gap: 11,
+                <div key={fact.label} className="gecko-row gecko-row-start" style={{
+                  gap: 11,
                   padding: '13px 0',
                   borderBottom: i < arr.length - 1 ? '1px solid var(--gecko-border)' : 'none',
                 }}>
                   <div style={{ width: 32, height: 32, borderRadius: 7, flexShrink: 0, background: fact.bg, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
                     <Icon name={fact.icon} size={14} style={{ color: fact.color }} />
                   </div>
-                  <div style={{ flex: 1, minWidth: 0 }}>
-                    <div style={{ fontSize: 9, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.07em', color: 'var(--gecko-text-secondary)', marginBottom: 2 }}>{fact.label}</div>
+                  <div className="gecko-flex-1">
+                    <div className="gecko-eyebrow" style={{ fontSize: 9, marginBottom: 2 }}>{fact.label}</div>
                     <div style={{ fontSize: 12.5, fontWeight: 700, color: 'var(--gecko-text-primary)', lineHeight: 1.2 }}>{fact.value}</div>
                     <div style={{ fontSize: 11, color: 'var(--gecko-text-secondary)', marginTop: 2 }}>{fact.sub}</div>
                   </div>
@@ -727,8 +727,8 @@ export default function ChargeCodeDetailPage({ params }: { params: { code: strin
             </div>
 
             <div style={{ marginTop: 20, paddingTop: 16, borderTop: '1px solid var(--gecko-border)' }}>
-              <div style={{ fontSize: 10, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.06em', color: 'var(--gecko-text-secondary)', marginBottom: 10 }}>Applicability Matrix</div>
-              <div style={{ display: 'flex', flexWrap: 'wrap', gap: 5 }}>
+              <div className="gecko-eyebrow gecko-mb-3">Applicability Matrix</div>
+              <div className="gecko-row gecko-row-wrap" style={{ gap: 5 }}>
                 {['Import', 'Export', 'TS', '20\'', '40\'', '45\'', 'GP', 'RF', 'DG', 'OOG'].map(tag => (
                   <span key={tag} style={{ fontSize: 10, fontWeight: 600, padding: '2px 7px', borderRadius: 5, background: 'var(--gecko-primary-50)', color: 'var(--gecko-primary-700)', border: '1px solid var(--gecko-primary-200)' }}>{tag}</span>
                 ))}
@@ -736,7 +736,7 @@ export default function ChargeCodeDetailPage({ params }: { params: { code: strin
             </div>
 
             <div style={{ marginTop: 16, padding: '10px 12px', background: 'var(--gecko-bg-subtle)', borderRadius: 8 }}>
-              <div style={{ fontSize: 10, fontWeight: 700, color: 'var(--gecko-text-secondary)', textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: 4 }}>Last Modified</div>
+              <div className="gecko-eyebrow gecko-mb-1">Last Modified</div>
               <div style={{ fontSize: 12, fontWeight: 600, color: 'var(--gecko-text-primary)' }}>Jan 15, 2026</div>
               <div style={{ fontSize: 11, color: 'var(--gecko-text-secondary)' }}>by Somchai K. — rate review</div>
             </div>

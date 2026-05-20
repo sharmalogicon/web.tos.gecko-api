@@ -280,9 +280,8 @@ function Toast({ message, type }: { message: string; type: 'success' | 'info' | 
     warning: { bg: 'var(--gecko-warning-50)', border: 'var(--gecko-warning-200)', color: 'var(--gecko-warning-700)', icon: 'warning' },
   }[type];
   return (
-    <div style={{
+    <div className="gecko-row gecko-stack-md" style={{
       position: 'fixed', bottom: 28, right: 28, zIndex: 200,
-      display: 'flex', alignItems: 'center', gap: 10,
       padding: '12px 18px', borderRadius: 10,
       background: cfg.bg, border: `1px solid ${cfg.border}`,
       color: cfg.color, fontSize: 13, fontWeight: 600,
@@ -310,8 +309,8 @@ function PermCheckbox({
 }) {
   if (!applicable) {
     return (
-      <span style={{
-        display: 'flex', alignItems: 'center', justifyContent: 'center',
+      <span className="gecko-row" style={{
+        justifyContent: 'center',
         color: 'var(--gecko-text-disabled)', fontSize: 13, userSelect: 'none',
       }}>
         —
@@ -396,7 +395,7 @@ function QuickSetPills({
   };
 
   return (
-    <div style={{ display: 'flex', gap: 3 }}>
+    <div className="gecko-row" style={{ gap: 3 }}>
       {pills.map(pill => {
         const active = current === pill.key;
         return (
@@ -467,12 +466,7 @@ function PermissionMatrix({
   }, [isSystem, perms, onToggle]);
 
   return (
-    <div style={{
-      background: 'var(--gecko-bg-surface)',
-      border: '1px solid var(--gecko-border)',
-      borderRadius: 10,
-      overflow: 'hidden',
-    }}>
+    <div className="gecko-table-card">
       <div style={{ overflowX: 'auto' }}>
         <table style={{ width: '100%', borderCollapse: 'collapse', minWidth: 720 }}>
           <thead>
@@ -517,9 +511,7 @@ function PermissionMatrix({
                     onClick={() => handleColToggle(perm)}
                     title={isSystem ? 'System role — read only' : `Toggle all "${label}"`}
                   >
-                    <div style={{
-                      display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 3,
-                    }}>
+                    <div className="gecko-stack" style={{ alignItems: 'center', gap: 3 }}>
                       <Icon
                         name={icon}
                         size={14}
@@ -553,11 +545,8 @@ function PermissionMatrix({
                         borderBottom: '1px solid var(--gecko-border)',
                       }}
                     >
-                      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-                        <span style={{
-                          fontSize: 10, fontWeight: 800, letterSpacing: '0.1em',
-                          textTransform: 'uppercase', color: 'var(--gecko-text-secondary)',
-                        }}>
+                      <div className="gecko-row gecko-row-between">
+                        <span className="gecko-eyebrow" style={{ fontWeight: 800, letterSpacing: '0.1em' }}>
                           {group}
                         </span>
                         {!isSystem && (
@@ -609,11 +598,11 @@ function PermissionMatrix({
                           background: idx % 2 === 0 ? 'var(--gecko-bg-surface)' : 'var(--gecko-bg-subtle)',
                           borderRight: '1px solid var(--gecko-border)',
                         }}>
-                          <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                            <span style={{ color: 'var(--gecko-text-secondary)', flexShrink: 0 }}>
+                          <div className="gecko-row">
+                            <span className="gecko-flex-shrink-0" style={{ color: 'var(--gecko-text-secondary)' }}>
                               <Icon name={mod.icon} size={14} />
                             </span>
-                            <span style={{ fontSize: 13, fontWeight: 500, color: 'var(--gecko-text-primary)', whiteSpace: 'nowrap' }}>
+                            <span className="gecko-form-label" style={{ whiteSpace: 'nowrap' }}>
                               {mod.label}
                             </span>
                           </div>
@@ -645,7 +634,7 @@ function PermissionMatrix({
                                 borderRight: '1px solid var(--gecko-border)',
                               }}
                             >
-                              <div style={{ display: 'flex', justifyContent: 'center' }}>
+                              <div className="gecko-row" style={{ justifyContent: 'center' }}>
                                 <PermCheckbox
                                   checked={checked}
                                   applicable={applicable}
@@ -667,23 +656,22 @@ function PermissionMatrix({
       </div>
 
       {/* Legend */}
-      <div style={{
+      <div className="gecko-row gecko-row-wrap" style={{
         padding: '10px 16px', borderTop: '1px solid var(--gecko-border)',
         background: 'var(--gecko-bg-subtle)',
-        display: 'flex', alignItems: 'center', gap: 20, flexWrap: 'wrap',
-        fontSize: 12, color: 'var(--gecko-text-secondary)',
+        gap: 20, fontSize: 12, color: 'var(--gecko-text-secondary)',
       }}>
-        <span style={{ display: 'flex', alignItems: 'center', gap: 7 }}>
-          <span style={{
+        <span className="gecko-inline-row" style={{ gap: 7 }}>
+          <span className="gecko-row" style={{
             width: 16, height: 16, borderRadius: 4,
             background: 'var(--gecko-primary-600)',
-            display: 'inline-flex', alignItems: 'center', justifyContent: 'center',
+            justifyContent: 'center',
           }}>
             <Icon name="check" size={10} style={{ color: '#fff', strokeWidth: 3 }} />
           </span>
           Permission granted
         </span>
-        <span style={{ display: 'flex', alignItems: 'center', gap: 7 }}>
+        <span className="gecko-inline-row" style={{ gap: 7 }}>
           <span style={{
             width: 16, height: 16, borderRadius: 4,
             border: '2px solid var(--gecko-border)',
@@ -691,18 +679,18 @@ function PermissionMatrix({
           }} />
           Not granted
         </span>
-        <span style={{ display: 'flex', alignItems: 'center', gap: 7 }}>
+        <span className="gecko-inline-row" style={{ gap: 7 }}>
           <span style={{ fontSize: 14, lineHeight: 1, color: 'var(--gecko-text-disabled)' }}>—</span>
           Not applicable
         </span>
         {isSystem && (
-          <span style={{ display: 'flex', alignItems: 'center', gap: 6, marginLeft: 'auto' }}>
+          <span className="gecko-inline-row gecko-ml-auto">
             <Icon name="lock" size={13} />
             System role — read only
           </span>
         )}
         {!isSystem && (
-          <span style={{ marginLeft: 'auto', color: 'var(--gecko-text-disabled)' }}>
+          <span className="gecko-ml-auto" style={{ color: 'var(--gecko-text-disabled)' }}>
             Click column header to toggle all
           </span>
         )}
@@ -724,22 +712,20 @@ function AssignedUsersTab({ roleId, roleColor }: { roleId: string; roleColor: st
 
   if (users.length === 0) {
     return (
-      <div style={{
-        display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center',
+      <div className="gecko-stack gecko-card" style={{
+        alignItems: 'center', justifyContent: 'center',
         gap: 14, padding: '64px 24px', textAlign: 'center',
-        background: 'var(--gecko-bg-surface)', border: '1px solid var(--gecko-border)',
-        borderRadius: 10,
       }}>
-        <div style={{
+        <div className="gecko-row" style={{
           width: 56, height: 56, borderRadius: '50%',
           background: 'var(--gecko-bg-subtle)',
-          display: 'flex', alignItems: 'center', justifyContent: 'center',
+          justifyContent: 'center',
           color: 'var(--gecko-text-disabled)',
         }}>
           <Icon name="users" size={26} />
         </div>
         <div>
-          <div style={{ fontSize: 15, fontWeight: 600, color: 'var(--gecko-text-primary)', marginBottom: 6 }}>
+          <div className="gecko-card-title gecko-mb-2" style={{ fontSize: 15 }}>
             No users assigned yet
           </div>
           <div style={{ fontSize: 13, color: 'var(--gecko-text-secondary)', maxWidth: 320 }}>
@@ -748,9 +734,9 @@ function AssignedUsersTab({ roleId, roleColor }: { roleId: string; roleColor: st
         </div>
         <Link
           href="/config/users"
+          className="gecko-inline-row"
           style={{
-            display: 'inline-flex', alignItems: 'center', gap: 7,
-            padding: '8px 16px', borderRadius: 7,
+            gap: 7, padding: '8px 16px', borderRadius: 7,
             background: 'var(--gecko-primary-600)', color: '#fff',
             fontSize: 13, fontWeight: 600, textDecoration: 'none',
           }}
@@ -763,25 +749,21 @@ function AssignedUsersTab({ roleId, roleColor }: { roleId: string; roleColor: st
   }
 
   return (
-    <div style={{
-      background: 'var(--gecko-bg-surface)',
-      border: '1px solid var(--gecko-border)',
-      borderRadius: 10, overflow: 'hidden',
-    }}>
-      <div style={{
+    <div className="gecko-table-card">
+      <div className="gecko-row gecko-row-between" style={{
         padding: '12px 16px',
         borderBottom: '1px solid var(--gecko-border)',
         background: 'var(--gecko-bg-subtle)',
-        display: 'flex', alignItems: 'center', justifyContent: 'space-between',
       }}>
         <div style={{ fontSize: 12, color: 'var(--gecko-text-secondary)', fontWeight: 600 }}>
           {users.length} user{users.length !== 1 ? 's' : ''} assigned to this role
         </div>
         <Link
           href="/config/users"
+          className="gecko-inline-row"
           style={{
             fontSize: 12, fontWeight: 600, color: 'var(--gecko-primary-600)',
-            textDecoration: 'none', display: 'flex', alignItems: 'center', gap: 5,
+            textDecoration: 'none', gap: 5,
           }}
         >
           Manage in Users &amp; Roles <Icon name="arrowRight" size={12} />
@@ -813,31 +795,31 @@ function AssignedUsersTab({ roleId, roleColor }: { roleId: string; roleColor: st
                 }}
               >
                 <td style={{ padding: '11px 14px' }}>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-                    <div style={{
+                  <div className="gecko-row" style={{ gap: 10 }}>
+                    <div className="gecko-row gecko-flex-shrink-0" style={{
                       width: 34, height: 34, borderRadius: '50%',
                       background: u.color, color: '#fff',
-                      display: 'flex', alignItems: 'center', justifyContent: 'center',
-                      fontSize: 12, fontWeight: 800, flexShrink: 0, letterSpacing: '0.02em',
+                      justifyContent: 'center',
+                      fontSize: 12, fontWeight: 800, letterSpacing: '0.02em',
                     }}>
                       {u.initials}
                     </div>
-                    <span style={{ fontWeight: 600, color: 'var(--gecko-text-primary)' }}>{u.name}</span>
+                    <span className="gecko-cell-primary">{u.name}</span>
                   </div>
                 </td>
                 <td style={{ padding: '11px 14px', color: 'var(--gecko-text-secondary)', fontSize: 12 }}>
                   {u.email}
                 </td>
                 <td style={{ padding: '11px 14px', color: 'var(--gecko-text-secondary)', fontSize: 12, whiteSpace: 'nowrap' }}>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: 5 }}>
+                  <div className="gecko-row" style={{ gap: 5 }}>
                     <Icon name="clock" size={13} />
                     {u.lastLogin}
                   </div>
                 </td>
                 <td style={{ padding: '11px 14px' }}>
-                  <span style={{ display: 'inline-flex', alignItems: 'center', gap: 5 }}>
-                    <span style={{ width: 7, height: 7, borderRadius: '50%', background: sc.dot, flexShrink: 0 }} />
-                    <span style={{ fontSize: 12, fontWeight: 600, color: sc.text }}>{u.status}</span>
+                  <span className="gecko-inline-row" style={{ gap: 5 }}>
+                    <span className="gecko-status-dot-mini" style={{ background: sc.dot, marginRight: 0 }} />
+                    <span className="gecko-cell-primary" style={{ color: sc.text }}>{u.status}</span>
                   </span>
                 </td>
               </tr>
@@ -951,21 +933,22 @@ export default function RoleDetailPage() {
         }
       `}</style>
 
-      <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--gecko-space-4, 20px)', paddingBottom: 48 }}>
+      <div className="gecko-stack gecko-stack-lg" style={{ paddingBottom: 48 }}>
 
         {/* ── Header ── */}
-        <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: 14, flexWrap: 'wrap' }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: 12, flexWrap: 'wrap' }}>
+        <div className="gecko-row gecko-row-start gecko-row-between gecko-row-wrap" style={{ gap: 14 }}>
+          <div className="gecko-row gecko-row-wrap" style={{ gap: 12 }}>
             {/* Back arrow */}
             <Link
               href="/config/roles"
+              className="gecko-row gecko-flex-shrink-0"
               style={{
-                display: 'flex', alignItems: 'center', justifyContent: 'center',
+                justifyContent: 'center',
                 width: 34, height: 34, borderRadius: 8,
                 background: 'var(--gecko-bg-surface)',
                 border: '1px solid var(--gecko-border)',
                 color: 'var(--gecko-text-secondary)',
-                textDecoration: 'none', flexShrink: 0,
+                textDecoration: 'none',
               }}
               title="Back to Roles"
             >
@@ -976,11 +959,12 @@ export default function RoleDetailPage() {
             <button
               onClick={cycleColor}
               title={isSystem ? 'System role color' : 'Click to change color'}
+              className="gecko-row gecko-flex-shrink-0"
               style={{
-                width: 34, height: 34, borderRadius: 8, flexShrink: 0,
+                width: 34, height: 34, borderRadius: 8,
                 background: color, border: 'none',
                 cursor: isSystem ? 'default' : 'pointer',
-                display: 'flex', alignItems: 'center', justifyContent: 'center',
+                justifyContent: 'center',
                 boxShadow: '0 1px 4px rgba(0,0,0,0.18)',
               }}
             >
@@ -988,11 +972,11 @@ export default function RoleDetailPage() {
             </button>
 
             {/* Role name */}
-            <div style={{ display: 'flex', flexDirection: 'column', gap: 3 }}>
-              <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+            <div className="gecko-stack" style={{ gap: 3 }}>
+              <div className="gecko-row">
                 {isSystem ? (
-                  <div style={{ display: 'flex', alignItems: 'center', gap: 7 }}>
-                    <h1 style={{ margin: 0, fontSize: 22, fontWeight: 700, letterSpacing: '-0.02em', color: 'var(--gecko-text-primary)' }}>
+                  <div className="gecko-row" style={{ gap: 7 }}>
+                    <h1 className="gecko-page-title">
                       {roleName || 'New Role'}
                     </h1>
                     <span title="System roles cannot be renamed" style={{ color: 'var(--gecko-text-secondary)' }}>
@@ -1026,12 +1010,12 @@ export default function RoleDetailPage() {
 
                 {/* Unsaved badge */}
                 {unsavedChanges && (
-                  <span style={{
+                  <span className="gecko-row" style={{
                     fontSize: 10, fontWeight: 700, letterSpacing: '0.05em', textTransform: 'uppercase',
                     padding: '2px 8px', borderRadius: 4,
                     background: 'var(--gecko-warning-50)', color: 'var(--gecko-warning-700)',
                     border: '1px solid var(--gecko-warning-200)',
-                    display: 'flex', alignItems: 'center', gap: 5,
+                    gap: 5,
                   }}>
                     <Icon name="alertCircle" size={11} />
                     Unsaved changes
@@ -1040,7 +1024,7 @@ export default function RoleDetailPage() {
               </div>
 
               {/* Breadcrumb */}
-              <div style={{ display: 'flex', alignItems: 'center', gap: 5, fontSize: 12, color: 'var(--gecko-text-secondary)' }}>
+              <div className="gecko-row" style={{ gap: 5, fontSize: 12, color: 'var(--gecko-text-secondary)' }}>
                 <Link href="/config/roles" style={{ color: 'var(--gecko-text-secondary)', textDecoration: 'none' }}>
                   Roles
                 </Link>
@@ -1053,16 +1037,16 @@ export default function RoleDetailPage() {
           </div>
 
           {/* Save button */}
-          <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+          <div className="gecko-row" style={{ gap: 10 }}>
             <span style={{ fontSize: 12, color: 'var(--gecko-text-secondary)' }}>
               {totalGranted} permission{totalGranted !== 1 ? 's' : ''} granted
             </span>
             <button
-              className="gecko-btn gecko-btn-primary gecko-btn-sm"
+              className="gecko-btn gecko-btn-primary gecko-btn-sm gecko-row"
               onClick={handleSave}
               title={isSystem ? 'System roles cannot be modified' : undefined}
               style={{
-                display: 'flex', alignItems: 'center', gap: 7,
+                gap: 7,
                 opacity: !unsavedChanges && !isNew ? 0.5 : 1,
               }}
             >
@@ -1074,10 +1058,10 @@ export default function RoleDetailPage() {
 
         {/* ── System role notice ── */}
         {isSystem && (
-          <div style={{
+          <div className="gecko-row" style={{
             padding: '10px 16px', borderRadius: 8,
             background: 'var(--gecko-primary-50)', border: '1px solid var(--gecko-primary-100)',
-            display: 'flex', alignItems: 'center', gap: 10,
+            gap: 10,
             fontSize: 13, color: 'var(--gecko-primary-800)',
           }}>
             <Icon name="lock" size={15} style={{ color: 'var(--gecko-primary-600)', flexShrink: 0 }} />
@@ -1085,8 +1069,8 @@ export default function RoleDetailPage() {
               <strong>System role</strong> — permissions are read-only and cannot be modified. Clone this role to create a customisable copy.
             </span>
             <button
-              className="gecko-btn gecko-btn-sm"
-              style={{ marginLeft: 'auto', display: 'flex', alignItems: 'center', gap: 6, flexShrink: 0 }}
+              className="gecko-btn gecko-btn-sm gecko-row gecko-ml-auto gecko-flex-shrink-0"
+              style={{ gap: 6 }}
               onClick={() => showToast('Role cloned — redirect to new role (demo)', 'info')}
             >
               <Icon name="copy" size={13} />
@@ -1096,8 +1080,8 @@ export default function RoleDetailPage() {
         )}
 
         {/* ── Tab bar ── */}
-        <div style={{
-          display: 'flex', alignItems: 'center', gap: 2,
+        <div className="gecko-row" style={{
+          gap: 2,
           borderBottom: '2px solid var(--gecko-border)',
         }}>
           {([
@@ -1135,14 +1119,14 @@ export default function RoleDetailPage() {
 
         {/* ── Tab content ── */}
         {tab === 'permissions' && (
-          <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
+          <div className="gecko-stack gecko-stack-lg">
 
             {/* Top bar: description + global quick-set */}
-            <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: 20, flexWrap: 'wrap' }}>
+            <div className="gecko-row gecko-row-start gecko-row-between gecko-row-wrap" style={{ gap: 20 }}>
               {/* Description */}
-              <div style={{ flex: 1, minWidth: 220 }}>
-                <label style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
-                  <span style={{ fontSize: 11, fontWeight: 700, letterSpacing: '0.06em', textTransform: 'uppercase', color: 'var(--gecko-text-secondary)' }}>
+              <div className="gecko-flex-1" style={{ minWidth: 220 }}>
+                <label className="gecko-stack gecko-stack-xs">
+                  <span className="gecko-eyebrow">
                     Role Description
                   </span>
                   <textarea
@@ -1162,7 +1146,7 @@ export default function RoleDetailPage() {
               </div>
 
               {/* Global quick-set */}
-              <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexShrink: 0, paddingTop: 22 }}>
+              <div className="gecko-row gecko-flex-shrink-0" style={{ paddingTop: 22 }}>
                 <span style={{ fontSize: 11, fontWeight: 600, color: 'var(--gecko-text-secondary)', whiteSpace: 'nowrap' }}>
                   Quick set:
                 </span>

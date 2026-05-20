@@ -35,8 +35,8 @@ const TABS = [
 function SectionHead({ title, sub }: { title: string; sub?: string }) {
   return (
     <div style={{ marginBottom: 20, paddingBottom: 12, borderBottom: '1px solid var(--gecko-border)' }}>
-      <h3 style={{ fontSize: 15, fontWeight: 700, margin: 0, color: 'var(--gecko-text-primary)' }}>{title}</h3>
-      {sub && <div style={{ fontSize: 12, color: 'var(--gecko-text-secondary)', marginTop: 3 }}>{sub}</div>}
+      <h3 className="gecko-card-title" style={{ fontSize: 15, margin: 0 }}>{title}</h3>
+      {sub && <div className="gecko-card-subtitle">{sub}</div>}
     </div>
   );
 }
@@ -46,7 +46,7 @@ function Field({ label, required, hint, children, span }: { label: string; requi
     <div className="gecko-form-group" style={{ gridColumn: span ? `span ${span}` : undefined }}>
       <label className={`gecko-label${required ? ' gecko-label-required' : ''}`}>{label}</label>
       {children}
-      {hint && <div style={{ fontSize: 11, color: 'var(--gecko-text-secondary)', marginTop: 4 }}>{hint}</div>}
+      {hint && <div className="gecko-helper-text">{hint}</div>}
     </div>
   );
 }
@@ -76,12 +76,12 @@ function TabDetails({ ct, edit }: { ct: ContainerType; edit: boolean }) {
   const heightStr = ct.dims.includes("9'6") ? "highcube" : "standard";
 
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', gap: 32 }}>
+    <div className="gecko-stack" style={{ gap: 32 }}>
 
       {/* ISO Identity */}
       <div>
         <SectionHead title="ISO Identity" sub="Core code reference — used in tariff, EIR, and vessel stow." />
-        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 18 }}>
+        <div className="gecko-grid-2" style={{ gap: 18 }}>
           <Field label="ISO Code" required>
             <input
               className="gecko-input"
@@ -128,7 +128,7 @@ function TabDetails({ ct, edit }: { ct: ContainerType; edit: boolean }) {
       {/* Physical Dimensions */}
       <div>
         <SectionHead title="Physical Dimensions" sub="External size class and internal usable space." />
-        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 18 }}>
+        <div className="gecko-grid-3" style={{ gap: 18 }}>
           <Field label="Length">
             <select className="gecko-input" disabled={!edit} defaultValue={lengthStr}>
               <option value="20ft">20 ft</option>
@@ -187,7 +187,7 @@ function TabDetails({ ct, edit }: { ct: ContainerType; edit: boolean }) {
       {/* Weight & Capacity */}
       <div>
         <SectionHead title="Weight &amp; Capacity" />
-        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 18 }}>
+        <div className="gecko-grid-3" style={{ gap: 18 }}>
           <Field label="Payload / Max Cargo (kg)" required>
             <div style={{ position: 'relative' }}>
               <input
@@ -259,7 +259,7 @@ function TabDetails({ ct, edit }: { ct: ContainerType; edit: boolean }) {
       {/* Special Features */}
       <div>
         <SectionHead title="Special Features" sub="Controls yard zoning, plug assignments, and DG segregation rules." />
-        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
+        <div className="gecko-grid-2" style={{ gap: 12 }}>
           {ALL_FEATURES.map(feat => {
             const checked = features.includes(feat.key);
             return (
@@ -297,7 +297,7 @@ function TabDetails({ ct, edit }: { ct: ContainerType; edit: boolean }) {
       {/* Tariff & Operations */}
       <div>
         <SectionHead title="Tariff &amp; Operations" />
-        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 18 }}>
+        <div className="gecko-grid-2" style={{ gap: 18 }}>
           <Field label="Default Tariff Row">
             <input
               className="gecko-input"
@@ -337,8 +337,8 @@ function TabInYard({ iso }: { iso: string }) {
     { unit: `YMLU882044${iso.slice(0,1)}`, status: 'Hold',  location: 'Block A / Row 7 / Bay 1', lastMove: 'Hold Applied · Apr 26 09:30', statusColor: 'var(--gecko-warning-600)', statusBg: 'var(--gecko-warning-50)' },
   ];
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', gap: 20 }}>
-      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+    <div className="gecko-stack" style={{ gap: 20 }}>
+      <div className="gecko-row gecko-row-between">
         <div style={{ fontSize: 13, color: 'var(--gecko-text-secondary)' }}>
           Containers currently in yard matching ISO type <span style={{ fontFamily: 'var(--gecko-font-mono)', fontWeight: 700, color: 'var(--gecko-text-primary)' }}>{iso}</span>
         </div>
@@ -391,8 +391,8 @@ function TabTariff({ iso, type }: { iso: string; type: string }) {
     { plan: 'PTT-2026',          planType: 'Contract', rate: '฿2,600', notes: 'Bulk chemical discount' },
   ];
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', gap: 20 }}>
-      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+    <div className="gecko-stack" style={{ gap: 20 }}>
+      <div className="gecko-row gecko-row-between">
         <div style={{ fontSize: 13, color: 'var(--gecko-text-secondary)' }}>
           Tariff schedules with a rate line referencing type <span style={{ fontFamily: 'var(--gecko-font-mono)', fontWeight: 700, color: 'var(--gecko-text-primary)' }}>{iso}</span>
         </div>
@@ -445,20 +445,20 @@ function TabHistory({ iso }: { iso: string }) {
     { date: '2025-07-01 00:00', user: 'System',      action: 'Record created',             detail: 'Migrated from legacy TMS v2.1 — ISO 6346 seed data' },
   ];
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', gap: 0 }}>
+    <div className="gecko-stack" style={{ gap: 0 }}>
       {logs.map((log, i) => (
         <div
           key={log.date}
+          className="gecko-row gecko-row-start"
           style={{
-            display: 'flex',
             gap: 16,
             padding: '16px 0',
             borderBottom: i < logs.length - 1 ? '1px solid var(--gecko-border)' : 'none',
           }}
         >
           <div style={{ width: 8, height: 8, borderRadius: '50%', background: 'var(--gecko-primary-400)', flexShrink: 0, marginTop: 5 }} />
-          <div style={{ flex: 1, minWidth: 0 }}>
-            <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 4 }}>
+          <div className="gecko-flex-1">
+            <div className="gecko-row gecko-mb-1" style={{ gap: 12 }}>
               <span style={{ fontSize: 13, fontWeight: 700, color: 'var(--gecko-text-primary)' }}>{log.action}</span>
               <span style={{ fontSize: 11, fontWeight: 600, color: 'var(--gecko-text-secondary)' }}>{log.user}</span>
             </div>
@@ -508,10 +508,10 @@ export default function ContainerTypeDetailPage() {
   };
 
   return (
-    <div style={{ maxWidth: 'var(--gecko-container-max)', margin: '0 auto', display: 'flex', flexDirection: 'column', gap: 24 }}>
+    <div className="gecko-stack" style={{ maxWidth: 'var(--gecko-container-max)', margin: '0 auto', gap: 24 }}>
 
       {/* Breadcrumb + Actions */}
-      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+      <div className="gecko-row gecko-row-between">
         <nav className="gecko-breadcrumb" aria-label="Breadcrumb">
           <Link href="/masters" className="gecko-breadcrumb-item">Masters</Link>
           <span className="gecko-breadcrumb-sep" />
@@ -519,7 +519,7 @@ export default function ContainerTypeDetailPage() {
           <span className="gecko-breadcrumb-sep" />
           <span className="gecko-breadcrumb-current" style={{ fontFamily: 'var(--gecko-font-mono)' }}>{ct.iso}</span>
         </nav>
-        <div style={{ display: 'flex', gap: 10 }}>
+        <div className="gecko-row" style={{ gap: 10 }}>
           <button className="gecko-btn gecko-btn-ghost gecko-btn-sm" onClick={() => toast({ variant: 'success', title: 'Container type cloned', message: `Copy of ${iso} created as a draft.` })}><Icon name="copy" size={14} /> Clone</button>
           <ExportButton resource="Container type" iconSize={14} />
           {editing ? (
@@ -538,9 +538,9 @@ export default function ContainerTypeDetailPage() {
       </div>
 
       {/* Title + Badge header */}
-      <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', paddingBottom: 20, borderBottom: '1px solid var(--gecko-border)' }}>
+      <div className="gecko-row gecko-row-between gecko-row-start" style={{ paddingBottom: 20, borderBottom: '1px solid var(--gecko-border)' }}>
         <div>
-          <div style={{ display: 'flex', alignItems: 'center', gap: 16, flexWrap: 'wrap' }}>
+          <div className="gecko-row gecko-row-wrap" style={{ gap: 16 }}>
             <h1 style={{ fontSize: 28, fontWeight: 800, margin: 0, color: 'var(--gecko-text-primary)', fontFamily: 'var(--gecko-font-mono)', letterSpacing: '0.06em' }}>
               {ct.iso}
             </h1>
@@ -562,21 +562,21 @@ export default function ContainerTypeDetailPage() {
       </div>
 
       {/* KPI Strip */}
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 1, background: 'var(--gecko-border)', border: '1px solid var(--gecko-border)', borderRadius: 12, overflow: 'hidden' }}>
+      <div className="gecko-kpi-strip">
         {[
           { label: 'Payload',          value: ct.payload,       sub: 'max cargo weight' },
           { label: 'Tare Weight',      value: ct.tare,          sub: 'container self-weight' },
           { label: 'Cubic Capacity',   value: ct.cube,          sub: 'usable volume' },
           { label: 'In Yard',          value: `${ct.active}`,   sub: 'containers currently in yard', highlight: true },
         ].map(kpi => (
-          <div key={kpi.label} style={{ background: 'var(--gecko-bg-surface)', padding: '20px 24px' }}>
-            <div style={{ fontSize: 11, fontWeight: 700, color: 'var(--gecko-text-secondary)', textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: 8 }}>
+          <div key={kpi.label} className="gecko-kpi-cell">
+            <div className="gecko-eyebrow">
               {kpi.label}
             </div>
             <div style={{ fontSize: 26, fontWeight: 800, color: kpi.highlight ? 'var(--gecko-primary-600)' : 'var(--gecko-text-primary)', fontFamily: 'var(--gecko-font-mono)' }}>
               {kpi.value}
             </div>
-            <div style={{ fontSize: 12, color: 'var(--gecko-text-disabled)', marginTop: 4 }}>{kpi.sub}</div>
+            <div className="gecko-cell-meta">{kpi.sub}</div>
           </div>
         ))}
       </div>

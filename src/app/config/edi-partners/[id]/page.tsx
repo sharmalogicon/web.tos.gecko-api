@@ -195,8 +195,7 @@ const ACTIVITY_LOG = [
 
 function Label({ children }: { children: React.ReactNode }) {
   return (
-    <div style={{ fontSize: 11, fontWeight: 700, letterSpacing: '0.06em', textTransform: 'uppercase',
-      color: 'var(--gecko-text-secondary)', marginBottom: 5 }}>
+    <div className="gecko-eyebrow" style={{ marginBottom: 5 }}>
       {children}
     </div>
   );
@@ -206,8 +205,8 @@ function SectionCard({ title, icon, children }: { title: string; icon?: string; 
   return (
     <div style={{ background: 'var(--gecko-bg-surface)', border: '1px solid var(--gecko-border)',
       borderRadius: 10, overflow: 'hidden', marginBottom: 16 }}>
-      <div style={{ padding: '11px 16px', borderBottom: '1px solid var(--gecko-border)',
-        display: 'flex', alignItems: 'center', gap: 8, background: 'var(--gecko-bg-subtle)' }}>
+      <div className="gecko-row" style={{ padding: '11px 16px', borderBottom: '1px solid var(--gecko-border)',
+        background: 'var(--gecko-bg-subtle)' }}>
         {icon && <Icon name={icon} size={14} style={{ color: 'var(--gecko-primary-500)' }} />}
         <span style={{ fontSize: 12, fontWeight: 700, color: 'var(--gecko-text-primary)' }}>{title}</span>
       </div>
@@ -219,9 +218,9 @@ function SectionCard({ title, icon, children }: { title: string; icon?: string; 
 function TF({ label, value, onChange, type = 'text', mono = false, readOnly = false, placeholder = '', suffix }:
   { label: string; value: string; onChange?: (v: string) => void; type?: string; mono?: boolean; readOnly?: boolean; placeholder?: string; suffix?: string }) {
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', gap: 4, flex: 1 }}>
+    <div className="gecko-stack gecko-stack-xs gecko-flex-1">
       <Label>{label}</Label>
-      <div style={{ position: 'relative', display: 'flex', alignItems: 'center' }}>
+      <div className="gecko-row" style={{ position: 'relative' }}>
         <input
           type={type} value={value}
           onChange={e => onChange?.(e.target.value)}
@@ -247,7 +246,7 @@ function Row({ children, gap = 12 }: { children: React.ReactNode; gap?: number }
 
 function Sel({ label, value, onChange, options }: { label: string; value: string; onChange: (v: string) => void; options: { value: string; label: string }[] }) {
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', gap: 4, flex: 1 }}>
+    <div className="gecko-stack gecko-stack-xs gecko-flex-1">
       <Label>{label}</Label>
       <select value={value} onChange={e => onChange(e.target.value)} className="gecko-input gecko-input-sm">
         {options.map(o => <option key={o.value} value={o.value}>{o.label}</option>)}
@@ -258,7 +257,7 @@ function Sel({ label, value, onChange, options }: { label: string; value: string
 
 function Toggle({ label, value, onChange, description }: { label: string; value: boolean; onChange: (v: boolean) => void; description?: string }) {
   return (
-    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '8px 0',
+    <div className="gecko-row gecko-row-between" style={{ padding: '8px 0',
       borderBottom: '1px solid var(--gecko-bg-subtle)' }}>
       <div>
         <div style={{ fontSize: 13, fontWeight: 500, color: 'var(--gecko-text-primary)' }}>{label}</div>
@@ -280,7 +279,7 @@ function Toggle({ label, value, onChange, description }: { label: string; value:
 function PwField({ label, value, onChange }: { label: string; value: string; onChange: (v: string) => void }) {
   const [show, setShow] = useState(false);
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', gap: 4, flex: 1 }}>
+    <div className="gecko-stack gecko-stack-xs gecko-flex-1">
       <Label>{label}</Label>
       <div style={{ position: 'relative', display: 'flex' }}>
         <input type={show ? 'text' : 'password'} value={value} onChange={e => onChange(e.target.value)}
@@ -330,7 +329,7 @@ function SftpForm({ cfg, onChange, direction }: { cfg: SftpConfig; onChange: (p:
       {cfg.authMethod === 'password'
         ? <Row><PwField label="Password" value={cfg.password} onChange={v => onChange({ password: v })} /></Row>
         : <Row>
-            <div style={{ flex: 1, display: 'flex', flexDirection: 'column', gap: 4 }}>
+            <div className="gecko-stack gecko-stack-xs gecko-flex-1">
               <Label>SSH Private Key (PEM)</Label>
               <textarea className="gecko-input" value={cfg.sshKey} onChange={e => onChange({ sshKey: e.target.value })}
                 rows={4} style={{ fontFamily: 'monospace', fontSize: 11, resize: 'vertical' }}
@@ -361,16 +360,15 @@ function SftpForm({ cfg, onChange, direction }: { cfg: SftpConfig; onChange: (p:
           )}
         </>
       )}
-      <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginTop: 4 }}>
-        <button className="gecko-btn gecko-btn-outline gecko-btn-sm" onClick={doTest}
-          disabled={testState === 'testing'}
-          style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+      <div className="gecko-row gecko-mt-1" style={{ gap: 12 }}>
+        <button className="gecko-btn gecko-btn-outline gecko-btn-sm gecko-inline-row" onClick={doTest}
+          disabled={testState === 'testing'}>
           {testState === 'testing'
             ? <><Icon name="refresh" size={13} /> Testing…</>
             : <><Icon name="zap" size={13} /> Test Connection</>}
         </button>
-        {testState === 'ok'   && <span style={{ fontSize: 12, color: 'var(--gecko-success-600)', fontWeight: 600, display: 'flex', gap: 5 }}><Icon name="checkCircle" size={14} /> Connected successfully</span>}
-        {testState === 'fail' && <span style={{ fontSize: 12, color: 'var(--gecko-error-600)', fontWeight: 600, display: 'flex', gap: 5 }}><Icon name="alertCircle" size={14} /> Connection failed</span>}
+        {testState === 'ok'   && <span className="gecko-inline-row" style={{ fontSize: 12, color: 'var(--gecko-success-600)', fontWeight: 600, gap: 5 }}><Icon name="checkCircle" size={14} /> Connected successfully</span>}
+        {testState === 'fail' && <span className="gecko-inline-row" style={{ fontSize: 12, color: 'var(--gecko-error-600)', fontWeight: 600, gap: 5 }}><Icon name="alertCircle" size={14} /> Connection failed</span>}
         {testState === 'idle' && <span style={{ fontSize: 11, color: 'var(--gecko-text-disabled)' }}>Last tested: 2026-05-04 09:00 ✓</span>}
       </div>
     </>
@@ -403,9 +401,8 @@ function FtpForm({ cfg, onChange, direction }: { cfg: FtpConfig; onChange: (p: P
           <TF label="Poll Interval (min)" value={cfg.pollInterval} onChange={v => onChange({ pollInterval: v })} suffix="min" />
         )}
       </Row>
-      <div style={{ display: 'flex', gap: 12, alignItems: 'center', marginTop: 4 }}>
-        <button className="gecko-btn gecko-btn-outline gecko-btn-sm" onClick={() => { setTestState('testing'); setTimeout(() => setTestState('ok'), 1400); }}
-          style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+      <div className="gecko-row gecko-mt-1" style={{ gap: 12 }}>
+        <button className="gecko-btn gecko-btn-outline gecko-btn-sm gecko-inline-row" onClick={() => { setTestState('testing'); setTimeout(() => setTestState('ok'), 1400); }}>
           <Icon name="zap" size={13} /> {testState === 'testing' ? 'Testing…' : 'Test Connection'}
         </button>
         {testState === 'ok' && <span style={{ fontSize: 12, color: 'var(--gecko-success-600)', fontWeight: 600 }}>✓ Connected</span>}
@@ -522,16 +519,16 @@ function ApiForm({ cfg, onChange }: { cfg: ApiConfig; onChange: (p: Partial<ApiC
       <Toggle label="SSL Certificate Verification" value={cfg.sslVerify} onChange={v => onChange({ sslVerify: v })} description="Disable only for self-signed certs in staging" />
 
       {/* Custom Headers */}
-      <div style={{ marginTop: 12 }}>
-        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8 }}>
+      <div className="gecko-mt-3">
+        <div className="gecko-row gecko-row-between gecko-mb-2">
           <Label>Custom Request Headers</Label>
-          <button className="gecko-btn gecko-btn-ghost gecko-btn-sm" onClick={addHeader}
-            style={{ fontSize: 11, display: 'flex', gap: 4, color: 'var(--gecko-primary-600)' }}>
+          <button className="gecko-btn gecko-btn-ghost gecko-btn-sm gecko-inline-row" onClick={addHeader}
+            style={{ fontSize: 11, gap: 4, color: 'var(--gecko-primary-600)' }}>
             <Icon name="plus" size={12} /> Add Header
           </button>
         </div>
         {cfg.headers.map((h, i) => (
-          <div key={i} style={{ display: 'flex', gap: 8, marginBottom: 6, alignItems: 'center' }}>
+          <div key={i} className="gecko-row" style={{ marginBottom: 6 }}>
             <input value={h.key} onChange={e => updateHeader(i, 'key', e.target.value)}
               className="gecko-input gecko-input-sm" placeholder="Header-Name"
               style={{ flex: 1, fontFamily: 'monospace' }} />
@@ -549,10 +546,9 @@ function ApiForm({ cfg, onChange }: { cfg: ApiConfig; onChange: (p: Partial<ApiC
         )}
       </div>
 
-      <div style={{ display: 'flex', gap: 12, alignItems: 'center', marginTop: 12 }}>
-        <button className="gecko-btn gecko-btn-outline gecko-btn-sm"
-          onClick={() => { setTestState('testing'); setTimeout(() => setTestState('ok'), 1800); }}
-          style={{ display: 'flex', gap: 6 }}>
+      <div className="gecko-row gecko-mt-3" style={{ gap: 12 }}>
+        <button className="gecko-btn gecko-btn-outline gecko-btn-sm gecko-inline-row"
+          onClick={() => { setTestState('testing'); setTimeout(() => setTestState('ok'), 1800); }}>
           <Icon name="zap" size={13} /> {testState === 'testing' ? 'Testing…' : 'Test API Connection'}
         </button>
         {testState === 'ok' && <span style={{ fontSize: 12, color: 'var(--gecko-success-600)', fontWeight: 600 }}>✓ 200 OK — API reachable</span>}
@@ -567,8 +563,8 @@ function WebhookForm({ cfg, onChange }: { cfg: WebhookConfig; onChange: (p: Part
   const [regenState, setRegenState] = useState(false);
   return (
     <>
-      <div style={{ padding: '10px 14px', background: 'var(--gecko-primary-50)', borderRadius: 8, marginBottom: 14,
-        border: '1px solid var(--gecko-primary-100)', display: 'flex', gap: 10 }}>
+      <div className="gecko-row gecko-row-start" style={{ padding: '10px 14px', background: 'var(--gecko-primary-50)', borderRadius: 8, marginBottom: 14,
+        border: '1px solid var(--gecko-primary-100)', gap: 10 }}>
         <Icon name="info" size={15} style={{ color: 'var(--gecko-primary-600)', flexShrink: 0, marginTop: 1 }} />
         <div style={{ fontSize: 12, color: 'var(--gecko-primary-800)' }}>
           Webhook mode means the partner <strong>pushes messages to us</strong>. Share the URL below with your partner.
@@ -576,22 +572,22 @@ function WebhookForm({ cfg, onChange }: { cfg: WebhookConfig; onChange: (p: Part
         </div>
       </div>
       <Row>
-        <div style={{ flex: 1, display: 'flex', flexDirection: 'column', gap: 4 }}>
+        <div className="gecko-stack gecko-stack-xs gecko-flex-1">
           <Label>Our Webhook Endpoint URL</Label>
-          <div style={{ display: 'flex', gap: 6 }}>
+          <div className="gecko-row" style={{ gap: 6 }}>
             <input readOnly value={cfg.ourUrl} className="gecko-input gecko-input-sm"
               style={{ flex: 1, fontFamily: 'monospace', background: 'var(--gecko-bg-subtle)' }} />
-            <button className="gecko-btn gecko-btn-ghost gecko-btn-sm" onClick={() => navigator.clipboard?.writeText(cfg.ourUrl)}
-              title="Copy URL" style={{ flexShrink: 0 }}>
+            <button className="gecko-btn gecko-btn-ghost gecko-btn-sm gecko-flex-shrink-0" onClick={() => navigator.clipboard?.writeText(cfg.ourUrl)}
+              title="Copy URL">
               <Icon name="copy" size={13} />
             </button>
           </div>
         </div>
       </Row>
       <Row>
-        <div style={{ flex: 1, display: 'flex', flexDirection: 'column', gap: 4 }}>
+        <div className="gecko-stack gecko-stack-xs gecko-flex-1">
           <Label>Signing Secret</Label>
-          <div style={{ display: 'flex', gap: 6 }}>
+          <div className="gecko-row" style={{ gap: 6 }}>
             <input type={revealSecret ? 'text' : 'password'} readOnly value={cfg.secret}
               className="gecko-input gecko-input-sm"
               style={{ flex: 1, fontFamily: 'monospace', background: 'var(--gecko-bg-subtle)' }} />
@@ -621,7 +617,7 @@ function WebhookForm({ cfg, onChange }: { cfg: WebhookConfig; onChange: (p: Part
       </div>
       <div>
         <Label>Subscribed Message Types</Label>
-        <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6, marginTop: 4 }}>
+        <div className="gecko-row gecko-row-wrap gecko-mt-1" style={{ gap: 6 }}>
           {MSG_CATALOGUE.map(m => {
             const active = cfg.events.includes(m.code);
             return (
@@ -662,7 +658,7 @@ function DirectionBlock({
   return (
     <div style={{ border: '1px solid var(--gecko-border)', borderRadius: 10, overflow: 'hidden' }}>
       {/* Direction header */}
-      <div style={{ padding: '12px 16px', display: 'flex', alignItems: 'center', gap: 12,
+      <div className="gecko-row" style={{ padding: '12px 16px', gap: 12,
         background: isIn ? 'var(--gecko-primary-50)' : 'var(--gecko-success-50)',
         borderBottom: '1px solid var(--gecko-border)' }}>
         <span style={{ width: 32, height: 32, borderRadius: 8,
@@ -670,7 +666,7 @@ function DirectionBlock({
           color: '#fff', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
           <Icon name={isIn ? 'arrowDown' : 'arrowUp'} size={16} />
         </span>
-        <div style={{ flex: 1 }}>
+        <div className="gecko-flex-1">
           <div style={{ fontSize: 13, fontWeight: 700, color: 'var(--gecko-text-primary)' }}>
             {isIn ? 'Inbound Channel' : 'Outbound Channel'}
           </div>
@@ -682,9 +678,9 @@ function DirectionBlock({
         </div>
         {/* One-shot copy button — only on Outbound when Both direction is active */}
         {!isIn && onCopyFromInbound && (
-          <button className="gecko-btn gecko-btn-ghost gecko-btn-sm"
+          <button className="gecko-btn gecko-btn-ghost gecko-btn-sm gecko-inline-row gecko-flex-shrink-0"
             onClick={onCopyFromInbound}
-            style={{ fontSize: 11, color: 'var(--gecko-primary-600)', display: 'flex', gap: 5, flexShrink: 0 }}
+            style={{ fontSize: 11, color: 'var(--gecko-primary-600)', gap: 5 }}
             title="Copy host, port, credentials from Inbound into this section — you can then adjust the outbound directory">
             <Icon name="copy" size={12} /> Copy from Inbound
           </button>
@@ -693,7 +689,7 @@ function DirectionBlock({
 
       <div style={{ padding: 16 }}>
         {/* Method selector */}
-        <div style={{ display: 'flex', gap: 8, marginBottom: 16, flexWrap: 'wrap' }}>
+        <div className="gecko-row gecko-row-wrap gecko-mb-4">
           {METHODS.map(m => (
             <MethodPill key={m.id} id={m.id} label={m.label} active={method === m.id} onClick={() => onMethodChange(m.id)} />
           ))}
@@ -779,57 +775,55 @@ export default function EdiPartnerProfilePage() {
   ];
 
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', gap: 0, maxWidth: 1100 }}>
+    <div className="gecko-stack" style={{ gap: 0, maxWidth: 1100 }}>
 
       {/* ── Page header ── */}
-      <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between',
-        gap: 12, flexWrap: 'wrap', marginBottom: 20 }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: 14 }}>
+      <div className="gecko-page-header gecko-mb-5">
+        <div className="gecko-row" style={{ gap: 14 }}>
           <Link href="/config/edi-partners" style={{ textDecoration: 'none' }}>
             <button className="gecko-btn gecko-btn-ghost gecko-btn-icon gecko-btn-sm">
               <Icon name="arrowLeft" size={16} />
             </button>
           </Link>
-          <div style={{ width: 44, height: 44, borderRadius: 10, background: partner.color,
-            color: '#fff', display: 'flex', alignItems: 'center', justifyContent: 'center',
-            fontSize: 15, fontWeight: 800, flexShrink: 0 }}>
+          <div className="gecko-mini-icon gecko-mini-icon-lg gecko-flex-shrink-0" style={{ background: partner.color,
+            color: '#fff', borderRadius: 10, width: 44, height: 44,
+            fontSize: 15, fontWeight: 800 }}>
             {partner.initials}
           </div>
           <div>
-            <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-              <h1 style={{ fontSize: 20, fontWeight: 700, margin: 0, letterSpacing: '-0.02em' }}>{partner.name}</h1>
+            <div className="gecko-row" style={{ gap: 10 }}>
+              <h1 className="gecko-page-title" style={{ fontSize: 20 }}>{partner.name}</h1>
               <span className="gecko-badge gecko-badge-gray" style={{ fontSize: 10, fontFamily: 'monospace' }}>{partner.code}</span>
               <span className={`gecko-badge gecko-badge-${status === 'active' ? 'success' : 'gray'}`} style={{ fontSize: 10 }}>
                 {status === 'active' ? '● Active' : '○ Inactive'}
               </span>
             </div>
-            <div style={{ fontSize: 12, color: 'var(--gecko-text-secondary)', marginTop: 2 }}>
+            <div className="gecko-page-subtitle" style={{ fontSize: 12, marginTop: 2 }}>
               {partner.type} · EDI Partner Profile
             </div>
           </div>
         </div>
-        <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
+        <div className="gecko-page-header-actions">
           {savedMsg && (
-            <span style={{ fontSize: 12, color: 'var(--gecko-success-600)', fontWeight: 600, display: 'flex', gap: 5 }}>
+            <span className="gecko-inline-row" style={{ fontSize: 12, color: 'var(--gecko-success-600)', fontWeight: 600, gap: 5 }}>
               <Icon name="checkCircle" size={14} /> {savedMsg}
             </span>
           )}
-          <button className="gecko-btn gecko-btn-outline gecko-btn-sm"
+          <button className="gecko-btn gecko-btn-outline gecko-btn-sm gecko-inline-row"
             onClick={() => setStatus(s => s === 'active' ? 'inactive' : 'active')}
             style={{ color: status === 'active' ? 'var(--gecko-error-600)' : 'var(--gecko-success-600)',
               borderColor: status === 'active' ? 'var(--gecko-error-300)' : 'var(--gecko-success-300)' }}>
             <Icon name={status === 'active' ? 'x' : 'check'} size={13} />
             {status === 'active' ? 'Disable Partner' : 'Enable Partner'}
           </button>
-          <button className="gecko-btn gecko-btn-primary gecko-btn-sm" onClick={handleSave}
-            style={{ display: 'flex', gap: 6 }}>
+          <button className="gecko-btn gecko-btn-primary gecko-btn-sm gecko-inline-row" onClick={handleSave}>
             <Icon name="save" size={13} /> Save Profile
           </button>
         </div>
       </div>
 
       {/* ── Tabs ── */}
-      <div style={{ display: 'flex', gap: 0, borderBottom: '2px solid var(--gecko-border)', marginBottom: 24 }}>
+      <div className="gecko-row gecko-mb-5" style={{ gap: 0, borderBottom: '2px solid var(--gecko-border)' }}>
         {TABS.map(t => (
           <button key={t.id} onClick={() => setTab(t.id)}
             style={{ display: 'flex', alignItems: 'center', gap: 7, padding: '10px 18px',
@@ -886,16 +880,15 @@ export default function EdiPartnerProfilePage() {
 
       {/* TRANSMISSION */}
       {tab === 'transmission' && (
-        <div style={{ display: 'flex', flexDirection: 'column', gap: 20 }}>
+        <div className="gecko-stack" style={{ gap: 20 }}>
 
           {/* ── Direction selector ── */}
           <div style={{ background: 'var(--gecko-bg-surface)', border: '1px solid var(--gecko-border)',
             borderRadius: 10, padding: '16px 20px' }}>
-            <div style={{ fontSize: 11, fontWeight: 700, letterSpacing: '0.07em', textTransform: 'uppercase',
-              color: 'var(--gecko-text-secondary)', marginBottom: 12 }}>
+            <div className="gecko-eyebrow gecko-mb-3">
               Exchange Direction
             </div>
-            <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap' }}>
+            <div className="gecko-row gecko-row-wrap" style={{ gap: 10 }}>
               {([
                 { id: 'inbound'  as TxDirection, icon: 'arrowDown',  label: 'Inbound Only',      desc: 'We receive from partner' },
                 { id: 'outbound' as TxDirection, icon: 'arrowUp',    label: 'Outbound Only',     desc: 'We send to partner' },
@@ -932,8 +925,7 @@ export default function EdiPartnerProfilePage() {
                 );
               })}
             </div>
-            <div style={{ marginTop: 10, fontSize: 11, color: 'var(--gecko-text-secondary)',
-              display: 'flex', gap: 6, alignItems: 'flex-start' }}>
+            <div className="gecko-row gecko-row-start gecko-mt-3" style={{ fontSize: 11, color: 'var(--gecko-text-secondary)', gap: 6 }}>
               <Icon name="info" size={13} style={{ flexShrink: 0, marginTop: 1 }} />
               Direction defines which channel blocks appear below. Each channel is fully independent —
               inbound and outbound can use different protocols, servers, and credentials.
@@ -971,9 +963,7 @@ export default function EdiPartnerProfilePage() {
               <thead>
                 <tr style={{ borderBottom: '2px solid var(--gecko-border)' }}>
                   {['Code','Description','Direction','Last Received / Sent','Active'].map(h => (
-                    <th key={h} style={{ padding: '8px 12px', textAlign: 'left', fontSize: 10,
-                      fontWeight: 700, letterSpacing: '0.07em', textTransform: 'uppercase',
-                      color: 'var(--gecko-text-secondary)' }}>{h}</th>
+                    <th key={h} className="gecko-eyebrow" style={{ padding: '8px 12px', textAlign: 'left', fontSize: 10 }}>{h}</th>
                   ))}
                 </tr>
               </thead>
@@ -984,7 +974,7 @@ export default function EdiPartnerProfilePage() {
                     <tr key={m.code} style={{ borderBottom: '1px solid var(--gecko-bg-subtle)',
                       background: i % 2 === 0 ? '#fff' : 'var(--gecko-bg-subtle)' }}>
                       <td style={{ padding: '10px 12px' }}>
-                        <code style={{ fontSize: 12, fontWeight: 700, color: 'var(--gecko-primary-700)',
+                        <code className="gecko-mono-strong" style={{ fontSize: 12, color: 'var(--gecko-primary-700)',
                           background: 'var(--gecko-primary-50)', padding: '2px 6px', borderRadius: 4 }}>
                           {m.code}
                         </code>
@@ -1024,12 +1014,12 @@ export default function EdiPartnerProfilePage() {
       {tab === 'activity' && (
         <div>
           <SectionCard title="Transmission Activity Log" icon="activity">
-            <div style={{ display: 'flex', gap: 8, marginBottom: 12 }}>
+            <div className="gecko-row gecko-mb-3">
               <div style={{ position: 'relative', flex: 1 }}>
                 <Icon name="search" size={14} style={{ position: 'absolute', left: 10, top: '50%', transform: 'translateY(-50%)', color: 'var(--gecko-text-disabled)' }} />
                 <input className="gecko-input gecko-input-sm" placeholder="Search message type, ref…" style={{ paddingLeft: 32 }} />
               </div>
-              <button className="gecko-btn gecko-btn-outline gecko-btn-sm" style={{ display: 'flex', gap: 6 }}>
+              <button className="gecko-btn gecko-btn-outline gecko-btn-sm gecko-inline-row">
                 <Icon name="download" size={13} /> Export
               </button>
             </div>
@@ -1037,9 +1027,7 @@ export default function EdiPartnerProfilePage() {
               <thead>
                 <tr style={{ borderBottom: '2px solid var(--gecko-border)' }}>
                   {['Timestamp','Message Type','Direction','Size','Reference','Status','Error'].map(h => (
-                    <th key={h} style={{ padding: '8px 12px', textAlign: 'left', fontSize: 10,
-                      fontWeight: 700, letterSpacing: '0.07em', textTransform: 'uppercase',
-                      color: 'var(--gecko-text-secondary)' }}>{h}</th>
+                    <th key={h} className="gecko-eyebrow" style={{ padding: '8px 12px', textAlign: 'left', fontSize: 10 }}>{h}</th>
                   ))}
                 </tr>
               </thead>
@@ -1049,11 +1037,11 @@ export default function EdiPartnerProfilePage() {
                     background: row.status === 'error' ? 'var(--gecko-error-50)' : i % 2 === 0 ? '#fff' : 'var(--gecko-bg-subtle)' }}>
                     <td style={{ padding: '9px 12px', fontSize: 12, color: 'var(--gecko-text-secondary)', fontFamily: 'monospace' }}>{row.ts}</td>
                     <td style={{ padding: '9px 12px' }}>
-                      <code style={{ fontSize: 12, fontWeight: 700, color: 'var(--gecko-primary-700)',
+                      <code className="gecko-mono-strong" style={{ fontSize: 12, color: 'var(--gecko-primary-700)',
                         background: 'var(--gecko-primary-50)', padding: '2px 6px', borderRadius: 4 }}>{row.msgType}</code>
                     </td>
                     <td style={{ padding: '9px 12px' }}>
-                      <span style={{ fontSize: 11, fontWeight: 700, display: 'flex', alignItems: 'center', gap: 4,
+                      <span className="gecko-row" style={{ fontSize: 11, fontWeight: 700, gap: 4,
                         color: row.dir === 'IN' ? 'var(--gecko-primary-700)' : 'var(--gecko-success-700)' }}>
                         <Icon name={row.dir === 'IN' ? 'arrowDown' : 'arrowUp'} size={12} /> {row.dir}
                       </span>
@@ -1091,19 +1079,19 @@ export default function EdiPartnerProfilePage() {
             <Toggle label="Enforce IP whitelist" value={true} onChange={() => {}} description="Reject connections from unlisted IPs" />
           </SectionCard>
           <SectionCard title="SSL / TLS Certificates" icon="lock">
-            <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+            <div className="gecko-stack" style={{ gap: 10 }}>
               {[
                 { label: 'Our Client Certificate', exp: '2027-01-15', status: 'valid' },
                 { label: "Partner's Server Certificate (pinned)", exp: '2026-09-30', status: 'expiring' },
               ].map(cert => (
-                <div key={cert.label} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+                <div key={cert.label} className="gecko-row gecko-row-between" style={{
                   padding: '10px 14px', borderRadius: 8, border: '1px solid var(--gecko-border)',
                   background: cert.status === 'expiring' ? 'var(--gecko-warning-50)' : 'var(--gecko-bg-subtle)' }}>
                   <div>
                     <div style={{ fontSize: 13, fontWeight: 600, color: 'var(--gecko-text-primary)' }}>{cert.label}</div>
                     <div style={{ fontSize: 11, color: 'var(--gecko-text-secondary)', marginTop: 2 }}>Expires {cert.exp}</div>
                   </div>
-                  <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
+                  <div className="gecko-row">
                     <span className={`gecko-badge gecko-badge-${cert.status === 'valid' ? 'success' : 'warning'}`} style={{ fontSize: 10 }}>
                       {cert.status === 'valid' ? '✓ Valid' : '⚠ Expiring Soon'}
                     </span>
@@ -1119,7 +1107,7 @@ export default function EdiPartnerProfilePage() {
               { ts: '2026-05-03 22:11', event: 'Successful SFTP authentication', ip: '185.45.12.44' },
               { ts: '2026-04-28 03:15', event: 'Failed authentication — wrong password (IP blocked after 5 attempts)', ip: '91.108.56.7' },
             ].map((e, i) => (
-              <div key={i} style={{ display: 'flex', gap: 12, padding: '8px 0', borderBottom: '1px solid var(--gecko-bg-subtle)' }}>
+              <div key={i} className="gecko-row" style={{ gap: 12, padding: '8px 0', borderBottom: '1px solid var(--gecko-bg-subtle)' }}>
                 <span style={{ fontSize: 11, fontFamily: 'monospace', color: 'var(--gecko-text-secondary)', flexShrink: 0 }}>{e.ts}</span>
                 <span style={{ fontSize: 12, color: e.event.includes('Failed') ? 'var(--gecko-error-700)' : 'var(--gecko-text-primary)', flex: 1 }}>{e.event}</span>
                 <code style={{ fontSize: 11, color: 'var(--gecko-text-secondary)' }}>{e.ip}</code>

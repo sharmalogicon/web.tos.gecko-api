@@ -122,7 +122,7 @@ function NewLocationModal({ onClose }: { onClose: () => void }) {
       <label className={`gecko-label${required ? ' gecko-label-required' : ''}`}>{label}</label>
       {children}
       {hint && (
-        <div style={{ fontSize: 11, color: 'var(--gecko-text-secondary)', marginTop: 3 }}>
+        <div className="gecko-helper-text">
           {hint}
         </div>
       )}
@@ -144,13 +144,13 @@ function NewLocationModal({ onClose }: { onClose: () => void }) {
           justifyContent: 'space-between', gap: 16,
         }}>
           <div>
-            <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+            <div className="gecko-row">
               <Icon name="mapPin" size={16} style={{ color: 'var(--gecko-info-600)' }} />
               <span style={{ fontSize: 16, fontWeight: 800, color: 'var(--gecko-text-primary)' }}>
                 New Location
               </span>
             </div>
-            <div style={{ fontSize: 12, color: 'var(--gecko-text-secondary)', marginTop: 3 }}>
+            <div className="gecko-helper-text">
               Add a node to the spatial hierarchy — from facility level down to individual slots.
             </div>
           </div>
@@ -177,7 +177,7 @@ function NewLocationModal({ onClose }: { onClose: () => void }) {
           {/* Section 1: Classification */}
           <div>
             {sectionHead('Classification')}
-            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16 }}>
+            <div className="gecko-grid-2">
               <Field label="Location Type" required>
                 <select
                   className="gecko-input"
@@ -213,7 +213,7 @@ function NewLocationModal({ onClose }: { onClose: () => void }) {
           {/* Section 2: Identity */}
           <div>
             {sectionHead('Identity')}
-            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16 }}>
+            <div className="gecko-grid-2">
               <Field label="Location Code" required hint='Uppercase, e.g. "BLOCK-A-05"'>
                 <input
                   className="gecko-input gecko-text-mono"
@@ -286,8 +286,8 @@ function NewLocationModal({ onClose }: { onClose: () => void }) {
           {/* Section 4: Notes & Status */}
           <div>
             {sectionHead('Notes & Status')}
-            <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
-              <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
+            <div className="gecko-stack gecko-stack-lg">
+              <div className="gecko-stack gecko-stack-xs">
                 <label className="gecko-label">Description / Notes</label>
                 <textarea
                   className="gecko-input"
@@ -333,7 +333,7 @@ function NewLocationModal({ onClose }: { onClose: () => void }) {
                   }}>
                     {form.active ? 'Active' : 'Inactive'}
                   </div>
-                  <div style={{ fontSize: 11, color: 'var(--gecko-text-secondary)', marginTop: 2 }}>
+                  <div className="gecko-helper-text">
                     {form.active
                       ? 'Location is operational and available for container placement'
                       : 'Location is disabled and will not appear in placement lists'}
@@ -354,7 +354,7 @@ function NewLocationModal({ onClose }: { onClose: () => void }) {
           <div style={{ flex: 1, fontSize: 11, color: 'var(--gecko-text-disabled)' }}>
             * Location Code and Location Name are required
           </div>
-          <div style={{ display: 'flex', gap: 8 }}>
+          <div className="gecko-action-toolbar">
             <button
               className="gecko-btn gecko-btn-outline gecko-btn-sm"
               onClick={onClose}
@@ -424,12 +424,12 @@ export default function LocationsPage() {
       {/* Header */}
       <div className="gecko-page-actions" style={{ flexShrink: 0 }}>
         <div className="gecko-page-actions-left">
-          <div style={{ display: 'flex', alignItems: 'baseline', gap: 12 }}>
-            <h1 style={{ fontSize: 24, fontWeight: 700, margin: 0, color: 'var(--gecko-text-primary)' }}>Locations</h1>
+          <div className="gecko-row gecko-row-baseline">
+            <h1 className="gecko-page-title">Locations</h1>
             <span className="gecko-count-badge">6 levels</span>
             <span style={{ fontSize: 12, fontWeight: 600, color: 'var(--gecko-info-700)', background: 'var(--gecko-info-100)', padding: '2px 8px', borderRadius: 12 }}>3 facilities</span>
           </div>
-          <div style={{ fontSize: 13, color: 'var(--gecko-text-secondary)', marginTop: 4 }}>Hierarchical spatial tree — facilities down to individual container slots. 1,842 nodes across 3 facilities.</div>
+          <div className="gecko-page-subtitle">Hierarchical spatial tree — facilities down to individual container slots. 1,842 nodes across 3 facilities.</div>
         </div>
         <div className="gecko-toolbar">
           <ExportButton label="Export tree" resource="Locations tree" iconSize={16} />
@@ -551,17 +551,17 @@ export default function LocationsPage() {
         {/* Right Detail Pane */}
         <div style={{ flex: 1, display: 'flex', flexDirection: 'column', gap: 20, overflowY: 'auto' }}>
 
-          <div style={{ fontSize: 12, color: 'var(--gecko-text-secondary)', display: 'flex', alignItems: 'center', gap: 8 }}>
+          <div className="gecko-row" style={{ fontSize: 12, color: 'var(--gecko-text-secondary)' }}>
             LCB <Icon name="chevronRight" size={12} /> Yard A <Icon name="chevronRight" size={12} /> <span style={{ fontWeight: 600, color: 'var(--gecko-text-primary)' }}>Block A-01</span>
           </div>
 
-          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: 24, background: 'var(--gecko-bg-surface)', border: '1px solid var(--gecko-border)', borderRadius: 12, boxShadow: 'var(--gecko-shadow-sm)' }}>
-            <div style={{ display: 'flex', alignItems: 'center', gap: 16 }}>
+          <div className="gecko-card gecko-card-padded gecko-row gecko-row-between">
+            <div className="gecko-row" style={{ gap: 16 }}>
               <div style={{ width: 64, height: 64, background: 'var(--gecko-primary-100)', color: 'var(--gecko-primary-600)', borderRadius: 12, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
                 <Icon name="grid" size={32} />
               </div>
               <div>
-                <div style={{ fontSize: 11, fontWeight: 700, color: 'var(--gecko-text-secondary)', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Block</div>
+                <div className="gecko-eyebrow">Block</div>
                 <h2 style={{ fontSize: 24, fontWeight: 800, margin: '2px 0' }}>Block A-01</h2>
                 <div style={{ fontSize: 13, color: 'var(--gecko-text-secondary)' }}>Code: A-01 · Path: LCB / A / A-01</div>
               </div>
@@ -572,22 +572,22 @@ export default function LocationsPage() {
           </div>
 
           {/* Stats */}
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 1, background: 'var(--gecko-border)', border: '1px solid var(--gecko-border)', borderRadius: 12, overflow: 'hidden' }}>
-            <div style={{ background: 'var(--gecko-bg-surface)', padding: '20px 24px' }}>
-              <div style={{ fontSize: 11, fontWeight: 700, color: 'var(--gecko-text-secondary)', textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: 8 }}>Capacity</div>
+          <div className="gecko-kpi-strip">
+            <div className="gecko-kpi-cell">
+              <div className="gecko-eyebrow">Capacity</div>
               <div style={{ fontSize: 28, fontWeight: 800 }}>480</div>
-              <div style={{ fontSize: 12, color: 'var(--gecko-text-disabled)', marginTop: 4 }}>TEU slots</div>
+              <div className="gecko-cell-meta">TEU slots</div>
             </div>
-            <div style={{ background: 'var(--gecko-bg-surface)', padding: '20px 24px' }}>
-              <div style={{ fontSize: 11, fontWeight: 700, color: 'var(--gecko-text-secondary)', textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: 8 }}>Occupied</div>
+            <div className="gecko-kpi-cell">
+              <div className="gecko-eyebrow">Occupied</div>
               <div style={{ fontSize: 28, fontWeight: 800 }}>412</div>
             </div>
-            <div style={{ background: 'var(--gecko-bg-surface)', padding: '20px 24px' }}>
-              <div style={{ fontSize: 11, fontWeight: 700, color: 'var(--gecko-text-secondary)', textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: 8 }}>Available</div>
+            <div className="gecko-kpi-cell">
+              <div className="gecko-eyebrow">Available</div>
               <div style={{ fontSize: 28, fontWeight: 800 }}>68</div>
             </div>
-            <div style={{ background: 'var(--gecko-bg-surface)', padding: '20px 24px' }}>
-              <div style={{ fontSize: 11, fontWeight: 700, color: 'var(--gecko-text-secondary)', textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: 8 }}>Utilization</div>
+            <div className="gecko-kpi-cell">
+              <div className="gecko-eyebrow">Utilization</div>
               <div style={{ fontSize: 28, fontWeight: 800 }}>86%</div>
             </div>
           </div>
@@ -661,8 +661,8 @@ export default function LocationsPage() {
               }}>
                 <Icon name="grid" size={22} />
               </div>
-              <div style={{ flex: 1, minWidth: 0 }}>
-                <div style={{ fontSize: 14, fontWeight: 700, color: 'var(--gecko-text-primary)' }}>
+              <div className="gecko-flex-1">
+                <div className="gecko-card-title">
                   Spatial layout lives in the Yard Plan
                 </div>
                 <div style={{ fontSize: 12, color: 'var(--gecko-text-secondary)', marginTop: 4, lineHeight: 1.5 }}>

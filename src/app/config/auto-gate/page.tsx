@@ -330,20 +330,20 @@ export default function AutoGatePage() {
   const webhookUrl = `${WEBHOOK_BASE}?lane=${selected.code}&tenant=${TENANT}&key=${selected.webhookKey}`;
 
   return (
-    <div style={{ maxWidth: 'var(--gecko-container-max)', margin: '0 auto', display: 'flex', flexDirection: 'column', gap: 20, paddingBottom: 40 }}>
+    <div className="gecko-stack gecko-stack-lg" style={{ maxWidth: 'var(--gecko-container-max)', margin: '0 auto', gap: 20, paddingBottom: 40 }}>
 
       {/* Header */}
       <div className="gecko-page-actions">
         <div className="gecko-page-actions-left">
-          <div style={{ display: 'flex', alignItems: 'baseline', gap: 12 }}>
-            <h1 style={{ fontSize: 24, fontWeight: 700, margin: 0, color: 'var(--gecko-text-primary)' }}>Auto-Gate</h1>
+          <div className="gecko-row gecko-row-baseline" style={{ gap: 12 }}>
+            <h1 className="gecko-page-title">Auto-Gate</h1>
             <span className="gecko-count-badge">{lanes.length} lanes</span>
-            <span className="gecko-pill gecko-pill-success" style={{ display: 'inline-flex', alignItems: 'center', gap: 4 }}>
-              <span className="gecko-pulse-dot" style={{ width: 6, height: 6, borderRadius: '50%', background: 'var(--gecko-success-500)' }} />
+            <span className="gecko-pill gecko-pill-success gecko-inline-row" style={{ gap: 4 }}>
+              <span className="gecko-pulse-dot gecko-tone-success-bg" style={{ width: 6, height: 6, borderRadius: '50%' }} />
               {streamPaused ? 'Paused' : 'Listening'}
             </span>
           </div>
-          <div style={{ fontSize: 13, color: 'var(--gecko-text-secondary)', marginTop: 4 }}>
+          <div className="gecko-page-subtitle gecko-mt-1">
             OCR camera webhooks · plate + container number captured by your existing edge hardware (Camco / Cyclone / Hikvision) push directly into Gecko.
           </div>
         </div>
@@ -359,7 +359,7 @@ export default function AutoGatePage() {
       </div>
 
       {/* KPI strip */}
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 12 }}>
+      <div className="gecko-grid-4">
         <div className="gecko-kpi-tile">
           <div className="gecko-kpi-tile-icon gecko-kpi-tile-icon-primary"><Icon name="activity" size={16} /></div>
           <div className="gecko-kpi-tile-value">{totalEvents24h.toLocaleString()}</div>
@@ -386,8 +386,8 @@ export default function AutoGatePage() {
       <div style={{ display: 'grid', gridTemplateColumns: '260px 1fr', gap: 18, alignItems: 'flex-start' }}>
 
         {/* Lane list */}
-        <div style={{ background: 'var(--gecko-bg-surface)', border: '1px solid var(--gecko-border)', borderRadius: 12, overflow: 'hidden' }}>
-          <div style={{ padding: '10px 14px', borderBottom: '1px solid var(--gecko-border)', fontSize: 11, fontWeight: 700, color: 'var(--gecko-text-secondary)', textTransform: 'uppercase', letterSpacing: '0.06em' }}>
+        <div className="gecko-table-card">
+          <div className="gecko-eyebrow" style={{ padding: '10px 14px', borderBottom: '1px solid var(--gecko-border)' }}>
             Gate Lanes
           </div>
           {lanes.map(l => {
@@ -412,8 +412,8 @@ export default function AutoGatePage() {
                 }}
               >
                 <span style={{ width: 8, height: 8, borderRadius: '50%', background: statusTone, flexShrink: 0, boxShadow: l.status === 'green' ? `0 0 6px ${statusTone}` : undefined }} />
-                <div style={{ flex: 1, minWidth: 0 }}>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 2 }}>
+                <div className="gecko-flex-1">
+                  <div className="gecko-row" style={{ gap: 6, marginBottom: 2 }}>
                     <span style={{ fontFamily: 'var(--gecko-font-mono)', fontSize: 13, fontWeight: 700, color: active ? 'var(--gecko-primary-700)' : 'var(--gecko-text-primary)' }}>{l.code}</span>
                     <span style={{ fontSize: 9, fontWeight: 700, color: 'var(--gecko-text-disabled)', textTransform: 'uppercase' }}>{l.direction === 'IN' ? '↓ IN' : '↑ OUT'}</span>
                   </div>
@@ -427,14 +427,14 @@ export default function AutoGatePage() {
         </div>
 
         {/* Lane detail */}
-        <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
+        <div className="gecko-stack" style={{ gap: 14 }}>
 
           {/* Lane header */}
-          <div style={{ background: 'var(--gecko-bg-surface)', border: '1px solid var(--gecko-border)', borderRadius: 12, padding: 18 }}>
-            <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 14 }}>
+          <div className="gecko-card gecko-card-padded">
+            <div className="gecko-row" style={{ gap: 12, marginBottom: 14 }}>
               <Icon name="map" size={20} style={{ color: 'var(--gecko-primary-600)' }} />
-              <div style={{ flex: 1 }}>
-                <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+              <div className="gecko-flex-1">
+                <div className="gecko-row" style={{ gap: 10 }}>
                   <h2 style={{ margin: 0, fontSize: 20, fontWeight: 700, fontFamily: 'var(--gecko-font-mono)', color: 'var(--gecko-text-primary)' }}>{selected.code}</h2>
                   <span className={`gecko-pill gecko-pill-${selected.status === 'green' ? 'success' : selected.status === 'yellow' ? 'warning' : 'danger'}`}>
                     {selected.status === 'green' ? '● HEALTHY' : selected.status === 'yellow' ? '⚠ DEGRADED' : '✕ OFFLINE'}
@@ -449,7 +449,7 @@ export default function AutoGatePage() {
             </div>
 
             {/* Vendor preset */}
-            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 14 }}>
+            <div className="gecko-grid-3" style={{ gap: 14 }}>
               <div className="gecko-field">
                 <div className="gecko-field-label">Vendor preset</div>
                 <select className="gecko-select" value={selected.preset} onChange={e => applyPreset(e.target.value as VendorPreset)}>
@@ -477,7 +477,7 @@ export default function AutoGatePage() {
           </div>
 
           {/* Webhook URL */}
-          <div style={{ background: 'var(--gecko-bg-surface)', border: '1px solid var(--gecko-border)', borderRadius: 12, overflow: 'hidden' }}>
+          <div className="gecko-table-card">
             <div style={{ padding: '14px 18px', borderBottom: '1px solid var(--gecko-border)' }}>
               <div className="gecko-section-header-title">Webhook endpoint</div>
               <div className="gecko-section-header-subtitle">
@@ -485,12 +485,12 @@ export default function AutoGatePage() {
               </div>
             </div>
             <div style={{ padding: 18 }}>
-              <div style={{ display: 'flex', gap: 8, alignItems: 'stretch' }}>
+              <div className="gecko-row" style={{ alignItems: 'stretch' }}>
                 <input
-                  className="gecko-input"
+                  className="gecko-input gecko-flex-1"
                   readOnly
                   value={webhookUrl}
-                  style={{ flex: 1, fontFamily: 'var(--gecko-font-mono)', fontSize: 12, color: 'var(--gecko-text-primary)', background: 'var(--gecko-bg-subtle)' }}
+                  style={{ fontFamily: 'var(--gecko-font-mono)', fontSize: 12, color: 'var(--gecko-text-primary)', background: 'var(--gecko-bg-subtle)' }}
                 />
                 <button
                   className="gecko-btn gecko-btn-outline"
@@ -520,8 +520,8 @@ export default function AutoGatePage() {
           </div>
 
           {/* Field mapping */}
-          <div style={{ background: 'var(--gecko-bg-surface)', border: '1px solid var(--gecko-border)', borderRadius: 12, overflow: 'hidden' }}>
-            <div style={{ padding: '14px 18px', borderBottom: '1px solid var(--gecko-border)', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+          <div className="gecko-table-card">
+            <div className="gecko-row gecko-row-between" style={{ padding: '14px 18px', borderBottom: '1px solid var(--gecko-border)' }}>
               <div>
                 <div className="gecko-section-header-title">Field mapping</div>
                 <div className="gecko-section-header-subtitle">Vendor field paths → Gecko canonical fields. Preset loads sensible defaults — customize as needed.</div>
@@ -535,9 +535,9 @@ export default function AutoGatePage() {
             </div>
             <div style={{ padding: 16 }}>
               <div style={{ display: 'grid', gridTemplateColumns: '1fr 24px 1fr 32px', gap: 8, alignItems: 'center', marginBottom: 6, padding: '0 4px' }}>
-                <div style={{ fontSize: 10, fontWeight: 700, color: 'var(--gecko-text-secondary)', textTransform: 'uppercase', letterSpacing: '0.06em' }}>Vendor field path</div>
+                <div className="gecko-eyebrow">Vendor field path</div>
                 <div />
-                <div style={{ fontSize: 10, fontWeight: 700, color: 'var(--gecko-text-secondary)', textTransform: 'uppercase', letterSpacing: '0.06em' }}>Gecko field</div>
+                <div className="gecko-eyebrow">Gecko field</div>
                 <div />
               </div>
               {selected.mappings.map((m, i) => (
@@ -591,10 +591,10 @@ export default function AutoGatePage() {
       </div>
 
       {/* Live events feed */}
-      <div style={{ background: 'var(--gecko-bg-surface)', border: '1px solid var(--gecko-border)', borderRadius: 12, overflow: 'hidden' }}>
-        <div style={{ padding: '14px 18px', borderBottom: '1px solid var(--gecko-border)', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+      <div className="gecko-table-card">
+        <div className="gecko-row gecko-row-between" style={{ padding: '14px 18px', borderBottom: '1px solid var(--gecko-border)' }}>
           <div>
-            <div className="gecko-section-header-title" style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+            <div className="gecko-section-header-title gecko-row">
               <Icon name="activity" size={14} style={{ color: 'var(--gecko-primary-600)' }} />
               Live events feed
             </div>
@@ -666,7 +666,7 @@ export default function AutoGatePage() {
             boxShadow: '-12px 0 36px rgba(0, 0, 0, 0.18)',
             animation: 'gecko-slide-in-right 220ms ease',
           }}>
-            <div style={{ padding: '16px 20px', borderBottom: '1px solid var(--gecko-border)', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+            <div className="gecko-row gecko-row-between" style={{ padding: '16px 20px', borderBottom: '1px solid var(--gecko-border)' }}>
               <div>
                 <div style={{ fontSize: 11, color: 'var(--gecko-text-secondary)', fontFamily: 'var(--gecko-font-mono)' }}>{inspectorEvent.id}</div>
                 <div style={{ fontSize: 15, fontWeight: 700, marginTop: 2 }}>{inspectorEvent.eventType} · {inspectorEvent.laneCode}</div>
@@ -675,11 +675,11 @@ export default function AutoGatePage() {
                 <Icon name="x" size={14} />
               </button>
             </div>
-            <div style={{ flex: 1, overflowY: 'auto', padding: 20 }}>
+            <div className="gecko-flex-1" style={{ overflowY: 'auto', padding: 20 }}>
               {/* Decoded fields */}
               <div style={{ marginBottom: 18 }}>
-                <div style={{ fontSize: 11, fontWeight: 700, color: 'var(--gecko-text-secondary)', textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: 8 }}>Decoded fields</div>
-                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10 }}>
+                <div className="gecko-eyebrow gecko-mb-2">Decoded fields</div>
+                <div className="gecko-grid-2" style={{ gap: 10 }}>
                   <Field label="Timestamp" value={new Date(inspectorEvent.ts).toLocaleString()} />
                   <Field label="Lane" value={inspectorEvent.laneCode} mono />
                   <Field label="Plate" value={`${inspectorEvent.plate.value} (${(inspectorEvent.plate.confidence * 100).toFixed(0)}%)`} mono />
@@ -695,7 +695,7 @@ export default function AutoGatePage() {
 
               {/* Raw payload */}
               <div>
-                <div style={{ fontSize: 11, fontWeight: 700, color: 'var(--gecko-text-secondary)', textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: 8 }}>Raw payload</div>
+                <div className="gecko-eyebrow gecko-mb-2">Raw payload</div>
                 <pre style={{
                   margin: 0, padding: 14,
                   background: '#0f172a', color: '#e2e8f0',
@@ -716,7 +716,7 @@ export default function AutoGatePage() {
 function Field({ label, value, mono }: { label: string; value: React.ReactNode; mono?: boolean }) {
   return (
     <div>
-      <div style={{ fontSize: 10, fontWeight: 700, color: 'var(--gecko-text-disabled)', textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: 2 }}>{label}</div>
+      <div className="gecko-eyebrow" style={{ color: 'var(--gecko-text-disabled)', marginBottom: 2 }}>{label}</div>
       <div style={{ fontSize: 13, fontWeight: 600, color: 'var(--gecko-text-primary)', fontFamily: mono ? 'var(--gecko-font-mono)' : 'inherit', wordBreak: 'break-word' }}>{value}</div>
     </div>
   );

@@ -174,7 +174,7 @@ export default function VoyageDetailPage() {
   ] as const;
 
   return (
-    <div style={{ maxWidth: 'var(--gecko-container-max)', margin: '0 auto', display: 'flex', flexDirection: 'column', gap: 22, paddingBottom: 40 }}>
+    <div className="gecko-stack" style={{ maxWidth: 'var(--gecko-container-max)', margin: '0 auto', gap: 22, paddingBottom: 40 }}>
 
       {/* Breadcrumb */}
       <nav className="gecko-breadcrumb">
@@ -186,14 +186,14 @@ export default function VoyageDetailPage() {
       </nav>
 
       {/* Page Header */}
-      <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', paddingBottom: 20, borderBottom: '1px solid var(--gecko-border)' }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: 16 }}>
+      <div className="gecko-row gecko-row-between gecko-row-start" style={{ paddingBottom: 20, borderBottom: '1px solid var(--gecko-border)' }}>
+        <div className="gecko-row" style={{ gap: 16 }}>
           <div style={{ width: 48, height: 48, borderRadius: 12, background: lc.bg, border: `2px solid ${lc.dot}44`, display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
             <span style={{ fontSize: 11, fontWeight: 800, color: lc.text }}>{voyage.line}</span>
           </div>
           <div>
-            <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
-              <h1 style={{ fontSize: 22, fontWeight: 800, margin: 0, color: 'var(--gecko-text-primary)', fontFamily: 'var(--gecko-font-mono)' }}>{voyage.id}</h1>
+            <div className="gecko-row" style={{ gap: 12 }}>
+              <h1 className="gecko-page-title" style={{ fontFamily: 'var(--gecko-font-mono)' }}>{voyage.id}</h1>
               <VoyageStatusBadge status={voyage.status} />
               <span style={{
                 fontSize: 10, fontWeight: 700, padding: '2px 8px', borderRadius: 20,
@@ -212,7 +212,7 @@ export default function VoyageDetailPage() {
             </div>
           </div>
         </div>
-        <div style={{ display: 'flex', gap: 8 }}>
+        <div className="gecko-row" style={{ gap: 8 }}>
           <ExportButton resource="Voyage" iconSize={15} />
           <button className="gecko-btn gecko-btn-outline gecko-btn-sm" onClick={() => window.print()}><Icon name="printer" size={15} /> Print Manifest</button>
           <Link href={`/masters/vessels/schedule/new`} className="gecko-btn gecko-btn-primary gecko-btn-sm">
@@ -256,10 +256,10 @@ export default function VoyageDetailPage() {
 
       {/* ── TAB: BOOKINGS ───────────────────────────────────────────────────── */}
       {activeTab === 'bookings' && (
-        <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
+        <div className="gecko-stack" style={{ gap: 16 }}>
 
           {/* Summary strip */}
-          <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap' }}>
+          <div className="gecko-row gecko-row-wrap" style={{ gap: 10 }}>
             {[
               { label: 'All',        value: '',           count: allBookings.length,                                      color: 'var(--gecko-text-secondary)', activeBg: 'var(--gecko-gray-100)' },
               { label: 'Confirmed',  value: 'Confirmed',  count: allBookings.filter(b => b.status === 'Confirmed').length, color: 'var(--gecko-success-700)', activeBg: 'var(--gecko-success-50)' },
@@ -418,14 +418,14 @@ export default function VoyageDetailPage() {
 
       {/* ── TAB: OVERVIEW ───────────────────────────────────────────────────── */}
       {activeTab === 'overview' && (
-        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 20 }}>
+        <div className="gecko-grid-2" style={{ gap: 20 }}>
 
           {/* Identity card */}
-          <div style={{ background: 'var(--gecko-bg-surface)', border: '1px solid var(--gecko-border)', borderRadius: 12, overflow: 'hidden', boxShadow: 'var(--gecko-shadow-sm)' }}>
-            <div style={{ padding: '12px 20px', borderBottom: '1px solid var(--gecko-border)', background: 'var(--gecko-bg-subtle)', fontSize: 12, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.05em', color: 'var(--gecko-text-secondary)' }}>
+          <div className="gecko-table-card">
+            <div className="gecko-eyebrow" style={{ padding: '12px 20px', borderBottom: '1px solid var(--gecko-border)', background: 'var(--gecko-bg-subtle)' }}>
               Voyage Identity
             </div>
-            <div style={{ padding: '16px 20px', display: 'flex', flexDirection: 'column', gap: 12 }}>
+            <div className="gecko-stack" style={{ padding: '16px 20px', gap: 12 }}>
               {[
                 { label: 'Voyage ID',      value: voyage.id,          mono: true  },
                 { label: 'Vessel',         value: voyage.vessel,      mono: false },
@@ -445,11 +445,11 @@ export default function VoyageDetailPage() {
           </div>
 
           {/* Timing card */}
-          <div style={{ background: 'var(--gecko-bg-surface)', border: '1px solid var(--gecko-border)', borderRadius: 12, overflow: 'hidden', boxShadow: 'var(--gecko-shadow-sm)' }}>
-            <div style={{ padding: '12px 20px', borderBottom: '1px solid var(--gecko-border)', background: 'var(--gecko-bg-subtle)', fontSize: 12, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.05em', color: 'var(--gecko-text-secondary)' }}>
+          <div className="gecko-table-card">
+            <div className="gecko-eyebrow" style={{ padding: '12px 20px', borderBottom: '1px solid var(--gecko-border)', background: 'var(--gecko-bg-subtle)' }}>
               Port Call Timing
             </div>
-            <div style={{ padding: '16px 20px', display: 'flex', flexDirection: 'column', gap: 14 }}>
+            <div className="gecko-stack" style={{ padding: '16px 20px', gap: 14 }}>
               {[
                 { label: 'ETD (Departure)',      value: voyage.etd,   color: 'var(--gecko-primary-600)' },
                 { label: 'ETA at Destination',   value: voyage.eta,   color: 'var(--gecko-info-600)'    },
@@ -478,8 +478,8 @@ export default function VoyageDetailPage() {
 
       {/* ── TAB: HISTORY ────────────────────────────────────────────────────── */}
       {activeTab === 'history' && (
-        <div style={{ background: 'var(--gecko-bg-surface)', border: '1px solid var(--gecko-border)', borderRadius: 12, padding: '20px 24px', boxShadow: 'var(--gecko-shadow-sm)' }}>
-          <div style={{ display: 'flex', flexDirection: 'column', gap: 0 }}>
+        <div className="gecko-card gecko-card-padded">
+          <div className="gecko-stack" style={{ gap: 0 }}>
             {[
               { date: '2026-03-12 09:14', user: 'Somchai K.',  action: 'Voyage Created',         detail: `Voyage ${voyage.id} scheduled. Status set to Open.` },
               { date: '2026-03-18 14:32', user: 'Nattaya P.',  action: 'ETD Updated',            detail: 'ETD revised from 2026-04-01 → ' + voyage.etd },
@@ -487,13 +487,13 @@ export default function VoyageDetailPage() {
               { date: '2026-04-01 08:00', user: 'Somchai K.',  action: 'Cut-offs Published',     detail: 'VGM, CY, and Port Closing cut-offs set and notified to agents.' },
               { date: '2026-04-02 16:45', user: 'System Auto', action: 'Status → ' + voyage.status, detail: 'Automatic status update triggered by ETD crossing.' },
             ].map((e, i) => (
-              <div key={i} style={{ display: 'flex', gap: 16, padding: '14px 0', borderBottom: i < 4 ? '1px solid var(--gecko-border)' : 'none' }}>
-                <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', flexShrink: 0 }}>
+              <div key={i} className="gecko-row gecko-row-start" style={{ gap: 16, padding: '14px 0', borderBottom: i < 4 ? '1px solid var(--gecko-border)' : 'none' }}>
+                <div className="gecko-stack" style={{ alignItems: 'center', flexShrink: 0 }}>
                   <div style={{ width: 10, height: 10, borderRadius: '50%', background: i === 4 ? 'var(--gecko-primary-600)' : 'var(--gecko-gray-300)', marginTop: 3 }} />
                   {i < 4 && <div style={{ width: 1, flex: 1, background: 'var(--gecko-border)', marginTop: 6 }} />}
                 </div>
-                <div style={{ flex: 1 }}>
-                  <div style={{ display: 'flex', alignItems: 'baseline', gap: 10, marginBottom: 2 }}>
+                <div className="gecko-flex-1">
+                  <div className="gecko-row gecko-row-baseline" style={{ gap: 10, marginBottom: 2 }}>
                     <span style={{ fontSize: 13, fontWeight: 700, color: 'var(--gecko-text-primary)' }}>{e.action}</span>
                     <span style={{ fontSize: 11, color: 'var(--gecko-text-secondary)' }}>{e.user}</span>
                     <span style={{ fontSize: 11, color: 'var(--gecko-text-disabled)', marginLeft: 'auto', fontFamily: 'var(--gecko-font-mono)' }}>{e.date}</span>

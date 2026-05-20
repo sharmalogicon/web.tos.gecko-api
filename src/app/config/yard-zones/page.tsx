@@ -316,7 +316,7 @@ function BlockPalette({ presets, onAdd }: { presets: Preset[]; onAdd: (p: Preset
               }}
             >
               <span style={{ width: 10, height: 10, borderRadius: 2, background: meta.stroke, display: 'inline-block' }} />
-              <span style={{ display: 'flex', flexDirection: 'column' }}>
+              <span className="gecko-stack" style={{ gap: 0 }}>
                 <span style={{ fontSize: 12, fontWeight: 700 }}>{p.name}</span>
                 <span style={{ fontSize: 10, opacity: 0.75, fontFamily: 'var(--gecko-font-mono)' }}>
                   {p.bays}×{p.rows}×{p.tiers} · {p.bays * p.rows * p.tiers} TEU{p.reeferPlugs ? ` · ${p.reeferPlugs} plugs` : ''}
@@ -334,7 +334,7 @@ function BlockPalette({ presets, onAdd }: { presets: Preset[]; onAdd: (p: Preset
           {(Object.keys(BLOCK_TYPES) as BlockType[]).map(t => {
             const m = BLOCK_TYPES[t];
             return (
-              <div key={t} style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 11 }}>
+              <div key={t} className="gecko-row" style={{ gap: 6, fontSize: 11 }}>
                 <span style={{ width: 14, height: 10, background: m.fill, border: `1px solid ${m.stroke}`, borderRadius: 2 }} />
                 <span style={{ color: 'var(--gecko-text-secondary)' }}>{m.label}</span>
               </div>
@@ -351,7 +351,7 @@ function BlockPalette({ presets, onAdd }: { presets: Preset[]; onAdd: (p: Preset
 function ZoomControl({ zoom, setZoom }: { zoom: number; setZoom: (z: number) => void }) {
   const idx = ZOOM_LEVELS.indexOf(zoom);
   return (
-    <div style={{ display: 'flex', alignItems: 'center', gap: 4, padding: '2px 4px', background: 'var(--gecko-bg-subtle)', borderRadius: 6, border: '1px solid var(--gecko-border)' }}>
+    <div className="gecko-row" style={{ gap: 4, padding: '2px 4px', background: 'var(--gecko-bg-subtle)', borderRadius: 6, border: '1px solid var(--gecko-border)' }}>
       <button
         className="gecko-btn gecko-btn-ghost gecko-btn-icon gecko-btn-sm"
         onClick={() => idx > 0 && setZoom(ZOOM_LEVELS[idx - 1])}

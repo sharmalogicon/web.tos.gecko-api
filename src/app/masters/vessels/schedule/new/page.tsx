@@ -128,7 +128,7 @@ function Field({ label, required, hint, children, span }: {
     <div className="gecko-form-group" style={{ gridColumn: span ? `span ${span}` : undefined }}>
       <label className={`gecko-label${required ? ' gecko-label-required' : ''}`}>{label}</label>
       {children}
-      {hint && <div style={{ fontSize: 11, color: 'var(--gecko-text-secondary)', marginTop: 4 }}>{hint}</div>}
+      {hint && <div className="gecko-helper-text">{hint}</div>}
     </div>
   );
 }
@@ -180,7 +180,7 @@ export default function NewVoyagePage() {
   ];
 
   return (
-    <div style={{ maxWidth: 'var(--gecko-container-max)', margin: '0 auto', display: 'flex', flexDirection: 'column', gap: 22, paddingBottom: 100 }}>
+    <div className="gecko-stack" style={{ maxWidth: 'var(--gecko-container-max)', margin: '0 auto', gap: 22, paddingBottom: 100 }}>
 
       {/* Success toast */}
       {saved && (
@@ -203,14 +203,14 @@ export default function NewVoyagePage() {
       </nav>
 
       <div style={{ paddingBottom: 18, borderBottom: '1px solid var(--gecko-border)' }}>
-        <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between' }}>
+        <div className="gecko-row gecko-row-between gecko-row-start">
           <div>
-            <h1 style={{ fontSize: 22, fontWeight: 700, margin: 0, color: 'var(--gecko-text-primary)' }}>New Voyage Call</h1>
-            <div style={{ fontSize: 13, color: 'var(--gecko-text-secondary)', marginTop: 6 }}>
+            <h1 className="gecko-page-title">New Voyage Call</h1>
+            <div className="gecko-page-subtitle gecko-mt-2">
               Schedule a vessel port call, set cut-off dates, and open the voyage for container bookings.
             </div>
           </div>
-          <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
+          <div className="gecko-row" style={{ gap: 8 }}>
             <span style={{ fontSize: 11, fontWeight: 600, color: 'var(--gecko-info-700)', background: 'var(--gecko-info-50)', border: '1px solid var(--gecko-info-200)', padding: '4px 10px', borderRadius: 20 }}>
               Navis N4 Standard
             </span>
@@ -223,8 +223,8 @@ export default function NewVoyagePage() {
 
       {/* ── SECTION 1: Vessel Identity ─────────────────────────────────────── */}
       <SectionCard title="1 · Vessel Identity" sub="Carrier identity, internal references, agent, and booking type" accent="var(--gecko-primary-500)">
-        <div style={{ display: 'flex', flexDirection: 'column', gap: 18 }}>
-          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr 1fr', gap: 18 }}>
+        <div className="gecko-stack" style={{ gap: 18 }}>
+          <div className="gecko-grid-4" style={{ gap: 18 }}>
             <Field label="Vessel Code" required>
               <div style={{ display: 'flex', gap: 6 }}>
                 <input className="gecko-input" style={{ fontFamily: 'var(--gecko-font-mono)', textTransform: 'uppercase', flex: 1 }}
@@ -259,7 +259,7 @@ export default function NewVoyagePage() {
             </Field>
           </div>
 
-          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr 1fr', gap: 18 }}>
+          <div className="gecko-grid-4" style={{ gap: 18 }}>
             <Field label="Booking Type">
               <select className="gecko-input" value={form.bookingType} onChange={e => set({ bookingType: e.target.value as BookingType })}>
                 <option value="IMPORT">IMPORT</option>
@@ -319,8 +319,8 @@ export default function NewVoyagePage() {
 
       {/* ── SECTION 2: Port Call Timing ────────────────────────────────────── */}
       <SectionCard title="2 · Port Call Timing" sub="ETA → ETB → Commence Load → ETD  (Navis N4 four-timestamp standard)" accent="var(--gecko-info-500)">
-        <div style={{ display: 'flex', flexDirection: 'column', gap: 18 }}>
-          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 18 }}>
+        <div className="gecko-stack" style={{ gap: 18 }}>
+          <div className="gecko-grid-3" style={{ gap: 18 }}>
             <Field label="Port of Loading (POL)" hint="UN/LOCODE">
               <input className="gecko-input" style={{ fontFamily: 'var(--gecko-font-mono)', textTransform: 'uppercase' }}
                 placeholder="e.g. THLCB" value={form.pol}
@@ -338,7 +338,7 @@ export default function NewVoyagePage() {
           </div>
 
           {/* 4-timestamp row with color-coded labels */}
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 18 }}>
+          <div className="gecko-grid-4" style={{ gap: 18 }}>
             {[
               { label: 'ETA', hint: 'Arrival at anchorage / port limits', color: 'var(--gecko-info-600)', key: 'eta' as const },
               { label: 'ETB', hint: 'Estimated Time of Berthing', color: 'var(--gecko-primary-600)', key: 'etb' as const },
@@ -360,7 +360,7 @@ export default function NewVoyagePage() {
 
       {/* ── SECTION 3: Capacity ────────────────────────────────────────────── */}
       <SectionCard title="3 · Berth Capacity" sub="TEU, reefer, OOG, and hazmat slot allocations for this voyage" accent="var(--gecko-success-500)">
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(5, 1fr)', gap: 18 }}>
+        <div className="gecko-grid-5" style={{ gap: 18 }}>
           <Field label="TEU Capacity" hint="Vessel total">
             <input className="gecko-input" type="number" min="0" placeholder="0"
               value={form.teuCapacity} onChange={e => set({ teuCapacity: e.target.value })}
@@ -391,7 +391,7 @@ export default function NewVoyagePage() {
 
       {/* ── SECTION 4: Cargo Cut-offs ──────────────────────────────────────── */}
       <SectionCard title="4 · Cargo Cut-off Dates" sub="ICD CY closing → Port closing → CFS closing, split by cargo type" accent="var(--gecko-warning-500)">
-        <div style={{ display: 'flex', flexDirection: 'column', gap: 0 }}>
+        <div className="gecko-stack" style={{ gap: 0 }}>
 
           {/* Column headers */}
           <div style={{ display: 'grid', gridTemplateColumns: '170px 1fr 1fr 1fr', gap: 12, marginBottom: 10 }}>
@@ -436,7 +436,7 @@ export default function NewVoyagePage() {
           <div style={{ height: 1, background: 'var(--gecko-border)', margin: '14px 0' }} />
 
           {/* Additional standalone cut-offs */}
-          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 18 }}>
+          <div className="gecko-grid-2" style={{ gap: 18 }}>
             <Field label="Empty Return Cut-off" hint="Deadline to return empty containers for this voyage">
               <DateField value={form.emptyReturn} onChange={v => set({ emptyReturn: v })} withTime />
             </Field>
@@ -449,8 +449,8 @@ export default function NewVoyagePage() {
 
       {/* ── SECTION 5: Documentation Cut-offs ─────────────────────────────── */}
       <SectionCard title="5 · Documentation Cut-offs" sub="SOLAS VGM, shipping instructions, B/L, and paperless release" accent="var(--gecko-error-500)">
-        <div style={{ display: 'flex', flexDirection: 'column', gap: 18 }}>
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 18 }}>
+        <div className="gecko-stack" style={{ gap: 18 }}>
+          <div className="gecko-grid-3" style={{ gap: 18 }}>
             <Field label="VGM Cut-off" required hint="SOLAS regulation — mandatory for all laden export containers">
               <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
                 <DateField value={form.vgmCutoff} onChange={v => set({ vgmCutoff: v })} withTime style={{ flex: 1 }} />
@@ -486,7 +486,7 @@ export default function NewVoyagePage() {
 
       {/* ── SECTION 6: Status ─────────────────────────────────────────────── */}
       <SectionCard title="6 · Voyage Status">
-        <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap' }}>
+        <div className="gecko-row gecko-row-wrap" style={{ gap: 10 }}>
           {statusOptions.map(s => {
             const active = form.status === s.value;
             return (

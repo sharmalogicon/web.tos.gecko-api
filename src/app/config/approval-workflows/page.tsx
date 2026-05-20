@@ -129,15 +129,15 @@ export default function ApprovalWorkflowsPage() {
   };
 
   return (
-    <div style={{ maxWidth: 'var(--gecko-container-max)', margin: '0 auto', display: 'flex', flexDirection: 'column', gap: 20, paddingBottom: 40 }}>
+    <div className="gecko-stack gecko-stack-lg" style={{ maxWidth: 'var(--gecko-container-max)', margin: '0 auto', gap: 20, paddingBottom: 40 }}>
 
       <div className="gecko-page-actions">
         <div className="gecko-page-actions-left">
-          <div style={{ display: 'flex', alignItems: 'baseline', gap: 12 }}>
-            <h1 style={{ fontSize: 24, fontWeight: 700, margin: 0, color: 'var(--gecko-text-primary)' }}>Approval Workflows</h1>
+          <div className="gecko-row gecko-row-baseline" style={{ gap: 12 }}>
+            <h1 className="gecko-page-title">Approval Workflows</h1>
             <span className="gecko-count-badge">{workflows.length} workflows</span>
           </div>
-          <div style={{ fontSize: 13, color: 'var(--gecko-text-secondary)', marginTop: 4 }}>
+          <div className="gecko-page-subtitle gecko-mt-1">
             Configurable multi-step approval chains. Drives sign-off on tariffs, rebates, and credit notes.
           </div>
         </div>
@@ -154,8 +154,8 @@ export default function ApprovalWorkflowsPage() {
       <div style={{ display: 'grid', gridTemplateColumns: '320px 1fr', gap: 18, alignItems: 'flex-start' }}>
 
         {/* Left: list */}
-        <div style={{ background: 'var(--gecko-bg-surface)', border: '1px solid var(--gecko-border)', borderRadius: 12, overflow: 'hidden' }}>
-          <div style={{ padding: '10px 14px', borderBottom: '1px solid var(--gecko-border)', fontSize: 11, fontWeight: 700, color: 'var(--gecko-text-secondary)', textTransform: 'uppercase', letterSpacing: '0.06em' }}>
+        <div className="gecko-table-card">
+          <div className="gecko-eyebrow" style={{ padding: '10px 14px', borderBottom: '1px solid var(--gecko-border)' }}>
             All Workflows
           </div>
           {workflows.map(w => {
@@ -173,12 +173,12 @@ export default function ApprovalWorkflowsPage() {
                   display: 'flex', flexDirection: 'column', gap: 4,
                 }}
               >
-                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 6 }}>
+                <div className="gecko-row gecko-row-between" style={{ gap: 6 }}>
                   <span style={{ fontSize: 13, fontWeight: 700, color: active ? 'var(--gecko-primary-700)' : 'var(--gecko-text-primary)' }}>{w.name}</span>
                   {w.isDefault && <span className="gecko-pill gecko-pill-primary" style={{ fontSize: 9 }}>DEFAULT</span>}
                 </div>
                 <div style={{ fontSize: 11, color: 'var(--gecko-text-secondary)', lineHeight: 1.4 }}>{w.description || <em style={{ color: 'var(--gecko-text-disabled)' }}>No description</em>}</div>
-                <div style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 10, color: 'var(--gecko-text-disabled)' }}>
+                <div className="gecko-row" style={{ gap: 6, fontSize: 10, color: 'var(--gecko-text-disabled)' }}>
                   <Icon name="layers" size={10} /> {w.steps.length} step{w.steps.length === 1 ? '' : 's'}
                   <span>·</span>
                   {w.appliesTo.map(a => APPLIES_TO_LABEL[a]).join(', ')}
@@ -190,27 +190,27 @@ export default function ApprovalWorkflowsPage() {
 
         {/* Right: detail */}
         {selected && (
-          <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
+          <div className="gecko-stack gecko-stack-lg">
 
             {/* Header card */}
-            <div style={{ background: 'var(--gecko-bg-surface)', border: '1px solid var(--gecko-border)', borderRadius: 12, padding: 18 }}>
-              <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 14 }}>
+            <div className="gecko-card gecko-card-padded">
+              <div className="gecko-row" style={{ gap: 12, marginBottom: 14 }}>
                 <Icon name="gitBranch" size={20} style={{ color: 'var(--gecko-primary-600)' }} />
-                <h2 style={{ margin: 0, fontSize: 18, fontWeight: 700, color: 'var(--gecko-text-primary)' }}>{selected.name}</h2>
+                <h2 className="gecko-card-title" style={{ margin: 0, fontSize: 18, fontWeight: 700 }}>{selected.name}</h2>
                 {selected.isDefault
                   ? <span className="gecko-pill gecko-pill-primary">DEFAULT</span>
                   : <button className="gecko-btn gecko-btn-ghost gecko-btn-sm" onClick={setAsDefault}>Set as default</button>
                 }
               </div>
 
-              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 14 }}>
+              <div className="gecko-grid-2" style={{ gap: 14 }}>
                 <div className="gecko-field">
                   <div className="gecko-field-label">Name</div>
                   <input className="gecko-input" value={selected.name} onChange={e => updateSelected({ name: e.target.value })} />
                 </div>
                 <div className="gecko-field">
                   <div className="gecko-field-label">Applies To</div>
-                  <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>
+                  <div className="gecko-row gecko-row-wrap" style={{ gap: 6 }}>
                     {(['TARIFF_SCHEDULE', 'REBATE', 'CREDIT_NOTE'] as const).map(a => {
                       const on = selected.appliesTo.includes(a);
                       return (
@@ -244,8 +244,8 @@ export default function ApprovalWorkflowsPage() {
             </div>
 
             {/* Steps */}
-            <div style={{ background: 'var(--gecko-bg-surface)', border: '1px solid var(--gecko-border)', borderRadius: 12, overflow: 'hidden' }}>
-              <div style={{ padding: '14px 18px', borderBottom: '1px solid var(--gecko-border)', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+            <div className="gecko-table-card">
+              <div className="gecko-row gecko-row-between" style={{ padding: '14px 18px', borderBottom: '1px solid var(--gecko-border)' }}>
                 <div>
                   <div className="gecko-section-header-title">Approval steps</div>
                   <div className="gecko-section-header-subtitle">Ordered chain. Each step blocks until approved or auto-skipped.</div>
@@ -255,7 +255,7 @@ export default function ApprovalWorkflowsPage() {
                 </button>
               </div>
 
-              <div style={{ padding: 18, display: 'flex', flexDirection: 'column', gap: 10 }}>
+              <div className="gecko-stack" style={{ padding: 18, gap: 10 }}>
                 {selected.steps.length === 0 && (
                   <div className="gecko-empty-state" style={{ padding: 32 }}>
                     <Icon name="layers" size={28} className="gecko-empty-state-icon" />
@@ -266,9 +266,9 @@ export default function ApprovalWorkflowsPage() {
 
                 {selected.steps.map((s, i) => (
                   <div key={s.id} className="gecko-workflow-step">
-                    <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+                    <div className="gecko-row" style={{ gap: 10 }}>
                       <div className="gecko-workflow-step-num">{i + 1}</div>
-                      <div style={{ flex: 1, display: 'grid', gridTemplateColumns: '2fr 1fr 1fr', gap: 8 }}>
+                      <div className="gecko-flex-1" style={{ display: 'grid', gridTemplateColumns: '2fr 1fr 1fr', gap: 8 }}>
                         <input
                           className="gecko-input gecko-input-sm"
                           value={s.name}
@@ -310,7 +310,7 @@ export default function ApprovalWorkflowsPage() {
                           />
                         )}
                       </div>
-                      <div style={{ display: 'flex', gap: 2 }}>
+                      <div className="gecko-row" style={{ gap: 2 }}>
                         <button className="gecko-btn gecko-btn-ghost gecko-btn-sm gecko-btn-icon" onClick={() => moveStep(s.id, -1)} disabled={i === 0}>
                           <Icon name="chevronUp" size={13} />
                         </button>
@@ -325,8 +325,8 @@ export default function ApprovalWorkflowsPage() {
 
                     {/* Threshold rule */}
                     <div style={{ marginTop: 10, marginLeft: 38, paddingTop: 10, borderTop: '1px dashed var(--gecko-border)' }}>
-                      <div style={{ display: 'flex', alignItems: 'center', gap: 10, flexWrap: 'wrap' }}>
-                        <span style={{ fontSize: 11, fontWeight: 700, color: 'var(--gecko-text-secondary)', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
+                      <div className="gecko-row gecko-row-wrap gecko-stack-md">
+                        <span className="gecko-eyebrow" style={{ letterSpacing: '0.05em' }}>
                           Auto rule:
                         </span>
                         <select
@@ -366,7 +366,7 @@ export default function ApprovalWorkflowsPage() {
               </div>
             </div>
 
-            <div style={{ padding: 14, background: 'var(--gecko-info-50)', border: '1px solid var(--gecko-info-200)', borderRadius: 10, display: 'flex', alignItems: 'flex-start', gap: 10, fontSize: 12, color: 'var(--gecko-info-700)' }}>
+            <div className="gecko-row gecko-row-start" style={{ padding: 14, background: 'var(--gecko-info-50)', border: '1px solid var(--gecko-info-200)', borderRadius: 10, gap: 10, fontSize: 12, color: 'var(--gecko-info-700)' }}>
               <Icon name="info" size={15} style={{ flexShrink: 0, marginTop: 1 }} />
               <div>
                 <strong>AI-future room:</strong> the threshold rule format is structured DSL. Once we ship the AI rate-suggestion engine,

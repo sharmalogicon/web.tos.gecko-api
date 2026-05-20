@@ -295,11 +295,10 @@ const INITIAL_PARTNERS: Partner[] = [
 
 function Badge({ label, bg, color }: { label: string; bg: string; color: string }) {
   return (
-    <span style={{
-      display: 'inline-flex', alignItems: 'center',
+    <span className="gecko-inline-row" style={{
       fontSize: 10, fontWeight: 700, letterSpacing: '0.04em',
       padding: '2px 7px', borderRadius: 4, background: bg, color,
-      whiteSpace: 'nowrap', lineHeight: 1.6,
+      whiteSpace: 'nowrap', lineHeight: 1.6, gap: 0,
     }}>
       {label}
     </span>
@@ -310,12 +309,11 @@ function StatusDot({ status }: { status: PartnerStatus }) {
   const dotColor = status === 'Active' ? 'var(--gecko-success-500)' : status === 'Error' ? 'var(--gecko-error-500)' : 'var(--gecko-text-disabled)';
   const { bg, color } = STATUS_COLORS[status];
   return (
-    <span style={{
-      display: 'inline-flex', alignItems: 'center', gap: 5,
+    <span className="gecko-inline-row" style={{
       fontSize: 10, fontWeight: 700, letterSpacing: '0.04em',
-      padding: '2px 7px', borderRadius: 4, background: bg, color,
+      padding: '2px 7px', borderRadius: 4, background: bg, color, gap: 5,
     }}>
-      <span style={{ width: 6, height: 6, borderRadius: '50%', background: dotColor, display: 'inline-block', flexShrink: 0 }} />
+      <span className="gecko-flex-shrink-0" style={{ width: 6, height: 6, borderRadius: '50%', background: dotColor, display: 'inline-block' }} />
       {status}
     </span>
   );
@@ -323,17 +321,14 @@ function StatusDot({ status }: { status: PartnerStatus }) {
 
 function SectionLabel({ children }: { children: React.ReactNode }) {
   return (
-    <div style={{
-      fontSize: 10, fontWeight: 700, letterSpacing: '0.08em', textTransform: 'uppercase',
-      color: 'var(--gecko-text-secondary)', marginBottom: 8,
-    }}>
+    <div className="gecko-eyebrow gecko-mb-2">
       {children}
     </div>
   );
 }
 
 function Divider() {
-  return <div style={{ height: 1, background: 'var(--gecko-border)', margin: '4px 0' }} />;
+  return <div className="gecko-section-divider" />;
 }
 
 function KpiCard({ label, value, sub, accent, icon }: { label: string; value: string | number; sub?: string; accent?: string; icon: string }) {
@@ -346,7 +341,7 @@ function KpiCard({ label, value, sub, accent, icon }: { label: string; value: st
         borderTop: `3px solid ${accent ?? 'var(--gecko-primary-500)'}`,
       }}
     >
-      <div className="gecko-row" style={{ gap: 6, marginBottom: 6 }}>
+      <div className="gecko-row gecko-mb-2" style={{ gap: 6 }}>
         <Icon name={icon} size={13} style={{ color: accent ?? 'var(--gecko-primary-500)' }} />
         <span className="gecko-eyebrow">
           {label}
@@ -433,12 +428,12 @@ export default function EdiPartnersPage() {
   const panelOpen = (selectedId !== null || showAdd) && !!(selectedPartner || showAdd);
 
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--gecko-space-4)' }}>
+    <div className="gecko-stack" style={{ gap: 'var(--gecko-space-4)' }}>
 
       {/* ── Page Header ── */}
       <div className="gecko-page-header">
         <div className="gecko-page-header-left">
-          <div className="gecko-row" style={{ gap: 10, marginBottom: 4 }}>
+          <div className="gecko-row gecko-mb-1" style={{ gap: 10 }}>
             <h1 className="gecko-page-title">EDI Partners</h1>
             <Badge label="Config" bg="var(--gecko-primary-50)" color="var(--gecko-primary-700)" />
           </div>
@@ -448,14 +443,12 @@ export default function EdiPartnersPage() {
         </div>
         <div className="gecko-page-header-actions">
           <button
-            className="gecko-btn gecko-btn-outline gecko-btn-sm gecko-inline-row"
-            style={{ gap: 6 }}>
+            className="gecko-btn gecko-btn-outline gecko-btn-sm gecko-inline-row">
             <Icon name="download" size={14} /> Export
           </button>
           <button
             className="gecko-btn gecko-btn-primary gecko-btn-sm gecko-inline-row"
-            onClick={() => { setShowAdd(true); setSelectedId(null); }}
-            style={{ gap: 6 }}>
+            onClick={() => { setShowAdd(true); setSelectedId(null); }}>
             <Icon name="plus" size={14} /> Add Partner
           </button>
         </div>
@@ -501,7 +494,7 @@ export default function EdiPartnersPage() {
       {/* Actually handled via the sub prop — replaced with span below by reimplementing */}
 
       {/* ── Main layout: table + detail panel ── */}
-      <div className="gecko-row gecko-row-start" style={{ gap: 16 }}>
+      <div className="gecko-row gecko-row-start gecko-stack-lg">
 
         {/* ── Partner Table ── */}
         <div className="gecko-table-card gecko-flex-1">
@@ -563,7 +556,7 @@ export default function EdiPartnersPage() {
               }} />
             </div>
 
-            <div style={{ marginLeft: 'auto', fontSize: 11, color: 'var(--gecko-text-secondary)' }}>
+            <div className="gecko-ml-auto" style={{ fontSize: 11, color: 'var(--gecko-text-secondary)' }}>
               {filtered.length} partner{filtered.length !== 1 ? 's' : ''}
             </div>
           </div>
@@ -657,14 +650,14 @@ export default function EdiPartnersPage() {
 
                       {/* Last Activity */}
                       <td style={{ padding: '10px 14px', whiteSpace: 'nowrap' }}>
-                        <div style={{ fontSize: 12, color: 'var(--gecko-text-primary)' }}>{p.lastActivity}</div>
+                        <div className="gecko-cell-primary">{p.lastActivity}</div>
                         {p.msgsToday > 0 && (
-                          <div style={{ fontSize: 10, color: 'var(--gecko-text-secondary)', marginTop: 2 }}>
+                          <div className="gecko-cell-sub" style={{ fontFamily: 'inherit' }}>
                             {p.msgsToday} msgs today
                           </div>
                         )}
                         {p.msgsToday === 0 && p.lastActivity !== '—' && (
-                          <div style={{ fontSize: 10, color: 'var(--gecko-error-500)', marginTop: 2 }}>No msgs today</div>
+                          <div className="gecko-cell-sub" style={{ fontFamily: 'inherit', color: 'var(--gecko-error-500)' }}>No msgs today</div>
                         )}
                       </td>
 
@@ -675,11 +668,11 @@ export default function EdiPartnersPage() {
 
                       {/* Actions */}
                       <td style={{ padding: '10px 14px' }}>
-                        <div className="gecko-row" style={{ gap: 4 }}>
+                        <div className="gecko-row gecko-stack-xs">
                           <button
                             className="gecko-btn gecko-btn-outline gecko-btn-sm gecko-inline-row"
                             onClick={e => { e.stopPropagation(); setSelectedId(p.id); setShowAdd(false); setConnTestState('idle'); }}
-                            style={{ gap: 5, fontSize: 11 }}>
+                            style={{ fontSize: 11 }}>
                             <Icon name="settings" size={12} /> Configure
                           </button>
                           <button
@@ -698,14 +691,13 @@ export default function EdiPartnersPage() {
           </div>
 
           {/* Table footer */}
-          <div style={{
+          <div className="gecko-row" style={{
             padding: '8px 16px', borderTop: '1px solid var(--gecko-border)',
-            display: 'flex', alignItems: 'center', gap: 8,
             fontSize: 11, color: 'var(--gecko-text-secondary)',
           }}>
             <Icon name="info" size={13} />
             Click a row to view and edit the partner&apos;s connection profile.
-            <span style={{ marginLeft: 'auto', display: 'flex', alignItems: 'center', gap: 5 }}>
+            <span className="gecko-inline-row gecko-ml-auto" style={{ gap: 5 }}>
               <span style={{ width: 7, height: 7, borderRadius: '50%', background: 'var(--gecko-success-500)', display: 'inline-block' }} />
               Live sync active
             </span>
@@ -714,23 +706,21 @@ export default function EdiPartnersPage() {
 
         {/* ── Detail / Add Panel ── */}
         {panelOpen && (
-          <div style={{
-            width: 340, flexShrink: 0,
+          <div className="gecko-stack gecko-flex-shrink-0" style={{
+            width: 340, gap: 0,
             background: 'var(--gecko-bg-surface)',
             border: '1px solid var(--gecko-border)',
             borderRadius: 10, overflow: 'hidden',
             position: 'sticky', top: 80,
             boxShadow: '0 4px 20px rgba(0,0,0,0.10)',
             maxHeight: 'calc(100vh - 100px)',
-            display: 'flex', flexDirection: 'column',
           }}>
 
             {/* ── ADD PANEL ── */}
             {showAdd && (
               <>
-                <div style={{
+                <div className="gecko-row gecko-row-between" style={{
                   padding: '12px 16px', borderBottom: '1px solid var(--gecko-border)',
-                  display: 'flex', alignItems: 'center', justifyContent: 'space-between',
                   background: 'var(--gecko-primary-600)',
                 }}>
                   <div>
@@ -745,7 +735,7 @@ export default function EdiPartnersPage() {
                   </button>
                 </div>
 
-                <div style={{ padding: 16, flex: 1, overflowY: 'auto', display: 'flex', flexDirection: 'column', gap: 14 }}>
+                <div className="gecko-stack" style={{ padding: 16, flex: 1, overflowY: 'auto', gap: 14 }}>
                   <div>
                     <SectionLabel>Partner Name</SectionLabel>
                     <input
@@ -807,10 +797,9 @@ export default function EdiPartnersPage() {
                     </div>
                   </div>
 
-                  <div style={{
+                  <div className="gecko-row gecko-row-start" style={{
                     padding: '10px 12px', borderRadius: 8,
                     background: 'var(--gecko-primary-50)', border: '1px solid var(--gecko-primary-100)',
-                    display: 'flex', gap: 8, alignItems: 'flex-start',
                   }}>
                     <Icon name="info" size={14} style={{ color: 'var(--gecko-primary-600)', flexShrink: 0, marginTop: 1 }} />
                     <span style={{ fontSize: 11, color: 'var(--gecko-primary-800)', lineHeight: 1.5 }}>
@@ -819,17 +808,15 @@ export default function EdiPartnersPage() {
                   </div>
                 </div>
 
-                <div style={{
+                <div className="gecko-action-toolbar" style={{
                   padding: '12px 16px', borderTop: '1px solid var(--gecko-border)',
-                  display: 'flex', gap: 8, justifyContent: 'flex-end',
                   background: 'var(--gecko-bg-subtle)',
                 }}>
                   <button className="gecko-btn gecko-btn-ghost gecko-btn-sm" onClick={() => setShowAdd(false)}>Cancel</button>
                   <button
-                    className="gecko-btn gecko-btn-primary gecko-btn-sm"
+                    className="gecko-btn gecko-btn-primary gecko-btn-sm gecko-inline-row"
                     onClick={handleAddPartner}
-                    disabled={!addName.trim() || !addCode.trim()}
-                    style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+                    disabled={!addName.trim() || !addCode.trim()}>
                     <Icon name="plus" size={13} /> Save Partner
                   </button>
                 </div>
@@ -843,12 +830,12 @@ export default function EdiPartnersPage() {
               return (
                 <>
                   {/* Panel header */}
-                  <div style={{
+                  <div className="gecko-flex-shrink-0" style={{
                     padding: '12px 16px', borderBottom: '1px solid var(--gecko-border)',
-                    background: headerBg, flexShrink: 0,
+                    background: headerBg,
                   }}>
-                    <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: 8 }}>
-                      <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+                    <div className="gecko-row gecko-row-between gecko-row-start">
+                      <div className="gecko-row" style={{ gap: 10 }}>
                         <div style={{
                           width: 36, height: 36, borderRadius: 8,
                           background: 'rgba(255,255,255,0.2)',
@@ -859,7 +846,7 @@ export default function EdiPartnersPage() {
                         </div>
                         <div>
                           <div style={{ fontSize: 14, fontWeight: 700, color: '#fff', lineHeight: 1.2 }}>{p.name}</div>
-                          <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginTop: 4 }}>
+                          <div className="gecko-row gecko-mt-1" style={{ gap: 6 }}>
                             <span style={{
                               fontSize: 10, fontFamily: 'monospace', fontWeight: 700,
                               color: 'rgba(255,255,255,0.8)',
@@ -891,7 +878,7 @@ export default function EdiPartnersPage() {
                   </div>
 
                   {/* Scrollable body */}
-                  <div style={{ flex: 1, overflowY: 'auto', padding: 16, display: 'flex', flexDirection: 'column', gap: 18 }}>
+                  <div className="gecko-stack" style={{ flex: 1, overflowY: 'auto', padding: 16, gap: 18 }}>
 
                     {/* ── Connection Settings ── */}
                     <div>
@@ -906,8 +893,7 @@ export default function EdiPartnersPage() {
                           { label: 'Port',    value: String(p.port), badge: false },
                           { label: 'Username', value: p.username,  badge: false },
                         ].map(({ label, value, badge }, i) => (
-                          <div key={label} style={{
-                            display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+                          <div key={label} className="gecko-row gecko-row-between" style={{
                             padding: '7px 12px',
                             borderBottom: i < 3 ? '1px solid var(--gecko-border)' : 'none',
                           }}>
@@ -921,12 +907,11 @@ export default function EdiPartnersPage() {
                         ))}
 
                         {/* Password */}
-                        <div style={{
-                          display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+                        <div className="gecko-row gecko-row-between" style={{
                           padding: '7px 12px', borderTop: '1px solid var(--gecko-border)',
                         }}>
                           <span style={{ fontSize: 11, color: 'var(--gecko-text-secondary)', fontWeight: 500 }}>Password</span>
-                          <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+                          <div className="gecko-row" style={{ gap: 6 }}>
                             <span style={{ fontSize: 12, fontWeight: 600, color: 'var(--gecko-text-primary)', fontFamily: 'monospace', letterSpacing: '0.12em' }}>
                               {showPassword ? 'L0g!c0n_s3cure' : '••••••••'}
                             </span>
@@ -945,8 +930,7 @@ export default function EdiPartnersPage() {
                           { label: 'Inbound Dir',  value: p.inboundDir  },
                           { label: 'Outbound Dir', value: p.outboundDir },
                         ].map(({ label, value }) => (
-                          <div key={label} style={{
-                            display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+                          <div key={label} className="gecko-row gecko-row-between" style={{
                             padding: '7px 12px', borderTop: '1px solid var(--gecko-border)',
                           }}>
                             <span style={{ fontSize: 11, color: 'var(--gecko-text-secondary)', fontWeight: 500 }}>{label}</span>
@@ -956,12 +940,11 @@ export default function EdiPartnersPage() {
                       </div>
 
                       {/* Test Connection */}
-                      <div style={{ marginTop: 10, display: 'flex', alignItems: 'center', gap: 8 }}>
+                      <div className="gecko-row gecko-mt-3">
                         <button
-                          className="gecko-btn gecko-btn-outline gecko-btn-sm"
+                          className="gecko-btn gecko-btn-outline gecko-btn-sm gecko-inline-row"
                           onClick={handleTestConnection}
-                          disabled={connTestState === 'testing'}
-                          style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+                          disabled={connTestState === 'testing'}>
                           {connTestState === 'testing' ? (
                             <><Icon name="refresh" size={13} style={{ animation: 'spin 1s linear infinite' }} /> Testing…</>
                           ) : (
@@ -969,12 +952,12 @@ export default function EdiPartnersPage() {
                           )}
                         </button>
                         {connTestState === 'ok' && (
-                          <span style={{ fontSize: 12, color: 'var(--gecko-success-600)', display: 'flex', alignItems: 'center', gap: 5, fontWeight: 600 }}>
+                          <span className="gecko-inline-row" style={{ fontSize: 12, color: 'var(--gecko-success-600)', fontWeight: 600, gap: 5 }}>
                             <Icon name="checkCircle" size={14} /> Connected
                           </span>
                         )}
                         {connTestState === 'fail' && (
-                          <span style={{ fontSize: 12, color: 'var(--gecko-error-600)', display: 'flex', alignItems: 'center', gap: 5, fontWeight: 600 }}>
+                          <span className="gecko-inline-row" style={{ fontSize: 12, color: 'var(--gecko-error-600)', fontWeight: 600, gap: 5 }}>
                             <Icon name="alertCircle" size={14} /> Failed
                           </span>
                         )}
@@ -986,15 +969,14 @@ export default function EdiPartnersPage() {
                     {/* ── Message Types ── */}
                     <div>
                       <SectionLabel>Message Types</SectionLabel>
-                      <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+                      <div className="gecko-stack" style={{ gap: 6 }}>
                         {p.msgTypes.map(m => (
-                          <div key={m.code} style={{
-                            display: 'flex', alignItems: 'center', gap: 8,
+                          <div key={m.code} className="gecko-row" style={{
                             padding: '8px 10px', borderRadius: 7,
                             background: 'var(--gecko-bg-subtle)', border: '1px solid var(--gecko-border)',
                           }}>
-                            <div style={{ flex: 1, minWidth: 0 }}>
-                              <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+                            <div className="gecko-flex-1">
+                              <div className="gecko-row" style={{ gap: 6 }}>
                                 <span style={{ fontSize: 11, fontWeight: 700, fontFamily: 'monospace', color: 'var(--gecko-text-primary)' }}>{m.code}</span>
                                 <span style={{
                                   fontSize: 9, fontWeight: 700, padding: '1px 5px', borderRadius: 3,
@@ -1034,10 +1016,9 @@ export default function EdiPartnersPage() {
                     {/* ── Activity Log ── */}
                     <div>
                       <SectionLabel>Recent Activity</SectionLabel>
-                      <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
+                      <div className="gecko-stack gecko-stack-xs">
                         {p.activityLog.map((entry, i) => (
-                          <div key={i} style={{
-                            display: 'flex', alignItems: 'center', gap: 8,
+                          <div key={i} className="gecko-row" style={{
                             padding: '6px 10px', borderRadius: 6,
                             background: 'var(--gecko-bg-subtle)', border: '1px solid var(--gecko-border)',
                           }}>
@@ -1046,8 +1027,8 @@ export default function EdiPartnersPage() {
                               size={13}
                               style={{ color: entry.direction === 'IN' ? 'var(--gecko-primary-500)' : 'var(--gecko-success-500)', flexShrink: 0 }}
                             />
-                            <div style={{ flex: 1, minWidth: 0 }}>
-                              <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+                            <div className="gecko-flex-1">
+                              <div className="gecko-row" style={{ gap: 6 }}>
                                 <span style={{ fontSize: 11, fontWeight: 700, fontFamily: 'monospace', color: 'var(--gecko-text-primary)' }}>{entry.msgType}</span>
                                 <span style={{
                                   fontSize: 9, fontWeight: 700, padding: '1px 5px', borderRadius: 3,
@@ -1067,21 +1048,20 @@ export default function EdiPartnersPage() {
                   </div>
 
                   {/* Panel footer */}
-                  <div style={{
+                  <div className="gecko-row" style={{
                     padding: '12px 16px', borderTop: '1px solid var(--gecko-border)',
-                    display: 'flex', gap: 8,
                     background: 'var(--gecko-bg-subtle)', flexShrink: 0,
                   }}>
                     <Link href={`/config/edi-partners/${selectedPartner?.id ?? ''}`} style={{ flex: 1, textDecoration: 'none' }}>
                       <button
-                        className="gecko-btn gecko-btn-outline gecko-btn-sm"
-                        style={{ width: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6 }}>
+                        className="gecko-btn gecko-btn-outline gecko-btn-sm gecko-inline-row"
+                        style={{ width: '100%', justifyContent: 'center' }}>
                         <Icon name="edit" size={13} /> Edit Full Profile
                       </button>
                     </Link>
                     <button
-                      className="gecko-btn gecko-btn-ghost gecko-btn-sm"
-                      style={{ color: 'var(--gecko-error-600)', display: 'flex', alignItems: 'center', gap: 6 }}>
+                      className="gecko-btn gecko-btn-ghost gecko-btn-sm gecko-inline-row"
+                      style={{ color: 'var(--gecko-error-600)' }}>
                       <Icon name="x" size={13} /> Disable
                     </button>
                   </div>
@@ -1093,12 +1073,12 @@ export default function EdiPartnersPage() {
       </div>
 
       {/* ── Info banner ── */}
-      <div style={{
+      <div className="gecko-row gecko-row-start" style={{
         padding: '11px 16px',
         background: 'var(--gecko-primary-50)',
         border: '1px solid var(--gecko-primary-100)',
         borderRadius: 8,
-        display: 'flex', gap: 12, alignItems: 'flex-start',
+        gap: 12,
       }}>
         <Icon name="shieldCheck" size={15} style={{ color: 'var(--gecko-primary-600)', flexShrink: 0, marginTop: 1 }} />
         <div style={{ fontSize: 12, color: 'var(--gecko-primary-800)', lineHeight: 1.6 }}>

@@ -165,7 +165,7 @@ function MovementNode({ movement, isSelected, onClick }: {
       <div style={{ height: 4, background: col.bg }} />
 
       {/* Seq + EDI flag */}
-      <div style={{ padding: '12px 14px 0', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+      <div className="gecko-row gecko-row-between" style={{ padding: '12px 14px 0' }}>
         <div style={{
           width: 28, height: 28, borderRadius: 8, fontSize: 14, fontWeight: 800,
           background: col.bg, color: '#fff',
@@ -181,7 +181,7 @@ function MovementNode({ movement, isSelected, onClick }: {
       </div>
 
       {/* Icon + code + name */}
-      <div style={{ padding: '10px 14px', display: 'flex', alignItems: 'center', gap: 10 }}>
+      <div className="gecko-row" style={{ padding: '10px 14px', gap: 10 }}>
         <div style={{ width: 34, height: 34, borderRadius: 9, flexShrink: 0, border: `1.5px solid ${col.border}`, background: col.light, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
           <Icon name={icon} size={15} style={{ color: col.bg }} />
         </div>
@@ -206,13 +206,13 @@ function MovementNode({ movement, isSelected, onClick }: {
       )}
 
       {/* Footer: charge counts */}
-      <div style={{ padding: '8px 14px 12px', borderTop: '1px solid var(--gecko-border)', display: 'flex', gap: 12, marginTop: 2 }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: 4, fontSize: 10, fontWeight: 600, color: isSelected ? col.bg : 'var(--gecko-text-secondary)' }}>
+      <div className="gecko-row" style={{ padding: '8px 14px 12px', borderTop: '1px solid var(--gecko-border)', gap: 12, marginTop: 2 }}>
+        <div className="gecko-row" style={{ gap: 4, fontSize: 10, fontWeight: 600, color: isSelected ? col.bg : 'var(--gecko-text-secondary)' }}>
           <Icon name="fileText" size={10} />
           {movement.charges.length} charges
         </div>
         {movement.vasCharges.length > 0 && (
-          <div style={{ display: 'flex', alignItems: 'center', gap: 4, fontSize: 10, fontWeight: 600, color: isSelected ? col.bg : 'var(--gecko-text-secondary)' }}>
+          <div className="gecko-row" style={{ gap: 4, fontSize: 10, fontWeight: 600, color: isSelected ? col.bg : 'var(--gecko-text-secondary)' }}>
             <Icon name="tag" size={10} />
             {movement.vasCharges.length} VAS
           </div>
@@ -249,7 +249,7 @@ function ChargesPanel({ movement, applicableCharges, applicableVAS, onToggleChar
   );
 
   const ColHeader = ({ children }: { children: React.ReactNode }) => (
-    <div style={{ fontSize: 10, fontWeight: 700, color: 'var(--gecko-text-secondary)', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
+    <div className="gecko-eyebrow">
       {children}
     </div>
   );
@@ -300,8 +300,8 @@ function ChargesPanel({ movement, applicableCharges, applicableVAS, onToggleChar
 
         {/* Regular Charges */}
         <div style={{ padding: '18px 20px', borderRight: '1px solid var(--gecko-border)' }}>
-          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 14 }}>
-            <div style={{ fontSize: 13, fontWeight: 700, color: 'var(--gecko-text-primary)', display: 'flex', alignItems: 'center', gap: 6 }}>
+          <div className="gecko-row gecko-row-between gecko-mb-3">
+            <div className="gecko-row" style={{ fontSize: 13, fontWeight: 700, color: 'var(--gecko-text-primary)', gap: 6 }}>
               <Icon name="fileText" size={14} style={{ color: col.bg }} />
               Regular Charges
             </div>
@@ -313,7 +313,7 @@ function ChargesPanel({ movement, applicableCharges, applicableVAS, onToggleChar
           {movement.charges.length === 0 ? (
             <div style={{ fontSize: 12, color: 'var(--gecko-text-disabled)', textAlign: 'center', padding: '24px 0' }}>No charges configured</div>
           ) : (
-            <div style={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
+            <div className="gecko-stack" style={{ gap: 2 }}>
               <div style={{ display: 'grid', gridTemplateColumns: '22px 1fr 72px 90px 36px', gap: 8, padding: '5px 8px', background: 'var(--gecko-bg-subtle)', borderRadius: 6, marginBottom: 4, alignItems: 'center' }}>
                 <div />
                 <ColHeader>Charge Code</ColHeader>
@@ -354,8 +354,8 @@ function ChargesPanel({ movement, applicableCharges, applicableVAS, onToggleChar
 
         {/* VAS Charges */}
         <div style={{ padding: '18px 20px' }}>
-          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 14 }}>
-            <div style={{ fontSize: 13, fontWeight: 700, color: 'var(--gecko-text-primary)', display: 'flex', alignItems: 'center', gap: 6 }}>
+          <div className="gecko-row gecko-row-between gecko-mb-3">
+            <div className="gecko-row" style={{ fontSize: 13, fontWeight: 700, color: 'var(--gecko-text-primary)', gap: 6 }}>
               <Icon name="tag" size={14} style={{ color: 'var(--gecko-accent-600)' }} />
               VAS Charges
             </div>
@@ -369,7 +369,7 @@ function ChargesPanel({ movement, applicableCharges, applicableVAS, onToggleChar
               No VAS charges for this movement
             </div>
           ) : (
-            <div style={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
+            <div className="gecko-stack" style={{ gap: 2 }}>
               <div style={{ display: 'grid', gridTemplateColumns: '22px 1fr 72px 90px 50px', gap: 8, padding: '5px 8px', background: 'var(--gecko-bg-subtle)', borderRadius: 6, marginBottom: 4, alignItems: 'center' }}>
                 <div />
                 <ColHeader>VAS Code</ColHeader>

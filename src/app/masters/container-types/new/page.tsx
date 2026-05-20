@@ -132,14 +132,14 @@ function PreviewCard({ form }: { form: FormState }) {
 
       {/* Info area */}
       <div style={{ padding: 16, flex: 1 }}>
-        <h3 style={{ fontSize: 16, fontWeight: 700, margin: '0 0 4px 0', color: 'var(--gecko-text-primary)' }}>
+        <h3 className="gecko-card-title" style={{ fontSize: 16, margin: '0 0 4px 0' }}>
           {form.commonName || <span style={{ color: 'var(--gecko-text-disabled)' }}>Common Name</span>}
         </h3>
         <div style={{ fontSize: 12, color: 'var(--gecko-text-secondary)', marginBottom: 16 }}>
           {dims} {form.category ? `· ${form.category}` : ''}
         </div>
 
-        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16 }}>
+        <div className="gecko-grid-2" style={{ gap: 16 }}>
           <div>
             <div style={{ fontSize: 10, fontWeight: 700, color: 'var(--gecko-text-disabled)', textTransform: 'uppercase' }}>Payload</div>
             <div style={{ fontSize: 13, fontWeight: 600, fontFamily: 'var(--gecko-font-mono)' }}>
@@ -252,7 +252,7 @@ function Field({
     <div className="gecko-form-group" style={{ gridColumn: span ? `span ${span}` : undefined }}>
       <label className={`gecko-label${required ? ' gecko-label-required' : ''}`}>{label}</label>
       {children}
-      {hint && <div style={{ fontSize: 11, color: 'var(--gecko-text-secondary)', marginTop: 4 }}>{hint}</div>}
+      {hint && <div className="gecko-helper-text">{hint}</div>}
     </div>
   );
 }
@@ -326,7 +326,7 @@ export default function NewContainerTypePage() {
   const canSave = form.isoTypeCode.trim().length === 4 && form.category !== '' && form.commonName.trim() !== '';
 
   return (
-    <div style={{ maxWidth: 'var(--gecko-container-max)', margin: '0 auto', display: 'flex', flexDirection: 'column', gap: 24, paddingBottom: 80 }}>
+    <div className="gecko-stack" style={{ maxWidth: 'var(--gecko-container-max)', margin: '0 auto', gap: 24, paddingBottom: 80 }}>
 
       {/* Breadcrumb */}
       <nav className="gecko-breadcrumb" aria-label="Breadcrumb">
@@ -339,16 +339,17 @@ export default function NewContainerTypePage() {
 
       {/* Page header */}
       <div style={{ paddingBottom: 20, borderBottom: '1px solid var(--gecko-border)' }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 6 }}>
+        <div className="gecko-row gecko-mb-1" style={{ gap: 10 }}>
           <Link
             href="/masters/container-types"
-            style={{ display: 'inline-flex', alignItems: 'center', justifyContent: 'center', width: 32, height: 32, borderRadius: 8, border: '1px solid var(--gecko-border)', background: 'var(--gecko-bg-surface)', color: 'var(--gecko-text-secondary)', textDecoration: 'none' }}
+            className="gecko-mini-icon gecko-mini-icon-neutral"
+            style={{ textDecoration: 'none' }}
           >
             <Icon name="arrowLeft" size={15} />
           </Link>
-          <h1 style={{ fontSize: 22, fontWeight: 700, margin: 0, color: 'var(--gecko-text-primary)' }}>New ISO Container Type</h1>
+          <h1 className="gecko-page-title">New ISO Container Type</h1>
         </div>
-        <div style={{ fontSize: 13, color: 'var(--gecko-text-secondary)', paddingLeft: 42 }}>
+        <div className="gecko-page-subtitle" style={{ paddingLeft: 42 }}>
           Define a new ISO 6346 container type. It will become available in the rate matrix, yard slot dimensions, and vessel stow planning.
         </div>
       </div>
@@ -357,7 +358,7 @@ export default function NewContainerTypePage() {
       <div style={{ display: 'grid', gridTemplateColumns: '1fr 320px', gap: 28, alignItems: 'start' }}>
 
         {/* ── LEFT: form ── */}
-        <div style={{ display: 'flex', flexDirection: 'column', gap: 28 }}>
+        <div className="gecko-stack" style={{ gap: 28 }}>
 
           {/* Section: ISO Identity */}
           <div style={{ background: 'var(--gecko-bg-surface)', border: '1px solid var(--gecko-border)', borderRadius: 12, padding: '22px 24px', boxShadow: 'var(--gecko-shadow-sm)' }}>
@@ -413,7 +414,7 @@ export default function NewContainerTypePage() {
           {/* Section: Dimensions */}
           <div style={{ background: 'var(--gecko-bg-surface)', border: '1px solid var(--gecko-border)', borderRadius: 12, padding: '22px 24px', boxShadow: 'var(--gecko-shadow-sm)' }}>
             <SectionHead>Dimensions</SectionHead>
-            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 16 }}>
+            <div className="gecko-grid-3" style={{ gap: 16 }}>
 
               <Field label="Nominal Length">
                 <select className="gecko-input" value={form.nominalLength} onChange={e => set({ nominalLength: e.target.value })}>
@@ -449,7 +450,7 @@ export default function NewContainerTypePage() {
           {/* Section: Weights */}
           <div style={{ background: 'var(--gecko-bg-surface)', border: '1px solid var(--gecko-border)', borderRadius: 12, padding: '22px 24px', boxShadow: 'var(--gecko-shadow-sm)' }}>
             <SectionHead>Weights</SectionHead>
-            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16 }}>
+            <div className="gecko-grid-2" style={{ gap: 16 }}>
 
               <Field label="Max Payload">
                 <NumInput
@@ -486,7 +487,7 @@ export default function NewContainerTypePage() {
               </Field>
             </div>
 
-            <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
+            <div className="gecko-stack" style={{ gap: 12 }}>
 
               {form.category === 'RF' && (
                 <div style={{
@@ -557,8 +558,8 @@ export default function NewContainerTypePage() {
         </div>
 
         {/* ── RIGHT: live preview ── */}
-        <div style={{ position: 'sticky', top: 24, display: 'flex', flexDirection: 'column', gap: 12 }}>
-          <div style={{ fontSize: 11, fontWeight: 700, color: 'var(--gecko-text-disabled)', textTransform: 'uppercase', letterSpacing: '0.07em' }}>
+        <div className="gecko-stack" style={{ position: 'sticky', top: 24, gap: 12 }}>
+          <div className="gecko-eyebrow">
             Live Preview
           </div>
           <PreviewCard form={form} />
@@ -582,7 +583,7 @@ export default function NewContainerTypePage() {
         <div style={{ fontSize: 12, color: 'var(--gecko-text-disabled)' }}>
           * ISO Type Code, Category, and Common Name are required
         </div>
-        <div style={{ display: 'flex', gap: 10 }}>
+        <div className="gecko-action-toolbar">
           <Link href="/masters/container-types" className="gecko-btn gecko-btn-outline gecko-btn-sm">
             Cancel
           </Link>

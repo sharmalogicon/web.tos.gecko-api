@@ -342,16 +342,16 @@ export default function VesselSchedulePage() {
   const containerRect = containerRef.current?.getBoundingClientRect() ?? null;
 
   return (
-    <div style={{ maxWidth: 'var(--gecko-container-max)', margin: '0 auto', display: 'flex', flexDirection: 'column', gap: 20, paddingBottom: 40 }}>
+    <div className="gecko-stack" style={{ maxWidth: 'var(--gecko-container-max)', margin: '0 auto', gap: 20, paddingBottom: 40 }}>
 
       {/* Page header */}
       <div className="gecko-page-actions">
         <div className="gecko-page-actions-left">
-          <div style={{ display: 'flex', alignItems: 'baseline', gap: 12 }}>
-            <h1 style={{ fontSize: 24, fontWeight: 700, margin: 0, color: 'var(--gecko-text-primary)' }}>Vessel Call Schedule</h1>
+          <div className="gecko-row gecko-row-baseline">
+            <h1 className="gecko-page-title">Vessel Call Schedule</h1>
             <span style={{ fontSize: 12, fontWeight: 600, color: 'var(--gecko-primary-700)', background: 'var(--gecko-primary-100)', padding: '2px 8px', borderRadius: 12 }}>Calendar View</span>
           </div>
-          <div style={{ fontSize: 13, color: 'var(--gecko-text-secondary)', marginTop: 4 }}>Operational voyage calendar for Laem Chabang ICD — ETA for inbound, ETD for outbound · hover a dot to see voyage details</div>
+          <div className="gecko-page-subtitle">Operational voyage calendar for Laem Chabang ICD — ETA for inbound, ETD for outbound · hover a dot to see voyage details</div>
         </div>
         <div className="gecko-toolbar">
           <Link href="/masters/vessels" className="gecko-btn gecko-btn-ghost gecko-btn-sm">
@@ -470,14 +470,14 @@ export default function VesselSchedulePage() {
                               : direction === 'outbound' ? 'Outbound voyages this month'
                               : 'Voyages this month';
         return (
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 12 }}>
+      <div className="gecko-grid-4">
         {[
           { label: monthLabel,           value: voyagesThisMonth.length,                                                                                  icon: 'ship',   color: 'var(--gecko-primary-600)', bg: 'var(--gecko-primary-50)' },
           { label: 'Open for booking',   value: voyagesThisMonth.filter(v => v.status === 'Open').length,                                                 icon: 'check',  color: 'var(--gecko-success-600)', bg: 'var(--gecko-success-50)' },
           { label: 'Total TEU capacity', value: voyagesThisMonth.reduce((s, v) => s + v.teu, 0).toLocaleString(),                                          icon: 'layers', color: 'var(--gecko-info-600)',    bg: 'var(--gecko-info-50)'    },
           { label: 'Shipping lines',     value: [...new Set(voyagesThisMonth.map(v => v.line))].length,                                                   icon: 'flag',   color: 'var(--gecko-accent-600)',  bg: 'var(--gecko-accent-50)'  },
         ].map(stat => (
-          <div key={stat.label} className="gecko-card" style={{ padding: '16px 20px', display: 'flex', alignItems: 'center', gap: 14 }}>
+          <div key={stat.label} className="gecko-card gecko-row" style={{ gap: 14 }}>
             <div style={{ width: 40, height: 40, borderRadius: 10, background: stat.bg, display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
               <Icon name={stat.icon} size={18} style={{ color: stat.color }} />
             </div>
