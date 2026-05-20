@@ -39,13 +39,13 @@ export default function OperationalReportsPage() {
       {/* Header */}
       <div className="gecko-page-actions">
         <div className="gecko-page-actions-left">
-          <div style={{ display: 'flex', alignItems: 'baseline', gap: 12 }}>
-            <h1 style={{ fontSize: 24, fontWeight: 700, margin: 0, color: 'var(--gecko-text-primary)' }}>Operational Reports</h1>
+          <div className="gecko-row gecko-row-baseline" style={{ gap: 12 }}>
+            <h1 className="gecko-page-title">Operational Reports</h1>
             <span className="gecko-count-badge">{OPERATIONAL_REPORTS.length} reports</span>
           </div>
-          <div style={{ fontSize: 13, color: 'var(--gecko-text-secondary)', marginTop: 4 }}>
+          <p className="gecko-page-subtitle" style={{ marginTop: 4 }}>
             Day-to-day depot operation reports — yard inventory, gate movements, customer-service exports.
-          </div>
+          </p>
         </div>
         <div className="gecko-toolbar">
           <div style={{ position: 'relative' }}>

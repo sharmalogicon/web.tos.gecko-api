@@ -70,13 +70,13 @@ export default function AutoScheduleReportsPage() {
 
       <div className="gecko-page-actions">
         <div className="gecko-page-actions-left">
-          <div style={{ display: 'flex', alignItems: 'baseline', gap: 12 }}>
-            <h1 style={{ fontSize: 24, fontWeight: 700, margin: 0, color: 'var(--gecko-text-primary)' }}>Auto-Schedule Reports</h1>
+          <div className="gecko-row gecko-row-baseline" style={{ gap: 12 }}>
+            <h1 className="gecko-page-title">Auto-Schedule Reports</h1>
             <span className="gecko-count-badge">{schedules.length} schedules</span>
           </div>
-          <div style={{ fontSize: 13, color: 'var(--gecko-text-secondary)', marginTop: 4 }}>
+          <p className="gecko-page-subtitle" style={{ marginTop: 4 }}>
             Recurring reports that generate and email automatically on a daily, weekly, or monthly cadence.
-          </div>
+          </p>
         </div>
         <div className="gecko-toolbar">
           <button className="gecko-btn gecko-btn-primary gecko-btn-sm" onClick={() => setCreateOpen(true)}>
@@ -86,7 +86,7 @@ export default function AutoScheduleReportsPage() {
       </div>
 
       {/* KPI strip */}
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 12 }}>
+      <div className="gecko-grid-4">
         <KpiTile icon="layers"        tone="primary"  label="Total schedules"     value={totals.total} />
         <KpiTile icon="check"         tone="success"  label="Active"              value={totals.active} />
         <KpiTile icon="alertTriangle" tone={totals.failed > 0 ? 'danger' : 'neutral'} label="Failed last run" value={totals.failed} />
@@ -106,7 +106,7 @@ export default function AutoScheduleReportsPage() {
       </div>
 
       {/* Schedule table */}
-      <div style={{ background: 'var(--gecko-bg-surface)', border: '1px solid var(--gecko-border)', borderRadius: 12, overflow: 'hidden' }}>
+      <div className="gecko-table-card">
         <div style={{ overflowX: 'auto' }}>
           <table className="gecko-table gecko-table-comfortable" style={{ fontSize: 12.5, minWidth: 1100 }}>
             <thead>
@@ -147,19 +147,21 @@ export default function AutoScheduleReportsPage() {
                       />
                     </td>
                     <td>
-                      <div style={{ fontSize: 13, fontWeight: 600, color: 'var(--gecko-text-primary)' }}>{s.reportTitle}</div>
-                      <div style={{ fontSize: 10, color: 'var(--gecko-text-disabled)', textTransform: 'uppercase', letterSpacing: '0.05em', marginTop: 2 }}>
-                        {s.category === 'operational' ? 'Operational' : 'Accounts'}
+                      <div className="gecko-cell-two-line">
+                        <div className="gecko-cell-primary">{s.reportTitle}</div>
+                        <div className="gecko-eyebrow" style={{ marginTop: 2 }}>
+                          {s.category === 'operational' ? 'Operational' : 'Accounts'}
+                        </div>
                       </div>
                     </td>
                     <td>
-                      <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+                      <div className="gecko-row" style={{ gap: 6 }}>
                         <span className="gecko-pill gecko-pill-info" style={{ fontSize: 10 }}>{FREQ_LABEL[s.frequency]}</span>
-                        <span style={{ fontSize: 11, color: 'var(--gecko-text-secondary)' }}>{s.scheduleLabel}</span>
+                        <span className="gecko-cell-meta" style={{ marginTop: 0 }}>{s.scheduleLabel}</span>
                       </div>
                     </td>
                     <td>
-                      <div style={{ display: 'flex', gap: 4, flexWrap: 'wrap' }}>
+                      <div className="gecko-row gecko-row-wrap" style={{ gap: 4 }}>
                         {s.recipients.slice(0, 2).map(email => (
                           <span key={email} className="gecko-pill gecko-pill-neutral" style={{ fontSize: 10, fontFamily: 'var(--gecko-font-mono)' }}>
                             {email.split('@')[0]}
@@ -174,7 +176,7 @@ export default function AutoScheduleReportsPage() {
                     </td>
                     <td>
                       {s.lastRun ? (
-                        <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+                        <div className="gecko-row" style={{ gap: 6 }}>
                           <Icon
                             name={status === 'success' ? 'check' : status === 'failed' ? 'x' : 'clock'}
                             size={12}
@@ -192,7 +194,7 @@ export default function AutoScheduleReportsPage() {
                       {s.enabled ? fmtRelativeDate(s.nextRun) : <span style={{ color: 'var(--gecko-text-disabled)' }}>— paused —</span>}
                     </td>
                     <td style={{ textAlign: 'right' }}>
-                      <div style={{ display: 'inline-flex', gap: 2 }}>
+                      <div className="gecko-inline-row" style={{ gap: 2 }}>
                         <button
                           onClick={() => runNow(s)}
                           className="gecko-btn gecko-btn-ghost gecko-btn-sm gecko-btn-icon"

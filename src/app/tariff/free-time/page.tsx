@@ -28,11 +28,11 @@ export default function FreeTimePage() {
       {/* Header */}
       <div className="gecko-page-actions" style={{ flexShrink: 0 }}>
         <div className="gecko-page-actions-left">
-          <div style={{ display: 'flex', alignItems: 'baseline', gap: 12 }}>
-            <h1 style={{ fontSize: 24, fontWeight: 700, margin: 0, color: 'var(--gecko-text-primary)' }}>Free Time & D&D Rules</h1>
+          <div className="gecko-row gecko-row-baseline" style={{ gap: 12 }}>
+            <h1 className="gecko-page-title">Free Time & D&D Rules</h1>
             <span style={{ fontSize: 12, fontWeight: 600, color: 'var(--gecko-primary-700)', background: 'var(--gecko-primary-100)', padding: '2px 8px', borderRadius: 12 }}>Storage Logic</span>
           </div>
-          <div style={{ fontSize: 13, color: 'var(--gecko-text-secondary)', marginTop: 4 }}>Define the base free days before storage charges apply, and conditional extensions.</div>
+          <p className="gecko-page-subtitle" style={{ marginTop: 4 }}>Define the base free days before storage charges apply, and conditional extensions.</p>
         </div>
         <div className="gecko-toolbar">
           <button className="gecko-btn gecko-btn-outline gecko-btn-sm" onClick={() => toast({ variant: 'info', title: 'Copy Rules', message: 'Rule-copy workflow coming soon.' })}><Icon name="copy" size={16} /> Copy Rules</button>
@@ -41,8 +41,8 @@ export default function FreeTimePage() {
       </div>
 
       {/* Plan Selector */}
-      <div style={{ display: 'flex', alignItems: 'center', gap: 16, background: 'var(--gecko-bg-surface)', padding: '16px 24px', borderRadius: 12, border: '1px solid var(--gecko-border)', boxShadow: 'var(--gecko-shadow-sm)' }}>
-        <div style={{ fontSize: 13, fontWeight: 700, color: 'var(--gecko-text-secondary)', textTransform: 'uppercase' }}>Editing Plan:</div>
+      <div className="gecko-card gecko-row" style={{ gap: 16, padding: '16px 24px', boxShadow: 'var(--gecko-shadow-sm)' }}>
+        <div className="gecko-eyebrow">Editing Plan:</div>
         <select
           className="gecko-input"
           value={selectedPlan}
@@ -59,8 +59,8 @@ export default function FreeTimePage() {
 
         {/* LEFT PANE: Free Time Groups */}
         <div style={{ width: 320, flexShrink: 0, display: 'flex', flexDirection: 'column', background: 'var(--gecko-bg-surface)', border: '1px solid var(--gecko-border)', borderRadius: 12, boxShadow: 'var(--gecko-shadow-sm)' }}>
-          <div style={{ padding: '16px 20px', borderBottom: '1px solid var(--gecko-border)', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-            <span style={{ fontSize: 13, fontWeight: 700, color: 'var(--gecko-text-secondary)', textTransform: 'uppercase' }}>Rule Groups</span>
+          <div className="gecko-row gecko-row-between" style={{ padding: '16px 20px', borderBottom: '1px solid var(--gecko-border)' }}>
+            <span className="gecko-eyebrow">Rule Groups</span>
             <button className="gecko-btn gecko-btn-ghost gecko-btn-sm gecko-btn-icon"><Icon name="plus" size={16} /></button>
           </div>
 
@@ -92,12 +92,12 @@ export default function FreeTimePage() {
           <div style={{ padding: '24px', borderBottom: '1px solid var(--gecko-border)', background: '#fff' }}>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
               <div>
-                <div style={{ fontSize: 11, fontWeight: 700, color: 'var(--gecko-text-secondary)', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Free Time Group</div>
+                <div className="gecko-eyebrow">Free Time Group</div>
                 <h2 style={{ fontSize: 24, fontWeight: 800, margin: '4px 0', color: 'var(--gecko-text-primary)' }}>{activeGroup.name}</h2>
               </div>
               <div style={{ textAlign: 'right' }}>
-                <div style={{ fontSize: 11, fontWeight: 700, color: 'var(--gecko-text-secondary)', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Base Free Days</div>
-                <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginTop: 4 }}>
+                <div className="gecko-eyebrow">Base Free Days</div>
+                <div className="gecko-row" style={{ gap: 8, marginTop: 4 }}>
                   <input className="gecko-input" type="number" value={activeGroup.baseDays} readOnly style={{ width: 80, fontSize: 24, fontWeight: 800, fontFamily: 'var(--gecko-font-mono)', height: 44, color: 'var(--gecko-primary-700)', borderColor: 'var(--gecko-primary-300)', textAlign: 'right' }} />
                   <span style={{ fontSize: 14, fontWeight: 700, color: 'var(--gecko-text-secondary)' }}>Days</span>
                 </div>
@@ -113,7 +113,7 @@ export default function FreeTimePage() {
               <button className="gecko-btn gecko-btn-outline gecko-btn-sm" style={{ background: '#fff' }} onClick={() => toast({ variant: 'info', title: 'Add Rule', message: 'Rule builder coming soon.' })}><Icon name="plus" size={14} /> Add Rule</button>
             </div>
 
-            <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
+            <div className="gecko-stack">
               {activeGroup.rules.length === 0 && (
                 <div style={{ padding: 24, textAlign: 'center', color: 'var(--gecko-text-disabled)', background: '#fff', border: '1px dashed var(--gecko-border)', borderRadius: 8 }}>
                   No conditional rules. Base days apply to all.

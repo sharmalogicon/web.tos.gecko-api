@@ -179,17 +179,17 @@ export default function ChargeCodesPage() {
   const { page, setPage, pageSize, setPageSize, totalPages, pageItems, totalItems, startRow, endRow } = usePagination(filtered);
 
   return (
-    <div style={{ maxWidth: 'var(--gecko-container-max)', margin: '0 auto', display: 'flex', flexDirection: 'column', gap: 24, paddingBottom: 60 }}>
+    <div className="gecko-stack gecko-stack-xl" style={{ maxWidth: 'var(--gecko-container-max)', margin: '0 auto', paddingBottom: 60 }}>
 
       {/* Page Header */}
       <div className="gecko-page-actions">
         <div className="gecko-page-actions-left">
-          <div style={{ display: 'flex', alignItems: 'baseline', gap: 12 }}>
-            <h1 style={{ fontSize: 24, fontWeight: 700, margin: 0, color: 'var(--gecko-text-primary)' }}>Charge Codes</h1>
+          <div className="gecko-row gecko-row-baseline gecko-stack-md">
+            <h1 className="gecko-page-title">Charge Codes</h1>
             <span className="gecko-count-badge">{totalCodes} codes</span>
-            <span style={{ fontSize: 12, fontWeight: 600, color: 'var(--gecko-info-700)', background: 'var(--gecko-info-100)', padding: '2px 8px', borderRadius: 12 }}>{CHARGE_CATEGORIES.length} categories</span>
+            <span className="gecko-badge gecko-badge-info">{CHARGE_CATEGORIES.length} categories</span>
           </div>
-          <div style={{ fontSize: 13, color: 'var(--gecko-text-secondary)', marginTop: 4 }}>
+          <div className="gecko-page-subtitle gecko-mt-1">
             Atomic billable services. Every rate card line and invoice item resolves to a charge code.
           </div>
         </div>
@@ -213,7 +213,7 @@ export default function ChargeCodesPage() {
       </div>
 
       {/* KPI Strip */}
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(5, 1fr)', gap: 1, background: 'var(--gecko-border)', border: '1px solid var(--gecko-border)', borderRadius: 12, overflow: 'hidden' }}>
+      <div className="gecko-kpi-strip gecko-kpi-strip-5">
         {[
           { label: 'Total Codes',   value: totalCodes,                     sub: `across ${CHARGE_CATEGORIES.length} categories`,  color: 'var(--gecko-text-primary)' },
           { label: 'Revenue',       value: revenueCodes,                   sub: 'billable to customer',                            color: 'var(--gecko-success-700)' },
@@ -221,16 +221,16 @@ export default function ChargeCodesPage() {
           { label: 'Cost',          value: costCodes,                      sub: 'internal / vendor cost',                          color: 'var(--gecko-danger-700)' },
           { label: 'Events (30d)',  value: totalEvents.toLocaleString(),   sub: 'invoiced occurrences',                            color: 'var(--gecko-primary-600)' },
         ].map(kpi => (
-          <div key={kpi.label} style={{ background: 'var(--gecko-bg-surface)', padding: '18px 20px' }}>
-            <div style={{ fontSize: 11, fontWeight: 700, color: 'var(--gecko-text-secondary)', textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: 8 }}>{kpi.label}</div>
-            <div style={{ fontSize: 26, fontWeight: 800, color: kpi.color, lineHeight: 1 }}>{kpi.value}</div>
-            <div style={{ fontSize: 11, color: 'var(--gecko-text-disabled)', marginTop: 4 }}>{kpi.sub}</div>
+          <div key={kpi.label} className="gecko-kpi-cell">
+            <div className="gecko-stat-label">{kpi.label}</div>
+            <div className="gecko-stat-num" style={{ color: kpi.color }}>{kpi.value}</div>
+            <div className="gecko-card-subtitle">{kpi.sub}</div>
           </div>
         ))}
       </div>
 
       {/* Flat Charge Codes Table */}
-      <div style={{ background: 'var(--gecko-bg-surface)', border: '1px solid var(--gecko-border)', borderRadius: 12, overflow: 'hidden', boxShadow: 'var(--gecko-shadow-sm)' }}>
+      <div className="gecko-table-card">
         <table className="gecko-table gecko-table-comfortable" style={{ fontSize: 12.5 }}>
           <thead>
             <tr>
@@ -254,7 +254,7 @@ export default function ChargeCodesPage() {
             {pageItems.map(c => (
               <tr key={c.code} style={{ opacity: c.status === 'Inactive' ? 0.55 : 1 }}>
                 <td style={{ whiteSpace: 'nowrap' }}>
-                  <Link href={`/masters/charge-codes/${c.code}`} style={{ fontFamily: 'var(--gecko-font-mono)', fontWeight: 700, color: c.catColor, fontSize: 12, whiteSpace: 'nowrap' }}>{c.code}</Link>
+                  <Link href={`/masters/charge-codes/${c.code}`} className="gecko-id-link" style={{ color: c.catColor }}>{c.code}</Link>
                 </td>
                 <td style={{ fontWeight: 500, color: 'var(--gecko-text-primary)' }}>{c.desc}</td>
                 <td>
@@ -266,11 +266,11 @@ export default function ChargeCodesPage() {
                 <td style={{ color: 'var(--gecko-text-secondary)', fontSize: 12 }}>{c.unit}</td>
                 <td style={{ color: 'var(--gecko-text-secondary)', fontSize: 12 }}>{c.basis}</td>
                 <td style={{ fontSize: 11, fontWeight: 600, color: c.currency === 'USD' ? 'var(--gecko-info-700)' : 'var(--gecko-text-secondary)' }}>{c.currency}</td>
-                <td style={{ textAlign: 'right', fontFamily: 'var(--gecko-font-mono)', fontWeight: 700, fontSize: 12.5 }}>{c.base}</td>
+                <td className="gecko-money gecko-money-sm" style={{ fontSize: 12.5 }}>{c.base}</td>
                 <td style={{ color: 'var(--gecko-info-600)', fontWeight: 600, fontSize: 12 }}>{c.vat}</td>
-                <td style={{ textAlign: 'right', fontFamily: 'var(--gecko-font-mono)', color: 'var(--gecko-text-secondary)', fontSize: 12 }}>{c.inUse}</td>
+                <td className="gecko-num-tabular" style={{ color: 'var(--gecko-text-secondary)', fontSize: 12 }}>{c.inUse}</td>
                 <td style={{ textAlign: 'right', fontWeight: 600, fontSize: 12 }}>{c.tariffs}</td>
-                <td style={{ fontFamily: 'var(--gecko-font-mono)', color: 'var(--gecko-text-disabled)', fontSize: 11 }}>{c.glRev}</td>
+                <td className="gecko-text-mono" style={{ color: 'var(--gecko-text-disabled)', fontSize: 11 }}>{c.glRev}</td>
                 <td>
                   <span className={`gecko-status-dot gecko-status-dot-${c.status === 'Active' ? 'active' : 'neutral'}`}>{c.status}</span>
                 </td>

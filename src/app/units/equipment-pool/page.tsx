@@ -147,22 +147,22 @@ export default function EquipmentPoolPage() {
   ];
 
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
+    <div className="gecko-stack" style={{ gap: 14 }}>
 
       {/* ── Header ── */}
-      <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: 12 }}>
-        <div>
-          <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-            <h1 style={{ fontSize: 20, fontWeight: 700, color: 'var(--gecko-text-primary)', margin: 0 }}>Equipment Pool</h1>
+      <div className="gecko-page-header">
+        <div className="gecko-page-header-left">
+          <div className="gecko-row" style={{ gap: 10 }}>
+            <h1 className="gecko-page-title">Equipment Pool</h1>
             <span style={{ fontSize: 10.5, fontWeight: 600, padding: '2px 8px', borderRadius: 20, background: 'var(--gecko-primary-50)', color: 'var(--gecko-primary-700)', border: '1px solid var(--gecko-primary-200)' }}>
               {filtered.length} of {POOLS.length} pools
             </span>
           </div>
-          <div style={{ fontSize: 12, color: 'var(--gecko-text-secondary)', marginTop: 3 }}>
+          <p className="gecko-page-subtitle">
             Empty container inventory by line × size × type × grade — Laem Chabang ICD
-          </div>
+          </p>
         </div>
-        <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
+        <div className="gecko-page-header-actions">
           <ExportButton resource="Equipment pool" iconSize={13} />
           <RefreshButton resource="Equipment pool" iconSize={13} />
           <button
@@ -175,21 +175,21 @@ export default function EquipmentPoolPage() {
       </div>
 
       {/* ── KPI Strip ── */}
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(5, 1fr)', gap: 10 }}>
+      <div className="gecko-grid-5" style={{ gap: 10 }}>
         {[
-          { label: 'Available',      value: kpi.available,      icon: 'check',         color: 'var(--gecko-success-700)', bg: 'var(--gecko-success-50)' },
-          { label: 'Damaged',        value: kpi.damaged,        icon: 'alertTriangle', color: 'var(--gecko-error-700)',   bg: 'var(--gecko-error-50)'   },
-          { label: 'Survey Pending', value: kpi.surveyPending,  icon: 'clock',         color: 'var(--gecko-warning-700)', bg: 'var(--gecko-warning-50)' },
-          { label: 'Reserved',       value: kpi.reserved,       icon: 'lock',          color: 'var(--gecko-info-700)',    bg: 'var(--gecko-info-50)'    },
-          { label: 'Outside Depot',  value: kpi.outsideDepot,   icon: 'truck',         color: 'var(--gecko-text-secondary)', bg: 'var(--gecko-bg-subtle)' },
+          { label: 'Available',      value: kpi.available,      icon: 'check',         tone: 'success' as const },
+          { label: 'Damaged',        value: kpi.damaged,        icon: 'alertTriangle', tone: 'error'   as const },
+          { label: 'Survey Pending', value: kpi.surveyPending,  icon: 'clock',         tone: 'warning' as const },
+          { label: 'Reserved',       value: kpi.reserved,       icon: 'lock',          tone: 'info'    as const },
+          { label: 'Outside Depot',  value: kpi.outsideDepot,   icon: 'truck',         tone: 'neutral' as const },
         ].map(k => (
-          <div key={k.label} style={{ padding: '12px 14px', background: 'var(--gecko-bg-surface)', border: '1px solid var(--gecko-border)', borderRadius: 10, display: 'flex', alignItems: 'center', gap: 12 }}>
-            <div style={{ width: 36, height: 36, borderRadius: 8, background: k.bg, color: k.color, display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+          <div key={k.label} className="gecko-card gecko-row" style={{ padding: '12px 14px', gap: 12 }}>
+            <div className={`gecko-mini-icon gecko-mini-icon-lg gecko-mini-icon-${k.tone}`}>
               <Icon name={k.icon} size={17} />
             </div>
             <div>
-              <div style={{ fontSize: 22, fontWeight: 700, fontFamily: 'var(--gecko-font-mono)', letterSpacing: '-0.02em', lineHeight: 1, color: 'var(--gecko-text-primary)' }}>{k.value.toLocaleString()}</div>
-              <div style={{ fontSize: 11, color: 'var(--gecko-text-secondary)', marginTop: 2 }}>{k.label}</div>
+              <div className="gecko-stat-num gecko-stat-num-sm" style={{ fontFamily: 'var(--gecko-font-mono)' }}>{k.value.toLocaleString()}</div>
+              <div className="gecko-cell-meta">{k.label}</div>
             </div>
           </div>
         ))}
@@ -208,7 +208,7 @@ export default function EquipmentPoolPage() {
       />
 
       {/* ── Table ── */}
-      <div style={{ background: 'var(--gecko-bg-surface)', border: '1px solid var(--gecko-border)', borderRadius: 10, overflow: 'hidden' }}>
+      <div className="gecko-table-card">
         <table className="gecko-table">
           <thead>
             <tr>
@@ -243,11 +243,11 @@ export default function EquipmentPoolPage() {
               return (
                 <tr key={`${p.line}-${p.size}${p.type}-${p.grade}-${i}`}>
                   <td>
-                    <div style={{ fontSize: 12.5, fontWeight: 700, fontFamily: 'var(--gecko-font-mono)', color: 'var(--gecko-text-primary)' }}>{p.line}</div>
+                    <div className="gecko-mono-strong" style={{ fontSize: 12.5 }}>{p.line}</div>
                   </td>
                   <td>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                      <span style={{ fontSize: 12.5, fontWeight: 700, fontFamily: 'var(--gecko-font-mono)' }}>{p.size}{p.type}</span>
+                    <div className="gecko-row" style={{ gap: 8 }}>
+                      <span className="gecko-mono-strong" style={{ fontSize: 12.5 }}>{p.size}{p.type}</span>
                       <span style={{ fontSize: 11, color: TYPE_META[p.type]?.color ?? 'var(--gecko-text-secondary)' }}>{TYPE_META[p.type]?.label ?? p.type}</span>
                     </div>
                   </td>
@@ -263,7 +263,7 @@ export default function EquipmentPoolPage() {
                   <td style={{ textAlign: 'right', fontFamily: 'var(--gecko-font-mono)' }}>{p.outsideDepot}</td>
                   <td style={{ textAlign: 'right', fontFamily: 'var(--gecko-font-mono)', fontWeight: 700 }}>{t}</td>
                   <td>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+                    <div className="gecko-row" style={{ gap: 6 }}>
                       <div style={{ flex: 1, height: 6, borderRadius: 3, background: 'var(--gecko-bg-subtle)', overflow: 'hidden' }}>
                         <div style={{
                           width: `${util}%`, height: '100%',

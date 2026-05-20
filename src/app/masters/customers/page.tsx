@@ -38,9 +38,9 @@ const CUSTOMER_FILTER_FIELDS: FilterField[] = [
 ];
 
 function RoleBadge({ role }: { role: string }) {
-  if (role === 'Bill-to') return <span style={{ background: 'var(--gecko-primary-100)', color: 'var(--gecko-primary-700)', padding: '2px 6px', borderRadius: 4, fontSize: 11, fontWeight: 600 }}>{role}</span>;
-  if (role === 'Consignee') return <span style={{ background: 'var(--gecko-info-100)', color: 'var(--gecko-info-700)', padding: '2px 6px', borderRadius: 4, fontSize: 11, fontWeight: 600 }}>{role}</span>;
-  if (role === 'Shipper') return <span style={{ background: 'var(--gecko-warning-100)', color: 'var(--gecko-warning-700)', padding: '2px 6px', borderRadius: 4, fontSize: 11, fontWeight: 600 }}>{role}</span>;
+  if (role === 'Bill-to') return <span className="gecko-badge gecko-badge-xs gecko-badge-primary">{role}</span>;
+  if (role === 'Consignee') return <span className="gecko-badge gecko-badge-xs gecko-badge-info">{role}</span>;
+  if (role === 'Shipper') return <span className="gecko-badge gecko-badge-xs gecko-badge-warning">{role}</span>;
   return null;
 }
 
@@ -143,7 +143,7 @@ function NewCustomerModal({ onClose }: NewCustomerModalProps) {
         {label}
       </label>
       {children}
-      {hint && !error && <div style={{ fontSize: 11, color: 'var(--gecko-text-secondary)', marginTop: 3 }}>{hint}</div>}
+      {hint && !error && <div className="gecko-cell-meta" style={{ marginTop: 3 }}>{hint}</div>}
       {error && <div style={{ fontSize: 11, color: 'var(--gecko-danger-600)', marginTop: 3 }}>This field is required</div>}
     </div>
   );
@@ -153,31 +153,32 @@ function NewCustomerModal({ onClose }: NewCustomerModalProps) {
       className="gecko-overlay"
       onClick={e => { if (e.target === e.currentTarget) onClose(); }}
     >
-      <div className="gecko-modal gecko-modal-lg" style={{ display: 'flex', flexDirection: 'column' }}>
+      <div className="gecko-modal gecko-modal-lg gecko-stack" style={{ gap: 0 }}>
 
         {/* Header */}
-        <div style={{ padding: '18px 24px', borderBottom: '1px solid var(--gecko-border)', background: 'var(--gecko-success-50)', borderRadius: '12px 12px 0 0', flexShrink: 0, display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: 16 }}>
+        <div className="gecko-row gecko-row-start gecko-row-between gecko-flex-shrink-0" style={{ padding: '18px 24px', borderBottom: '1px solid var(--gecko-border)', background: 'var(--gecko-success-50)', borderRadius: '12px 12px 0 0', gap: 16 }}>
           <div>
-            <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+            <div className="gecko-row">
               <Icon name="users" size={16} style={{ color: 'var(--gecko-success-600)' }} />
               <span style={{ fontSize: 16, fontWeight: 800, color: 'var(--gecko-text-primary)' }}>
                 New Customer
               </span>
             </div>
-            <div style={{ fontSize: 12, color: 'var(--gecko-text-secondary)', marginTop: 3 }}>
+            <div className="gecko-cell-meta" style={{ fontSize: 12, marginTop: 3 }}>
               Create a new party record. One record can hold multiple roles — bill-to, consignee, or shipper.
             </div>
           </div>
           <button
             onClick={onClose}
-            style={{ width: 32, height: 32, border: '1px solid var(--gecko-border)', borderRadius: 7, background: 'var(--gecko-bg-surface)', color: 'var(--gecko-text-secondary)', fontSize: 17, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', fontFamily: 'inherit', flexShrink: 0 }}
+            className="gecko-mini-icon gecko-mini-icon-neutral"
+            style={{ border: '1px solid var(--gecko-border)', borderRadius: 7, background: 'var(--gecko-bg-surface)', color: 'var(--gecko-text-secondary)', fontSize: 17, cursor: 'pointer', fontFamily: 'inherit' }}
           >
             ×
           </button>
         </div>
 
         {/* Form Body */}
-        <div style={{ padding: '22px 24px', flex: 1, overflowY: 'auto', display: 'flex', flexDirection: 'column', gap: 24 }}>
+        <div className="gecko-stack gecko-stack-xl gecko-flex-1" style={{ padding: '22px 24px', overflowY: 'auto' }}>
 
           {/* Section 1: Identity */}
           <div>
@@ -225,7 +226,7 @@ function NewCustomerModal({ onClose }: NewCustomerModalProps) {
                 Assign Roles
               </label>
             </div>
-            <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap', marginBottom: 6 }}>
+            <div className="gecko-row gecko-row-wrap gecko-stack-md" style={{ marginBottom: 6 }}>
               {(['Bill-to', 'Consignee', 'Shipper'] as CustomerRole[]).map(role => {
                 const selected = form.roles.includes(role);
                 const s = selected ? ROLE_STYLE[role].selected : ROLE_STYLE[role].unselected;
@@ -258,7 +259,7 @@ function NewCustomerModal({ onClose }: NewCustomerModalProps) {
               })}
             </div>
             {rolesError && (
-              <div style={{ fontSize: 11, color: 'var(--gecko-danger-600)', marginTop: 4 }}>At least one role must be selected</div>
+              <div className="gecko-mt-1" style={{ fontSize: 11, color: 'var(--gecko-danger-600)' }}>At least one role must be selected</div>
             )}
             {!rolesError && (
               <div style={{ fontSize: 11, color: 'var(--gecko-text-secondary)' }}>Select at least one role. A single party record can hold multiple roles.</div>
@@ -284,13 +285,13 @@ function NewCustomerModal({ onClose }: NewCustomerModalProps) {
             </div>
             <div style={{ display: 'grid', gridTemplateColumns: '200px 1fr', gap: 16 }}>
               <Field label="Credit Limit" hint="0 = no credit">
-                <div style={{ display: 'flex', alignItems: 'center' }}>
-                  <span style={{
+                <div className="gecko-row" style={{ gap: 0 }}>
+                  <span className="gecko-flex-shrink-0" style={{
                     display: 'inline-flex', alignItems: 'center', justifyContent: 'center',
                     padding: '0 10px', height: 34, background: 'var(--gecko-bg-subtle)',
                     border: '1px solid var(--gecko-border)', borderRight: 'none',
                     borderRadius: '6px 0 0 6px', fontSize: 13, fontWeight: 700,
-                    color: 'var(--gecko-text-secondary)', flexShrink: 0,
+                    color: 'var(--gecko-text-secondary)',
                   }}>
                     ฿
                   </span>
@@ -334,11 +335,11 @@ function NewCustomerModal({ onClose }: NewCustomerModalProps) {
           {/* Section 5: Status */}
           <div>
             {sectionHead('Status')}
-            <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
+            <div className="gecko-stack gecko-stack-lg">
 
               {/* Active toggle */}
-              <div style={{
-                display: 'flex', alignItems: 'flex-start', gap: 12, padding: '12px 14px',
+              <div className="gecko-row gecko-row-start gecko-stack-md" style={{
+                padding: '12px 14px',
                 border: `1px solid ${form.active ? 'var(--gecko-success-200)' : 'var(--gecko-border)'}`,
                 borderRadius: 8, background: form.active ? 'var(--gecko-success-50)' : 'var(--gecko-bg-subtle)',
                 maxWidth: 340,
@@ -364,14 +365,14 @@ function NewCustomerModal({ onClose }: NewCustomerModalProps) {
                   <div style={{ fontSize: 12.5, fontWeight: 700, color: form.active ? 'var(--gecko-success-700)' : 'var(--gecko-text-secondary)' }}>
                     {form.active ? 'Active' : 'Inactive'}
                   </div>
-                  <div style={{ fontSize: 11, color: 'var(--gecko-text-secondary)', marginTop: 2 }}>
+                  <div className="gecko-cell-meta">
                     {form.active ? 'Customer is live and can be used in bookings' : 'Customer is disabled and will not appear in party lookups'}
                   </div>
                 </div>
               </div>
 
               {/* Notes */}
-              <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
+              <div className="gecko-stack gecko-stack-xs">
                 <label className="gecko-label">Notes <span style={{ fontWeight: 400, color: 'var(--gecko-text-disabled)' }}>(optional)</span></label>
                 <textarea
                   className="gecko-input"
@@ -388,11 +389,11 @@ function NewCustomerModal({ onClose }: NewCustomerModalProps) {
         </div>
 
         {/* Footer */}
-        <div style={{ padding: '14px 24px', borderTop: '1px solid var(--gecko-border)', background: 'var(--gecko-bg-surface)', borderRadius: '0 0 12px 12px', flexShrink: 0, display: 'flex', alignItems: 'center', gap: 10 }}>
-          <div style={{ flex: 1, fontSize: 11, color: 'var(--gecko-text-disabled)' }}>
+        <div className="gecko-row gecko-flex-shrink-0" style={{ padding: '14px 24px', borderTop: '1px solid var(--gecko-border)', background: 'var(--gecko-bg-surface)', borderRadius: '0 0 12px 12px', gap: 10 }}>
+          <div className="gecko-flex-1" style={{ fontSize: 11, color: 'var(--gecko-text-disabled)' }}>
             * Code, Name, and at least one Role are required
           </div>
-          <div style={{ display: 'flex', gap: 8 }}>
+          <div className="gecko-action-toolbar">
             <button className="gecko-btn gecko-btn-outline gecko-btn-sm" onClick={onClose}>Cancel</button>
             <button
               className="gecko-btn gecko-btn-primary gecko-btn-sm"
@@ -437,16 +438,16 @@ export default function CustomersListPage() {
   const { page, setPage, pageSize, setPageSize, totalPages, pageItems, totalItems, startRow, endRow } = usePagination(filtered);
 
   return (
-    <div style={{ maxWidth: 'var(--gecko-container-max)', margin: '0 auto', display: 'flex', flexDirection: 'column', gap: 24 }}>
+    <div className="gecko-stack gecko-stack-xl" style={{ maxWidth: 'var(--gecko-container-max)', margin: '0 auto' }}>
 
       {/* Header */}
       <div className="gecko-page-actions">
         <div className="gecko-page-actions-left">
-          <div style={{ display: 'flex', alignItems: 'baseline', gap: 12 }}>
-            <h1 style={{ fontSize: 24, fontWeight: 700, margin: 0, color: 'var(--gecko-text-primary)' }}>Customers</h1>
+          <div className="gecko-row gecko-row-baseline gecko-stack-md">
+            <h1 className="gecko-page-title">Customers</h1>
             <span className="gecko-count-badge">{pageItems.length} shown of {totalItems}</span>
           </div>
-          <div style={{ fontSize: 13, color: 'var(--gecko-text-secondary)' }}>Unified party master — bill-to, consignee, shipper, agent, prospect. One record, many roles.</div>
+          <div className="gecko-page-subtitle">Unified party master — bill-to, consignee, shipper, agent, prospect. One record, many roles.</div>
         </div>
         <div className="gecko-toolbar">
           <ExportButton resource="Customers" iconSize={16} />
@@ -468,7 +469,7 @@ export default function CustomersListPage() {
       </div>
 
       {/* Table */}
-      <div style={{ background: 'var(--gecko-bg-surface)', border: '1px solid var(--gecko-border)', borderRadius: 12, overflow: 'hidden', boxShadow: 'var(--gecko-shadow-sm)' }}>
+      <div className="gecko-table-card">
         <table className="gecko-table gecko-table-comfortable" style={{ fontSize: 13 }}>
           <thead>
             <tr>
@@ -499,14 +500,16 @@ export default function CustomersListPage() {
             {pageItems.map((c) => (
               <tr key={c.id}>
                 <td>
-                  <Link href={`/masters/customers/${c.id}`} className="gecko-text-mono" style={{ fontWeight: 600, color: 'var(--gecko-primary-600)' }}>{c.id}</Link>
+                  <Link href={`/masters/customers/${c.id}`} className="gecko-id-link">{c.id}</Link>
                 </td>
                 <td>
-                  <div style={{ fontWeight: 600, color: 'var(--gecko-text-primary)' }}>{c.name}</div>
-                  <div style={{ fontSize: 11, color: 'var(--gecko-text-disabled)' }}>{c.country}</div>
+                  <div className="gecko-cell-two-line">
+                    <div className="gecko-cell-primary">{c.name}</div>
+                    <div className="gecko-cell-sub">{c.country}</div>
+                  </div>
                 </td>
                 <td>
-                  <div style={{ display: 'flex', gap: 4, flexWrap: 'wrap' }}>
+                  <div className="gecko-row gecko-row-wrap" style={{ gap: 4 }}>
                     {c.roles.map(r => <RoleBadge key={r} role={r} />)}
                   </div>
                 </td>
@@ -515,13 +518,13 @@ export default function CustomersListPage() {
                 </td>
                 <td className="gecko-text-mono" style={{ color: 'var(--gecko-text-secondary)' }}>{c.taxId}</td>
                 <td style={{ color: 'var(--gecko-text-secondary)' }}>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-                    <div style={{ width: 6, height: 6, borderRadius: '50%', background: c.tariff.includes('Custom') ? 'var(--gecko-primary-400)' : 'var(--gecko-gray-300)', flexShrink: 0 }} />
+                  <div className="gecko-row" style={{ gap: 6 }}>
+                    <div className="gecko-status-dot-mini" style={{ background: c.tariff.includes('Custom') ? 'var(--gecko-primary-400)' : 'var(--gecko-gray-300)', marginRight: 0 }} />
                     {c.tariff}
                   </div>
                 </td>
-                <td className="gecko-text-mono" style={{ textAlign: 'right', fontWeight: 600, color: 'var(--gecko-text-primary)' }}>{c.credit}</td>
-                <td className="gecko-text-mono" style={{ textAlign: 'right', fontWeight: 600, color: 'var(--gecko-text-primary)' }}>{c.balance}</td>
+                <td className="gecko-money gecko-money-md">{c.credit}</td>
+                <td className="gecko-money gecko-money-md">{c.balance}</td>
                 <td>
                   <span className={`gecko-status-dot gecko-status-dot-${c.status === 'Active' ? 'active' : 'warning'}`}>
                     {c.status}

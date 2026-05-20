@@ -100,7 +100,7 @@ function NewLineModal({ onClose }: NewLineModalProps) {
     <div className="gecko-form-group" style={{ gridColumn: span ? `span ${span}` : undefined }}>
       <label className={`gecko-label${required ? ' gecko-label-required' : ''}`}>{label}</label>
       {children}
-      {hint && <div style={{ fontSize: 11, color: 'var(--gecko-text-secondary)', marginTop: 3 }}>{hint}</div>}
+      {hint && <div className="gecko-cell-meta" style={{ marginTop: 3 }}>{hint}</div>}
     </div>
   );
 
@@ -109,29 +109,30 @@ function NewLineModal({ onClose }: NewLineModalProps) {
       className="gecko-overlay"
       onClick={e => { if (e.target === e.currentTarget) onClose(); }}
     >
-      <div className="gecko-modal gecko-modal-lg" style={{ display: 'flex', flexDirection: 'column' }}>
+      <div className="gecko-modal gecko-modal-lg gecko-stack" style={{ gap: 0 }}>
 
         {/* Header */}
-        <div style={{ padding: '18px 24px', borderBottom: '1px solid var(--gecko-border)', background: 'var(--gecko-primary-50)', borderRadius: '12px 12px 0 0', flexShrink: 0, display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: 16 }}>
+        <div className="gecko-row gecko-row-start gecko-row-between gecko-flex-shrink-0" style={{ padding: '18px 24px', borderBottom: '1px solid var(--gecko-border)', background: 'var(--gecko-primary-50)', borderRadius: '12px 12px 0 0', gap: 16 }}>
           <div>
-            <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+            <div className="gecko-row">
               <Icon name="ship" size={16} style={{ color: 'var(--gecko-primary-600)' }} />
               <span style={{ fontSize: 16, fontWeight: 800, color: 'var(--gecko-text-primary)' }}>New Shipping Line</span>
             </div>
-            <div style={{ fontSize: 12, color: 'var(--gecko-text-secondary)', marginTop: 3 }}>
+            <div className="gecko-cell-meta" style={{ fontSize: 12, marginTop: 3 }}>
               Register a new carrier or line operator in the master catalog.
             </div>
           </div>
           <button
             onClick={onClose}
-            style={{ width: 32, height: 32, border: '1px solid var(--gecko-border)', borderRadius: 7, background: 'var(--gecko-bg-surface)', color: 'var(--gecko-text-secondary)', fontSize: 17, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', fontFamily: 'inherit', flexShrink: 0 }}
+            className="gecko-mini-icon gecko-mini-icon-neutral"
+            style={{ border: '1px solid var(--gecko-border)', borderRadius: 7, background: 'var(--gecko-bg-surface)', color: 'var(--gecko-text-secondary)', fontSize: 17, cursor: 'pointer', fontFamily: 'inherit' }}
           >
             ×
           </button>
         </div>
 
         {/* Form Body */}
-        <div style={{ padding: '22px 24px', flex: 1, overflowY: 'auto', display: 'flex', flexDirection: 'column', gap: 24 }}>
+        <div className="gecko-stack gecko-stack-xl gecko-flex-1" style={{ padding: '22px 24px', overflowY: 'auto' }}>
 
           {/* Section 1: Identity */}
           <div>
@@ -166,16 +167,16 @@ function NewLineModal({ onClose }: NewLineModalProps) {
                   onChange={e => set({ fullName: e.target.value })}
                 />
               </Field>
-              <div className="gecko-form-group" style={{ flexShrink: 0 }}>
+              <div className="gecko-form-group gecko-flex-shrink-0">
                 <label className="gecko-label">Brand Color</label>
-                <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                <div className="gecko-row">
                   <input
                     type="color"
                     value={form.brandColor}
                     onChange={e => set({ brandColor: e.target.value })}
                     style={{ width: 36, height: 34, padding: 2, border: '1px solid var(--gecko-border)', borderRadius: 6, cursor: 'pointer', background: 'var(--gecko-bg-surface)' }}
                   />
-                  <div style={{ width: 20, height: 20, borderRadius: 4, background: form.brandColor, border: '1px solid var(--gecko-border)', flexShrink: 0 }} />
+                  <div className="gecko-flex-shrink-0" style={{ width: 20, height: 20, borderRadius: 4, background: form.brandColor, border: '1px solid var(--gecko-border)' }} />
                   <span className="gecko-text-mono" style={{ fontSize: 11, color: 'var(--gecko-text-secondary)' }}>{form.brandColor}</span>
                 </div>
               </div>
@@ -239,7 +240,7 @@ function NewLineModal({ onClose }: NewLineModalProps) {
             {sectionHead('EDI & Integration')}
             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16 }}>
               <Field label="EDI Messages">
-                <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap', paddingTop: 2 }}>
+                <div className="gecko-row gecko-row-wrap" style={{ gap: 6, paddingTop: 2 }}>
                   {EDI_OPTIONS.map(msg => {
                     const active = form.ediMessages.includes(msg);
                     return (
@@ -285,7 +286,7 @@ function NewLineModal({ onClose }: NewLineModalProps) {
           {/* Section 5: Status */}
           <div>
             {sectionHead('Status')}
-            <div style={{ display: 'flex', alignItems: 'flex-start', gap: 12, padding: '12px 14px', border: `1px solid ${form.active ? 'var(--gecko-success-200)' : 'var(--gecko-border)'}`, borderRadius: 8, background: form.active ? 'var(--gecko-success-50)' : 'var(--gecko-bg-subtle)', maxWidth: 340 }}>
+            <div className="gecko-row gecko-row-start gecko-stack-md" style={{ padding: '12px 14px', border: `1px solid ${form.active ? 'var(--gecko-success-200)' : 'var(--gecko-border)'}`, borderRadius: 8, background: form.active ? 'var(--gecko-success-50)' : 'var(--gecko-bg-subtle)', maxWidth: 340 }}>
               <button
                 type="button"
                 onClick={() => set({ active: !form.active })}
@@ -307,7 +308,7 @@ function NewLineModal({ onClose }: NewLineModalProps) {
                 <div style={{ fontSize: 12.5, fontWeight: 700, color: form.active ? 'var(--gecko-success-700)' : 'var(--gecko-text-secondary)' }}>
                   {form.active ? 'Active' : 'Inactive'}
                 </div>
-                <div style={{ fontSize: 11, color: 'var(--gecko-text-secondary)', marginTop: 2 }}>
+                <div className="gecko-cell-meta">
                   {form.active ? 'Line is live and available for EDO and vessel assignments' : 'Line is disabled and will not appear in operational lookups'}
                 </div>
               </div>
@@ -317,11 +318,11 @@ function NewLineModal({ onClose }: NewLineModalProps) {
         </div>
 
         {/* Footer */}
-        <div style={{ padding: '14px 24px', borderTop: '1px solid var(--gecko-border)', background: 'var(--gecko-bg-surface)', borderRadius: '0 0 12px 12px', flexShrink: 0, display: 'flex', alignItems: 'center', gap: 10 }}>
-          <div style={{ flex: 1, fontSize: 11, color: 'var(--gecko-text-disabled)' }}>
+        <div className="gecko-row gecko-flex-shrink-0" style={{ padding: '14px 24px', borderTop: '1px solid var(--gecko-border)', background: 'var(--gecko-bg-surface)', borderRadius: '0 0 12px 12px', gap: 10 }}>
+          <div className="gecko-flex-1" style={{ fontSize: 11, color: 'var(--gecko-text-disabled)' }}>
             * Line Code, SCAC Code and Full Name are required
           </div>
-          <div style={{ display: 'flex', gap: 8 }}>
+          <div className="gecko-action-toolbar">
             <button className="gecko-btn gecko-btn-outline gecko-btn-sm" onClick={onClose}>Cancel</button>
             <button
               className="gecko-btn gecko-btn-primary gecko-btn-sm"
@@ -389,17 +390,17 @@ export default function ShippingLinesPage() {
   const { page, setPage, pageSize, setPageSize, totalPages, pageItems, totalItems, startRow, endRow } = usePagination(filtered);
 
   return (
-    <div style={{ maxWidth: 'var(--gecko-container-max)', margin: '0 auto', display: 'flex', flexDirection: 'column', gap: 24 }}>
+    <div className="gecko-stack gecko-stack-xl" style={{ maxWidth: 'var(--gecko-container-max)', margin: '0 auto' }}>
 
       {/* Header */}
       <div className="gecko-page-actions">
         <div className="gecko-page-actions-left">
-          <div style={{ display: 'flex', alignItems: 'baseline', gap: 12 }}>
-            <h1 style={{ fontSize: 24, fontWeight: 700, margin: 0, color: 'var(--gecko-text-primary)' }}>Shipping Lines</h1>
+          <div className="gecko-row gecko-row-baseline gecko-stack-md">
+            <h1 className="gecko-page-title">Shipping Lines</h1>
             <span className="gecko-count-badge">{pageItems.length} shown of {totalItems}</span>
-            <span style={{ fontSize: 12, fontWeight: 600, color: 'var(--gecko-info-700)', background: 'var(--gecko-info-100)', padding: '2px 8px', borderRadius: 12 }}>34 EDI-linked</span>
+            <span className="gecko-badge gecko-badge-info">34 EDI-linked</span>
           </div>
-          <div style={{ fontSize: 13, color: 'var(--gecko-text-secondary)', marginTop: 4 }}>Line operators and carriers. Source of EDO, BL, and vessel schedule.</div>
+          <div className="gecko-page-subtitle gecko-mt-1">Line operators and carriers. Source of EDO, BL, and vessel schedule.</div>
         </div>
         <div className="gecko-toolbar">
           <ExportButton resource="Shipping lines" iconSize={16} />
@@ -419,7 +420,7 @@ export default function ShippingLinesPage() {
       </div>
 
       {/* Table */}
-      <div style={{ background: 'var(--gecko-bg-surface)', border: '1px solid var(--gecko-border)', borderRadius: 12, overflow: 'hidden', boxShadow: 'var(--gecko-shadow-sm)' }}>
+      <div className="gecko-table-card">
         <table className="gecko-table gecko-table-comfortable" style={{ fontSize: 13 }}>
           <thead>
             <tr>
@@ -450,23 +451,23 @@ export default function ShippingLinesPage() {
             {pageItems.map((line, i) => (
               <tr key={line.id}>
                 <td>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                  <div className="gecko-row">
                     <div style={{ width: 16, height: 16, borderRadius: 4, background: line.color }} />
-                    <span className="gecko-text-mono" style={{ fontWeight: 700, color: 'var(--gecko-primary-700)' }}>{line.id}</span>
+                    <span className="gecko-id-link" style={{ color: 'var(--gecko-primary-700)' }}>{line.id}</span>
                   </div>
                 </td>
                 <td className="gecko-text-mono" style={{ fontSize: 12, color: 'var(--gecko-text-secondary)' }}>{line.scac}</td>
-                <td style={{ fontWeight: 600, color: 'var(--gecko-text-primary)' }}>{line.name}</td>
+                <td><span className="gecko-cell-primary" style={{ fontSize: 13 }}>{line.name}</span></td>
                 <td style={{ color: 'var(--gecko-text-secondary)' }}>{line.hq}</td>
-                <td className="gecko-text-mono" style={{ fontSize: 12, fontWeight: 600 }}>{line.prefix}</td>
-                <td style={{ textAlign: 'right', fontWeight: 700 }}>{line.fleet}</td>
-                <td style={{ textAlign: 'right', fontWeight: 700 }}>{line.edos}</td>
+                <td className="gecko-mono-strong" style={{ fontSize: 12 }}>{line.prefix}</td>
+                <td className="gecko-num-tabular" style={{ fontWeight: 700 }}>{line.fleet}</td>
+                <td className="gecko-num-tabular" style={{ fontWeight: 700 }}>{line.edos}</td>
                 <td>
-                  <div style={{ display: 'flex', gap: 4, flexWrap: 'wrap' }}>
+                  <div className="gecko-row gecko-row-wrap" style={{ gap: 4 }}>
                     {line.edi.map(msg => (
                       msg === 'manual'
-                        ? <span key={msg} style={{ background: 'var(--gecko-gray-100)', color: 'var(--gecko-text-secondary)', padding: '2px 6px', borderRadius: 4, fontSize: 10, fontWeight: 600, textTransform: 'lowercase' }}>{msg}</span>
-                        : <span key={msg} style={{ background: 'var(--gecko-info-100)', color: 'var(--gecko-info-700)', padding: '2px 6px', borderRadius: 4, fontSize: 10, fontWeight: 700 }}>{msg}</span>
+                        ? <span key={msg} className="gecko-badge gecko-badge-xs gecko-badge-gray" style={{ textTransform: 'lowercase' }}>{msg}</span>
+                        : <span key={msg} className="gecko-badge gecko-badge-xs gecko-badge-info">{msg}</span>
                     ))}
                   </div>
                 </td>

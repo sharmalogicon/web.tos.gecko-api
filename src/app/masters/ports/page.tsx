@@ -145,6 +145,7 @@ const PORT_TYPE_STYLES: Record<PortType, { bg: string; color: string; label: str
 
 function PortTypeBadge({ type }: { type: PortType }) {
   const s = PORT_TYPE_STYLES[type];
+  // Dynamic bg/color tones — keep as inline (catalog covers only standard tones).
   return (
     <span style={{
       background: s.bg,
@@ -203,7 +204,7 @@ function CoordCell({ lat, lon }: { lat?: number; lon?: number }) {
   if (lat == null || lon == null) return <span style={{ color: 'var(--gecko-text-disabled)', fontSize: 11 }}>—</span>;
   const fmt = (n: number, pos: string, neg: string) => `${Math.abs(n).toFixed(2)}°${n >= 0 ? pos : neg}`;
   return (
-    <div style={{ fontFamily: 'var(--gecko-font-mono)', fontSize: 11, color: 'var(--gecko-text-secondary)', lineHeight: 1.3 }}>
+    <div className="gecko-text-mono" style={{ fontSize: 11, color: 'var(--gecko-text-secondary)', lineHeight: 1.3 }}>
       <div>{fmt(lat, 'N', 'S')}</div>
       <div>{fmt(lon, 'E', 'W')}</div>
     </div>
@@ -284,23 +285,19 @@ function PortModal({
       onMouseDown={(e) => { if (e.target === e.currentTarget) onClose(); }}
     >
       <div
-        className="gecko-modal gecko-modal-lg"
-        style={{ display: 'flex', flexDirection: 'column' }}
+        className="gecko-modal gecko-modal-lg gecko-stack"
+        style={{ gap: 0 }}
       >
         {/* Modal header */}
-        <div style={{
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'space-between',
+        <div className="gecko-row gecko-row-between gecko-flex-shrink-0" style={{
           padding: '16px 20px',
           borderBottom: '1px solid var(--gecko-border)',
-          flexShrink: 0,
         }}>
           <div>
             <div style={{ fontSize: 15, fontWeight: 700, color: 'var(--gecko-text-primary)' }}>
               {isEdit ? `Edit Port — ${initial!.locode}` : 'New Port'}
             </div>
-            <div style={{ fontSize: 11, color: 'var(--gecko-text-secondary)', marginTop: 2 }}>
+            <div className="gecko-card-subtitle">
               {isEdit ? 'Update UN/LOCODE global place record' : 'Add a port, ICD, depot, or place to the global catalog'}
             </div>
           </div>
@@ -475,13 +472,9 @@ function PortModal({
         </form>
 
         {/* Modal footer */}
-        <div style={{
-          display: 'flex',
-          justifyContent: 'flex-end',
-          gap: 8,
+        <div className="gecko-action-toolbar gecko-flex-shrink-0" style={{
           padding: '14px 20px',
           borderTop: '1px solid var(--gecko-border)',
-          flexShrink: 0,
           background: 'var(--gecko-bg-subtle, var(--gecko-bg-surface))',
           borderRadius: '0 0 12px 12px',
         }}>
@@ -571,22 +564,22 @@ export default function PortsListPage() {
 
   return (
     <>
-      <div style={{ maxWidth: 'var(--gecko-container-max)', margin: '0 auto', display: 'flex', flexDirection: 'column', gap: 24 }}>
+      <div className="gecko-stack gecko-stack-xl" style={{ maxWidth: 'var(--gecko-container-max)', margin: '0 auto' }}>
 
         {/* Header */}
         <div className="gecko-page-actions">
           <div className="gecko-page-actions-left">
-            <div style={{ display: 'flex', alignItems: 'baseline', gap: 12 }}>
-              <h1 style={{ fontSize: 24, fontWeight: 700, margin: 0, color: 'var(--gecko-text-primary)' }}>
+            <div className="gecko-row gecko-row-baseline gecko-stack-md">
+              <h1 className="gecko-page-title">
                 Ports &amp; Locations
               </h1>
               <span className="gecko-count-badge">{pageItems.length} shown of {totalItems}</span>
             </div>
-            <div style={{ fontSize: 13, color: 'var(--gecko-text-secondary)', marginTop: 2 }}>
+            <div className="gecko-page-subtitle">
               UN/LOCODE global place catalog. References POL, POD, and transshipment on every booking and B/L.
             </div>
             {/* Stat badges */}
-            <div style={{ display: 'flex', gap: 10, marginTop: 8, flexWrap: 'wrap' }}>
+            <div className="gecko-row gecko-row-wrap gecko-stack-md gecko-mt-2">
               <span style={{
                 fontSize: 11, fontWeight: 600,
                 background: 'var(--gecko-primary-50, #eff6ff)',
@@ -636,13 +629,7 @@ export default function PortsListPage() {
         </div>
 
         {/* Table */}
-        <div style={{
-          background: 'var(--gecko-bg-surface)',
-          border: '1px solid var(--gecko-border)',
-          borderRadius: 12,
-          overflow: 'hidden',
-          boxShadow: 'var(--gecko-shadow-sm)',
-        }}>
+        <div className="gecko-table-card">
           <table className="gecko-table gecko-table-comfortable" style={{ fontSize: 13 }}>
             <thead>
               <tr>
@@ -675,12 +662,14 @@ export default function PortsListPage() {
                     <LOCODEBadge locode={p.locode} />
                   </td>
                   <td>
-                    <div style={{ fontWeight: 600, color: 'var(--gecko-text-primary)' }}>{p.name}</div>
-                    {p.iataCode && (
-                      <div style={{ fontSize: 11, color: 'var(--gecko-text-disabled)', fontFamily: 'var(--gecko-font-mono)' }}>
-                        IATA: {p.iataCode}
-                      </div>
-                    )}
+                    <div className="gecko-cell-two-line">
+                      <div className="gecko-cell-primary" style={{ fontSize: 13 }}>{p.name}</div>
+                      {p.iataCode && (
+                        <div className="gecko-cell-sub" style={{ fontSize: 11 }}>
+                          IATA: {p.iataCode}
+                        </div>
+                      )}
+                    </div>
                   </td>
                   <td>
                     <span style={{
@@ -709,7 +698,7 @@ export default function PortsListPage() {
                   </td>
                   <td>
                     {p.mappingCode
-                      ? <span style={{ fontFamily: 'var(--gecko-font-mono)', fontSize: 11, color: 'var(--gecko-text-secondary)' }}>{p.mappingCode}</span>
+                      ? <span className="gecko-text-mono" style={{ fontSize: 11, color: 'var(--gecko-text-secondary)' }}>{p.mappingCode}</span>
                       : <span style={{ color: 'var(--gecko-text-disabled)', fontSize: 11 }}>—</span>
                     }
                   </td>

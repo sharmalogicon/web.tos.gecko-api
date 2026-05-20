@@ -145,28 +145,23 @@ function KpiCard({
   accent: string;
 }) {
   return (
-    <div style={{
-      flex: 1, minWidth: 160,
-      padding: '14px 18px',
-      background: 'var(--gecko-bg-surface)',
-      border: '1px solid var(--gecko-border)',
-      borderTop: `3px solid ${accent}`,
-      borderRadius: 10,
-    }}>
-      <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 8 }}>
+    <div
+      className="gecko-card"
+      style={{
+        flex: 1, minWidth: 160,
+        padding: '14px 18px',
+        borderTop: `3px solid ${accent}`,
+      }}
+    >
+      <div className="gecko-row" style={{ gap: 6, marginBottom: 8 }}>
         <Icon name={icon} size={13} style={{ color: accent }} />
-        <span style={{
-          fontSize: 10, fontWeight: 700, letterSpacing: '0.08em',
-          textTransform: 'uppercase', color: 'var(--gecko-text-secondary)',
-        }}>
-          {label}
-        </span>
+        <span className="gecko-eyebrow">{label}</span>
       </div>
-      <div style={{ fontSize: 28, fontWeight: 700, lineHeight: 1, color: 'var(--gecko-text-primary)' }}>
+      <div className="gecko-stat-num gecko-stat-num-lg">
         {value}
       </div>
       {sub && (
-        <div style={{ fontSize: 11, color: 'var(--gecko-text-secondary)', marginTop: 5 }}>
+        <div className="gecko-cell-meta" style={{ marginTop: 5 }}>
           {sub}
         </div>
       )}
@@ -181,7 +176,7 @@ function AvatarStack({ avatars }: { avatars: AvatarDef[] }) {
   const extra = avatars.length - visible.length;
 
   return (
-    <div style={{ display: 'flex', alignItems: 'center' }}>
+    <div className="gecko-row" style={{ gap: 0 }}>
       {visible.map((av, i) => (
         <div
           key={i}
@@ -225,7 +220,7 @@ function PermBar({ granted, total }: { granted: number; total: number }) {
   const color = permColor(pct);
 
   return (
-    <div style={{ display: 'flex', alignItems: 'center', gap: 8, minWidth: 120 }}>
+    <div className="gecko-row" style={{ gap: 8, minWidth: 120 }}>
       <div style={{ flex: 1, height: 5, borderRadius: 3, background: 'var(--gecko-bg-subtle)', overflow: 'hidden' }}>
         <div style={{ width: `${pct}%`, height: '100%', background: color, borderRadius: 3, transition: 'width 0.3s' }} />
       </div>
@@ -305,13 +300,10 @@ export default function RolesPage() {
     <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--gecko-space-4)' }}>
 
       {/* ── Page Header ── */}
-      <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: 12, flexWrap: 'wrap' }}>
-        <div>
-          <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 4 }}>
-            <h1 style={{
-              fontSize: 22, fontWeight: 700, margin: 0,
-              letterSpacing: '-0.02em', color: 'var(--gecko-text-primary)',
-            }}>
+      <div className="gecko-page-header">
+        <div className="gecko-page-header-left">
+          <div className="gecko-row" style={{ gap: 10, marginBottom: 4 }}>
+            <h1 className="gecko-page-title">
               Roles &amp; Rights
             </h1>
             <span style={{
@@ -323,21 +315,18 @@ export default function RolesPage() {
               Config
             </span>
           </div>
-          <div style={{ fontSize: 13, color: 'var(--gecko-text-secondary)' }}>
+          <p className="gecko-page-subtitle">
             Define permission sets — assign roles to users on the{' '}
-            <Link
-              href="/config/users"
-              style={{ color: 'var(--gecko-primary-600)', textDecoration: 'none', fontWeight: 600 }}
-            >
+            <Link href="/config/users" className="gecko-link">
               Users &amp; Roles
             </Link>{' '}
             page
-          </div>
+          </p>
         </div>
       </div>
 
       {/* ── KPI Strip ── */}
-      <div style={{ display: 'flex', gap: 12, flexWrap: 'wrap' }}>
+      <div className="gecko-row gecko-row-wrap" style={{ gap: 12 }}>
         <KpiCard
           label="Total Roles"
           value={totalRoles}
@@ -369,7 +358,7 @@ export default function RolesPage() {
       </div>
 
       {/* ── Toolbar ── */}
-      <div style={{ display: 'flex', alignItems: 'center', gap: 10, flexWrap: 'wrap' }}>
+      <div className="gecko-row gecko-row-wrap" style={{ gap: 10 }}>
         {/* Search */}
         <div style={{ position: 'relative', flex: 1, minWidth: 220, maxWidth: 340 }}>
           <span style={{
@@ -424,11 +413,7 @@ export default function RolesPage() {
       </div>
 
       {/* ── Data Table ── */}
-      <div style={{
-        background: 'var(--gecko-bg-surface)',
-        border: '1px solid var(--gecko-border)',
-        borderRadius: 10, overflow: 'hidden',
-      }}>
+      <div className="gecko-table-card">
         <div style={{ overflowX: 'auto' }}>
           <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 13 }}>
             <thead>
@@ -491,7 +476,7 @@ export default function RolesPage() {
 
                       {/* ── Role column ── */}
                       <td style={{ padding: '12px 14px', whiteSpace: 'nowrap' }}>
-                        <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+                        <div className="gecko-row" style={{ gap: 10 }}>
                           {/* color chip */}
                           <div style={{
                             width: 10, height: 10, borderRadius: '50%',
@@ -499,12 +484,12 @@ export default function RolesPage() {
                             boxShadow: `0 0 0 2px ${role.color}33`,
                           }} />
                           <div>
-                            <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+                            <div className="gecko-row" style={{ gap: 6 }}>
                               <span style={{ fontWeight: 700, color: 'var(--gecko-text-primary)' }}>
                                 {role.name}
                               </span>
                               {isSystem && (
-                                <span style={{ color: 'var(--gecko-text-disabled)', display: 'flex', alignItems: 'center' }} title="System role — cannot be deleted or renamed">
+                                <span className="gecko-inline-row" style={{ color: 'var(--gecko-text-disabled)' }} title="System role — cannot be deleted or renamed">
                                   <Icon name="lock" size={11} />
                                 </span>
                               )}
@@ -537,7 +522,7 @@ export default function RolesPage() {
 
                       {/* ── Users ── */}
                       <td style={{ padding: '12px 14px' }}>
-                        <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                        <div className="gecko-row" style={{ gap: 8 }}>
                           {/* count badge */}
                           <span style={{
                             minWidth: 22, height: 22,
@@ -582,7 +567,7 @@ export default function RolesPage() {
 
                       {/* ── Actions ── */}
                       <td style={{ padding: '12px 14px' }}>
-                        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'flex-end', gap: 4 }}>
+                        <div className="gecko-row gecko-row-right" style={{ gap: 4 }}>
 
                           {/* Edit */}
                           <Link href={`/config/roles/${role.id}`} style={{ textDecoration: 'none' }}>

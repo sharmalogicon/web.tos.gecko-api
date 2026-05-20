@@ -7,9 +7,9 @@ import { RefreshButton } from '@/components/ui/RefreshButton';
 
 function KpiCard({ label, value, sub, accent, trend }: { label: string; value: string; sub?: string; accent?: string; trend?: 'up' | 'down' | 'neutral' }) {
   return (
-    <div style={{ background: 'var(--gecko-bg-surface)', border: '1px solid var(--gecko-border)', borderRadius: 12, padding: '18px 20px', borderTop: `3px solid ${accent ?? 'var(--gecko-primary-400)'}`, display: 'flex', flexDirection: 'column', gap: 6 }}>
-      <div style={{ fontSize: 11, fontWeight: 600, color: 'var(--gecko-text-secondary)', textTransform: 'uppercase', letterSpacing: '0.05em' }}>{label}</div>
-      <div style={{ fontSize: 28, fontWeight: 800, color: 'var(--gecko-text-primary)', fontFamily: 'var(--gecko-font-mono)', lineHeight: 1 }}>{value}</div>
+    <div className="gecko-card gecko-card-padded gecko-stack" style={{ gap: 6, borderTop: `3px solid ${accent ?? 'var(--gecko-primary-400)'}` }}>
+      <div className="gecko-stat-label">{label}</div>
+      <div className="gecko-stat-num" style={{ fontFamily: 'var(--gecko-font-mono)', fontWeight: 800, fontSize: 28 }}>{value}</div>
       {sub && <div style={{ fontSize: 12, color: trend === 'up' ? 'var(--gecko-success-600)' : trend === 'down' ? 'var(--gecko-error-600)' : 'var(--gecko-text-secondary)' }}>{sub}</div>}
     </div>
   );
@@ -76,7 +76,7 @@ function complianceBarColor(pct: number) {
 
 export default function GateTrafficDashboardPage() {
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', gap: 24, paddingBottom: 40 }}>
+    <div className="gecko-stack" style={{ gap: 24, paddingBottom: 40 }}>
       <nav className="gecko-breadcrumb">
         <span className="gecko-breadcrumb-item">Masters</span>
         <span className="gecko-breadcrumb-sep">/</span>
@@ -85,18 +85,18 @@ export default function GateTrafficDashboardPage() {
         <span className="gecko-breadcrumb-current">Gate &amp; Traffic</span>
       </nav>
 
-      <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', flexWrap: 'wrap', gap: 16 }}>
-        <div>
-          <h1 style={{ fontSize: 26, fontWeight: 700, margin: 0, letterSpacing: '-0.02em', color: 'var(--gecko-text-primary)' }}>Gate &amp; Traffic Dashboard</h1>
-          <div style={{ fontSize: 13, color: 'var(--gecko-text-secondary)', marginTop: 4 }}>Real-time gate throughput, truck queue, and lane performance</div>
+      <div className="gecko-page-header">
+        <div className="gecko-page-header-left">
+          <h1 className="gecko-page-title-lg">Gate &amp; Traffic Dashboard</h1>
+          <p className="gecko-page-subtitle">Real-time gate throughput, truck queue, and lane performance</p>
         </div>
-        <div style={{ display: 'flex', gap: 8 }}>
+        <div className="gecko-page-header-actions">
           <RefreshButton resource="Gate traffic" iconSize={14} />
           <ExportButton resource="Gate traffic" variant="primary" iconSize={14} />
         </div>
       </div>
 
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(5, 1fr)', gap: 14 }}>
+      <div className="gecko-grid-5" style={{ gap: 14 }}>
         <KpiCard label="Trucks In Today" value="124" sub="↑ 12% vs yesterday" accent="var(--gecko-primary-400)" trend="up" />
         <KpiCard label="Avg Turn Time" value="18 min" sub="Target: 20 min ✓" accent="var(--gecko-success-400)" trend="neutral" />
         <KpiCard label="Gate Throughput" value="14 / hr" sub="Peak hour: 08:00–09:00" accent="var(--gecko-info-400)" />

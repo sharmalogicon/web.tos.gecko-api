@@ -28,19 +28,19 @@ function KPICard({ label, value, delta, deltaKind = 'up', sublabel, spark, icon,
   };
   const c = accentMap[accent];
   return (
-    <div className="gecko-card" style={{ padding: 18, display: 'flex', flexDirection: 'column', gap: 14 }}>
-      <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between' }}>
+    <div className="gecko-card gecko-card-padded gecko-stack gecko-stack-lg">
+      <div className="gecko-row gecko-row-start gecko-row-between">
         <div>
           <div style={{ fontSize: 12, fontWeight: 500, color: 'var(--gecko-text-secondary)' }}>{label}</div>
           {sublabel && <div style={{ fontSize: 10, color: 'var(--gecko-text-disabled)', marginTop: 2, letterSpacing: '0.04em' }}>{sublabel}</div>}
         </div>
-        <div style={{ width: 32, height: 32, borderRadius: 8, background: c.bg, color: c.fg, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+        <div className="gecko-mini-icon" style={{ background: c.bg, color: c.fg }}>
           <Icon name={icon} size={16} />
         </div>
       </div>
-      <div style={{ display: 'flex', alignItems: 'flex-end', justifyContent: 'space-between', gap: 12 }}>
+      <div className="gecko-row gecko-row-end gecko-row-between gecko-stack-md">
         <div>
-          <div style={{ fontSize: 28, fontWeight: 700, color: 'var(--gecko-text-primary)', lineHeight: 1 }}>{value}</div>
+          <div className="gecko-stat-num" style={{ fontSize: 28 }}>{value}</div>
           {delta && (
             <div style={{ display: 'inline-flex', alignItems: 'center', gap: 3, marginTop: 8, fontSize: 11, fontWeight: 600, color: deltaKind === 'up' ? 'var(--gecko-success-600)' : 'var(--gecko-error-600)' }}>
               <Icon name={deltaKind === 'up' ? 'arrowUp' : 'arrowDown'} size={11} stroke={2.5} />
@@ -65,17 +65,17 @@ export default function DashboardOverviewPage() {
   const maxMovement = Math.max(...movementData.map(d => d.v));
 
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', gap: 20 }}>
+    <div className="gecko-stack" style={{ gap: 20 }}>
       {/* Page header */}
-      <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', flexWrap: 'wrap', gap: 16 }}>
-        <div>
-          <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 6 }}>
-            <h1 style={{ fontSize: 26, fontWeight: 700, margin: 0, letterSpacing: '-0.02em' }}>Operations Overview</h1>
+      <div className="gecko-page-header">
+        <div className="gecko-page-header-left">
+          <div className="gecko-row" style={{ gap: 10 }}>
+            <h1 className="gecko-page-title-lg">Operations Overview</h1>
             <span className="gecko-badge gecko-badge-success" style={{ fontSize: 10 }}><span className="gecko-badge-dot" style={{ width: 6, height: 6, borderRadius: '50%', background: 'var(--gecko-success-500)', display: 'inline-block' }} />Live</span>
           </div>
-          <div style={{ fontSize: 13, color: 'var(--gecko-text-secondary)' }}>Thursday, 23 Apr 2026 · Laem Chabang ICD · Shift A (06:00–14:00)</div>
+          <p className="gecko-page-subtitle">Thursday, 23 Apr 2026 · Laem Chabang ICD · Shift A (06:00–14:00)</p>
         </div>
-        <div style={{ display: 'flex', gap: 8 }}>
+        <div className="gecko-page-header-actions">
           <div style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '0 12px', height: 36, border: '1px solid var(--gecko-border)', borderRadius: 6, fontSize: 12, color: 'var(--gecko-text-secondary)', background: 'var(--gecko-bg-surface)' }}>
             <Icon name="calendar" size={14} />
             Today · 23 Apr
@@ -87,7 +87,7 @@ export default function DashboardOverviewPage() {
       </div>
 
       {/* KPI row */}
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 14 }}>
+      <div className="gecko-grid-4" style={{ gap: 14 }}>
         <KPICard label="Gate Transactions" sublabel="TODAY" value="150" delta="+12" spark={[120, 128, 135, 122, 140, 145, 138, 150]} icon="invoice" accent="primary" />
         <KPICard label="Truck Turnaround" sublabel="AVG MIN" value="38" delta="-4" spark={[46, 44, 42, 44, 40, 42, 40, 38]} icon="truck" accent="success" />
         <KPICard label="EIR-Out" sublabel="DELIVERIES (DLV)" value="44" delta="-6" deltaKind="down" spark={[52, 50, 48, 56, 50, 46, 48, 44]} icon="arrowUp" accent="accent" />
@@ -97,11 +97,11 @@ export default function DashboardOverviewPage() {
       {/* Secondary row: movement chart + shift summary */}
       <div style={{ display: 'grid', gridTemplateColumns: '2fr 1fr', gap: 14 }}>
         {/* Monthly movement */}
-        <div className="gecko-card" style={{ padding: 20 }}>
-          <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', marginBottom: 16 }}>
+        <div className="gecko-card gecko-card-padded">
+          <div className="gecko-row gecko-row-start gecko-row-between" style={{ marginBottom: 16 }}>
             <div>
-              <div style={{ fontSize: 14, fontWeight: 600, color: 'var(--gecko-text-primary)' }}>Monthly Moves (RCV + DLV)</div>
-              <div style={{ fontSize: 11, color: 'var(--gecko-text-secondary)', marginTop: 2 }}>Last 12 months · all yards · facility rollup</div>
+              <div className="gecko-card-title">Monthly Moves (RCV + DLV)</div>
+              <div className="gecko-card-subtitle">Last 12 months · all yards · facility rollup</div>
             </div>
             <div style={{ display: 'flex', gap: 4 }}>
               {['3M', '6M', '1Y'].map((p, i) => (
@@ -143,9 +143,9 @@ export default function DashboardOverviewPage() {
         </div>
 
         {/* Shift summary */}
-        <div className="gecko-card" style={{ padding: 20 }}>
-          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 14 }}>
-            <div style={{ fontSize: 14, fontWeight: 600 }}>Shift Summary</div>
+        <div className="gecko-card gecko-card-padded">
+          <div className="gecko-row gecko-row-between" style={{ marginBottom: 14 }}>
+            <div className="gecko-card-title">Shift Summary</div>
             <span className="gecko-badge gecko-badge-primary" style={{ fontSize: 10 }}>SHIFT A</span>
           </div>
           {(() => {
@@ -182,11 +182,11 @@ export default function DashboardOverviewPage() {
       {/* Third row: Liner breakdown + Closing voyages */}
       <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 14 }}>
         {/* Line-operator breakdown */}
-        <div className="gecko-card" style={{ padding: 20 }}>
-          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 14 }}>
+        <div className="gecko-card gecko-card-padded">
+          <div className="gecko-row gecko-row-between" style={{ marginBottom: 14 }}>
             <div>
-              <div style={{ fontSize: 14, fontWeight: 600 }}>Movement by Shipping Line</div>
-              <div style={{ fontSize: 11, color: 'var(--gecko-text-secondary)', marginTop: 2 }}>This week · top 5</div>
+              <div className="gecko-card-title">Movement by Shipping Line</div>
+              <div className="gecko-card-subtitle">This week · top 5</div>
             </div>
             <button className="gecko-btn gecko-btn-ghost gecko-btn-icon gecko-btn-sm"><Icon name="moreH" size={16} /></button>
           </div>
@@ -211,13 +211,13 @@ export default function DashboardOverviewPage() {
         </div>
 
         {/* Closing voyages */}
-        <div className="gecko-card" style={{ padding: 20 }}>
-          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 14 }}>
+        <div className="gecko-card gecko-card-padded">
+          <div className="gecko-row gecko-row-between" style={{ marginBottom: 14 }}>
             <div>
-              <div style={{ fontSize: 14, fontWeight: 600 }}>Closing Voyages</div>
-              <div style={{ fontSize: 11, color: 'var(--gecko-text-secondary)', marginTop: 2 }}>Cutoff in next 48 hours</div>
+              <div className="gecko-card-title">Closing Voyages</div>
+              <div className="gecko-card-subtitle">Cutoff in next 48 hours</div>
             </div>
-            <a href="#" style={{ fontSize: 11, fontWeight: 600, color: 'var(--gecko-primary-600)' }}>View all →</a>
+            <a href="#" className="gecko-link" style={{ fontSize: 11, fontWeight: 600 }}>View all →</a>
           </div>
           {[
             { voyage: 'MSKK-142E', vessel: 'Maersk Kalmar', eta: '14h 20m', fullPct: 92, emptyPct: 78, risk: 'high' },
@@ -259,13 +259,13 @@ export default function DashboardOverviewPage() {
       </div>
 
       {/* Recent activity table */}
-      <div className="gecko-card">
-        <div style={{ padding: 20, borderBottom: '1px solid var(--gecko-border)', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+      <div className="gecko-card gecko-card-flush">
+        <div className="gecko-row gecko-row-between" style={{ padding: 20, borderBottom: '1px solid var(--gecko-border)' }}>
           <div>
-            <div style={{ fontSize: 14, fontWeight: 600 }}>Recent Gate Transactions</div>
-            <div style={{ fontSize: 11, color: 'var(--gecko-text-secondary)', marginTop: 2 }}>Last 10 EIR events across all yards</div>
+            <div className="gecko-card-title">Recent Gate Transactions</div>
+            <div className="gecko-card-subtitle">Last 10 EIR events across all yards</div>
           </div>
-          <div style={{ display: 'flex', gap: 8 }}>
+          <div className="gecko-row gecko-stack-sm">
             <button className="gecko-btn gecko-btn-outline gecko-btn-sm"><Icon name="filter" size={13} />Filter</button>
             <RefreshButton resource="Dashboard" iconSize={13} />
           </div>

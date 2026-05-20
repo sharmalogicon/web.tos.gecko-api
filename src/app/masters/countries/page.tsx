@@ -96,6 +96,7 @@ const COUNTRY_FILTER_FIELDS: FilterField[] = [
 
 function RegionBadge({ region }: { region: Region }) {
   const cfg = REGION_CONFIG[region];
+  // Dynamic bg/color per region — kept inline (catalog covers only standard tones).
   return (
     <span style={{
       display: 'inline-block',
@@ -114,21 +115,8 @@ function RegionBadge({ region }: { region: Region }) {
 
 function ActiveBadge({ active }: { active: boolean }) {
   return (
-    <span style={{
-      display: 'inline-flex',
-      alignItems: 'center',
-      gap: 5,
-      padding: '2px 8px',
-      borderRadius: 12,
-      fontSize: 11,
-      fontWeight: 700,
-      background: active ? 'var(--gecko-success-100)' : 'var(--gecko-gray-100)',
-      color:      active ? 'var(--gecko-success-700)' : 'var(--gecko-gray-500)',
-    }}>
-      <span style={{
-        width: 6, height: 6, borderRadius: '50%', flexShrink: 0,
-        background: active ? 'var(--gecko-success-500)' : 'var(--gecko-gray-400)',
-      }} />
+    <span className={`gecko-badge gecko-badge-xs ${active ? 'gecko-badge-success' : 'gecko-badge-gray'}`}>
+      <span className={`gecko-status-dot-mini ${active ? 'gecko-tone-success-bg' : 'gecko-tone-gray-bg'}`} />
       {active ? 'Active' : 'Inactive'}
     </span>
   );
@@ -192,27 +180,23 @@ function CountryModal({ country, isNew, onClose }: CountryModalProps) {
       className="gecko-overlay"
       onClick={e => { if (e.target === e.currentTarget) onClose(); }}
     >
-      <div className="gecko-modal gecko-modal-lg" style={{ display: 'flex', flexDirection: 'column' }}>
+      <div className="gecko-modal gecko-modal-lg gecko-stack" style={{ gap: 0 }}>
 
         {/* ── Modal Header ── */}
-        <div style={{
+        <div className="gecko-row gecko-row-start gecko-row-between gecko-flex-shrink-0" style={{
           padding: '18px 24px',
           borderBottom: '1px solid var(--gecko-border)',
           background: 'var(--gecko-primary-50)',
           borderRadius: '12px 12px 0 0',
-          flexShrink: 0,
-          display: 'flex',
-          alignItems: 'flex-start',
-          justifyContent: 'space-between',
           gap: 16,
         }}>
           <div>
-            <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+            <div className="gecko-row">
               <Icon name="globe" size={16} style={{ color: 'var(--gecko-primary-600)' }} />
               <span style={{ fontSize: 16, fontWeight: 800, color: 'var(--gecko-text-primary)' }}>{modalTitle}</span>
-              <span style={{ fontSize: 9, fontWeight: 800, letterSpacing: '0.06em', padding: '1px 5px', borderRadius: 3, background: 'var(--gecko-info-100)', color: 'var(--gecko-info-700)' }}>ISO 3166-1</span>
+              <span className="gecko-badge gecko-badge-xs gecko-badge-info">ISO 3166-1</span>
             </div>
-            <div style={{ fontSize: 12, color: 'var(--gecko-text-secondary)', marginTop: 3 }}>
+            <div className="gecko-cell-meta" style={{ fontSize: 12, marginTop: 3 }}>
               {isNew
                 ? 'New entry — Country Code (alpha-2) and Name are required.'
                 : `Editing · Last saved by system`}
@@ -220,18 +204,19 @@ function CountryModal({ country, isNew, onClose }: CountryModalProps) {
           </div>
           <button
             onClick={onClose}
-            style={{ width: 32, height: 32, border: '1px solid var(--gecko-border)', borderRadius: 7, background: 'var(--gecko-bg-surface)', color: 'var(--gecko-text-secondary)', fontSize: 17, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', fontFamily: 'inherit', flexShrink: 0 }}
+            className="gecko-mini-icon gecko-mini-icon-neutral"
+            style={{ border: '1px solid var(--gecko-border)', borderRadius: 7, background: 'var(--gecko-bg-surface)', color: 'var(--gecko-text-secondary)', fontSize: 17, cursor: 'pointer', fontFamily: 'inherit' }}
           >×</button>
         </div>
 
         {/* ── Form body (scrollable) ── */}
-        <div style={{ padding: '22px 24px', flex: 1, overflowY: 'auto', display: 'flex', flexDirection: 'column', gap: 24 }}>
+        <div className="gecko-stack gecko-stack-xl gecko-flex-1" style={{ padding: '22px 24px', overflowY: 'auto' }}>
 
           {/* Section 1 — Identity (required) */}
           <div>
             {sectionHead('Identity')}
             <div style={{ display: 'grid', gridTemplateColumns: '120px 1fr', gap: 14 }}>
-              <div style={{ display: 'flex', flexDirection: 'column', gap: 3 }}>
+              <div className="gecko-stack gecko-stack-xs" style={{ gap: 3 }}>
                 <label className="gecko-label gecko-label-required">Country Code</label>
                 <input
                   className="gecko-input gecko-text-mono"
@@ -241,9 +226,9 @@ function CountryModal({ country, isNew, onClose }: CountryModalProps) {
                   maxLength={2}
                   style={{ textTransform: 'uppercase' }}
                 />
-                <div style={{ fontSize: 10, color: 'var(--gecko-text-disabled)' }}>ISO alpha-2, 2 chars</div>
+                <div className="gecko-cell-sub" style={{ fontSize: 10, marginTop: 0, fontFamily: 'inherit' }}>ISO alpha-2, 2 chars</div>
               </div>
-              <div style={{ display: 'flex', flexDirection: 'column', gap: 3 }}>
+              <div className="gecko-stack gecko-stack-xs" style={{ gap: 3 }}>
                 <label className="gecko-label gecko-label-required">Country Name</label>
                 <input
                   className="gecko-input"
@@ -251,7 +236,7 @@ function CountryModal({ country, isNew, onClose }: CountryModalProps) {
                   onChange={set('name')}
                   placeholder="e.g. Thailand"
                 />
-                <div style={{ fontSize: 10, color: 'var(--gecko-text-disabled)' }}>Official English name</div>
+                <div className="gecko-cell-sub" style={{ fontSize: 10, marginTop: 0, fontFamily: 'inherit' }}>Official English name</div>
               </div>
             </div>
           </div>
@@ -260,10 +245,10 @@ function CountryModal({ country, isNew, onClose }: CountryModalProps) {
           <div>
             {sectionHead('ISO 3166-1 Codes')}
             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 14 }}>
-              <div style={{ display: 'flex', flexDirection: 'column', gap: 3 }}>
-                <label className="gecko-label" style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+              <div className="gecko-stack gecko-stack-xs" style={{ gap: 3 }}>
+                <label className="gecko-label gecko-row" style={{ gap: 6 }}>
                   ISO Alpha-3
-                  <span style={{ fontSize: 9, fontWeight: 800, letterSpacing: '0.04em', padding: '1px 5px', borderRadius: 3, background: 'var(--gecko-info-100)', color: 'var(--gecko-info-700)' }}>ISO</span>
+                  <span className="gecko-badge gecko-badge-xs gecko-badge-info">ISO</span>
                 </label>
                 <input
                   className="gecko-input gecko-text-mono"
@@ -273,12 +258,12 @@ function CountryModal({ country, isNew, onClose }: CountryModalProps) {
                   maxLength={3}
                   style={{ textTransform: 'uppercase' }}
                 />
-                <div style={{ fontSize: 10, color: 'var(--gecko-text-disabled)' }}>3-character alphabetic code</div>
+                <div className="gecko-cell-sub" style={{ fontSize: 10, marginTop: 0, fontFamily: 'inherit' }}>3-character alphabetic code</div>
               </div>
-              <div style={{ display: 'flex', flexDirection: 'column', gap: 3 }}>
-                <label className="gecko-label" style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+              <div className="gecko-stack gecko-stack-xs" style={{ gap: 3 }}>
+                <label className="gecko-label gecko-row" style={{ gap: 6 }}>
                   ISO Numeric
-                  <span style={{ fontSize: 9, fontWeight: 800, letterSpacing: '0.04em', padding: '1px 5px', borderRadius: 3, background: 'var(--gecko-info-100)', color: 'var(--gecko-info-700)' }}>ISO</span>
+                  <span className="gecko-badge gecko-badge-xs gecko-badge-info">ISO</span>
                 </label>
                 <input
                   className="gecko-input gecko-text-mono"
@@ -287,7 +272,7 @@ function CountryModal({ country, isNew, onClose }: CountryModalProps) {
                   placeholder="e.g. 764"
                   maxLength={3}
                 />
-                <div style={{ fontSize: 10, color: 'var(--gecko-text-disabled)' }}>3-digit numeric code</div>
+                <div className="gecko-cell-sub" style={{ fontSize: 10, marginTop: 0, fontFamily: 'inherit' }}>3-digit numeric code</div>
               </div>
             </div>
           </div>
@@ -296,7 +281,7 @@ function CountryModal({ country, isNew, onClose }: CountryModalProps) {
           <div>
             {sectionHead('Classification')}
             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 14 }}>
-              <div style={{ display: 'flex', flexDirection: 'column', gap: 3 }}>
+              <div className="gecko-stack gecko-stack-xs" style={{ gap: 3 }}>
                 <label className="gecko-label">Region</label>
                 <select className="gecko-input" value={form.region} onChange={set('region')}>
                   <option value="ASIA_PACIFIC">Asia Pacific</option>
@@ -307,9 +292,9 @@ function CountryModal({ country, isNew, onClose }: CountryModalProps) {
                   <option value="OTHER">Other</option>
                 </select>
               </div>
-              <div style={{ display: 'flex', flexDirection: 'column', gap: 3 }}>
+              <div className="gecko-stack gecko-stack-xs" style={{ gap: 3 }}>
                 <label className="gecko-label">UN Member</label>
-                <label style={{ display: 'flex', alignItems: 'center', gap: 10, paddingTop: 8, cursor: 'pointer' }}>
+                <label className="gecko-row" style={{ gap: 10, paddingTop: 8, cursor: 'pointer' }}>
                   <input
                     type="checkbox"
                     checked={form.unMember}
@@ -328,7 +313,7 @@ function CountryModal({ country, isNew, onClose }: CountryModalProps) {
           <div>
             {sectionHead('Mapping & Status')}
             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 14 }}>
-              <div style={{ display: 'flex', flexDirection: 'column', gap: 3 }}>
+              <div className="gecko-stack gecko-stack-xs" style={{ gap: 3 }}>
                 <label className="gecko-label">Mapping Code</label>
                 <input
                   className="gecko-input gecko-text-mono"
@@ -336,11 +321,11 @@ function CountryModal({ country, isNew, onClose }: CountryModalProps) {
                   onChange={set('mappingCode')}
                   placeholder="e.g. TH or legacy EDI code"
                 />
-                <div style={{ fontSize: 10, color: 'var(--gecko-text-disabled)' }}>Legacy system / EDI mapping reference</div>
+                <div className="gecko-cell-sub" style={{ fontSize: 10, marginTop: 0, fontFamily: 'inherit' }}>Legacy system / EDI mapping reference</div>
               </div>
-              <div style={{ display: 'flex', flexDirection: 'column', gap: 3 }}>
+              <div className="gecko-stack gecko-stack-xs" style={{ gap: 3 }}>
                 <label className="gecko-label">Active</label>
-                <label style={{ display: 'flex', alignItems: 'center', gap: 10, paddingTop: 8, cursor: 'pointer' }}>
+                <label className="gecko-row" style={{ gap: 10, paddingTop: 8, cursor: 'pointer' }}>
                   <input
                     type="checkbox"
                     checked={form.active}
@@ -358,17 +343,14 @@ function CountryModal({ country, isNew, onClose }: CountryModalProps) {
         </div>
 
         {/* ── Footer ── */}
-        <div style={{
+        <div className="gecko-row gecko-flex-shrink-0" style={{
           padding: '14px 24px',
           borderTop: '1px solid var(--gecko-border)',
           background: 'var(--gecko-bg-surface)',
           borderRadius: '0 0 12px 12px',
-          flexShrink: 0,
-          display: 'flex',
-          alignItems: 'center',
           gap: 10,
         }}>
-          <div style={{ flex: 1, fontSize: 11, color: 'var(--gecko-text-disabled)' }}>
+          <div className="gecko-flex-1" style={{ fontSize: 11, color: 'var(--gecko-text-disabled)' }}>
             * Country Code (alpha-2) and Name are required
           </div>
           <button className="gecko-btn gecko-btn-outline gecko-btn-sm" onClick={onClose}>Cancel</button>
@@ -452,16 +434,16 @@ export default function CountriesPage() {
   };
 
   return (
-    <div style={{ maxWidth: 'var(--gecko-container-max)', margin: '0 auto', display: 'flex', flexDirection: 'column', gap: 24 }}>
+    <div className="gecko-stack gecko-stack-xl" style={{ maxWidth: 'var(--gecko-container-max)', margin: '0 auto' }}>
 
       {/* ── Page Header ── */}
       <div className="gecko-page-actions">
         <div className="gecko-page-actions-left">
-          <div style={{ display: 'flex', alignItems: 'baseline', gap: 12 }}>
-            <h1 style={{ fontSize: 24, fontWeight: 700, margin: 0, color: 'var(--gecko-text-primary)' }}>Countries</h1>
+          <div className="gecko-row gecko-row-baseline gecko-stack-md">
+            <h1 className="gecko-page-title">Countries</h1>
             <span className="gecko-count-badge">{pageItems.length} shown of {totalItems}</span>
           </div>
-          <div style={{ fontSize: 13, color: 'var(--gecko-text-secondary)' }}>
+          <div className="gecko-page-subtitle">
             ISO 3166-1 country catalog. Reference for ports, customers, customs, and trade compliance.
           </div>
         </div>
@@ -485,13 +467,13 @@ export default function CountriesPage() {
       </div>
 
       {/* ── Stats badges ── */}
-      <div style={{ display: 'flex', gap: 12 }}>
+      <div className="gecko-row gecko-stack-md">
         {[
           { label: 'Total countries', value: totalCount,   color: 'var(--gecko-text-primary)',   bg: 'var(--gecko-bg-subtle)',     border: 'var(--gecko-border)' },
           { label: 'Active',          value: activeCount,  color: 'var(--gecko-success-700)',    bg: 'var(--gecko-success-50)',    border: 'var(--gecko-success-200)' },
           { label: 'Regions',         value: regionCount,  color: 'var(--gecko-primary-700)',    bg: 'var(--gecko-primary-50)',    border: 'var(--gecko-primary-200)' },
         ].map(stat => (
-          <div key={stat.label} style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '10px 18px', borderRadius: 10, background: stat.bg, border: `1px solid ${stat.border}` }}>
+          <div key={stat.label} className="gecko-row" style={{ gap: 10, padding: '10px 18px', borderRadius: 10, background: stat.bg, border: `1px solid ${stat.border}` }}>
             <span style={{ fontSize: 22, fontWeight: 800, color: stat.color, lineHeight: 1 }}>{stat.value}</span>
             <span style={{ fontSize: 12, fontWeight: 600, color: stat.color, opacity: 0.8 }}>{stat.label}</span>
           </div>
@@ -499,7 +481,7 @@ export default function CountriesPage() {
       </div>
 
       {/* ── Table ── */}
-      <div style={{ background: 'var(--gecko-bg-surface)', border: '1px solid var(--gecko-border)', borderRadius: 12, overflow: 'hidden', boxShadow: 'var(--gecko-shadow-sm)' }}>
+      <div className="gecko-table-card">
         <table className="gecko-table gecko-table-comfortable" style={{ fontSize: 13 }}>
           <thead>
             <tr>
@@ -531,36 +513,26 @@ export default function CountriesPage() {
 
                   {/* Code */}
                   <td>
-                    <span style={{
-                      fontFamily: 'var(--gecko-font-mono)',
-                      fontWeight: 700,
-                      fontSize: 12,
-                      color: 'var(--gecko-primary-700)',
-                      background: 'var(--gecko-primary-50)',
-                      border: '1px solid var(--gecko-primary-200)',
-                      padding: '2px 8px',
-                      borderRadius: 6,
-                      letterSpacing: '0.04em',
-                    }}>
+                    <span className="gecko-badge gecko-badge-xs gecko-badge-primary gecko-text-mono">
                       {c.code}
                     </span>
                   </td>
 
                   {/* Name */}
                   <td>
-                    <div style={{ fontWeight: 600, color: 'var(--gecko-text-primary)' }}>{c.name}</div>
+                    <div className="gecko-cell-primary" style={{ fontSize: 13 }}>{c.name}</div>
                   </td>
 
                   {/* Alpha-3 */}
                   <td>
-                    <span style={{ fontFamily: 'var(--gecko-font-mono)', fontSize: 12, color: 'var(--gecko-text-secondary)', fontWeight: 600 }}>
+                    <span className="gecko-mono-strong" style={{ fontSize: 12, color: 'var(--gecko-text-secondary)' }}>
                       {c.alpha3 || <span style={{ color: 'var(--gecko-text-disabled)' }}>—</span>}
                     </span>
                   </td>
 
                   {/* Numeric */}
                   <td>
-                    <span style={{ fontFamily: 'var(--gecko-font-mono)', fontSize: 12, color: 'var(--gecko-text-secondary)' }}>
+                    <span className="gecko-text-mono" style={{ fontSize: 12, color: 'var(--gecko-text-secondary)' }}>
                       {c.numeric || <span style={{ color: 'var(--gecko-text-disabled)' }}>—</span>}
                     </span>
                   </td>
@@ -579,7 +551,7 @@ export default function CountriesPage() {
                   {/* Mapping Code */}
                   <td>
                     {c.mappingCode
-                      ? <span style={{ fontFamily: 'var(--gecko-font-mono)', fontSize: 12, color: 'var(--gecko-text-secondary)' }}>{c.mappingCode}</span>
+                      ? <span className="gecko-text-mono" style={{ fontSize: 12, color: 'var(--gecko-text-secondary)' }}>{c.mappingCode}</span>
                       : <span style={{ color: 'var(--gecko-text-disabled)' }}>—</span>
                     }
                   </td>

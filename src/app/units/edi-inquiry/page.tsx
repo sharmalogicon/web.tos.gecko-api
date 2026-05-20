@@ -150,22 +150,22 @@ export default function EdiInquiryPage() {
   ];
 
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
+    <div className="gecko-stack" style={{ gap: 14 }}>
 
       {/* ── Header ── */}
-      <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: 12 }}>
-        <div>
-          <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-            <h1 style={{ fontSize: 20, fontWeight: 700, color: 'var(--gecko-text-primary)', margin: 0 }}>EDI Event Inquiry</h1>
+      <div className="gecko-page-header">
+        <div className="gecko-page-header-left">
+          <div className="gecko-row" style={{ gap: 10 }}>
+            <h1 className="gecko-page-title">EDI Event Inquiry</h1>
             <span style={{ fontSize: 10.5, fontWeight: 600, padding: '2px 8px', borderRadius: 20, background: 'var(--gecko-primary-50)', color: 'var(--gecko-primary-700)', border: '1px solid var(--gecko-primary-200)' }}>
               {filtered.length} of {EVENTS.length}
             </span>
           </div>
-          <div style={{ fontSize: 12, color: 'var(--gecko-text-secondary)', marginTop: 3 }}>
+          <p className="gecko-page-subtitle">
             Audit trail of every EDIFACT message — COPARN, CODECO, COARRI, BAPLIE, MOVINS, COPRAR, CUSCAR, IFTMIN.
-          </div>
+          </p>
         </div>
-        <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
+        <div className="gecko-page-header-actions">
           <ExportButton resource="EDI events" iconSize={13} />
           <RefreshButton resource="EDI events" iconSize={13} />
           <Link href="/dashboard/edi" className="gecko-btn gecko-btn-outline gecko-btn-sm" style={{ textDecoration: 'none' }}>
@@ -175,20 +175,20 @@ export default function EdiInquiryPage() {
       </div>
 
       {/* ── KPI Strip ── */}
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 10 }}>
+      <div className="gecko-grid-4" style={{ gap: 10 }}>
         {[
-          { label: 'Today',   value: kpi.today,   icon: 'clock',         color: 'var(--gecko-primary-700)', bg: 'var(--gecko-primary-50)' },
-          { label: 'Acked',   value: kpi.acked,   icon: 'check',         color: 'var(--gecko-success-700)', bg: 'var(--gecko-success-50)' },
-          { label: 'Pending', value: kpi.pending, icon: 'clock',         color: 'var(--gecko-warning-700)', bg: 'var(--gecko-warning-50)' },
-          { label: 'Errors',  value: kpi.error,   icon: 'alertTriangle', color: 'var(--gecko-error-700)',   bg: 'var(--gecko-error-50)'   },
+          { label: 'Today',   value: kpi.today,   icon: 'clock',         tone: 'primary' as const },
+          { label: 'Acked',   value: kpi.acked,   icon: 'check',         tone: 'success' as const },
+          { label: 'Pending', value: kpi.pending, icon: 'clock',         tone: 'warning' as const },
+          { label: 'Errors',  value: kpi.error,   icon: 'alertTriangle', tone: 'error'   as const },
         ].map(k => (
-          <div key={k.label} style={{ padding: '12px 14px', background: 'var(--gecko-bg-surface)', border: '1px solid var(--gecko-border)', borderRadius: 10, display: 'flex', alignItems: 'center', gap: 12 }}>
-            <div style={{ width: 36, height: 36, borderRadius: 8, background: k.bg, color: k.color, display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+          <div key={k.label} className="gecko-card gecko-row" style={{ padding: '12px 14px', gap: 12 }}>
+            <div className={`gecko-mini-icon gecko-mini-icon-lg gecko-mini-icon-${k.tone}`}>
               <Icon name={k.icon} size={17} />
             </div>
             <div>
-              <div style={{ fontSize: 22, fontWeight: 700, fontFamily: 'var(--gecko-font-mono)', letterSpacing: '-0.02em', lineHeight: 1, color: 'var(--gecko-text-primary)' }}>{k.value}</div>
-              <div style={{ fontSize: 11, color: 'var(--gecko-text-secondary)', marginTop: 2 }}>{k.label}</div>
+              <div className="gecko-stat-num gecko-stat-num-sm" style={{ fontFamily: 'var(--gecko-font-mono)' }}>{k.value}</div>
+              <div className="gecko-cell-meta">{k.label}</div>
             </div>
           </div>
         ))}
@@ -207,7 +207,7 @@ export default function EdiInquiryPage() {
       />
 
       {/* ── Table ── */}
-      <div style={{ background: 'var(--gecko-bg-surface)', border: '1px solid var(--gecko-border)', borderRadius: 10, overflow: 'hidden' }}>
+      <div className="gecko-table-card">
         <table className="gecko-table">
           <thead>
             <tr>
@@ -249,9 +249,9 @@ export default function EdiInquiryPage() {
                     </span>
                   </td>
                   <td>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                      <span style={{ fontSize: 9.5, fontWeight: 700, color: 'var(--gecko-text-disabled)', textTransform: 'uppercase', letterSpacing: '0.04em', minWidth: 64 }}>{e.referenceType}</span>
-                      <span style={{ fontSize: 12, fontFamily: 'var(--gecko-font-mono)', fontWeight: 600 }}>{e.reference}</span>
+                    <div className="gecko-row" style={{ gap: 8 }}>
+                      <span className="gecko-eyebrow" style={{ minWidth: 64 }}>{e.referenceType}</span>
+                      <span className="gecko-mono-strong" style={{ fontSize: 12 }}>{e.reference}</span>
                     </div>
                   </td>
                   <td className="gecko-text-mono" style={{ fontSize: 11, color: 'var(--gecko-text-secondary)' }}>{e.msgRef}</td>
@@ -302,7 +302,7 @@ function EventDetailModal({ event, onClose, onResend }: { event: EdiEvent; onClo
       <div className="gecko-modal gecko-modal-lg" style={{ display: 'flex', flexDirection: 'column' }} onClick={e => e.stopPropagation()}>
         <div className="gecko-modal-header">
           <div>
-            <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+            <div className="gecko-row" style={{ gap: 10 }}>
               <span className="gecko-badge gecko-badge-info gecko-text-mono">{event.messageType}</span>
               <span style={{ fontSize: 11, fontWeight: 700, padding: '2px 7px', borderRadius: 4, background: event.direction === 'IN' ? 'var(--gecko-info-50)' : 'var(--gecko-primary-50)', color: event.direction === 'IN' ? 'var(--gecko-info-700)' : 'var(--gecko-primary-700)' }}>
                 {event.direction === 'IN' ? '↓ IN' : '↑ OUT'}
@@ -318,7 +318,7 @@ function EventDetailModal({ event, onClose, onResend }: { event: EdiEvent; onClo
         </div>
 
         <div className="gecko-modal-body">
-          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16 }}>
+          <div className="gecko-grid-2" style={{ gap: 16 }}>
             <Kv label="Event ID"   value={event.id}   mono />
             <Kv label="Partner"    value={event.partner} mono />
             <Kv label="Reference"  value={`${event.referenceType} · ${event.reference}`} mono />
@@ -329,13 +329,13 @@ function EventDetailModal({ event, onClose, onResend }: { event: EdiEvent; onClo
 
           {event.errorDetail && (
             <div style={{ marginTop: 16, padding: 12, background: 'var(--gecko-error-50)', border: '1px solid var(--gecko-error-200)', borderRadius: 8 }}>
-              <div style={{ fontSize: 11, fontWeight: 800, color: 'var(--gecko-error-700)', textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: 6 }}>Error Detail</div>
+              <div className="gecko-eyebrow" style={{ color: 'var(--gecko-error-700)', marginBottom: 6 }}>Error Detail</div>
               <div style={{ fontSize: 13, color: 'var(--gecko-error-700)' }}>{event.errorDetail}</div>
             </div>
           )}
 
           <div style={{ marginTop: 16 }}>
-            <div style={{ fontSize: 11, fontWeight: 800, color: 'var(--gecko-text-disabled)', textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: 6 }}>Payload (preview)</div>
+            <div className="gecko-eyebrow" style={{ marginBottom: 6 }}>Payload (preview)</div>
             <pre style={{ fontSize: 11, fontFamily: 'var(--gecko-font-mono)', background: 'var(--gecko-bg-subtle)', border: '1px solid var(--gecko-border)', borderRadius: 8, padding: 12, overflow: 'auto', maxHeight: 220, margin: 0 }}>
 {`UNH+${event.msgRef}+${event.messageType}:D:00B:UN'
 BGM+12+${event.id}+9'

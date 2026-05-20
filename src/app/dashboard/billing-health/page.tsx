@@ -5,9 +5,9 @@ import { Icon } from '@/components/ui/Icon';
 
 function KpiCard({ label, value, sub, accent, trend }: { label: string; value: string; sub?: string; accent?: string; trend?: 'up' | 'down' | 'neutral' }) {
   return (
-    <div style={{ background: 'var(--gecko-bg-surface)', border: '1px solid var(--gecko-border)', borderRadius: 12, padding: '18px 20px', borderTop: `3px solid ${accent ?? 'var(--gecko-primary-400)'}` }}>
-      <div style={{ fontSize: 11, fontWeight: 600, color: 'var(--gecko-text-secondary)', textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: 8 }}>{label}</div>
-      <div style={{ fontSize: 28, fontWeight: 800, color: 'var(--gecko-text-primary)', fontFamily: 'var(--gecko-font-mono)', lineHeight: 1 }}>{value}</div>
+    <div className="gecko-card gecko-card-padded" style={{ borderTop: `3px solid ${accent ?? 'var(--gecko-primary-400)'}` }}>
+      <div className="gecko-stat-label gecko-mb-2">{label}</div>
+      <div className="gecko-stat-num" style={{ fontFamily: 'var(--gecko-font-mono)', fontWeight: 800, fontSize: 28 }}>{value}</div>
       {sub && <div style={{ fontSize: 12, color: trend === 'up' ? 'var(--gecko-success-600)' : trend === 'down' ? 'var(--gecko-error-600)' : 'var(--gecko-text-secondary)', marginTop: 6 }}>{sub}</div>}
     </div>
   );
@@ -101,13 +101,13 @@ const UNBILLED_CUSTOMERS = [
 
 export default function BillingHealthPage() {
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', gap: 20 }}>
-      <div>
-        <h1 style={{ fontSize: 26, fontWeight: 700, margin: 0, letterSpacing: '-0.02em', marginBottom: 4 }}>Billing Health Dashboard</h1>
-        <div style={{ fontSize: 13, color: 'var(--gecko-text-secondary)' }}>Service order billing pipeline, exceptions, auto-bill coverage, and time-to-bill</div>
+    <div className="gecko-stack" style={{ gap: 20 }}>
+      <div className="gecko-page-header-left">
+        <h1 className="gecko-page-title-lg">Billing Health Dashboard</h1>
+        <p className="gecko-page-subtitle">Service order billing pipeline, exceptions, auto-bill coverage, and time-to-bill</p>
       </div>
 
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(5, 1fr)', gap: 14 }}>
+      <div className="gecko-grid-5" style={{ gap: 14 }}>
         <KpiCard label="Unbilled SOs"         value="47"        sub="฿85,640 pending billing"        accent="var(--gecko-warning-400)"  trend="down" />
         <KpiCard label="Avg Days to Bill"      value="2.3 days"  sub="Target: ≤ 3 days ✓"            accent="var(--gecko-success-400)" />
         <KpiCard label="Billing Exceptions"    value="8"         sub="Require manual review"          accent="var(--gecko-error-400)"    trend="down" />
@@ -115,7 +115,7 @@ export default function BillingHealthPage() {
         <KpiCard label="Oldest Unbilled"       value="12 days"   sub="SO-2026-0714 · CP Foods"        accent="var(--gecko-error-400)"    trend="down" />
       </div>
 
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 14 }}>
+      <div className="gecko-grid-3" style={{ gap: 14 }}>
         <Widget title="Unbilled Service Orders — Aging" col={2}>
           <svg viewBox={`0 0 ${AGING_SVG_W} ${AGING_SVG_H}`} width="100%" style={{ display: 'block' }}>
             {AGING_COUNTS.map((cnt, i) => {

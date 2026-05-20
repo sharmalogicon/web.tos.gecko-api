@@ -297,7 +297,7 @@ export default function YardGlancePage() {
 
   if (!loaded) {
     return (
-      <div style={{ padding: 40, textAlign: 'center', color: 'var(--gecko-text-secondary)' }}>
+      <div className="gecko-empty-card" style={{ padding: 40 }}>
         Loading yard layout…
       </div>
     );
@@ -327,21 +327,21 @@ export default function YardGlancePage() {
   ];
 
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', gap: 16, paddingBottom: 40 }}>
+    <div className="gecko-stack gecko-stack-lg" style={{ paddingBottom: 40 }}>
 
       {/* Page header */}
       <div className="gecko-page-actions">
         <div className="gecko-page-actions-left">
-          <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 4 }}>
-            <h1 style={{ fontSize: 24, fontWeight: 700, margin: 0, color: 'var(--gecko-text-primary)' }}>Yard at a Glance</h1>
+          <div className="gecko-row" style={{ gap: 10, marginBottom: 4 }}>
+            <h1 className="gecko-page-title">Yard at a Glance</h1>
             <span className="gecko-pill gecko-pill-success" style={{ display: 'inline-flex', alignItems: 'center', gap: 4 }}>
               <span className="gecko-pulse-dot" style={{ width: 6, height: 6, borderRadius: '50%', background: 'var(--gecko-success-500)' }} />
               Live
             </span>
           </div>
-          <div style={{ fontSize: 13, color: 'var(--gecko-text-secondary)' }}>
+          <p className="gecko-page-subtitle">
             {template?.name ?? 'Yard'} — {blocks.length} blocks · refreshed {now.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' })}
-          </div>
+          </p>
         </div>
         <div className="gecko-toolbar">
           <button className="gecko-btn gecko-btn-outline gecko-btn-sm" onClick={() => setNow(new Date())}>
@@ -356,7 +356,7 @@ export default function YardGlancePage() {
         </div>
       </div>
 
-      {/* KPI strip */}
+      {/* KPI strip — 6 columns, no catalog gecko-grid-6 */}
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(6, 1fr)', gap: 12 }}>
         <KpiTile
           icon="layers" tone="primary"

@@ -5,9 +5,9 @@ import { Icon } from '@/components/ui/Icon';
 
 function KpiCard({ label, value, sub, accent, trend }: { label: string; value: string; sub?: string; accent?: string; trend?: 'up' | 'down' | 'neutral' }) {
   return (
-    <div style={{ background: 'var(--gecko-bg-surface)', border: '1px solid var(--gecko-border)', borderRadius: 12, padding: '18px 20px', borderTop: `3px solid ${accent ?? 'var(--gecko-primary-400)'}` }}>
-      <div style={{ fontSize: 11, fontWeight: 600, color: 'var(--gecko-text-secondary)', textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: 8 }}>{label}</div>
-      <div style={{ fontSize: 28, fontWeight: 800, color: 'var(--gecko-text-primary)', fontFamily: 'var(--gecko-font-mono)', lineHeight: 1 }}>{value}</div>
+    <div className="gecko-card gecko-card-padded" style={{ borderTop: `3px solid ${accent ?? 'var(--gecko-primary-400)'}` }}>
+      <div className="gecko-stat-label gecko-mb-2">{label}</div>
+      <div className="gecko-stat-num" style={{ fontFamily: 'var(--gecko-font-mono)', fontWeight: 800, fontSize: 28 }}>{value}</div>
       {sub && <div style={{ fontSize: 12, color: trend === 'up' ? 'var(--gecko-success-600)' : trend === 'down' ? 'var(--gecko-error-600)' : 'var(--gecko-text-secondary)', marginTop: 6 }}>{sub}</div>}
     </div>
   );
@@ -98,13 +98,13 @@ const COL_AREA = `M${ptX(0)},${ptY(COLLECTED[0])} ` + COLLECTED.map((v, i) => `L
 
 export default function AccountsRevenuePage() {
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', gap: 20 }}>
-      <div>
-        <h1 style={{ fontSize: 26, fontWeight: 700, margin: 0, letterSpacing: '-0.02em', marginBottom: 4 }}>Accounts &amp; Revenue Dashboard</h1>
-        <div style={{ fontSize: 13, color: 'var(--gecko-text-secondary)' }}>Monthly revenue, accounts receivable aging, and top customer billing performance</div>
+    <div className="gecko-stack" style={{ gap: 20 }}>
+      <div className="gecko-page-header-left">
+        <h1 className="gecko-page-title-lg">Accounts &amp; Revenue Dashboard</h1>
+        <p className="gecko-page-subtitle">Monthly revenue, accounts receivable aging, and top customer billing performance</p>
       </div>
 
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(5, 1fr)', gap: 14 }}>
+      <div className="gecko-grid-5" style={{ gap: 14 }}>
         <KpiCard label="Revenue (MTD)"       value="฿1,284,500" sub="↑ 8.4% vs last month"      accent="var(--gecko-primary-400)"  trend="up" />
         <KpiCard label="Outstanding AR"      value="฿425,800"   sub="Across 28 customers"        accent="var(--gecko-warning-400)" />
         <KpiCard label="Overdue 30+ Days"    value="฿128,400"   sub="Needs follow-up"            accent="var(--gecko-error-400)"   trend="down" />
@@ -112,7 +112,7 @@ export default function AccountsRevenuePage() {
         <KpiCard label="Collection Rate"     value="94.2%"      sub="↑ 1.8% vs last month"       accent="var(--gecko-success-400)" trend="up" />
       </div>
 
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 14 }}>
+      <div className="gecko-grid-3" style={{ gap: 14 }}>
         <Widget title="Monthly Revenue — Last 12 Months" col={2}>
           <svg viewBox={`0 0 ${REV_SVG_W} ${REV_SVG_H}`} width="100%" style={{ display: 'block' }}>
             <line

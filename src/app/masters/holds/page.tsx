@@ -324,7 +324,7 @@ function PriorityBadge({ priority }: { priority: Priority }) {
 
 function ReleaseAuthBadge({ auth }: { auth: ReleaseAuthority }) {
   return (
-    <span style={{ display: 'inline-flex', alignItems: 'center', gap: 4, padding: '2px 8px', borderRadius: 10, fontSize: 11, fontWeight: 600, background: 'var(--gecko-bg-subtle)', color: 'var(--gecko-text-secondary)', border: '1px solid var(--gecko-border)', whiteSpace: 'nowrap' }}>
+    <span className="gecko-badge gecko-badge-xs gecko-badge-gray">
       <Icon name="user" size={10} />
       {RELEASE_AUTH_LABEL[auth]}
     </span>
@@ -385,7 +385,7 @@ function HoldModal({ hold, isNew, onClose }: HoldModalProps) {
     <div className="gecko-form-group" style={{ gridColumn: span ? `span ${span}` : undefined }}>
       <label className={`gecko-label${required ? ' gecko-label-required' : ''}`}>{label}</label>
       {children}
-      {hint && <div style={{ fontSize: 11, color: 'var(--gecko-text-secondary)', marginTop: 3 }}>{hint}</div>}
+      {hint && <div className="gecko-cell-meta" style={{ marginTop: 3 }}>{hint}</div>}
     </div>
   );
 
@@ -394,18 +394,18 @@ function HoldModal({ hold, isNew, onClose }: HoldModalProps) {
       className="gecko-overlay"
       onClick={e => { if (e.target === e.currentTarget) onClose(); }}
     >
-      <div className="gecko-modal gecko-modal-lg" style={{ display: 'flex', flexDirection: 'column' }}>
+      <div className="gecko-modal gecko-modal-lg gecko-stack" style={{ gap: 0 }}>
 
         {/* Header */}
-        <div style={{ padding: '18px 24px', borderBottom: '1px solid var(--gecko-border)', background: 'var(--gecko-danger-50)', borderRadius: '12px 12px 0 0', flexShrink: 0, display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: 16 }}>
+        <div className="gecko-row gecko-row-start gecko-row-between gecko-flex-shrink-0" style={{ padding: '18px 24px', borderBottom: '1px solid var(--gecko-border)', background: 'var(--gecko-danger-50)', borderRadius: '12px 12px 0 0', gap: 16 }}>
           <div>
-            <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+            <div className="gecko-row">
               <Icon name="lock" size={16} style={{ color: 'var(--gecko-danger-600)' }} />
               <span style={{ fontSize: 16, fontWeight: 800, color: 'var(--gecko-text-primary)' }}>
                 {isNew ? 'New Hold' : `Edit Hold — ${hold.code}`}
               </span>
             </div>
-            <div style={{ fontSize: 12, color: 'var(--gecko-text-secondary)', marginTop: 3 }}>
+            <div className="gecko-cell-meta" style={{ fontSize: 12, marginTop: 3 }}>
               {isNew
                 ? 'Define a named hold to block container operations pending resolution.'
                 : `Modifying hold definition. Changes apply immediately to newly applied instances.`}
@@ -413,14 +413,15 @@ function HoldModal({ hold, isNew, onClose }: HoldModalProps) {
           </div>
           <button
             onClick={onClose}
-            style={{ width: 32, height: 32, border: '1px solid var(--gecko-border)', borderRadius: 7, background: 'var(--gecko-bg-surface)', color: 'var(--gecko-text-secondary)', fontSize: 17, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', fontFamily: 'inherit', flexShrink: 0 }}
+            className="gecko-mini-icon gecko-mini-icon-neutral"
+            style={{ border: '1px solid var(--gecko-border)', borderRadius: 7, background: 'var(--gecko-bg-surface)', color: 'var(--gecko-text-secondary)', fontSize: 17, cursor: 'pointer', fontFamily: 'inherit' }}
           >
             ×
           </button>
         </div>
 
         {/* Form Body */}
-        <div style={{ padding: '22px 24px', flex: 1, overflowY: 'auto', display: 'flex', flexDirection: 'column', gap: 24 }}>
+        <div className="gecko-stack gecko-stack-xl gecko-flex-1" style={{ padding: '22px 24px', overflowY: 'auto' }}>
 
           {/* Section 1: Identity */}
           <div>
@@ -501,7 +502,7 @@ function HoldModal({ hold, isNew, onClose }: HoldModalProps) {
             </div>
 
             {/* Preview badges */}
-            <div style={{ marginTop: 12, padding: '10px 14px', background: 'var(--gecko-bg-subtle)', borderRadius: 8, border: '1px solid var(--gecko-border)', display: 'flex', gap: 10, alignItems: 'center', flexWrap: 'wrap' }}>
+            <div className="gecko-row gecko-row-wrap gecko-mt-3" style={{ padding: '10px 14px', background: 'var(--gecko-bg-subtle)', borderRadius: 8, border: '1px solid var(--gecko-border)', gap: 10 }}>
               <span style={{ fontSize: 11, color: 'var(--gecko-text-secondary)', fontWeight: 600 }}>Preview:</span>
               <ScopeBadge scope={form.blockingScope} />
               <ReleaseAuthBadge auth={form.releaseAuthority} />
@@ -514,7 +515,7 @@ function HoldModal({ hold, isNew, onClose }: HoldModalProps) {
             {sectionHead('Notifications & Automation')}
             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16, marginBottom: 16 }}>
               {/* Auto Apply toggle */}
-              <div style={{ display: 'flex', alignItems: 'flex-start', gap: 12, padding: '12px 14px', border: '1px solid var(--gecko-border)', borderRadius: 8, background: form.autoApply ? 'var(--gecko-primary-50)' : 'var(--gecko-bg-surface)' }}>
+              <div className="gecko-row gecko-row-start gecko-stack-md" style={{ padding: '12px 14px', border: '1px solid var(--gecko-border)', borderRadius: 8, background: form.autoApply ? 'var(--gecko-primary-50)' : 'var(--gecko-bg-surface)' }}>
                 <button
                   onClick={() => set({ autoApply: !form.autoApply })}
                   style={{
@@ -533,12 +534,12 @@ function HoldModal({ hold, isNew, onClose }: HoldModalProps) {
                 </button>
                 <div>
                   <div style={{ fontSize: 12.5, fontWeight: 700, color: 'var(--gecko-text-primary)' }}>Auto Apply</div>
-                  <div style={{ fontSize: 11, color: 'var(--gecko-text-secondary)', marginTop: 2 }}>System applies this hold automatically based on configured rules</div>
+                  <div className="gecko-cell-meta">System applies this hold automatically based on configured rules</div>
                 </div>
               </div>
 
               {/* Notify Party toggle */}
-              <div style={{ display: 'flex', alignItems: 'flex-start', gap: 12, padding: '12px 14px', border: '1px solid var(--gecko-border)', borderRadius: 8, background: form.notifyParty ? 'var(--gecko-success-50)' : 'var(--gecko-bg-surface)' }}>
+              <div className="gecko-row gecko-row-start gecko-stack-md" style={{ padding: '12px 14px', border: '1px solid var(--gecko-border)', borderRadius: 8, background: form.notifyParty ? 'var(--gecko-success-50)' : 'var(--gecko-bg-surface)' }}>
                 <button
                   onClick={() => set({ notifyParty: !form.notifyParty })}
                   style={{
@@ -557,13 +558,13 @@ function HoldModal({ hold, isNew, onClose }: HoldModalProps) {
                 </button>
                 <div>
                   <div style={{ fontSize: 12.5, fontWeight: 700, color: 'var(--gecko-text-primary)' }}>Notify Party</div>
-                  <div style={{ fontSize: 11, color: 'var(--gecko-text-secondary)', marginTop: 2 }}>Generate notification to the responsible party when hold is applied or released</div>
+                  <div className="gecko-cell-meta">Generate notification to the responsible party when hold is applied or released</div>
                 </div>
               </div>
             </div>
 
             {form.notifyParty && (
-              <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
+              <div className="gecko-stack gecko-stack-xs">
                 <label className="gecko-label">Notify Template</label>
                 <input
                   className="gecko-input gecko-text-mono"
@@ -572,7 +573,7 @@ function HoldModal({ hold, isNew, onClose }: HoldModalProps) {
                   onChange={e => set({ notifyTemplate: e.target.value.toUpperCase() })}
                   style={{ maxWidth: 320, textTransform: 'uppercase' }}
                 />
-                <div style={{ fontSize: 11, color: 'var(--gecko-text-secondary)' }}>Notification template code used when hold is applied / released</div>
+                <div className="gecko-cell-meta" style={{ marginTop: 0 }}>Notification template code used when hold is applied / released</div>
               </div>
             )}
           </div>
@@ -580,8 +581,8 @@ function HoldModal({ hold, isNew, onClose }: HoldModalProps) {
           {/* Section 5: Description & Active */}
           <div>
             {sectionHead('Description & Status')}
-            <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
-              <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
+            <div className="gecko-stack gecko-stack-lg">
+              <div className="gecko-stack gecko-stack-xs">
                 <label className="gecko-label">Description / SOP Note</label>
                 <textarea
                   className="gecko-input"
@@ -593,7 +594,7 @@ function HoldModal({ hold, isNew, onClose }: HoldModalProps) {
                 />
               </div>
 
-              <div style={{ display: 'flex', alignItems: 'flex-start', gap: 12, padding: '12px 14px', border: `1px solid ${form.active ? 'var(--gecko-success-200)' : 'var(--gecko-border)'}`, borderRadius: 8, background: form.active ? 'var(--gecko-success-50)' : 'var(--gecko-bg-subtle)', maxWidth: 340 }}>
+              <div className="gecko-row gecko-row-start gecko-stack-md" style={{ padding: '12px 14px', border: `1px solid ${form.active ? 'var(--gecko-success-200)' : 'var(--gecko-border)'}`, borderRadius: 8, background: form.active ? 'var(--gecko-success-50)' : 'var(--gecko-bg-subtle)', maxWidth: 340 }}>
                 <button
                   onClick={() => set({ active: !form.active })}
                   style={{
@@ -614,7 +615,7 @@ function HoldModal({ hold, isNew, onClose }: HoldModalProps) {
                   <div style={{ fontSize: 12.5, fontWeight: 700, color: form.active ? 'var(--gecko-success-700)' : 'var(--gecko-text-secondary)' }}>
                     {form.active ? 'Active' : 'Inactive'}
                   </div>
-                  <div style={{ fontSize: 11, color: 'var(--gecko-text-secondary)', marginTop: 2 }}>
+                  <div className="gecko-cell-meta">
                     {form.active ? 'Hold is live and can be applied to containers' : 'Hold is disabled and will not appear in apply lists'}
                   </div>
                 </div>
@@ -624,13 +625,13 @@ function HoldModal({ hold, isNew, onClose }: HoldModalProps) {
         </div>
 
         {/* Footer */}
-        <div style={{ padding: '14px 24px', borderTop: '1px solid var(--gecko-border)', background: 'var(--gecko-bg-surface)', borderRadius: '0 0 12px 12px', flexShrink: 0, display: 'flex', alignItems: 'center', gap: 10 }}>
+        <div className="gecko-row gecko-flex-shrink-0" style={{ padding: '14px 24px', borderTop: '1px solid var(--gecko-border)', background: 'var(--gecko-bg-surface)', borderRadius: '0 0 12px 12px', gap: 10 }}>
           {isNew && (
-            <div style={{ flex: 1, fontSize: 11, color: 'var(--gecko-text-disabled)' }}>
+            <div className="gecko-flex-1" style={{ fontSize: 11, color: 'var(--gecko-text-disabled)' }}>
               * Hold Code and Hold Name are required
             </div>
           )}
-          <div style={{ marginLeft: isNew ? undefined : 'auto', display: 'flex', gap: 8 }}>
+          <div className="gecko-action-toolbar" style={{ marginLeft: isNew ? undefined : 'auto' }}>
             <button className="gecko-btn gecko-btn-outline gecko-btn-sm" onClick={onClose}>Cancel</button>
             <button
               className="gecko-btn gecko-btn-primary gecko-btn-sm"
@@ -771,16 +772,16 @@ export default function HoldsPage() {
   };
 
   return (
-    <div style={{ maxWidth: 'var(--gecko-container-max)', margin: '0 auto', display: 'flex', flexDirection: 'column', gap: 24 }}>
+    <div className="gecko-stack gecko-stack-xl" style={{ maxWidth: 'var(--gecko-container-max)', margin: '0 auto' }}>
 
       {/* Header */}
       <div className="gecko-page-actions">
         <div className="gecko-page-actions-left">
-          <div style={{ display: 'flex', alignItems: 'baseline', gap: 12, flexWrap: 'wrap' }}>
-            <h1 style={{ fontSize: 24, fontWeight: 700, margin: 0, color: 'var(--gecko-text-primary)' }}>Holds &amp; Remarks</h1>
+          <div className="gecko-row gecko-row-baseline gecko-row-wrap gecko-stack-md">
+            <h1 className="gecko-page-title">Holds &amp; Remarks</h1>
             <span className="gecko-count-badge">{pageItems.length} shown of {totalItems}</span>
           </div>
-          <div style={{ fontSize: 13, color: 'var(--gecko-text-secondary)', marginTop: 4 }}>
+          <div className="gecko-page-subtitle gecko-mt-1">
             Named hold catalog. Applied to containers to block gate-out, load, or all movement pending resolution.
           </div>
         </div>
@@ -803,7 +804,7 @@ export default function HoldsPage() {
       </div>
 
       {/* Stats bar */}
-      <div style={{ display: 'flex', gap: 12, flexWrap: 'wrap' }}>
+      <div className="gecko-row gecko-row-wrap gecko-stack-md">
         {[
           { label: 'Total Holds',    value: HOLDS.length,   color: 'var(--gecko-text-primary)'  },
           { label: 'Active',         value: totalActive,    color: 'var(--gecko-success-700)'    },
@@ -812,15 +813,15 @@ export default function HoldsPage() {
           { label: 'Line Operator',  value: lineCount,      color: 'var(--gecko-primary-600)'    },
           { label: 'Port Authority', value: portCount,      color: '#1a3466'                     },
         ].map(s => (
-          <div key={s.label} style={{ padding: '10px 18px', background: 'var(--gecko-bg-surface)', border: '1px solid var(--gecko-border)', borderRadius: 10, boxShadow: 'var(--gecko-shadow-sm)', textAlign: 'center', minWidth: 90 }}>
-            <div style={{ fontSize: 22, fontWeight: 800, color: s.color, lineHeight: 1 }}>{s.value}</div>
-            <div style={{ fontSize: 10, fontWeight: 600, color: 'var(--gecko-text-secondary)', textTransform: 'uppercase', letterSpacing: '0.06em', marginTop: 4 }}>{s.label}</div>
+          <div key={s.label} className="gecko-card" style={{ padding: '10px 18px', borderRadius: 10, textAlign: 'center', minWidth: 90 }}>
+            <div className="gecko-stat-num" style={{ color: s.color }}>{s.value}</div>
+            <div className="gecko-stat-label gecko-mt-1">{s.label}</div>
           </div>
         ))}
       </div>
 
       {/* Table */}
-      <div style={{ background: 'var(--gecko-bg-surface)', border: '1px solid var(--gecko-border)', borderRadius: 12, overflow: 'hidden', boxShadow: 'var(--gecko-shadow-sm)' }}>
+      <div className="gecko-table-card">
         <table className="gecko-table gecko-table-comfortable" style={{ fontSize: 12.5, tableLayout: 'fixed', width: '100%' }}>
           <thead>
             <tr>
@@ -854,7 +855,8 @@ export default function HoldsPage() {
                 {/* Hold Code — mono pill */}
                 <td>
                   <span
-                    style={{ fontFamily: 'var(--gecko-font-mono)', fontWeight: 700, fontSize: 12, color: 'var(--gecko-primary-600)', background: 'var(--gecko-primary-50)', padding: '3px 8px', borderRadius: 6, whiteSpace: 'nowrap', cursor: 'pointer' }}
+                    className="gecko-badge gecko-badge-xs gecko-badge-primary gecko-text-mono"
+                    style={{ cursor: 'pointer' }}
                     onClick={() => openEdit(h)}
                   >
                     {h.code}
@@ -863,12 +865,14 @@ export default function HoldsPage() {
 
                 {/* Hold Name */}
                 <td>
-                  <div style={{ fontWeight: 600, color: 'var(--gecko-text-primary)', fontSize: 13 }}>{h.name}</div>
-                  {h.description && (
-                    <div style={{ fontSize: 11, color: 'var(--gecko-text-disabled)', marginTop: 2, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', maxWidth: '100%' }} title={h.description}>
-                      {h.description}
-                    </div>
-                  )}
+                  <div className="gecko-cell-two-line">
+                    <div className="gecko-cell-primary" style={{ fontSize: 13 }}>{h.name}</div>
+                    {h.description && (
+                      <div className="gecko-cell-sub gecko-truncate" style={{ fontSize: 11, fontFamily: 'inherit', maxWidth: '100%' }} title={h.description}>
+                        {h.description}
+                      </div>
+                    )}
+                  </div>
                 </td>
 
                 {/* Type badge */}

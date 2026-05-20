@@ -444,14 +444,14 @@ export default function OrderTypeMasterPage() {
   const toggleVAS    = (id: string) => setApplicableVAS(prev => { const n = new Set(prev); n.has(id) ? n.delete(id) : n.add(id); return n; });
 
   return (
-    <div style={{ maxWidth: 'var(--gecko-container-max)', margin: '0 auto', display: 'flex', flexDirection: 'column', gap: 20, paddingBottom: 40 }}>
+    <div className="gecko-stack" style={{ maxWidth: 'var(--gecko-container-max)', margin: '0 auto', gap: 20, paddingBottom: 40 }}>
       <style>{ANIM_CSS}</style>
 
       {/* Page header */}
       <div className="gecko-page-actions">
         <div className="gecko-page-actions-left">
-          <h1 style={{ fontSize: 24, fontWeight: 700, margin: 0, color: 'var(--gecko-text-primary)' }}>Work Order Types</h1>
-          <div style={{ fontSize: 13, color: 'var(--gecko-text-secondary)', marginTop: 4 }}>
+          <h1 className="gecko-page-title">Work Order Types</h1>
+          <div className="gecko-page-subtitle gecko-mt-1">
             Configure order types, movement sequences, and associated charges per leg
           </div>
         </div>
@@ -462,12 +462,12 @@ export default function OrderTypeMasterPage() {
         </div>
       </div>
 
-      <div style={{ display: 'flex', gap: 20, alignItems: 'flex-start' }}>
+      <div className="gecko-row gecko-row-start" style={{ gap: 20 }}>
 
         {/* LEFT: Order type list */}
-        <div style={{ width: 244, flexShrink: 0, background: 'var(--gecko-bg-surface)', border: '1px solid var(--gecko-border)', borderRadius: 12, overflow: 'hidden', position: 'sticky', top: 80 }}>
+        <div className="gecko-flex-shrink-0" style={{ width: 244, background: 'var(--gecko-bg-surface)', border: '1px solid var(--gecko-border)', borderRadius: 12, overflow: 'hidden', position: 'sticky', top: 80 }}>
           <div style={{ padding: '14px 14px 10px', borderBottom: '1px solid var(--gecko-border)' }}>
-            <div style={{ fontSize: 11, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.06em', color: 'var(--gecko-text-secondary)', marginBottom: 10 }}>
+            <div className="gecko-eyebrow gecko-mb-3">
               Work Order Types ({ORDER_TYPES.length})
             </div>
             <div style={{ position: 'relative' }}>
@@ -530,21 +530,21 @@ export default function OrderTypeMasterPage() {
         </div>
 
         {/* RIGHT: Detail area */}
-        <div style={{ flex: 1, minWidth: 0, display: 'flex', flexDirection: 'column', gap: 16 }}>
+        <div className="gecko-flex-1 gecko-stack gecko-stack-lg">
 
           {/* Order type header */}
-          <div style={{ background: 'var(--gecko-bg-surface)', border: '1px solid var(--gecko-border)', borderRadius: 14, padding: '20px 24px' }}>
-            <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 10 }}>
+          <div className="gecko-card" style={{ borderRadius: 14, padding: '20px 24px' }}>
+            <div className="gecko-row gecko-mb-3" style={{ gap: 12 }}>
               <h2 style={{ margin: 0, fontFamily: 'var(--gecko-font-mono)', fontSize: 20, fontWeight: 800, color: 'var(--gecko-text-primary)' }}>{selected.code}</h2>
               <span style={{ fontSize: 10, fontWeight: 700, padding: '3px 8px', borderRadius: 4, background: bt.bg, color: bt.text }}>{selected.bookingType}</span>
-              <span style={{ fontSize: 10, fontWeight: 600, padding: '3px 8px', borderRadius: 4, background: 'var(--gecko-bg-subtle)', color: 'var(--gecko-text-secondary)', border: '1px solid var(--gecko-border)' }}>{selected.bookingMode}</span>
-              <div style={{ marginLeft: 'auto', display: 'flex', alignItems: 'center', gap: 6 }}>
+              <span className="gecko-badge gecko-badge-xs gecko-badge-gray">{selected.bookingMode}</span>
+              <div className="gecko-row gecko-ml-auto">
                 <div style={{ width: 8, height: 8, borderRadius: '50%', background: selected.status === 'Active' ? 'var(--gecko-success-500)' : 'var(--gecko-gray-400)' }} />
                 <span style={{ fontSize: 12, fontWeight: 600, color: selected.status === 'Active' ? 'var(--gecko-success-700)' : 'var(--gecko-text-secondary)' }}>{selected.status}</span>
               </div>
             </div>
-            <div style={{ fontSize: 14, color: 'var(--gecko-text-secondary)', marginBottom: 14 }}>{selected.description}</div>
-            <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6, alignItems: 'center' }}>
+            <div className="gecko-mb-4" style={{ fontSize: 14, color: 'var(--gecko-text-secondary)' }}>{selected.description}</div>
+            <div className="gecko-row gecko-row-wrap" style={{ gap: 6 }}>
               <span style={{ fontSize: 10, fontWeight: 700, color: 'var(--gecko-text-secondary)', marginRight: 2 }}>Rules:</span>
               {[
                 { label: 'Release Damaged', val: selected.rules.allowReleaseDamaged },
@@ -565,8 +565,8 @@ export default function OrderTypeMasterPage() {
           </div>
 
           {/* Workflow canvas */}
-          <div style={{ background: 'var(--gecko-bg-surface)', border: '1px solid var(--gecko-border)', borderRadius: 14, overflow: 'hidden' }}>
-            <div style={{ padding: '14px 20px', borderBottom: '1px solid var(--gecko-border)', display: 'flex', alignItems: 'center', gap: 10 }}>
+          <div className="gecko-table-card" style={{ borderRadius: 14 }}>
+            <div className="gecko-row" style={{ padding: '14px 20px', borderBottom: '1px solid var(--gecko-border)', gap: 10 }}>
               <Icon name="activity" size={16} style={{ color: 'var(--gecko-primary-600)' }} />
               <span style={{ fontSize: 14, fontWeight: 700, color: 'var(--gecko-text-primary)' }}>Movement Workflow</span>
               <span style={{ fontSize: 12, color: 'var(--gecko-text-secondary)' }}>
@@ -575,7 +575,8 @@ export default function OrderTypeMasterPage() {
               {selectedSeq !== null && (
                 <button
                   onClick={() => setSelectedSeq(null)}
-                  style={{ marginLeft: 'auto', fontSize: 11, color: 'var(--gecko-text-secondary)', background: 'none', border: 'none', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 4, fontFamily: 'inherit' }}
+                  className="gecko-row gecko-ml-auto"
+                  style={{ fontSize: 11, color: 'var(--gecko-text-secondary)', background: 'none', border: 'none', cursor: 'pointer', gap: 4, fontFamily: 'inherit' }}
                 >
                   <Icon name="xCircle" size={13} /> Clear selection
                 </button>
@@ -583,7 +584,7 @@ export default function OrderTypeMasterPage() {
             </div>
 
             <div style={{ padding: '28px 28px 24px', overflowX: 'auto' }}>
-              <div style={{ display: 'flex', alignItems: 'center', minWidth: 'max-content' }}>
+              <div className="gecko-row" style={{ minWidth: 'max-content' }}>
                 {selected.movements.map((mov, idx) => (
                   <React.Fragment key={mov.seq}>
                     <MovementNode
@@ -597,7 +598,7 @@ export default function OrderTypeMasterPage() {
               </div>
 
               {selectedSeq === null && (
-                <div style={{ marginTop: 20, fontSize: 12, color: 'var(--gecko-text-disabled)', fontStyle: 'italic', textAlign: 'center' }}>
+                <div className="gecko-mt-5" style={{ fontSize: 12, color: 'var(--gecko-text-disabled)', fontStyle: 'italic', textAlign: 'center' }}>
                   ↑ Click a movement node to view and configure its charges
                 </div>
               )}

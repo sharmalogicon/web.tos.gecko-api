@@ -43,11 +43,11 @@ export default function TariffPlansPage() {
       {/* Header */}
       <div className="gecko-page-actions">
         <div className="gecko-page-actions-left">
-          <div style={{ display: 'flex', alignItems: 'baseline', gap: 12 }}>
-            <h1 style={{ fontSize: 24, fontWeight: 700, margin: 0, color: 'var(--gecko-text-primary)' }}>Tariff Schedules</h1>
+          <div className="gecko-row gecko-row-baseline" style={{ gap: 12 }}>
+            <h1 className="gecko-page-title">Tariff Schedules</h1>
             <span className="gecko-count-badge">5 schedules</span>
           </div>
-          <div style={{ fontSize: 13, color: 'var(--gecko-text-secondary)', marginTop: 4 }}>High-level pricing agreements containing rate cards and free-time logic.</div>
+          <p className="gecko-page-subtitle" style={{ marginTop: 4 }}>High-level pricing agreements containing rate cards and free-time logic.</p>
         </div>
         <div className="gecko-toolbar">
           <ExportButton resource="Tariff plans" iconSize={16} />
@@ -66,7 +66,7 @@ export default function TariffPlansPage() {
       </div>
 
       {/* Table */}
-      <div style={{ background: 'var(--gecko-bg-surface)', border: '1px solid var(--gecko-border)', borderRadius: 12, overflow: 'hidden', boxShadow: 'var(--gecko-shadow-sm)' }}>
+      <div className="gecko-table-card">
         <table className="gecko-table gecko-table-comfortable" style={{ fontSize: 13 }}>
           <thead>
             <tr>
@@ -83,8 +83,8 @@ export default function TariffPlansPage() {
           <tbody>
             {TARIFF_PLANS.map((plan) => (
               <tr key={plan.id} className="gecko-row-clickable">
-                <td className="gecko-text-mono" style={{ fontWeight: 700, color: 'var(--gecko-primary-600)' }}>
-                  <Link href={`/tariff/plans/${plan.id}`} style={{ color: 'inherit', textDecoration: 'none' }}>{plan.id}</Link>
+                <td>
+                  <Link href={`/tariff/plans/${plan.id}`} className="gecko-id-link">{plan.id}</Link>
                 </td>
                 <td style={{ fontWeight: 600, color: 'var(--gecko-text-primary)' }}>
                   <Link href={`/tariff/plans/${plan.id}`} style={{ color: 'inherit', textDecoration: 'none' }}>{plan.name}</Link>

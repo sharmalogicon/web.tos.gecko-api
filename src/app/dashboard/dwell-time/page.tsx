@@ -5,9 +5,9 @@ import { Icon } from '@/components/ui/Icon';
 
 function KpiCard({ label, value, sub, accent, trend }: { label: string; value: string; sub?: string; accent?: string; trend?: 'up' | 'down' | 'neutral' }) {
   return (
-    <div style={{ background: 'var(--gecko-bg-surface)', border: '1px solid var(--gecko-border)', borderRadius: 12, padding: '18px 20px', borderTop: `3px solid ${accent ?? 'var(--gecko-primary-400)'}` }}>
-      <div style={{ fontSize: 11, fontWeight: 600, color: 'var(--gecko-text-secondary)', textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: 8 }}>{label}</div>
-      <div style={{ fontSize: 28, fontWeight: 800, color: 'var(--gecko-text-primary)', fontFamily: 'var(--gecko-font-mono)', lineHeight: 1 }}>{value}</div>
+    <div className="gecko-card gecko-card-padded" style={{ borderTop: `3px solid ${accent ?? 'var(--gecko-primary-400)'}` }}>
+      <div className="gecko-stat-label gecko-mb-2">{label}</div>
+      <div className="gecko-stat-num" style={{ fontFamily: 'var(--gecko-font-mono)', fontWeight: 800, fontSize: 28 }}>{value}</div>
       {sub && <div style={{ fontSize: 12, color: trend === 'up' ? 'var(--gecko-success-600)' : trend === 'down' ? 'var(--gecko-error-600)' : 'var(--gecko-text-secondary)', marginTop: 6 }}>{sub}</div>}
     </div>
   );
@@ -131,19 +131,19 @@ const SIZE_STATS = [
 
 export default function DwellTimePage() {
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', gap: 20 }}>
-      <div>
-        <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 4 }}>
-          <h1 style={{ fontSize: 26, fontWeight: 700, margin: 0, letterSpacing: '-0.02em' }}>Container Dwell Time Dashboard</h1>
+    <div className="gecko-stack" style={{ gap: 20 }}>
+      <div className="gecko-page-header-left">
+        <div className="gecko-row" style={{ gap: 10 }}>
+          <h1 className="gecko-page-title-lg">Container Dwell Time Dashboard</h1>
           <span style={{ display: 'inline-flex', alignItems: 'center', gap: 4, fontSize: 10, fontWeight: 600, padding: '2px 8px', borderRadius: 20, background: 'var(--gecko-success-50)', color: 'var(--gecko-success-600)', border: '1px solid var(--gecko-success-600)' }}>
             <span style={{ width: 6, height: 6, borderRadius: '50%', background: 'var(--gecko-success-500)', display: 'inline-block' }} />
             Live
           </span>
         </div>
-        <div style={{ fontSize: 13, color: 'var(--gecko-text-secondary)' }}>Average container dwell, long-stay alerts, and dwell trends by customer and line</div>
+        <p className="gecko-page-subtitle">Average container dwell, long-stay alerts, and dwell trends by customer and line</p>
       </div>
 
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(5, 1fr)', gap: 14 }}>
+      <div className="gecko-grid-5" style={{ gap: 14 }}>
         <KpiCard label="Avg Dwell (All)"      value="4.2 days"    sub="Target: ≤ 5 days ✓"              accent="var(--gecko-success-400)" />
         <KpiCard label="Containers > 7 Days"  value="34"          sub="Requires attention"               accent="var(--gecko-warning-400)" />
         <KpiCard label="Containers > 14 Days" value="12"          sub="Escalation required"              accent="var(--gecko-error-400)" />
@@ -151,7 +151,7 @@ export default function DwellTimePage() {
         <KpiCard label="Dwell Improving"      value="↓ 0.4 days"  sub="vs last month avg"                accent="var(--gecko-success-400)" trend="up" />
       </div>
 
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 14 }}>
+      <div className="gecko-grid-3" style={{ gap: 14 }}>
         <Widget title="Dwell Distribution — All Containers" col={2}>
           <svg viewBox={`0 0 ${HIST_SVG_W} ${HIST_SVG_H}`} width="100%" style={{ display: 'block' }}>
             {HIST_COUNTS.map((cnt, i) => {

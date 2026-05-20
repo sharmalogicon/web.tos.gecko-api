@@ -5,9 +5,9 @@ import { Icon } from '@/components/ui/Icon';
 
 function KpiCard({ label, value, sub, accent, trend }: { label: string; value: string; sub?: string; accent?: string; trend?: 'up' | 'down' | 'neutral' }) {
   return (
-    <div style={{ background: 'var(--gecko-bg-surface)', border: '1px solid var(--gecko-border)', borderRadius: 12, padding: '18px 20px', borderTop: `3px solid ${accent ?? 'var(--gecko-primary-400)'}`, display: 'flex', flexDirection: 'column', gap: 6 }}>
-      <div style={{ fontSize: 11, fontWeight: 600, color: 'var(--gecko-text-secondary)', textTransform: 'uppercase', letterSpacing: '0.05em' }}>{label}</div>
-      <div style={{ fontSize: 28, fontWeight: 800, color: 'var(--gecko-text-primary)', fontFamily: 'var(--gecko-font-mono)', lineHeight: 1 }}>{value}</div>
+    <div className="gecko-card gecko-card-padded gecko-stack" style={{ gap: 6, borderTop: `3px solid ${accent ?? 'var(--gecko-primary-400)'}` }}>
+      <div className="gecko-stat-label">{label}</div>
+      <div className="gecko-stat-num" style={{ fontFamily: 'var(--gecko-font-mono)', fontWeight: 800, fontSize: 28 }}>{value}</div>
       {sub && <div style={{ fontSize: 12, color: trend === 'up' ? 'var(--gecko-success-600)' : trend === 'down' ? 'var(--gecko-error-600)' : 'var(--gecko-text-secondary)' }}>{sub}</div>}
     </div>
   );
@@ -99,7 +99,7 @@ export default function VoyageDashboardPage() {
   const areaPath = `M${pts[0].x},${PAD_T + CHART_H} ` + pts.map(p => `L${p.x},${p.y}`).join(' ') + ` L${pts[pts.length - 1].x},${PAD_T + CHART_H} Z`;
 
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', gap: 24, paddingBottom: 40 }}>
+    <div className="gecko-stack" style={{ gap: 24, paddingBottom: 40 }}>
       <nav className="gecko-breadcrumb">
         <span className="gecko-breadcrumb-item">Masters</span>
         <span className="gecko-breadcrumb-sep">/</span>
@@ -108,12 +108,12 @@ export default function VoyageDashboardPage() {
         <span className="gecko-breadcrumb-current">Voyage &amp; Vessel</span>
       </nav>
 
-      <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', flexWrap: 'wrap', gap: 16 }}>
-        <div>
-          <h1 style={{ fontSize: 26, fontWeight: 700, margin: 0, letterSpacing: '-0.02em', color: 'var(--gecko-text-primary)' }}>Voyage &amp; Vessel Dashboard</h1>
-          <div style={{ fontSize: 13, color: 'var(--gecko-text-secondary)', marginTop: 4 }}>Active voyages, TEU fill rates, upcoming ETAs and cut-off countdowns</div>
+      <div className="gecko-page-header">
+        <div className="gecko-page-header-left">
+          <h1 className="gecko-page-title-lg">Voyage &amp; Vessel Dashboard</h1>
+          <p className="gecko-page-subtitle">Active voyages, TEU fill rates, upcoming ETAs and cut-off countdowns</p>
         </div>
-        <div style={{ display: 'flex', gap: 6, alignItems: 'center' }}>
+        <div className="gecko-row" style={{ gap: 6 }}>
           {(['active', 'upcoming', 'all'] as Period[]).map(p => (
             <button
               key={p}
@@ -136,7 +136,7 @@ export default function VoyageDashboardPage() {
         </div>
       </div>
 
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(5, 1fr)', gap: 14 }}>
+      <div className="gecko-grid-5" style={{ gap: 14 }}>
         <KpiCard label="Active Voyages" value="8" sub="3 accepting bookings" accent="var(--gecko-primary-400)" />
         <KpiCard label="TEU Allotment" value="4,200" sub="Across all active voyages" accent="var(--gecko-info-400)" />
         <KpiCard label="TEU Booked" value="3,156" sub="75.1% fill rate" accent="var(--gecko-success-400)" trend="up" />
@@ -144,9 +144,9 @@ export default function VoyageDashboardPage() {
         <KpiCard label="Cut-offs Today" value="2" sub="MSK-142E · OOL-089W" accent="var(--gecko-error-400)" />
       </div>
 
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 16 }}>
+      <div className="gecko-grid-3" style={{ gap: 16 }}>
         <Widget title="Active Voyage Cards" col={3}>
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 14 }}>
+          <div className="gecko-grid-3" style={{ gap: 14 }}>
             {VOYAGES.map(v => {
               const pct = Math.round((v.teuBooked / v.teuTotal) * 100);
               const fillColor = teuFillColor(pct);

@@ -5,9 +5,9 @@ import { Icon } from '@/components/ui/Icon';
 
 function KpiCard({ label, value, sub, accent, trend }: { label: string; value: string; sub?: string; accent?: string; trend?: 'up' | 'down' | 'neutral' }) {
   return (
-    <div style={{ background: 'var(--gecko-bg-surface)', border: '1px solid var(--gecko-border)', borderRadius: 12, padding: '18px 20px', borderTop: `3px solid ${accent ?? 'var(--gecko-primary-400)'}` }}>
-      <div style={{ fontSize: 11, fontWeight: 600, color: 'var(--gecko-text-secondary)', textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: 8 }}>{label}</div>
-      <div style={{ fontSize: 28, fontWeight: 800, color: 'var(--gecko-text-primary)', fontFamily: 'var(--gecko-font-mono)', lineHeight: 1 }}>{value}</div>
+    <div className="gecko-card gecko-card-padded" style={{ borderTop: `3px solid ${accent ?? 'var(--gecko-primary-400)'}` }}>
+      <div className="gecko-stat-label gecko-mb-2">{label}</div>
+      <div className="gecko-stat-num" style={{ fontFamily: 'var(--gecko-font-mono)', fontWeight: 800, fontSize: 28 }}>{value}</div>
       {sub && <div style={{ fontSize: 12, color: trend === 'up' ? 'var(--gecko-success-600)' : trend === 'down' ? 'var(--gecko-error-600)' : 'var(--gecko-text-secondary)', marginTop: 6 }}>{sub}</div>}
     </div>
   );
@@ -75,19 +75,19 @@ export default function DDAccrualPage() {
   const avgY = CHART_PAD_T + CHART_H - (AVG_VAL / MAX_VAL) * CHART_H;
 
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', gap: 20 }}>
-      <div>
-        <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 4 }}>
-          <h1 style={{ fontSize: 26, fontWeight: 700, margin: 0, letterSpacing: '-0.02em' }}>D&D Accrual Dashboard</h1>
+    <div className="gecko-stack" style={{ gap: 20 }}>
+      <div className="gecko-page-header-left">
+        <div className="gecko-row" style={{ gap: 10 }}>
+          <h1 className="gecko-page-title-lg">D&D Accrual Dashboard</h1>
           <span style={{ display: 'inline-flex', alignItems: 'center', gap: 4, fontSize: 10, fontWeight: 600, padding: '2px 8px', borderRadius: 20, background: 'var(--gecko-success-50)', color: 'var(--gecko-success-600)', border: '1px solid var(--gecko-success-600)' }}>
             <span style={{ width: 6, height: 6, borderRadius: '50%', background: 'var(--gecko-success-500)', display: 'inline-block' }} />
             Live
           </span>
         </div>
-        <div style={{ fontSize: 13, color: 'var(--gecko-text-secondary)' }}>Live detention &amp; demurrage accrual, at-risk containers, and revenue capture</div>
+        <p className="gecko-page-subtitle">Live detention &amp; demurrage accrual, at-risk containers, and revenue capture</p>
       </div>
 
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(5, 1fr)', gap: 14 }}>
+      <div className="gecko-grid-5" style={{ gap: 14 }}>
         <KpiCard label="Total D&D (MTD)"    value="฿284,500" sub="↑ 18% vs last month"      accent="var(--gecko-primary-400)" trend="up" />
         <KpiCard label="Daily Accrual Rate" value="฿12,800"  sub="Per day at current rate"   accent="var(--gecko-info-400)" />
         <KpiCard label="In Free Time"       value="142 ctrs" sub="No charge yet"              accent="var(--gecko-success-400)" />
@@ -95,7 +95,7 @@ export default function DDAccrualPage() {
         <KpiCard label="Uncaptured Revenue" value="฿48,200"  sub="Not yet invoiced"           accent="var(--gecko-error-400)" />
       </div>
 
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 14 }}>
+      <div className="gecko-grid-3" style={{ gap: 14 }}>
         <Widget title="Daily D&D Accrual — Last 30 Days" col={2}>
           <svg viewBox={`0 0 ${SVG_W} ${SVG_H}`} width="100%" style={{ display: 'block', overflow: 'visible' }}>
             <line x1={0} y1={avgY} x2={SVG_W} y2={avgY} stroke="var(--gecko-text-disabled)" strokeWidth={1} strokeDasharray="4 3" />

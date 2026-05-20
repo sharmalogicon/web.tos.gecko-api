@@ -186,25 +186,25 @@ const COMPLIANCE_STYLE: Record<NonNullable<Compliance>, { bg: string; color: str
 };
 
 function LifecycleBadge({ state }: { state: Lifecycle }) {
-  const s = LC_STYLE[state];
+  const toneMap: Record<Lifecycle, string> = { ACTIVE: 'success', DEPRECATED: 'warning', RETIRED: 'gray', DRAFT: 'info' };
   return (
-    <span style={{ display: 'inline-flex', alignItems: 'center', gap: 5, padding: '2px 8px', borderRadius: 12, fontSize: 11, fontWeight: 700, background: s.bg, color: s.color }}>
-      <span style={{ width: 6, height: 6, borderRadius: '50%', background: s.dot, flexShrink: 0 }} />
+    <span className={`gecko-badge gecko-badge-xs gecko-badge-${toneMap[state]}`}>
+      <span className={`gecko-status-dot-mini gecko-tone-${toneMap[state] === 'gray' ? 'gray' : toneMap[state]}-bg`} />
       {state}
     </span>
   );
 }
 
 function EntryTypeBadge({ type }: { type: EntryType }) {
-  if (type === 'SYSTEM')   return <span style={{ display: 'inline-flex', alignItems: 'center', gap: 4, fontSize: 10, fontWeight: 700, color: 'var(--gecko-text-secondary)', background: 'var(--gecko-bg-subtle)', border: '1px solid var(--gecko-border)', padding: '1px 6px', borderRadius: 4 }}><Icon name="lock" size={10} />SYSTEM</span>;
-  if (type === 'IMPORTED') return <span style={{ display: 'inline-flex', alignItems: 'center', gap: 4, fontSize: 10, fontWeight: 700, color: 'var(--gecko-info-700)',          background: 'var(--gecko-info-50)',    border: '1px solid var(--gecko-info-200)',  padding: '1px 6px', borderRadius: 4 }}><Icon name="upload" size={10} />IMPORT</span>;
-  return                          <span style={{ display: 'inline-flex', alignItems: 'center', gap: 4, fontSize: 10, fontWeight: 700, color: 'var(--gecko-success-700)',       background: 'var(--gecko-success-50)', border: '1px solid var(--gecko-success-200)', padding: '1px 6px', borderRadius: 4 }}><Icon name="user" size={10} />USER</span>;
+  if (type === 'SYSTEM')   return <span className="gecko-badge gecko-badge-xs gecko-badge-gray"><Icon name="lock" size={10} />SYSTEM</span>;
+  if (type === 'IMPORTED') return <span className="gecko-badge gecko-badge-xs gecko-badge-info"><Icon name="upload" size={10} />IMPORT</span>;
+  return                          <span className="gecko-badge gecko-badge-xs gecko-badge-success"><Icon name="user" size={10} />USER</span>;
 }
 
 function CompliancePill({ compliance }: { compliance: Compliance }) {
   if (!compliance) return null;
-  const s = COMPLIANCE_STYLE[compliance];
-  return <span style={{ fontSize: 9, fontWeight: 800, letterSpacing: '0.06em', padding: '1px 5px', borderRadius: 3, background: s.bg, color: s.color }}>{compliance}</span>;
+  const toneMap: Record<NonNullable<Compliance>, string> = { SMDG: 'primary', ISO: 'info', IICL: 'accent', EDIFACT: 'warning' };
+  return <span className={`gecko-badge gecko-badge-xs gecko-badge-${toneMap[compliance]}`}>{compliance}</span>;
 }
 
 // ─── Entry Modal ──────────────────────────────────────────────────────────────
@@ -259,28 +259,28 @@ function EntryModal({ entry, isNew, catMeta, groupColor, groupBg, onClose }: Ent
       className="gecko-overlay"
       onClick={e => { if (e.target === e.currentTarget) onClose(); }}
     >
-      <div className="gecko-modal gecko-modal-lg" style={{ display: 'flex', flexDirection: 'column' }}>
+      <div className="gecko-modal gecko-modal-lg gecko-stack" style={{ gap: 0 }}>
 
         {/* ── Modal Header ── */}
-        <div style={{ padding: '18px 24px', borderBottom: '1px solid var(--gecko-border)', background: groupBg, borderRadius: '12px 12px 0 0', flexShrink: 0, display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: 16 }}>
+        <div className="gecko-row gecko-row-start gecko-row-between gecko-flex-shrink-0" style={{ padding: '18px 24px', borderBottom: '1px solid var(--gecko-border)', background: groupBg, borderRadius: '12px 12px 0 0', gap: 16 }}>
           <div>
-            <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
+            <div className="gecko-row gecko-row-wrap">
               <span style={{ fontSize: 16, fontWeight: 800, color: 'var(--gecko-text-primary)' }}>{catMeta.label}</span>
               <CompliancePill compliance={catMeta.compliance} />
               {!isNew && <EntryTypeBadge type={entry.entryType} />}
             </div>
-            <div style={{ fontSize: 12, color: 'var(--gecko-text-secondary)', marginTop: 3 }}>
+            <div className="gecko-cell-meta" style={{ fontSize: 12, marginTop: 3 }}>
               {isNew
                 ? 'New Entry — complete the required fields below'
                 : `Edit · ${entry.code} · Last saved by ${entry.modifiedBy || '—'} on ${entry.modifiedOn || '—'}`}
             </div>
           </div>
-          <button onClick={onClose} style={{ width: 32, height: 32, border: '1px solid var(--gecko-border)', borderRadius: 7, background: 'var(--gecko-bg-surface)', color: 'var(--gecko-text-secondary)', fontSize: 17, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', fontFamily: 'inherit', flexShrink: 0 }}>×</button>
+          <button onClick={onClose} className="gecko-mini-icon gecko-mini-icon-neutral" style={{ border: '1px solid var(--gecko-border)', borderRadius: 7, background: 'var(--gecko-bg-surface)', color: 'var(--gecko-text-secondary)', fontSize: 17, cursor: 'pointer', fontFamily: 'inherit' }}>×</button>
         </div>
 
         {/* ── System lock notice ── */}
         {locked && (
-          <div style={{ margin: '16px 24px 0', padding: '10px 14px', background: 'var(--gecko-warning-50)', border: '1px solid var(--gecko-warning-200)', borderRadius: 8, display: 'flex', gap: 10, alignItems: 'flex-start', flexShrink: 0 }}>
+          <div className="gecko-row gecko-row-start gecko-stack-md gecko-flex-shrink-0" style={{ margin: '16px 24px 0', padding: '10px 14px', background: 'var(--gecko-warning-50)', border: '1px solid var(--gecko-warning-200)', borderRadius: 8 }}>
             <Icon name="lock" size={13} style={{ color: 'var(--gecko-warning-600)', marginTop: 1, flexShrink: 0 }} />
             <div style={{ fontSize: 11.5, color: 'var(--gecko-warning-800)', lineHeight: 1.55 }}>
               <strong>SYSTEM</strong> entry — sourced from {entry.smdgCode ? 'SMDG' : entry.edifactCode ? 'EDIFACT' : 'ISO'}. Code and external mappings are read-only. You may update description and lifecycle state only.
@@ -289,26 +289,26 @@ function EntryModal({ entry, isNew, catMeta, groupColor, groupBg, onClose }: Ent
         )}
 
         {/* ── Form body (scrollable) ── */}
-        <div style={{ padding: '22px 24px', flex: 1, overflowY: 'auto', display: 'flex', flexDirection: 'column', gap: 24 }}>
+        <div className="gecko-stack gecko-stack-xl gecko-flex-1" style={{ padding: '22px 24px', overflowY: 'auto' }}>
 
           {/* Section 1 — Identity */}
           <div>
             {sectionHead('Identity')}
             <div style={{ display: 'grid', gridTemplateColumns: '160px 1fr', gap: 14, marginBottom: 14 }}>
-              <div style={{ display: 'flex', flexDirection: 'column', gap: 3 }}>
+              <div className="gecko-stack" style={{ gap: 3 }}>
                 <label className="gecko-label gecko-label-required">Code</label>
                 <input className="gecko-input gecko-text-mono" value={form.code} onChange={set('code')} readOnly={locked} placeholder="e.g. AVAIL" style={roStyle} />
-                <div style={{ fontSize: 10, color: 'var(--gecko-text-disabled)' }}>Unique within category</div>
+                <div className="gecko-cell-sub" style={{ fontSize: 10, marginTop: 0, fontFamily: 'inherit' }}>Unique within category</div>
               </div>
-              <div style={{ display: 'flex', flexDirection: 'column', gap: 3 }}>
+              <div className="gecko-stack" style={{ gap: 3 }}>
                 <label className="gecko-label gecko-label-required">Description</label>
                 <input className="gecko-input" value={form.description} onChange={set('description')} placeholder="Full descriptive text for this code" />
               </div>
             </div>
-            <div style={{ maxWidth: 260, display: 'flex', flexDirection: 'column', gap: 3 }}>
+            <div className="gecko-stack" style={{ maxWidth: 260, gap: 3 }}>
               <label className="gecko-label">Short Label</label>
               <input className="gecko-input" value={form.shortLabel} onChange={set('shortLabel')} readOnly={locked} placeholder="e.g. Available" style={roStyle} />
-              <div style={{ fontSize: 10, color: 'var(--gecko-text-disabled)' }}>Abbreviated label for dropdowns & reports</div>
+              <div className="gecko-cell-sub" style={{ fontSize: 10, marginTop: 0, fontFamily: 'inherit' }}>Abbreviated label for dropdowns & reports</div>
             </div>
           </div>
 
@@ -323,12 +323,12 @@ function EntryModal({ entry, isNew, catMeta, groupColor, groupBg, onClose }: Ent
                 { field: 'customsCode', label: 'Customs Code', badge: null,      badgeBg: '',                        badgeClr: '',                        ph: 'e.g. CBM',  hint: 'Local customs / BoC code'      },
               ].map(f => (
                 <div key={f.field} style={{ display: 'flex', flexDirection: 'column', gap: 3 }}>
-                  <label className="gecko-label" style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+                  <label className="gecko-label gecko-row" style={{ gap: 6 }}>
                     {f.label}
                     {f.badge && <span style={{ fontSize: 9, fontWeight: 800, letterSpacing: '0.04em', padding: '1px 5px', borderRadius: 3, background: f.badgeBg, color: f.badgeClr }}>{f.badge}</span>}
                   </label>
                   <input className="gecko-input gecko-text-mono" value={form[f.field]} onChange={set(f.field)} readOnly={locked} placeholder={f.ph} style={roStyle} />
-                  <div style={{ fontSize: 10, color: 'var(--gecko-text-disabled)' }}>{f.hint}</div>
+                  <div className="gecko-cell-sub" style={{ fontSize: 10, marginTop: 0, fontFamily: 'inherit' }}>{f.hint}</div>
                 </div>
               ))}
             </div>
@@ -338,7 +338,7 @@ function EntryModal({ entry, isNew, catMeta, groupColor, groupBg, onClose }: Ent
           <div>
             {sectionHead('Classification & Lifecycle')}
             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 110px', gap: 14, marginBottom: 14 }}>
-              <div style={{ display: 'flex', flexDirection: 'column', gap: 3 }}>
+              <div className="gecko-stack" style={{ gap: 3 }}>
                 <label className="gecko-label">Lifecycle State</label>
                 <select className="gecko-input" value={form.lifecycle} onChange={set('lifecycle')}>
                   <option value="DRAFT">Draft — not live yet</option>
@@ -347,7 +347,7 @@ function EntryModal({ entry, isNew, catMeta, groupColor, groupBg, onClose }: Ent
                   <option value="RETIRED">Retired — historical only</option>
                 </select>
               </div>
-              <div style={{ display: 'flex', flexDirection: 'column', gap: 3 }}>
+              <div className="gecko-stack" style={{ gap: 3 }}>
                 <label className="gecko-label">Facility Scope</label>
                 <select className="gecko-input" value={form.facilityScope} onChange={set('facilityScope')}>
                   <option value="GLOBAL">GLOBAL — all facilities</option>
@@ -356,20 +356,20 @@ function EntryModal({ entry, isNew, catMeta, groupColor, groupBg, onClose }: Ent
                   <option value="DEPOT-MR">Depot M&R only</option>
                 </select>
               </div>
-              <div style={{ display: 'flex', flexDirection: 'column', gap: 3 }}>
+              <div className="gecko-stack" style={{ gap: 3 }}>
                 <label className="gecko-label">Sort Order</label>
                 <input className="gecko-input gecko-text-mono" type="number" value={form.sortOrder} onChange={set('sortOrder')} />
               </div>
             </div>
             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 14 }}>
-              <div style={{ display: 'flex', flexDirection: 'column', gap: 3 }}>
+              <div className="gecko-stack" style={{ gap: 3 }}>
                 <label className="gecko-label">Effective From</label>
                 <DateField value={form.effectiveFrom} onChange={v => setForm(p => ({ ...p, effectiveFrom: v }))} placeholder="dd mmm yyyy" />
               </div>
-              <div style={{ display: 'flex', flexDirection: 'column', gap: 3 }}>
+              <div className="gecko-stack" style={{ gap: 3 }}>
                 <label className="gecko-label">Effective To</label>
                 <DateField value={form.effectiveTo} onChange={v => setForm(p => ({ ...p, effectiveTo: v }))} placeholder="No expiry" />
-                <div style={{ fontSize: 10, color: 'var(--gecko-text-disabled)' }}>Leave blank for no expiry</div>
+                <div className="gecko-cell-sub" style={{ fontSize: 10, marginTop: 0, fontFamily: 'inherit' }}>Leave blank for no expiry</div>
               </div>
             </div>
           </div>
@@ -378,17 +378,17 @@ function EntryModal({ entry, isNew, catMeta, groupColor, groupBg, onClose }: Ent
           {!isNew && (
             <div>
               {sectionHead('Live Usage')}
-              <div style={{ display: 'flex', alignItems: 'center', gap: 20, padding: '14px 16px', background: 'var(--gecko-bg-subtle)', borderRadius: 8, border: '1px solid var(--gecko-border)' }}>
+              <div className="gecko-row" style={{ gap: 20, padding: '14px 16px', background: 'var(--gecko-bg-subtle)', borderRadius: 8, border: '1px solid var(--gecko-border)' }}>
                 <div>
                   <div style={{ fontSize: 28, fontWeight: 800, color: entry.usageCount > 0 ? groupColor : 'var(--gecko-text-disabled)', lineHeight: 1 }}>{entry.usageCount.toLocaleString()}</div>
-                  <div style={{ fontSize: 11, color: 'var(--gecko-text-secondary)', marginTop: 3 }}>records referencing this code</div>
+                  <div className="gecko-cell-meta" style={{ marginTop: 3 }}>records referencing this code</div>
                   {entry.usageCount > 0 && (
                     <button style={{ marginTop: 6, background: 'none', border: 'none', color: groupColor, fontSize: 11, fontWeight: 600, cursor: 'pointer', padding: 0 }}>View usages →</button>
                   )}
                 </div>
-                <div style={{ marginLeft: 'auto', textAlign: 'right' }}>
-                  <div style={{ fontSize: 10, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.06em', color: 'var(--gecko-text-disabled)', marginBottom: 2 }}>Last Modified</div>
-                  <div style={{ fontSize: 12, fontWeight: 600, color: 'var(--gecko-text-primary)', fontFamily: 'var(--gecko-font-mono)' }}>{entry.modifiedOn || '—'}</div>
+                <div className="gecko-ml-auto" style={{ textAlign: 'right' }}>
+                  <div className="gecko-eyebrow" style={{ marginBottom: 2 }}>Last Modified</div>
+                  <div className="gecko-mono-strong" style={{ fontSize: 12 }}>{entry.modifiedOn || '—'}</div>
                   <div style={{ fontSize: 11, color: 'var(--gecko-text-secondary)' }}>by {entry.modifiedBy || '—'}</div>
                 </div>
               </div>
@@ -397,9 +397,9 @@ function EntryModal({ entry, isNew, catMeta, groupColor, groupBg, onClose }: Ent
         </div>
 
         {/* ── Footer ── */}
-        <div style={{ padding: '14px 24px', borderTop: '1px solid var(--gecko-border)', background: 'var(--gecko-bg-surface)', borderRadius: '0 0 12px 12px', flexShrink: 0, display: 'flex', alignItems: 'center', gap: 10 }}>
+        <div className="gecko-row gecko-flex-shrink-0" style={{ padding: '14px 24px', borderTop: '1px solid var(--gecko-border)', background: 'var(--gecko-bg-surface)', borderRadius: '0 0 12px 12px', gap: 10 }}>
           {isNew && (
-            <div style={{ flex: 1, fontSize: 11, color: 'var(--gecko-text-disabled)' }}>* Code and Description required to save</div>
+            <div className="gecko-flex-1" style={{ fontSize: 11, color: 'var(--gecko-text-disabled)' }}>* Code and Description required to save</div>
           )}
           <button className="gecko-btn gecko-btn-outline gecko-btn-sm" onClick={onClose}>Cancel</button>
           <button
@@ -454,17 +454,17 @@ export default function LookupMasterPage() {
   };
 
   return (
-    <div style={{ maxWidth: 'var(--gecko-container-max)', margin: '0 auto', display: 'flex', flexDirection: 'column', gap: 20, paddingBottom: 40 }}>
+    <div className="gecko-stack" style={{ maxWidth: 'var(--gecko-container-max)', margin: '0 auto', gap: 20, paddingBottom: 40 }}>
 
       {/* Page Header */}
       <div className="gecko-page-actions">
         <div className="gecko-page-actions-left">
-          <div style={{ display: 'flex', alignItems: 'baseline', gap: 12 }}>
-            <h1 style={{ fontSize: 24, fontWeight: 700, margin: 0, color: 'var(--gecko-text-primary)' }}>Reference Codes</h1>
+          <div className="gecko-row gecko-row-baseline gecko-stack-md">
+            <h1 className="gecko-page-title">Reference Codes</h1>
             <span className="gecko-count-badge">{TOTAL_ENTRIES} entries</span>
-            <span style={{ fontSize: 12, fontWeight: 600, color: 'var(--gecko-info-700)', background: 'var(--gecko-info-100)', padding: '2px 8px', borderRadius: 12 }}>{TOTAL_CATEGORIES} categories</span>
+            <span className="gecko-badge gecko-badge-info">{TOTAL_CATEGORIES} categories</span>
           </div>
-          <div style={{ fontSize: 13, color: 'var(--gecko-text-secondary)', marginTop: 4 }}>
+          <div className="gecko-page-subtitle gecko-mt-1">
             Global reference codelist — SMDG · ISO · IICL · EDIFACT compliant. Single source of truth for all dropdowns.
           </div>
         </div>
@@ -477,23 +477,24 @@ export default function LookupMasterPage() {
       </div>
 
       {/* Body: sidebar + table + optional drawer */}
-      <div style={{ display: 'flex', gap: 0, border: '1px solid var(--gecko-border)', borderRadius: 12, overflow: 'hidden', background: 'var(--gecko-bg-surface)', boxShadow: 'var(--gecko-shadow-sm)' }}>
+      <div className="gecko-row gecko-row-start gecko-table-card" style={{ gap: 0, borderRadius: 12 }}>
 
         {/* ── Left Sidebar ── */}
-        <div style={{ width: 256, flexShrink: 0, borderRight: '1px solid var(--gecko-border)', overflowY: 'auto', background: 'var(--gecko-bg-subtle)' }}>
-          <div style={{ padding: '14px 16px 8px', fontSize: 10, fontWeight: 800, textTransform: 'uppercase', letterSpacing: '0.08em', color: 'var(--gecko-text-disabled)' }}>Categories</div>
+        <div className="gecko-flex-shrink-0" style={{ width: 256, borderRight: '1px solid var(--gecko-border)', overflowY: 'auto', background: 'var(--gecko-bg-subtle)' }}>
+          <div className="gecko-eyebrow" style={{ padding: '14px 16px 8px' }}>Categories</div>
 
           {LOOKUP_GROUPS.map(group => (
             <div key={group.id} style={{ marginBottom: 4 }}>
               {/* Group header */}
               <button
                 onClick={() => { setActiveGroupId(group.id); setActiveCategoryKey(group.categories[0].key); setEditEntry(null); }}
-                style={{ width: '100%', display: 'flex', alignItems: 'center', gap: 10, padding: '8px 16px', background: 'none', border: 'none', cursor: 'pointer', textAlign: 'left', fontFamily: 'inherit' }}
+                className="gecko-row"
+                style={{ width: '100%', gap: 10, padding: '8px 16px', background: 'none', border: 'none', cursor: 'pointer', textAlign: 'left', fontFamily: 'inherit' }}
               >
-                <div style={{ width: 28, height: 28, borderRadius: 7, background: activeGroupId === group.id ? group.color : 'var(--gecko-bg-surface)', color: activeGroupId === group.id ? '#fff' : 'var(--gecko-text-secondary)', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+                <div className="gecko-flex-shrink-0" style={{ width: 28, height: 28, borderRadius: 7, background: activeGroupId === group.id ? group.color : 'var(--gecko-bg-surface)', color: activeGroupId === group.id ? '#fff' : 'var(--gecko-text-secondary)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
                   <Icon name={group.icon} size={14} />
                 </div>
-                <span style={{ fontSize: 12, fontWeight: 700, color: activeGroupId === group.id ? group.color : 'var(--gecko-text-primary)', flex: 1 }}>{group.label}</span>
+                <span className="gecko-flex-1" style={{ fontSize: 12, fontWeight: 700, color: activeGroupId === group.id ? group.color : 'var(--gecko-text-primary)' }}>{group.label}</span>
                 <span style={{ fontSize: 10, color: 'var(--gecko-text-disabled)' }}>{group.categories.reduce((s, c) => s + c.entryCount, 0)}</span>
               </button>
 
@@ -502,21 +503,22 @@ export default function LookupMasterPage() {
                 <button
                   key={cat.key}
                   onClick={() => { setActiveCategoryKey(cat.key); setEditEntry(null); setSearchQ(''); setLcFilter('ALL'); }}
+                  className="gecko-row"
                   style={{
-                    width: '100%', display: 'flex', alignItems: 'center', gap: 8, padding: '7px 16px 7px 28px',
+                    width: '100%', gap: 8, padding: '7px 16px 7px 28px',
                     background: activeCategoryKey === cat.key ? group.bg : 'none',
                     border: 'none', borderLeft: activeCategoryKey === cat.key ? `2px solid ${group.color}` : '2px solid transparent',
                     cursor: 'pointer', textAlign: 'left', fontFamily: 'inherit',
                   }}
                 >
-                  <div style={{ flex: 1, minWidth: 0 }}>
-                    <div style={{ fontSize: 12, fontWeight: activeCategoryKey === cat.key ? 700 : 500, color: activeCategoryKey === cat.key ? group.color : 'var(--gecko-text-primary)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{cat.label}</div>
+                  <div className="gecko-flex-1">
+                    <div className="gecko-truncate" style={{ fontSize: 12, fontWeight: activeCategoryKey === cat.key ? 700 : 500, color: activeCategoryKey === cat.key ? group.color : 'var(--gecko-text-primary)' }}>{cat.label}</div>
                     {cat.compliance && (
                       <CompliancePill compliance={cat.compliance} />
                     )}
                   </div>
-                  <div style={{ flexShrink: 0, textAlign: 'right' }}>
-                    <div style={{ fontSize: 11, fontWeight: 700, color: 'var(--gecko-text-secondary)', fontFamily: 'var(--gecko-font-mono)' }}>{cat.entryCount}</div>
+                  <div className="gecko-flex-shrink-0" style={{ textAlign: 'right' }}>
+                    <div className="gecko-mono-strong" style={{ fontSize: 11, color: 'var(--gecko-text-secondary)' }}>{cat.entryCount}</div>
                     {cat.activeCount < cat.entryCount && (
                       <div style={{ fontSize: 9, color: 'var(--gecko-warning-600)', fontWeight: 600 }}>{cat.entryCount - cat.activeCount} depr.</div>
                     )}
@@ -528,21 +530,21 @@ export default function LookupMasterPage() {
         </div>
 
         {/* ── Main Panel ── */}
-        <div style={{ flex: 1, minWidth: 0, display: 'flex', flexDirection: 'column' }}>
+        <div className="gecko-flex-1 gecko-stack" style={{ gap: 0 }}>
 
           {/* Category header */}
-          <div style={{ padding: '16px 24px', borderBottom: '1px solid var(--gecko-border)', background: activeGroup.bg, flexShrink: 0 }}>
-            <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: 16 }}>
+          <div className="gecko-flex-shrink-0" style={{ padding: '16px 24px', borderBottom: '1px solid var(--gecko-border)', background: activeGroup.bg }}>
+            <div className="gecko-row gecko-row-start gecko-row-between" style={{ gap: 16 }}>
               <div>
-                <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+                <div className="gecko-row" style={{ gap: 10 }}>
                   <span style={{ fontSize: 17, fontWeight: 700, color: 'var(--gecko-text-primary)' }}>{activeCatMeta?.label}</span>
                   {activeCatMeta?.compliance && <CompliancePill compliance={activeCatMeta.compliance} />}
                 </div>
-                <div style={{ fontSize: 12, color: 'var(--gecko-text-secondary)', marginTop: 3 }}>{activeCatMeta?.description}</div>
+                <div className="gecko-cell-meta" style={{ fontSize: 12, marginTop: 3 }}>{activeCatMeta?.description}</div>
               </div>
 
               {/* Mini stats */}
-              <div style={{ display: 'flex', gap: 16, flexShrink: 0 }}>
+              <div className="gecko-row gecko-flex-shrink-0" style={{ gap: 16 }}>
                 {[
                   { label: 'Total',    val: rawEntries.length, color: 'var(--gecko-text-primary)' },
                   { label: 'Active',   val: activeCount,       color: 'var(--gecko-success-700)'  },
@@ -551,8 +553,8 @@ export default function LookupMasterPage() {
                   { label: 'User',     val: userCount,         color: 'var(--gecko-primary-600)'  },
                 ].map(s => (
                   <div key={s.label} style={{ textAlign: 'center' }}>
-                    <div style={{ fontSize: 18, fontWeight: 800, color: s.color, lineHeight: 1 }}>{s.val}</div>
-                    <div style={{ fontSize: 9, fontWeight: 600, color: 'var(--gecko-text-disabled)', textTransform: 'uppercase', letterSpacing: '0.06em', marginTop: 2 }}>{s.label}</div>
+                    <div className="gecko-stat-num gecko-stat-num-sm" style={{ color: s.color }}>{s.val}</div>
+                    <div className="gecko-stat-label" style={{ marginTop: 2, fontSize: 9 }}>{s.label}</div>
                   </div>
                 ))}
               </div>
@@ -560,9 +562,9 @@ export default function LookupMasterPage() {
           </div>
 
           {/* Toolbar */}
-          <div style={{ padding: '10px 20px', borderBottom: '1px solid var(--gecko-border)', display: 'flex', alignItems: 'center', gap: 10, flexShrink: 0, background: 'var(--gecko-bg-surface)' }}>
+          <div className="gecko-row gecko-flex-shrink-0" style={{ padding: '10px 20px', borderBottom: '1px solid var(--gecko-border)', gap: 10, background: 'var(--gecko-bg-surface)' }}>
             {/* Search */}
-            <div style={{ position: 'relative', flex: 1, maxWidth: 320 }}>
+            <div className="gecko-flex-1" style={{ position: 'relative', maxWidth: 320 }}>
               <Icon name="search" size={13} style={{ position: 'absolute', left: 9, top: '50%', transform: 'translateY(-50%)', color: 'var(--gecko-text-disabled)', pointerEvents: 'none' }} />
               <input
                 className="gecko-input gecko-input-sm"
@@ -574,7 +576,7 @@ export default function LookupMasterPage() {
             </div>
 
             {/* Lifecycle filter pills */}
-            <div style={{ display: 'flex', gap: 4 }}>
+            <div className="gecko-row" style={{ gap: 4 }}>
               {(['ALL', 'ACTIVE', 'DEPRECATED', 'RETIRED', 'DRAFT'] as const).map(f => (
                 <button key={f} onClick={() => setLcFilter(f)} style={{
                   padding: '3px 10px', borderRadius: 20, border: '1px solid', fontSize: 11, fontWeight: 600, cursor: 'pointer',
@@ -587,15 +589,15 @@ export default function LookupMasterPage() {
               ))}
             </div>
 
-            <div style={{ marginLeft: 'auto', display: 'flex', gap: 8 }}>
+            <div className="gecko-row gecko-ml-auto">
               <button className="gecko-btn gecko-btn-primary gecko-btn-sm" onClick={openNew}><Icon name="plus" size={13} /> New Entry</button>
             </div>
           </div>
 
           {/* Table */}
-          <div style={{ flex: 1, overflowX: 'auto', overflowY: 'auto' }}>
+          <div className="gecko-flex-1" style={{ overflowX: 'auto', overflowY: 'auto' }}>
             {rawEntries.length === 0 ? (
-              <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', padding: '60px 20px', color: 'var(--gecko-text-secondary)' }}>
+              <div className="gecko-stack" style={{ alignItems: 'center', justifyContent: 'center', padding: '60px 20px', color: 'var(--gecko-text-secondary)' }}>
                 <Icon name="database" size={36} style={{ color: 'var(--gecko-text-disabled)', marginBottom: 12 }} />
                 <div style={{ fontSize: 14, fontWeight: 600 }}>No entries yet</div>
                 <div style={{ fontSize: 12, marginTop: 4 }}>This category has no lookup values. Add the first one.</div>
@@ -622,28 +624,28 @@ export default function LookupMasterPage() {
                     return (
                       <tr key={e.id} style={{ opacity: e.lifecycle === 'RETIRED' ? 0.5 : 1 }}>
                         <td>
-                          <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+                          <div className="gecko-row" style={{ gap: 6 }}>
                             {locked && <Icon name="lock" size={11} style={{ color: 'var(--gecko-text-disabled)', flexShrink: 0 }} />}
-                            <span style={{ fontFamily: 'var(--gecko-font-mono)', fontWeight: 700, color: activeGroup.color, fontSize: 12, whiteSpace: 'nowrap' }}>{e.code}</span>
+                            <span className="gecko-text-mono" style={{ fontWeight: 700, color: activeGroup.color, fontSize: 12, whiteSpace: 'nowrap' }}>{e.code}</span>
                           </div>
                         </td>
                         <td style={{ color: 'var(--gecko-text-primary)', fontWeight: 500, maxWidth: 300 }}>{e.description}</td>
                         <td style={{ color: 'var(--gecko-text-secondary)', fontSize: 12 }}>{e.shortLabel}</td>
                         <td>
-                          <div style={{ display: 'flex', flexWrap: 'wrap', gap: 4 }}>
-                            {e.smdgCode    && <span style={{ fontSize: 10, fontWeight: 700, fontFamily: 'var(--gecko-font-mono)', padding: '1px 5px', borderRadius: 3, background: 'var(--gecko-primary-100)', color: 'var(--gecko-primary-700)' }}>S:{e.smdgCode}</span>}
-                            {e.edifactCode && <span style={{ fontSize: 10, fontWeight: 700, fontFamily: 'var(--gecko-font-mono)', padding: '1px 5px', borderRadius: 3, background: 'var(--gecko-warning-100)', color: 'var(--gecko-warning-700)' }}>E:{e.edifactCode}</span>}
-                            {e.isoCode     && <span style={{ fontSize: 10, fontWeight: 700, fontFamily: 'var(--gecko-font-mono)', padding: '1px 5px', borderRadius: 3, background: 'var(--gecko-info-100)', color: 'var(--gecko-info-700)' }}>I:{e.isoCode}</span>}
-                            {e.customsCode && <span style={{ fontSize: 10, fontWeight: 700, fontFamily: 'var(--gecko-font-mono)', padding: '1px 5px', borderRadius: 3, background: 'var(--gecko-accent-100)', color: 'var(--gecko-accent-700)' }}>C:{e.customsCode}</span>}
+                          <div className="gecko-row gecko-row-wrap" style={{ gap: 4 }}>
+                            {e.smdgCode    && <span className="gecko-badge gecko-badge-xs gecko-badge-primary gecko-text-mono">S:{e.smdgCode}</span>}
+                            {e.edifactCode && <span className="gecko-badge gecko-badge-xs gecko-badge-warning gecko-text-mono">E:{e.edifactCode}</span>}
+                            {e.isoCode     && <span className="gecko-badge gecko-badge-xs gecko-badge-info gecko-text-mono">I:{e.isoCode}</span>}
+                            {e.customsCode && <span className="gecko-badge gecko-badge-xs gecko-badge-accent gecko-text-mono">C:{e.customsCode}</span>}
                             {!e.smdgCode && !e.edifactCode && !e.isoCode && !e.customsCode && <span style={{ color: 'var(--gecko-text-disabled)', fontSize: 11 }}>—</span>}
                           </div>
                         </td>
-                        <td style={{ textAlign: 'center', fontFamily: 'var(--gecko-font-mono)', color: 'var(--gecko-text-secondary)', fontSize: 12 }}>{e.sortOrder}</td>
+                        <td className="gecko-num-tabular" style={{ color: 'var(--gecko-text-secondary)', fontSize: 12, textAlign: 'center' }}>{e.sortOrder}</td>
                         <td style={{ fontSize: 11, color: e.facilityScope === 'GLOBAL' ? 'var(--gecko-text-disabled)' : 'var(--gecko-accent-700)', fontWeight: 600 }}>{e.facilityScope}</td>
                         <td><EntryTypeBadge type={e.entryType} /></td>
                         <td><LifecycleBadge state={e.lifecycle} /></td>
                         <td style={{ textAlign: 'right' }}>
-                          <div style={{ display: 'flex', gap: 2, justifyContent: 'flex-end' }}>
+                          <div className="gecko-row gecko-row-right" style={{ gap: 2 }}>
                             <button
                               onClick={() => { setEditEntry(e); setIsNewEntry(false); }}
                               style={{ background: 'none', border: 'none', cursor: locked ? 'not-allowed' : 'pointer', color: 'var(--gecko-text-disabled)', padding: '3px 5px', borderRadius: 4, opacity: locked ? 0.4 : 1 }}
@@ -669,12 +671,12 @@ export default function LookupMasterPage() {
 
           {/* Table footer */}
           {rawEntries.length > 0 && (
-            <div style={{ padding: '8px 20px', borderTop: '1px solid var(--gecko-border)', background: 'var(--gecko-bg-subtle)', display: 'flex', alignItems: 'center', gap: 16, flexShrink: 0 }}>
+            <div className="gecko-row gecko-flex-shrink-0" style={{ padding: '8px 20px', borderTop: '1px solid var(--gecko-border)', background: 'var(--gecko-bg-subtle)', gap: 16 }}>
               <span style={{ fontSize: 11, color: 'var(--gecko-text-secondary)' }}>
                 Showing <strong>{entries.length}</strong> of <strong>{rawEntries.length}</strong> entries
                 {activeCatMeta?.compliance && <> · Standard: <CompliancePill compliance={activeCatMeta.compliance} /></>}
               </span>
-              <div style={{ marginLeft: 'auto', display: 'flex', gap: 8 }}>
+              <div className="gecko-row gecko-ml-auto">
                 <button className="gecko-btn gecko-btn-ghost gecko-btn-sm" style={{ fontSize: 11 }} onClick={() => toast({ variant: 'info', title: 'Reorder', message: 'Drag-to-reorder coming soon.' })}><Icon name="arrowUp" size={12} /> Reorder</button>
                 <ExportButton label="Export this category" resource="Lookup category" iconSize={12} className="" style={{ fontSize: 11 }} />
               </div>

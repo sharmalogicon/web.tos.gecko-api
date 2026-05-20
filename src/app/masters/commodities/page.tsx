@@ -143,11 +143,7 @@ function DgBadge({ dgClass }: { dgClass: DgClass }) {
 
 function ReeferIcon() {
   return (
-    <span title="Reefer required" style={{
-      display: 'inline-flex', alignItems: 'center', gap: 3, padding: '2px 6px',
-      borderRadius: 20, fontSize: 10, fontWeight: 700,
-      background: 'var(--gecko-info-100)', color: 'var(--gecko-info-700)',
-    }}>
+    <span title="Reefer required" className="gecko-badge gecko-badge-xs gecko-badge-info">
       <Icon name="thermometer" size={10} />
       RF
     </span>
@@ -156,11 +152,7 @@ function ReeferIcon() {
 
 function OogIcon() {
   return (
-    <span title="Out of gauge" style={{
-      display: 'inline-flex', alignItems: 'center', gap: 3, padding: '2px 6px',
-      borderRadius: 20, fontSize: 10, fontWeight: 700,
-      background: 'var(--gecko-warning-100)', color: 'var(--gecko-warning-700)',
-    }}>
+    <span title="Out of gauge" className="gecko-badge gecko-badge-xs gecko-badge-warning">
       <Icon name="packageOpen" size={10} />
       OOG
     </span>
@@ -170,12 +162,7 @@ function OogIcon() {
 function ControlBadge({ type }: { type: 'IMP' | 'EXP' }) {
   const isImp = type === 'IMP';
   return (
-    <span style={{
-      display: 'inline-flex', alignItems: 'center', padding: '2px 5px',
-      borderRadius: 4, fontSize: 9, fontWeight: 800, letterSpacing: '0.06em',
-      background: isImp ? 'var(--gecko-danger-100)' : 'var(--gecko-accent-100)',
-      color: isImp ? 'var(--gecko-danger-700)' : 'var(--gecko-accent-700)',
-    }}>
+    <span className={`gecko-badge gecko-badge-xs ${isImp ? 'gecko-badge-error' : 'gecko-badge-accent'}`}>
       {type}
     </span>
   );
@@ -248,12 +235,12 @@ function CommodityModal({ commodity, onClose }: CommodityModalProps) {
   );
 
   const FG = ({ label, required, hint, children, half }: { label: string; required?: boolean; hint?: string; children: React.ReactNode; half?: boolean }) => (
-    <div style={{ display: 'flex', flexDirection: 'column', gap: 4, gridColumn: half ? undefined : 'span 2' }}>
-      <label style={{ fontSize: 11.5, fontWeight: 600, color: 'var(--gecko-text-secondary)' }}>
+    <div className="gecko-stack gecko-stack-xs" style={{ gridColumn: half ? undefined : 'span 2' }}>
+      <label className="gecko-label">
         {label}{required && <span style={{ color: 'var(--gecko-danger-600)', marginLeft: 3 }}>*</span>}
       </label>
       {children}
-      {hint && <div style={{ fontSize: 10, color: 'var(--gecko-text-disabled)' }}>{hint}</div>}
+      {hint && <div className="gecko-helper-text" style={{ fontSize: 10, marginTop: 0 }}>{hint}</div>}
     </div>
   );
 
@@ -286,18 +273,17 @@ function CommodityModal({ commodity, onClose }: CommodityModalProps) {
       className="gecko-overlay"
       onClick={e => { if (e.target === e.currentTarget) onClose(); }}
     >
-      <div className="gecko-modal gecko-modal-lg" style={{ display: 'flex', flexDirection: 'column' }}>
+      <div className="gecko-modal gecko-modal-lg gecko-stack" style={{ gap: 0 }}>
         {/* Header */}
-        <div style={{
+        <div className="gecko-row gecko-row-start gecko-row-between gecko-flex-shrink-0" style={{
           padding: '18px 24px', borderBottom: '1px solid var(--gecko-border)',
-          background: 'var(--gecko-primary-50)', borderRadius: '12px 12px 0 0',
-          flexShrink: 0, display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: 16,
+          background: 'var(--gecko-primary-50)', borderRadius: '12px 12px 0 0', gap: 16,
         }}>
           <div>
             <div style={{ fontSize: 16, fontWeight: 800, color: 'var(--gecko-text-primary)' }}>
               {isNew ? 'New Commodity Code' : `Edit — ${commodity.hsCode}`}
             </div>
-            <div style={{ fontSize: 12, color: 'var(--gecko-text-secondary)', marginTop: 3 }}>
+            <div className="gecko-cell-meta" style={{ fontSize: 12, marginTop: 3 }}>
               {isNew
                 ? 'Add a new HS code to the commodity catalog.'
                 : commodity.description}
@@ -305,18 +291,18 @@ function CommodityModal({ commodity, onClose }: CommodityModalProps) {
           </div>
           <button
             onClick={onClose}
+            className="gecko-mini-icon gecko-mini-icon-neutral"
             style={{
-              width: 32, height: 32, border: '1px solid var(--gecko-border)',
+              border: '1px solid var(--gecko-border)',
               borderRadius: 7, background: 'var(--gecko-bg-surface)',
               color: 'var(--gecko-text-secondary)', fontSize: 17, cursor: 'pointer',
-              display: 'flex', alignItems: 'center', justifyContent: 'center',
-              fontFamily: 'inherit', flexShrink: 0,
+              fontFamily: 'inherit',
             }}
           >×</button>
         </div>
 
         {/* Body */}
-        <div style={{ padding: '22px 24px', flex: 1, overflowY: 'auto', display: 'flex', flexDirection: 'column', gap: 24 }}>
+        <div className="gecko-stack gecko-stack-xl gecko-flex-1" style={{ padding: '22px 24px', overflowY: 'auto' }}>
 
           {/* Section 1 — Classification */}
           <div>
@@ -382,9 +368,9 @@ function CommodityModal({ commodity, onClose }: CommodityModalProps) {
                   <option value="CLASS_9">Class 9 — Misc. Dangerous</option>
                 </select>
               </FG>
-              <div style={{ display: 'flex', flexDirection: 'column', gap: 6, gridColumn: 'span 2' }}>
-                <label style={{ fontSize: 11.5, fontWeight: 600, color: 'var(--gecko-text-secondary)' }}>Cargo Handling Flags</label>
-                <div style={{ display: 'flex', gap: 8 }}>
+              <div className="gecko-stack" style={{ gap: 6, gridColumn: 'span 2' }}>
+                <label className="gecko-label">Cargo Handling Flags</label>
+                <div className="gecko-row gecko-stack-sm">
                   <BoolToggle label="Reefer Required" value={form.reeferRequired} onChange={v => set({ reeferRequired: v })} />
                   <BoolToggle label="Out of Gauge (OOG)" value={form.oogFlag} onChange={v => set({ oogFlag: v })} />
                 </div>
@@ -395,13 +381,13 @@ function CommodityModal({ commodity, onClose }: CommodityModalProps) {
           {/* Section 4 — Trade Controls */}
           <div>
             {sectionHead('Trade Controls')}
-            <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
-              <label style={{ fontSize: 11.5, fontWeight: 600, color: 'var(--gecko-text-secondary)' }}>Licensing / Permit Requirements</label>
-              <div style={{ display: 'flex', gap: 8 }}>
+            <div className="gecko-stack" style={{ gap: 6 }}>
+              <label className="gecko-label">Licensing / Permit Requirements</label>
+              <div className="gecko-row gecko-stack-sm">
                 <BoolToggle label="Import Controlled" value={form.importCtrl} onChange={v => set({ importCtrl: v })} />
                 <BoolToggle label="Export Controlled" value={form.exportCtrl} onChange={v => set({ exportCtrl: v })} />
               </div>
-              <div style={{ fontSize: 11, color: 'var(--gecko-text-secondary)', marginTop: 4 }}>
+              <div className="gecko-cell-meta">
                 Flagging import/export control triggers a mandatory license field on BL and customs declaration forms.
               </div>
             </div>
@@ -422,7 +408,7 @@ function CommodityModal({ commodity, onClose }: CommodityModalProps) {
                 />
               </FG>
               <FG label="Active" half hint="Inactive codes are hidden from BL and declaration dropdowns.">
-                <div style={{ display: 'flex', gap: 8, marginTop: 2 }}>
+                <div className="gecko-row gecko-stack-sm" style={{ marginTop: 2 }}>
                   {([true, false] as const).map(v => (
                     <button
                       key={String(v)}
@@ -445,12 +431,12 @@ function CommodityModal({ commodity, onClose }: CommodityModalProps) {
         </div>
 
         {/* Footer */}
-        <div style={{
+        <div className="gecko-row gecko-flex-shrink-0" style={{
           padding: '14px 24px', borderTop: '1px solid var(--gecko-border)',
           background: 'var(--gecko-bg-surface)', borderRadius: '0 0 12px 12px',
-          flexShrink: 0, display: 'flex', alignItems: 'center', gap: 10,
+          gap: 10,
         }}>
-          <div style={{ flex: 1, fontSize: 11, color: 'var(--gecko-text-disabled)' }}>
+          <div className="gecko-flex-1" style={{ fontSize: 11, color: 'var(--gecko-text-disabled)' }}>
             {isNew ? '* HS Code and Description are required' : `ID: ${commodity.id}`}
           </div>
           <button className="gecko-btn gecko-btn-outline gecko-btn-sm" onClick={onClose}>Cancel</button>
@@ -472,12 +458,9 @@ function CommodityModal({ commodity, onClose }: CommodityModalProps) {
 
 function StatCard({ label, value, color }: { label: string; value: number | string; color?: string }) {
   return (
-    <div style={{
-      background: 'var(--gecko-bg-surface)', border: '1px solid var(--gecko-border)',
-      borderRadius: 10, padding: '14px 18px', minWidth: 0,
-    }}>
-      <div style={{ fontSize: 26, fontWeight: 800, color: color ?? 'var(--gecko-text-primary)', lineHeight: 1 }}>{value}</div>
-      <div style={{ fontSize: 11, color: 'var(--gecko-text-secondary)', marginTop: 4, fontWeight: 500 }}>{label}</div>
+    <div className="gecko-card" style={{ borderRadius: 10, padding: '14px 18px', minWidth: 0 }}>
+      <div className="gecko-stat-num" style={{ color: color ?? undefined }}>{value}</div>
+      <div className="gecko-stat-label gecko-mt-1">{label}</div>
     </div>
   );
 }
@@ -535,16 +518,16 @@ export default function CommoditiesPage() {
   );
 
   return (
-    <div style={{ maxWidth: 'var(--gecko-container-max)', margin: '0 auto', display: 'flex', flexDirection: 'column', gap: 24, paddingBottom: 40 }}>
+    <div className="gecko-stack gecko-stack-xl" style={{ maxWidth: 'var(--gecko-container-max)', margin: '0 auto', paddingBottom: 40 }}>
 
       {/* Header */}
       <div className="gecko-page-actions">
         <div className="gecko-page-actions-left">
-          <div style={{ display: 'flex', alignItems: 'baseline', gap: 12 }}>
-            <h1 style={{ fontSize: 24, fontWeight: 700, margin: 0, color: 'var(--gecko-text-primary)' }}>Commodity Codes</h1>
+          <div className="gecko-row gecko-row-baseline gecko-stack-md">
+            <h1 className="gecko-page-title">Commodity Codes</h1>
             <span className="gecko-count-badge">{pageItems.length} shown of {totalItems}</span>
           </div>
-          <div style={{ fontSize: 13, color: 'var(--gecko-text-secondary)', marginTop: 2 }}>
+          <div className="gecko-page-subtitle">
             WCO Harmonized System (HS) catalog. Used on BL, customs declaration, DG verification, and reefer planning.
           </div>
         </div>
@@ -556,7 +539,7 @@ export default function CommoditiesPage() {
       </div>
 
       {/* Stats */}
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 12 }}>
+      <div className="gecko-grid-4">
         <StatCard label="Total HS Codes"    value={totalCodes}    />
         <StatCard label="Chapters"          value={chapters}      color="var(--gecko-gray-700)" />
         <StatCard label="DG Flagged"        value={dgFlagged}     color="var(--gecko-danger-600)" />
@@ -564,11 +547,7 @@ export default function CommoditiesPage() {
       </div>
 
       {/* Filter bar */}
-      <div style={{
-        background: 'var(--gecko-bg-surface)', border: '1px solid var(--gecko-border)',
-        borderRadius: 10, padding: '12px 16px',
-        display: 'flex', flexWrap: 'wrap', gap: 10, alignItems: 'center',
-      }}>
+      <div className="gecko-filter-bar" style={{ borderRadius: 10 }}>
         {/* Search */}
         <div style={{ position: 'relative', flex: '1 1 220px', minWidth: 180 }}>
           <Icon name="search" size={14} style={{ position: 'absolute', left: 9, top: '50%', transform: 'translateY(-50%)', color: 'var(--gecko-text-disabled)', pointerEvents: 'none' }} />
@@ -581,10 +560,10 @@ export default function CommoditiesPage() {
           />
         </div>
 
-        <div style={{ width: 1, height: 22, background: 'var(--gecko-border)', flexShrink: 0 }} />
+        <div className="gecko-flex-shrink-0" style={{ width: 1, height: 22, background: 'var(--gecko-border)' }} />
 
         {/* Level filter */}
-        <div style={{ display: 'flex', gap: 4, flexWrap: 'wrap' }}>
+        <div className="gecko-row gecko-row-wrap" style={{ gap: 4 }}>
           <FilterPill label="All Levels"   active={levelFilter === ''}           onClick={() => setLevelFilter('')} />
           <FilterPill label="Chapter"      active={levelFilter === 'CHAPTER'}    onClick={() => setLevelFilter('CHAPTER')} />
           <FilterPill label="Heading"      active={levelFilter === 'HEADING'}    onClick={() => setLevelFilter('HEADING')} />
@@ -592,19 +571,19 @@ export default function CommoditiesPage() {
           <FilterPill label="Tariff Line"  active={levelFilter === 'TARIFF_LINE'} onClick={() => setLevelFilter('TARIFF_LINE')} />
         </div>
 
-        <div style={{ width: 1, height: 22, background: 'var(--gecko-border)', flexShrink: 0 }} />
+        <div className="gecko-flex-shrink-0" style={{ width: 1, height: 22, background: 'var(--gecko-border)' }} />
 
         {/* Cargo flag filters */}
-        <div style={{ display: 'flex', gap: 4, flexWrap: 'wrap' }}>
+        <div className="gecko-row gecko-row-wrap" style={{ gap: 4 }}>
           <FilterPill label="DG only"    active={dgFilter    === 'dg'}     onClick={() => setDgFilter(dgFilter === 'dg' ? 'all' : 'dg')} />
           <FilterPill label="Reefer"     active={reeferFilter=== 'reefer'} onClick={() => setReeferFilter(reeferFilter === 'reefer' ? 'all' : 'reefer')} />
           <FilterPill label="OOG"        active={oogFilter   === 'oog'}    onClick={() => setOogFilter(oogFilter === 'oog' ? 'all' : 'oog')} />
         </div>
 
-        <div style={{ width: 1, height: 22, background: 'var(--gecko-border)', flexShrink: 0 }} />
+        <div className="gecko-flex-shrink-0" style={{ width: 1, height: 22, background: 'var(--gecko-border)' }} />
 
         {/* Active filter */}
-        <div style={{ display: 'flex', gap: 4 }}>
+        <div className="gecko-row" style={{ gap: 4 }}>
           <FilterPill label="Active"   active={activeFilter === 'active'}   onClick={() => setActiveFilter('active')} />
           <FilterPill label="All"      active={activeFilter === 'all'}      onClick={() => setActiveFilter('all')} />
           <FilterPill label="Inactive" active={activeFilter === 'inactive'} onClick={() => setActiveFilter('inactive')} />
@@ -612,10 +591,7 @@ export default function CommoditiesPage() {
       </div>
 
       {/* Table */}
-      <div style={{
-        background: 'var(--gecko-bg-surface)', border: '1px solid var(--gecko-border)',
-        borderRadius: 12, overflow: 'hidden', boxShadow: 'var(--gecko-shadow-sm)',
-      }}>
+      <div className="gecko-table-card">
         <table className="gecko-table gecko-table-comfortable" style={{ fontSize: 13 }}>
           <thead>
             <tr>
@@ -648,7 +624,7 @@ export default function CommoditiesPage() {
                   <tr key={c.id} style={{ opacity: c.active ? 1 : 0.55 }}>
                     {/* HS Code cell — indent by level */}
                     <td>
-                      <div style={{ paddingLeft: indent, display: 'flex', alignItems: 'center', gap: 4 }}>
+                      <div className="gecko-row" style={{ paddingLeft: indent, gap: 4 }}>
                         {!isChapter && (
                           <span style={{ color: 'var(--gecko-border)', fontSize: 12, userSelect: 'none' }}>└</span>
                         )}
@@ -668,8 +644,8 @@ export default function CommoditiesPage() {
                         {c.description}
                       </div>
                       {c.parentCode && (
-                        <div style={{ fontSize: 11, color: 'var(--gecko-text-disabled)', marginTop: 2 }}>
-                          Parent: <span style={{ fontFamily: 'var(--gecko-font-mono)' }}>{c.parentCode}</span>
+                        <div className="gecko-cell-sub" style={{ fontSize: 11, fontFamily: 'inherit' }}>
+                          Parent: <span className="gecko-text-mono">{c.parentCode}</span>
                         </div>
                       )}
                     </td>
@@ -681,7 +657,7 @@ export default function CommoditiesPage() {
                     </td>
                     {/* Flags */}
                     <td>
-                      <div style={{ display: 'flex', gap: 4, flexWrap: 'wrap' }}>
+                      <div className="gecko-row gecko-row-wrap" style={{ gap: 4 }}>
                         {c.reeferRequired && <ReeferIcon />}
                         {c.oogFlag        && <OogIcon />}
                         {!c.reeferRequired && !c.oogFlag && <span style={{ color: 'var(--gecko-text-disabled)', fontSize: 12 }}>—</span>}

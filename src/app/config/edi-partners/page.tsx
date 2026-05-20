@@ -338,22 +338,22 @@ function Divider() {
 
 function KpiCard({ label, value, sub, accent, icon }: { label: string; value: string | number; sub?: string; accent?: string; icon: string }) {
   return (
-    <div style={{
-      flex: 1, minWidth: 160,
-      padding: '14px 18px',
-      background: 'var(--gecko-bg-surface)',
-      border: '1px solid var(--gecko-border)',
-      borderRadius: 10,
-      borderTop: `3px solid ${accent ?? 'var(--gecko-primary-500)'}`,
-    }}>
-      <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 6 }}>
+    <div
+      className="gecko-card"
+      style={{
+        flex: 1, minWidth: 160,
+        padding: '14px 18px',
+        borderTop: `3px solid ${accent ?? 'var(--gecko-primary-500)'}`,
+      }}
+    >
+      <div className="gecko-row" style={{ gap: 6, marginBottom: 6 }}>
         <Icon name={icon} size={13} style={{ color: accent ?? 'var(--gecko-primary-500)' }} />
-        <span style={{ fontSize: 10, fontWeight: 600, letterSpacing: '0.08em', textTransform: 'uppercase', color: 'var(--gecko-text-secondary)' }}>
+        <span className="gecko-eyebrow">
           {label}
         </span>
       </div>
-      <div style={{ fontSize: 26, fontWeight: 700, lineHeight: 1, color: 'var(--gecko-text-primary)' }}>{value}</div>
-      {sub && <div style={{ fontSize: 11, color: 'var(--gecko-text-secondary)', marginTop: 4 }}>{sub}</div>}
+      <div className="gecko-stat-num">{value}</div>
+      {sub && <div className="gecko-cell-meta">{sub}</div>}
     </div>
   );
 }
@@ -436,33 +436,33 @@ export default function EdiPartnersPage() {
     <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--gecko-space-4)' }}>
 
       {/* ── Page Header ── */}
-      <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: 12, flexWrap: 'wrap' }}>
-        <div>
-          <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 4 }}>
-            <h1 style={{ fontSize: 22, fontWeight: 700, margin: 0, letterSpacing: '-0.02em' }}>EDI Partners</h1>
+      <div className="gecko-page-header">
+        <div className="gecko-page-header-left">
+          <div className="gecko-row" style={{ gap: 10, marginBottom: 4 }}>
+            <h1 className="gecko-page-title">EDI Partners</h1>
             <Badge label="Config" bg="var(--gecko-primary-50)" color="var(--gecko-primary-700)" />
           </div>
-          <div style={{ fontSize: 12, color: 'var(--gecko-text-secondary)' }}>
+          <p className="gecko-page-subtitle">
             Configure trading partner connections, message types, and EDI exchange profiles
-          </div>
+          </p>
         </div>
-        <div style={{ display: 'flex', gap: 8, alignItems: 'center', flexWrap: 'wrap' }}>
+        <div className="gecko-page-header-actions">
           <button
-            className="gecko-btn gecko-btn-outline gecko-btn-sm"
-            style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+            className="gecko-btn gecko-btn-outline gecko-btn-sm gecko-inline-row"
+            style={{ gap: 6 }}>
             <Icon name="download" size={14} /> Export
           </button>
           <button
-            className="gecko-btn gecko-btn-primary gecko-btn-sm"
+            className="gecko-btn gecko-btn-primary gecko-btn-sm gecko-inline-row"
             onClick={() => { setShowAdd(true); setSelectedId(null); }}
-            style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+            style={{ gap: 6 }}>
             <Icon name="plus" size={14} /> Add Partner
           </button>
         </div>
       </div>
 
       {/* ── KPI Strip ── */}
-      <div style={{ display: 'flex', gap: 12, flexWrap: 'wrap' }}>
+      <div className="gecko-row gecko-row-wrap" style={{ gap: 12 }}>
         <KpiCard
           label="Active Partners"
           value={8}
@@ -501,20 +501,14 @@ export default function EdiPartnersPage() {
       {/* Actually handled via the sub prop — replaced with span below by reimplementing */}
 
       {/* ── Main layout: table + detail panel ── */}
-      <div style={{ display: 'flex', gap: 16, alignItems: 'flex-start' }}>
+      <div className="gecko-row gecko-row-start" style={{ gap: 16 }}>
 
         {/* ── Partner Table ── */}
-        <div style={{
-          flex: 1, minWidth: 0,
-          background: 'var(--gecko-bg-surface)',
-          border: '1px solid var(--gecko-border)',
-          borderRadius: 10, overflow: 'hidden',
-        }}>
+        <div className="gecko-table-card gecko-flex-1">
 
           {/* Toolbar */}
-          <div style={{
-            padding: '12px 16px', borderBottom: '1px solid var(--gecko-border)',
-            display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap',
+          <div className="gecko-row gecko-row-wrap" style={{
+            padding: '12px 16px', borderBottom: '1px solid var(--gecko-border)', gap: 8,
           }}>
             {/* Search */}
             <div style={{ position: 'relative', flex: 1, minWidth: 180, maxWidth: 280 }}>
@@ -616,18 +610,18 @@ export default function EdiPartnersPage() {
                     >
                       {/* Partner name + code */}
                       <td style={{ padding: '10px 14px', whiteSpace: 'nowrap' }}>
-                        <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-                          <div style={{
-                            width: 32, height: 32, borderRadius: 8,
-                            background: avatarBg, color: '#fff',
-                            display: 'flex', alignItems: 'center', justifyContent: 'center',
-                            fontSize: 11, fontWeight: 800, letterSpacing: '0.04em', flexShrink: 0,
-                          }}>
+                        <div className="gecko-row" style={{ gap: 10 }}>
+                          <div
+                            className="gecko-mini-icon"
+                            style={{
+                              background: avatarBg, color: '#fff',
+                              fontSize: 11, fontWeight: 800, letterSpacing: '0.04em',
+                            }}>
                             {p.code.slice(0, 2)}
                           </div>
-                          <div>
-                            <div style={{ fontWeight: 600, color: 'var(--gecko-text-primary)', fontSize: 13 }}>{p.name}</div>
-                            <div style={{ fontSize: 10, color: 'var(--gecko-text-secondary)', fontFamily: 'monospace' }}>{p.code}</div>
+                          <div className="gecko-cell-two-line">
+                            <div className="gecko-cell-primary">{p.name}</div>
+                            <div className="gecko-cell-sub">{p.code}</div>
                           </div>
                         </div>
                       </td>
@@ -644,7 +638,7 @@ export default function EdiPartnersPage() {
 
                       {/* Message Types */}
                       <td style={{ padding: '10px 14px' }}>
-                        <div style={{ display: 'flex', gap: 4, flexWrap: 'wrap', maxWidth: 200 }}>
+                        <div className="gecko-row gecko-row-wrap" style={{ gap: 4, maxWidth: 200 }}>
                           {p.messages.slice(0, 4).map(m => (
                             <span key={m} style={{
                               fontSize: 9, fontWeight: 700, padding: '1px 5px', borderRadius: 3,
@@ -681,11 +675,11 @@ export default function EdiPartnersPage() {
 
                       {/* Actions */}
                       <td style={{ padding: '10px 14px' }}>
-                        <div style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
+                        <div className="gecko-row" style={{ gap: 4 }}>
                           <button
-                            className="gecko-btn gecko-btn-outline gecko-btn-sm"
+                            className="gecko-btn gecko-btn-outline gecko-btn-sm gecko-inline-row"
                             onClick={e => { e.stopPropagation(); setSelectedId(p.id); setShowAdd(false); setConnTestState('idle'); }}
-                            style={{ display: 'flex', alignItems: 'center', gap: 5, fontSize: 11 }}>
+                            style={{ gap: 5, fontSize: 11 }}>
                             <Icon name="settings" size={12} /> Configure
                           </button>
                           <button

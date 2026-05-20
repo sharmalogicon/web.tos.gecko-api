@@ -5,9 +5,9 @@ import { Icon } from '@/components/ui/Icon';
 
 function KpiCard({ label, value, sub, accent, trend }: { label: string; value: string; sub?: string; accent?: string; trend?: 'up' | 'down' | 'neutral' }) {
   return (
-    <div style={{ background: 'var(--gecko-bg-surface)', border: '1px solid var(--gecko-border)', borderRadius: 12, padding: '18px 20px', borderTop: `3px solid ${accent ?? 'var(--gecko-primary-400)'}` }}>
-      <div style={{ fontSize: 11, fontWeight: 600, color: 'var(--gecko-text-secondary)', textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: 8 }}>{label}</div>
-      <div style={{ fontSize: 28, fontWeight: 800, color: 'var(--gecko-text-primary)', fontFamily: 'var(--gecko-font-mono)', lineHeight: 1 }}>{value}</div>
+    <div className="gecko-card gecko-card-padded" style={{ borderTop: `3px solid ${accent ?? 'var(--gecko-primary-400)'}` }}>
+      <div className="gecko-stat-label gecko-mb-2">{label}</div>
+      <div className="gecko-stat-num" style={{ fontFamily: 'var(--gecko-font-mono)', fontWeight: 800, fontSize: 28 }}>{value}</div>
       {sub && <div style={{ fontSize: 12, color: trend === 'up' ? 'var(--gecko-success-600)' : trend === 'down' ? 'var(--gecko-error-600)' : 'var(--gecko-text-secondary)', marginTop: 6 }}>{sub}</div>}
     </div>
   );
@@ -92,12 +92,12 @@ export default function EdiDashboard() {
 
   return (
     <div style={{ padding: '28px 32px', minHeight: '100vh', background: 'var(--gecko-bg-subtle)' }}>
-      <div style={{ marginBottom: 24 }}>
-        <h1 style={{ fontSize: 22, fontWeight: 800, color: 'var(--gecko-text-primary)', margin: 0 }}>EDI &amp; Partner Dashboard</h1>
-        <p style={{ fontSize: 13, color: 'var(--gecko-text-secondary)', marginTop: 4, marginBottom: 0 }}>Message volume, partner connectivity, error rates, and processing health</p>
+      <div className="gecko-page-header-left gecko-mb-5">
+        <h1 className="gecko-page-title">EDI &amp; Partner Dashboard</h1>
+        <p className="gecko-page-subtitle">Message volume, partner connectivity, error rates, and processing health</p>
       </div>
 
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(5, 1fr)', gap: 16, marginBottom: 24 }}>
+      <div className="gecko-grid-5 gecko-mb-5" style={{ gap: 16 }}>
         <KpiCard label="Messages Today" value="1,847" sub="↑ 12% vs yesterday" accent="var(--gecko-primary-400)" trend="up" />
         <KpiCard label="Error Rate" value="0.8%" sub="14 failed messages" accent="var(--gecko-success-400)" />
         <KpiCard label="Partners Online" value="12 / 14" sub="HAPAG, PIL offline" accent="var(--gecko-warning-400)" trend="down" />
@@ -105,7 +105,7 @@ export default function EdiDashboard() {
         <KpiCard label="Pending ACK" value="23" sub="Awaiting acknowledgement" accent="var(--gecko-info-400)" />
       </div>
 
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 16 }}>
+      <div className="gecko-grid-3" style={{ gap: 16 }}>
         <Widget title="Message Volume — Last 24 Hours" col={2}>
           <svg viewBox="0 0 560 110" width="100%" style={{ display: 'block', overflow: 'visible' }}>
             {HOURLY_VALS.map((v, i) => {

@@ -228,26 +228,26 @@ export default function YardConfigPage() {
   };
 
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
+    <div className="gecko-stack" style={{ gap: 12 }}>
 
       {/* Top toolbar */}
-      <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: 12, flexWrap: 'wrap' }}>
-        <div>
-          <div style={{ display: 'flex', alignItems: 'center', gap: 10, flexWrap: 'wrap' }}>
-            <h1 style={{ fontSize: 20, fontWeight: 700, color: 'var(--gecko-text-primary)', margin: 0 }}>Yard Zones &amp; Blocks</h1>
+      <div className="gecko-page-header">
+        <div className="gecko-page-header-left">
+          <div className="gecko-row gecko-row-wrap" style={{ gap: 10 }}>
+            <h1 className="gecko-page-title">Yard Zones &amp; Blocks</h1>
             <span className="gecko-pill gecko-pill-primary">{stats.blockCount} blocks · {stats.totalCap} TEU</span>
             {stats.reeferPlugs > 0 && (
               <span className="gecko-pill gecko-pill-info">{stats.reeferPlugs} reefer plugs</span>
             )}
           </div>
-          <div style={{ fontSize: 12, color: 'var(--gecko-text-secondary)', marginTop: 3 }}>
+          <p className="gecko-page-subtitle">
             Visual layout — Laem Chabang ICD · Import Yard · {lastSavedAt ? `auto-saved ${new Date(lastSavedAt).toLocaleTimeString()}` : 'not yet saved'}
-          </div>
+          </p>
         </div>
 
-        <div style={{ display: 'flex', gap: 8, alignItems: 'center', flexWrap: 'wrap' }}>
+        <div className="gecko-page-header-actions">
           <ZoomControl zoom={zoom} setZoom={setZoom} />
-          <label className="gecko-btn gecko-btn-outline gecko-btn-sm" style={{ display: 'inline-flex', alignItems: 'center', gap: 6, cursor: 'pointer' }}>
+          <label className="gecko-btn gecko-btn-outline gecko-btn-sm gecko-inline-row" style={{ gap: 6, cursor: 'pointer' }}>
             <Icon name="upload" size={13} />
             Import JSON
             <input type="file" accept="application/json" hidden onChange={e => { const f = e.target.files?.[0]; if (f) importJson(f); e.target.value = ''; }} />
@@ -283,7 +283,7 @@ export default function YardConfigPage() {
         />
       </div>
 
-      <div style={{ fontSize: 11, color: 'var(--gecko-text-secondary)', textAlign: 'center', paddingTop: 6 }}>
+      <div className="gecko-cell-meta" style={{ textAlign: 'center', paddingTop: 6 }}>
         Click a preset to add a block · drag any block on the canvas to position it · click to select &amp; edit · changes auto-save to this browser
       </div>
     </div>
@@ -294,13 +294,13 @@ export default function YardConfigPage() {
 
 function BlockPalette({ presets, onAdd }: { presets: Preset[]; onAdd: (p: Preset) => void }) {
   return (
-    <section className="gecko-card" style={{ padding: 14, display: 'flex', flexDirection: 'column', gap: 10 }}>
+    <section className="gecko-card gecko-stack" style={{ padding: 14, gap: 10 }}>
       <div>
-        <div style={{ fontSize: 11, fontWeight: 700, color: 'var(--gecko-text-secondary)', letterSpacing: '0.06em', textTransform: 'uppercase' }}>Add block</div>
-        <div style={{ fontSize: 11, color: 'var(--gecko-text-disabled)', marginTop: 2 }}>Click a preset to add</div>
+        <div className="gecko-eyebrow">Add block</div>
+        <div className="gecko-cell-meta">Click a preset to add</div>
       </div>
 
-      <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+      <div className="gecko-stack" style={{ gap: 6 }}>
         {presets.map(p => {
           const meta = BLOCK_TYPES[p.type];
           return (
@@ -329,8 +329,8 @@ function BlockPalette({ presets, onAdd }: { presets: Preset[]; onAdd: (p: Preset
       </div>
 
       <div style={{ marginTop: 8, paddingTop: 10, borderTop: '1px solid var(--gecko-border)' }}>
-        <div style={{ fontSize: 11, fontWeight: 700, color: 'var(--gecko-text-secondary)', letterSpacing: '0.06em', textTransform: 'uppercase', marginBottom: 8 }}>Legend</div>
-        <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
+        <div className="gecko-eyebrow" style={{ marginBottom: 8 }}>Legend</div>
+        <div className="gecko-stack" style={{ gap: 4 }}>
           {(Object.keys(BLOCK_TYPES) as BlockType[]).map(t => {
             const m = BLOCK_TYPES[t];
             return (
@@ -585,10 +585,10 @@ function PropertiesPanel({ block, allBlocks, updateBlock, removeBlock, stats, te
 
   if (!block) {
     return (
-      <section className="gecko-card" style={{ padding: 14, display: 'flex', flexDirection: 'column', gap: 14 }}>
+      <section className="gecko-card gecko-stack" style={{ padding: 14, gap: 14 }}>
         <div>
-          <div style={{ fontSize: 11, fontWeight: 700, color: 'var(--gecko-text-secondary)', letterSpacing: '0.06em', textTransform: 'uppercase' }}>Template</div>
-          <div style={{ fontSize: 11, color: 'var(--gecko-text-disabled)', marginTop: 2 }}>Auto-saved to this browser</div>
+          <div className="gecko-eyebrow">Template</div>
+          <div className="gecko-cell-meta">Auto-saved to this browser</div>
         </div>
         <PropField label="Template name">
           <input
@@ -600,8 +600,8 @@ function PropertiesPanel({ block, allBlocks, updateBlock, removeBlock, stats, te
         </PropField>
 
         <div style={{ marginTop: 4, paddingTop: 12, borderTop: '1px solid var(--gecko-border)' }}>
-          <div style={{ fontSize: 11, fontWeight: 700, color: 'var(--gecko-text-secondary)', letterSpacing: '0.06em', textTransform: 'uppercase', marginBottom: 8 }}>Yard summary</div>
-          <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
+          <div className="gecko-eyebrow" style={{ marginBottom: 8 }}>Yard summary</div>
+          <div className="gecko-stack" style={{ gap: 4 }}>
             <SummaryRow label="Total blocks"   value={stats.blockCount} />
             <SummaryRow label="Total capacity" value={`${stats.totalCap} TEU`} />
             <SummaryRow label="Reefer plugs"   value={stats.reeferPlugs} />
@@ -610,14 +610,14 @@ function PropertiesPanel({ block, allBlocks, updateBlock, removeBlock, stats, te
 
         {stats.blockCount > 0 && (
           <div style={{ paddingTop: 12, borderTop: '1px solid var(--gecko-border)' }}>
-            <div style={{ fontSize: 11, fontWeight: 700, color: 'var(--gecko-text-secondary)', letterSpacing: '0.06em', textTransform: 'uppercase', marginBottom: 8 }}>By type</div>
-            <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
+            <div className="gecko-eyebrow" style={{ marginBottom: 8 }}>By type</div>
+            <div className="gecko-stack" style={{ gap: 4 }}>
               {(Object.keys(stats.byType) as BlockType[]).map(t => {
                 const m = BLOCK_TYPES[t];
                 const s = stats.byType[t];
                 return (
-                  <div key={t} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', fontSize: 11 }}>
-                    <span style={{ display: 'inline-flex', alignItems: 'center', gap: 5 }}>
+                  <div key={t} className="gecko-row gecko-row-between" style={{ fontSize: 11 }}>
+                    <span className="gecko-inline-row" style={{ gap: 5 }}>
                       <span style={{ width: 8, height: 8, borderRadius: 2, background: m.stroke }} />
                       {m.label}
                     </span>
@@ -643,11 +643,11 @@ function PropertiesPanel({ block, allBlocks, updateBlock, removeBlock, stats, te
   const codeDuplicate = allBlocks.some(b => b.id !== block.id && b.code === block.code);
 
   return (
-    <section className="gecko-card" style={{ padding: 14, display: 'flex', flexDirection: 'column', gap: 14 }}>
-      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 8 }}>
+    <section className="gecko-card gecko-stack" style={{ padding: 14, gap: 14 }}>
+      <div className="gecko-row gecko-row-between" style={{ gap: 8 }}>
         <div>
-          <div style={{ fontSize: 11, fontWeight: 700, color: 'var(--gecko-text-secondary)', letterSpacing: '0.06em', textTransform: 'uppercase' }}>Block</div>
-          <div style={{ fontSize: 16, fontWeight: 700, color: 'var(--gecko-text-primary)', fontFamily: 'var(--gecko-font-mono)', display: 'flex', alignItems: 'center', gap: 6 }}>
+          <div className="gecko-eyebrow">Block</div>
+          <div className="gecko-row" style={{ fontSize: 16, fontWeight: 700, color: 'var(--gecko-text-primary)', fontFamily: 'var(--gecko-font-mono)', gap: 6 }}>
             <span style={{ width: 12, height: 12, borderRadius: 3, background: meta.stroke }} />
             {block.code}
           </div>
@@ -657,7 +657,7 @@ function PropertiesPanel({ block, allBlocks, updateBlock, removeBlock, stats, te
         </button>
       </div>
 
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: 8 }}>
+      <div className="gecko-grid-2" style={{ gap: 8 }}>
         <PropField label="Code">
           <input
             className="gecko-input gecko-input-sm"
@@ -680,7 +680,7 @@ function PropertiesPanel({ block, allBlocks, updateBlock, removeBlock, stats, te
         </PropField>
       </div>
 
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 8 }}>
+      <div className="gecko-grid-3" style={{ gap: 8 }}>
         <PropField label="Bays">
           <input
             className="gecko-input gecko-input-sm" type="number" min={1} max={40}
@@ -707,7 +707,7 @@ function PropertiesPanel({ block, allBlocks, updateBlock, removeBlock, stats, te
         </PropField>
       </div>
 
-      <div style={{ padding: 10, background: 'var(--gecko-bg-subtle)', borderRadius: 6, fontSize: 12, display: 'flex', justifyContent: 'space-between' }}>
+      <div className="gecko-row gecko-row-between" style={{ padding: 10, background: 'var(--gecko-bg-subtle)', borderRadius: 6, fontSize: 12 }}>
         <span style={{ color: 'var(--gecko-text-secondary)' }}>Capacity</span>
         <span style={{ fontFamily: 'var(--gecko-font-mono)', fontWeight: 700, color: 'var(--gecko-text-primary)' }}>
           {cap} TEU <span style={{ color: 'var(--gecko-text-secondary)', fontWeight: 500 }}>({block.bays}×{block.rows}×{block.tiers})</span>
@@ -739,7 +739,7 @@ function PropertiesPanel({ block, allBlocks, updateBlock, removeBlock, stats, te
       )}
 
       <PropField label="ISO sizes accepted">
-        <div style={{ display: 'flex', gap: 6 }}>
+        <div className="gecko-row" style={{ gap: 6 }}>
           {ISO_TYPES.map(iso => {
             const on = block.isoAccepted.includes(iso);
             return (
@@ -772,7 +772,7 @@ function PropertiesPanel({ block, allBlocks, updateBlock, removeBlock, stats, te
         </PropField>
       )}
 
-      <div style={{ paddingTop: 10, borderTop: '1px solid var(--gecko-border)', display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8 }}>
+      <div className="gecko-grid-2" style={{ paddingTop: 10, borderTop: '1px solid var(--gecko-border)', gap: 8 }}>
         <PropField label="X position">
           <input
             className="gecko-input gecko-input-sm" type="number"
@@ -805,7 +805,7 @@ function PropField({ label, children }: { label: string; children: React.ReactNo
 
 function SummaryRow({ label, value }: { label: string; value: React.ReactNode }) {
   return (
-    <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 11.5 }}>
+    <div className="gecko-row gecko-row-between" style={{ fontSize: 11.5 }}>
       <span style={{ color: 'var(--gecko-text-secondary)' }}>{label}</span>
       <span style={{ fontFamily: 'var(--gecko-font-mono)', fontWeight: 600, color: 'var(--gecko-text-primary)' }}>{value}</span>
     </div>

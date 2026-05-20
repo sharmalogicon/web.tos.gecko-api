@@ -31,11 +31,11 @@ export default function RateCardsPage() {
       {/* Header */}
       <div className="gecko-page-actions" style={{ flexShrink: 0 }}>
         <div className="gecko-page-actions-left">
-          <div style={{ display: 'flex', alignItems: 'baseline', gap: 12 }}>
-            <h1 style={{ fontSize: 24, fontWeight: 700, margin: 0, color: 'var(--gecko-text-primary)' }}>Rate Cards Builder</h1>
+          <div className="gecko-row gecko-row-baseline" style={{ gap: 12 }}>
+            <h1 className="gecko-page-title">Rate Cards Builder</h1>
             <span style={{ fontSize: 12, fontWeight: 600, color: 'var(--gecko-primary-700)', background: 'var(--gecko-primary-100)', padding: '2px 8px', borderRadius: 12 }}>Logic Editor</span>
           </div>
-          <div style={{ fontSize: 13, color: 'var(--gecko-text-secondary)', marginTop: 4 }}>Define pricing matrices using base rates and conditional constraint multipliers.</div>
+          <p className="gecko-page-subtitle" style={{ marginTop: 4 }}>Define pricing matrices using base rates and conditional constraint multipliers.</p>
         </div>
         <div className="gecko-toolbar">
           <button className="gecko-btn gecko-btn-outline gecko-btn-sm" onClick={() => toast({ variant: 'success', title: 'Plan duplicated', message: `Copy of "${selectedPlan}" created as a draft.` })}><Icon name="copy" size={16} /> Duplicate Plan</button>
@@ -44,8 +44,8 @@ export default function RateCardsPage() {
       </div>
 
       {/* Plan Selector */}
-      <div style={{ display: 'flex', alignItems: 'center', gap: 16, background: 'var(--gecko-bg-surface)', padding: '16px 24px', borderRadius: 12, border: '1px solid var(--gecko-border)', boxShadow: 'var(--gecko-shadow-sm)' }}>
-        <div style={{ fontSize: 13, fontWeight: 700, color: 'var(--gecko-text-secondary)', textTransform: 'uppercase' }}>Editing Plan:</div>
+      <div className="gecko-card gecko-row" style={{ gap: 16, padding: '16px 24px', boxShadow: 'var(--gecko-shadow-sm)' }}>
+        <div className="gecko-eyebrow">Editing Plan:</div>
         <select
           className="gecko-input"
           value={selectedPlan}
@@ -102,13 +102,13 @@ export default function RateCardsPage() {
           <div style={{ padding: '24px', borderBottom: '1px solid var(--gecko-border)', background: '#fff' }}>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
               <div>
-                <div style={{ fontSize: 11, fontWeight: 700, color: 'var(--gecko-text-secondary)', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Pricing Logic For</div>
+                <div className="gecko-eyebrow">Pricing Logic For</div>
                 <h2 style={{ fontSize: 24, fontWeight: 800, margin: '4px 0', fontFamily: 'var(--gecko-font-mono)', color: 'var(--gecko-text-primary)' }}>{activeItem.id}</h2>
                 <div style={{ fontSize: 14, color: 'var(--gecko-text-secondary)' }}>{activeItem.desc}</div>
               </div>
               <div style={{ textAlign: 'right' }}>
-                <div style={{ fontSize: 11, fontWeight: 700, color: 'var(--gecko-text-secondary)', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Base Rate (THB)</div>
-                <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginTop: 4 }}>
+                <div className="gecko-eyebrow">Base Rate (THB)</div>
+                <div className="gecko-row" style={{ gap: 8, marginTop: 4 }}>
                   <span style={{ fontSize: 18, fontWeight: 700, color: 'var(--gecko-text-disabled)' }}>฿</span>
                   <input className="gecko-input" type="number" value={activeItem.base} readOnly style={{ width: 120, fontSize: 24, fontWeight: 800, fontFamily: 'var(--gecko-font-mono)', height: 44, color: 'var(--gecko-success-700)', borderColor: 'var(--gecko-success-300)', textAlign: 'right' }} />
                 </div>
@@ -124,7 +124,7 @@ export default function RateCardsPage() {
               <button className="gecko-btn gecko-btn-outline gecko-btn-sm" style={{ background: '#fff' }} onClick={() => toast({ variant: 'info', title: 'Add Constraint', message: 'Constraint builder coming soon.' })}><Icon name="plus" size={14} /> Add Constraint</button>
             </div>
 
-            <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
+            <div className="gecko-stack">
               {activeItem.conditions.map((cond, idx) => (
                 <div key={cond.id} style={{ display: 'flex', alignItems: 'center', gap: 16, background: '#fff', border: '1px solid var(--gecko-border)', padding: 16, borderRadius: 8, boxShadow: '0 2px 4px rgba(0,0,0,0.02)' }}>
 

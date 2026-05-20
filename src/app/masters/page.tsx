@@ -8,20 +8,18 @@ import { useToast } from '@/components/ui/Toast';
 
 function EntityCard({ entity }: { entity: any }) {
   return (
-    <Link href={`/masters/${entity.id}`} style={{
-      padding: 18, textAlign: 'left', cursor: 'pointer', fontFamily: 'inherit',
-      background: 'var(--gecko-bg-surface)', border: '1px solid var(--gecko-border)', borderRadius: 10,
-      display: 'flex', flexDirection: 'column', gap: 12,
+    <Link href={`/masters/${entity.id}`} className="gecko-card gecko-stack" style={{
+      cursor: 'pointer', fontFamily: 'inherit',
       transition: 'border-color 120ms, box-shadow 120ms',
       textDecoration: 'none', color: 'inherit',
     }}>
-      <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
-        <div style={{ width: 38, height: 38, borderRadius: 9, background: 'var(--gecko-primary-50)', color: 'var(--gecko-primary-700)', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+      <div className="gecko-row gecko-stack-md">
+        <div className="gecko-mini-icon gecko-mini-icon-lg gecko-mini-icon-primary">
           <Icon name={entity.icon} size={18} />
         </div>
-        <div style={{ flex: 1, minWidth: 0 }}>
+        <div className="gecko-flex-1">
           <div style={{ fontSize: 14, fontWeight: 700 }}>{entity.label}</div>
-          <div style={{ fontSize: 10.5, color: 'var(--gecko-text-disabled)', marginTop: 1, fontFamily: 'var(--gecko-font-mono)' }}>Updated {entity.updated}</div>
+          <div className="gecko-cell-sub" style={{ fontSize: 10.5, marginTop: 1 }}>Updated {entity.updated}</div>
         </div>
         <div style={{ textAlign: 'right' }}>
           <div style={{ fontSize: 22, fontWeight: 700, fontFamily: 'var(--gecko-font-mono)', letterSpacing: '-0.02em', lineHeight: 1 }}>{entity.count.toLocaleString()}</div>
@@ -31,9 +29,9 @@ function EntityCard({ entity }: { entity: any }) {
 
       <div style={{ fontSize: 12, color: 'var(--gecko-text-secondary)', lineHeight: 1.5 }}>{entity.desc}</div>
 
-      <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap', paddingTop: 10, borderTop: '1px dashed var(--gecko-border)' }}>
+      <div className="gecko-row gecko-row-wrap gecko-stack-md" style={{ paddingTop: 10, borderTop: '1px dashed var(--gecko-border)' }}>
         {entity.stats.map(([label, n]: [string, number]) => (
-          <div key={label} style={{ display: 'flex', alignItems: 'baseline', gap: 4, fontSize: 11 }}>
+          <div key={label} className="gecko-row gecko-row-baseline" style={{ gap: 4, fontSize: 11 }}>
             <span style={{ fontWeight: 700, fontFamily: 'var(--gecko-font-mono)', color: 'var(--gecko-text-primary)' }}>{n}</span>
             <span style={{ color: 'var(--gecko-text-secondary)', textTransform: 'capitalize' }}>{label.replace('-', ' ')}</span>
           </div>
@@ -68,7 +66,7 @@ export default function MastersHubPage() {
   ];
 
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
+    <div className="gecko-stack" style={{ gap: 14 }}>
       <PageToolbar
         title="Master Data"
         subtitle="Central catalog for every reference entity used across Gate, Yard, CFS, Billing, and Tariff"
@@ -83,13 +81,13 @@ export default function MastersHubPage() {
       />
 
       {/* Cross-entity search */}
-      <div style={{ padding: 14, background: 'linear-gradient(to right, var(--gecko-primary-50), var(--gecko-bg-surface) 60%)', border: '1px solid var(--gecko-border)', borderRadius: 10, display: 'flex', alignItems: 'center', gap: 14 }}>
-        <div style={{ width: 44, height: 44, borderRadius: 10, background: 'var(--gecko-primary-600)', color: '#fff', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+      <div className="gecko-row" style={{ padding: 14, background: 'linear-gradient(to right, var(--gecko-primary-50), var(--gecko-bg-surface) 60%)', border: '1px solid var(--gecko-border)', borderRadius: 10, gap: 14 }}>
+        <div className="gecko-mini-icon gecko-mini-icon-solid" style={{ width: 44, height: 44, borderRadius: 10 }}>
           <Icon name="search" size={20} />
         </div>
-        <div style={{ flex: 1 }}>
+        <div className="gecko-flex-1">
           <div style={{ fontSize: 13, fontWeight: 600, color: 'var(--gecko-primary-700)' }}>Unified search across master data</div>
-          <div style={{ fontSize: 11, color: 'var(--gecko-text-secondary)', marginTop: 2 }}>Find any customer, line, vessel, charge code, container type or yard slot by name, code, IMO, scac, or ISO designation.</div>
+          <div className="gecko-cell-meta">Find any customer, line, vessel, charge code, container type or yard slot by name, code, IMO, scac, or ISO designation.</div>
         </div>
         <div style={{ position: 'relative', width: 420 }}>
           <Icon name="search" size={13} style={{ position: 'absolute', left: 10, top: '50%', transform: 'translateY(-50%)', color: 'var(--gecko-text-disabled)' }} />
@@ -101,9 +99,9 @@ export default function MastersHubPage() {
       {/* Main grid: entities (2/3) + recent (1/3) */}
       <div style={{ display: 'grid', gridTemplateColumns: '2fr 1fr', gap: 14, alignItems: 'flex-start' }}>
         <div>
-          <div style={{ fontSize: 11, fontWeight: 700, color: 'var(--gecko-text-secondary)', letterSpacing: '0.08em', textTransform: 'uppercase', marginBottom: 10, display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-            <span>Catalogs</span>
-            <span style={{ fontWeight: 500, letterSpacing: 'normal', textTransform: 'none', fontSize: 11 }}>{entities.reduce((s, e) => s + e.count, 0).toLocaleString()} records total</span>
+          <div className="gecko-row gecko-row-between gecko-mb-3">
+            <span className="gecko-eyebrow">Catalogs</span>
+            <span style={{ fontWeight: 500, fontSize: 11, color: 'var(--gecko-text-secondary)' }}>{entities.reduce((s, e) => s + e.count, 0).toLocaleString()} records total</span>
           </div>
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: 12 }}>
             {entities.map(e => <EntityCard key={e.id} entity={e} />)}
@@ -111,19 +109,19 @@ export default function MastersHubPage() {
         </div>
 
         <div>
-          <div style={{ fontSize: 11, fontWeight: 700, color: 'var(--gecko-text-secondary)', letterSpacing: '0.08em', textTransform: 'uppercase', marginBottom: 10 }}>Recent Changes</div>
-          <div className="gecko-card" style={{ padding: 0, overflow: 'hidden' }}>
+          <div className="gecko-eyebrow gecko-mb-3">Recent Changes</div>
+          <div className="gecko-card gecko-card-flush" style={{ overflow: 'hidden' }}>
             {recent.map((r, i) => (
-              <div key={i} style={{ display: 'flex', gap: 10, padding: 12, borderBottom: i === recent.length - 1 ? 'none' : '1px solid var(--gecko-border)', alignItems: 'flex-start' }}>
-                <div style={{ width: 28, height: 28, borderRadius: 8, background: `var(--gecko-${r.tone}-50)`, color: `var(--gecko-${r.tone}-700)`, display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0, fontSize: 11, fontWeight: 700 }}>
+              <div key={i} className="gecko-row gecko-row-start gecko-stack-md" style={{ padding: 12, borderBottom: i === recent.length - 1 ? 'none' : '1px solid var(--gecko-border)' }}>
+                <div className={`gecko-mini-icon gecko-mini-icon-${r.tone}`} style={{ width: 28, height: 28, borderRadius: 8, fontSize: 11, fontWeight: 700 }}>
                   {r.who.split(' ').map(w => w[0]).join('').slice(0, 2)}
                 </div>
-                <div style={{ flex: 1, minWidth: 0 }}>
+                <div className="gecko-flex-1">
                   <div style={{ fontSize: 11.5, color: 'var(--gecko-text-primary)' }}>
                     <span style={{ fontWeight: 600 }}>{r.who}</span> {r.what}
                   </div>
-                  <div style={{ fontSize: 11, color: 'var(--gecko-text-secondary)', marginTop: 2, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{r.entity}</div>
-                  <div style={{ fontSize: 10, color: 'var(--gecko-text-disabled)', marginTop: 2, fontFamily: 'var(--gecko-font-mono)' }}>{r.time}</div>
+                  <div className="gecko-cell-meta gecko-truncate">{r.entity}</div>
+                  <div className="gecko-cell-sub">{r.time}</div>
                 </div>
               </div>
             ))}
@@ -134,19 +132,19 @@ export default function MastersHubPage() {
 
           {/* Quick actions */}
           <div style={{ marginTop: 14 }}>
-            <div style={{ fontSize: 11, fontWeight: 700, color: 'var(--gecko-text-secondary)', letterSpacing: '0.08em', textTransform: 'uppercase', marginBottom: 10 }}>Quick Actions</div>
-            <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+            <div className="gecko-eyebrow gecko-mb-3">Quick Actions</div>
+            <div className="gecko-stack" style={{ gap: 6 }}>
               {[
                 { icon: 'plus',     label: 'New customer onboarding',    sub: 'Guided 5-step wizard' },
                 { icon: 'download', label: 'Bulk import vessels',         sub: 'Excel or EDI COPARN' },
                 { icon: 'refresh',  label: 'Re-sync ISO catalog',          sub: 'Pulls from BIC registry' },
                 { icon: 'invoice',  label: 'Clone charge codes',           sub: 'Copy from facility to facility' },
               ].map(q => (
-                <button key={q.label} className="gecko-card" style={{ padding: '10px 12px', display: 'flex', alignItems: 'center', gap: 10, textAlign: 'left', cursor: 'pointer', fontFamily: 'inherit', border: '1px solid var(--gecko-border)' }}>
-                  <div style={{ width: 28, height: 28, borderRadius: 7, background: 'var(--gecko-bg-subtle)', color: 'var(--gecko-text-secondary)', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+                <button key={q.label} className="gecko-card gecko-card-tight gecko-row" style={{ gap: 10, textAlign: 'left', cursor: 'pointer', fontFamily: 'inherit' }}>
+                  <div className="gecko-mini-icon gecko-mini-icon-neutral" style={{ width: 28, height: 28, borderRadius: 7 }}>
                     <Icon name={q.icon} size={14} />
                   </div>
-                  <div style={{ flex: 1, minWidth: 0 }}>
+                  <div className="gecko-flex-1">
                     <div style={{ fontSize: 12, fontWeight: 600 }}>{q.label}</div>
                     <div style={{ fontSize: 10.5, color: 'var(--gecko-text-secondary)', marginTop: 1 }}>{q.sub}</div>
                   </div>

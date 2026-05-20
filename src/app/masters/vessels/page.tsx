@@ -37,10 +37,10 @@ const ACTIVE_VOYAGES = [
 ];
 
 function StatusBadge({ status }: { status: string }) {
-  let bg = 'var(--gecko-gray-100)', color = 'var(--gecko-gray-700)';
-  if (status === 'Expected') { bg = 'var(--gecko-info-50)'; color = 'var(--gecko-info-700)'; }
-  if (status === 'Arriving') { bg = 'var(--gecko-warning-50)'; color = 'var(--gecko-warning-700)'; }
-  return <span style={{ background: bg, color: color, padding: '2px 8px', borderRadius: 12, fontSize: 11, fontWeight: 600, border: `1px solid ${bg.replace('50', '200')}` }}>{status}</span>;
+  let cls = 'gecko-badge-gray';
+  if (status === 'Expected') cls = 'gecko-badge-info';
+  if (status === 'Arriving') cls = 'gecko-badge-warning';
+  return <span className={`gecko-badge gecko-badge-xs ${cls}`}>{status}</span>;
 }
 
 export default function VesselsPage() {
@@ -52,17 +52,17 @@ export default function VesselsPage() {
   const { page, setPage, pageSize, setPageSize, totalPages, pageItems, totalItems, startRow, endRow } = usePagination(filtered);
 
   return (
-    <div style={{ maxWidth: 'var(--gecko-container-max)', margin: '0 auto', display: 'flex', flexDirection: 'column', gap: 24, paddingBottom: 40 }}>
+    <div className="gecko-stack gecko-stack-xl" style={{ maxWidth: 'var(--gecko-container-max)', margin: '0 auto', paddingBottom: 40 }}>
 
       {/* Header */}
       <div className="gecko-page-actions">
         <div className="gecko-page-actions-left">
-          <div style={{ display: 'flex', alignItems: 'baseline', gap: 12 }}>
-            <h1 style={{ fontSize: 24, fontWeight: 700, margin: 0, color: 'var(--gecko-text-primary)' }}>Vessels & Voyages</h1>
+          <div className="gecko-row gecko-row-baseline gecko-stack-md">
+            <h1 className="gecko-page-title">Vessels & Voyages</h1>
             <span className="gecko-count-badge">126 vessels</span>
-            <span style={{ fontSize: 12, fontWeight: 600, color: 'var(--gecko-info-700)', background: 'var(--gecko-info-100)', padding: '2px 8px', borderRadius: 12 }}>14 in next 7 days</span>
+            <span className="gecko-badge gecko-badge-info">14 in next 7 days</span>
           </div>
-          <div style={{ fontSize: 13, color: 'var(--gecko-text-secondary)', marginTop: 4 }}>Vessel catalog with IMO-keyed identity, plus current and scheduled voyages.</div>
+          <div className="gecko-page-subtitle gecko-mt-1">Vessel catalog with IMO-keyed identity, plus current and scheduled voyages.</div>
         </div>
         <div className="gecko-toolbar">
           <ExportButton resource="Vessels" iconSize={16} />
@@ -82,7 +82,7 @@ export default function VesselsPage() {
       </div>
 
       {/* Vessels Table */}
-      <div style={{ background: 'var(--gecko-bg-surface)', border: '1px solid var(--gecko-border)', borderRadius: 12, overflow: 'hidden', boxShadow: 'var(--gecko-shadow-sm)' }}>
+      <div className="gecko-table-card">
         <table className="gecko-table gecko-table-comfortable" style={{ fontSize: 13 }}>
           <thead>
             <tr>
@@ -101,24 +101,24 @@ export default function VesselsPage() {
           <tbody>
             {pageItems.map((v, i) => (
               <tr key={v.imo}>
-                <td className="gecko-text-mono" style={{ fontWeight: 600, color: 'var(--gecko-primary-600)' }}>
-                  <Link href={`/masters/vessels/${v.imo}`}>{v.imo}</Link>
+                <td>
+                  <Link href={`/masters/vessels/${v.imo}`} className="gecko-id-link">{v.imo}</Link>
                 </td>
                 <td>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                  <div className="gecko-row">
                     <Icon name="anchor" size={16} style={{ color: 'var(--gecko-info-500)' }} />
-                    <span style={{ fontWeight: 600, color: 'var(--gecko-text-primary)' }}>{v.name}</span>
+                    <span className="gecko-cell-primary" style={{ fontSize: 13 }}>{v.name}</span>
                   </div>
                 </td>
                 <td style={{ fontWeight: 600 }}>{v.line}</td>
                 <td style={{ color: 'var(--gecko-text-secondary)', fontSize: 11, fontWeight: 600 }}>{v.flag} {v.flag}</td>
                 <td style={{ color: 'var(--gecko-text-secondary)' }}>{v.class}</td>
-                <td className="gecko-text-mono" style={{ textAlign: 'right', fontWeight: 600 }}>{v.loa}</td>
-                <td className="gecko-text-mono" style={{ textAlign: 'right', fontWeight: 600 }}>{v.teu}</td>
+                <td className="gecko-num-tabular" style={{ fontWeight: 600 }}>{v.loa}</td>
+                <td className="gecko-num-tabular" style={{ fontWeight: 600 }}>{v.teu}</td>
                 <td style={{ textAlign: 'right', color: 'var(--gecko-text-secondary)' }}>{v.built}</td>
                 <td>
-                  <div className="gecko-text-mono" style={{ fontWeight: 600 }}>{v.voyage}</div>
-                  <div style={{ fontSize: 11, color: 'var(--gecko-text-secondary)' }}>{v.eta}</div>
+                  <div className="gecko-mono-strong" style={{ fontSize: 12 }}>{v.voyage}</div>
+                  <div className="gecko-cell-meta">{v.eta}</div>
                 </td>
                 <td>
                   <StatusBadge status={v.status} />
@@ -133,11 +133,11 @@ export default function VesselsPage() {
       </div>
 
       {/* Active Voyages Section */}
-      <div style={{ background: 'var(--gecko-bg-surface)', border: '1px solid var(--gecko-border)', borderRadius: 12, overflow: 'hidden', boxShadow: 'var(--gecko-shadow-sm)' }}>
-        <div style={{ padding: '20px 24px', borderBottom: '1px solid var(--gecko-border)', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+      <div className="gecko-table-card">
+        <div className="gecko-row gecko-row-between" style={{ padding: '20px 24px', borderBottom: '1px solid var(--gecko-border)' }}>
           <div>
             <h3 style={{ fontSize: 16, fontWeight: 700, margin: 0, color: 'var(--gecko-text-primary)' }}>Active voyages at Laem Chabang</h3>
-            <div style={{ fontSize: 13, color: 'var(--gecko-text-secondary)', marginTop: 4 }}>Vessels berthed or expected at this facility in the next 48h</div>
+            <div className="gecko-page-subtitle gecko-mt-1">Vessels berthed or expected at this facility in the next 48h</div>
           </div>
           <Link href="/masters/vessels/schedule" className="gecko-btn gecko-btn-ghost gecko-btn-sm" style={{ color: 'var(--gecko-text-secondary)', textDecoration: 'none' }}>
             Berth schedule <Icon name="arrowRight" size={14} />
@@ -162,12 +162,12 @@ export default function VesselsPage() {
                 <td className="gecko-text-mono" style={{ fontWeight: 700 }}>{v.voyage}</td>
                 <td style={{ fontWeight: 600, color: 'var(--gecko-text-secondary)' }}>{v.vessel}</td>
                 <td>
-                  <span style={{ color: 'var(--gecko-primary-600)', background: 'var(--gecko-primary-50)', padding: '2px 8px', borderRadius: 4, fontWeight: 600, fontFamily: 'var(--gecko-font-mono)' }}>{v.berth}</span>
+                  <span className="gecko-badge gecko-badge-xs gecko-badge-primary gecko-text-mono">{v.berth}</span>
                 </td>
                 <td style={{ color: 'var(--gecko-text-secondary)' }}>{v.eta}</td>
                 <td style={{ color: 'var(--gecko-text-secondary)' }}>{v.etd}</td>
-                <td className="gecko-text-mono" style={{ textAlign: 'right', fontWeight: 600 }}>{v.disch}</td>
-                <td className="gecko-text-mono" style={{ textAlign: 'right', fontWeight: 600 }}>{v.load}</td>
+                <td className="gecko-num-tabular" style={{ fontWeight: 600 }}>{v.disch}</td>
+                <td className="gecko-num-tabular" style={{ fontWeight: 600 }}>{v.load}</td>
               </tr>
             ))}
           </tbody>

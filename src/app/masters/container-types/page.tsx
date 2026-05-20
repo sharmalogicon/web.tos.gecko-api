@@ -20,7 +20,7 @@ const CONTAINER_TYPES = [
 
 function ContainerGraphic({ width, height, color }: { width: number, height: number, color: string }) {
   return (
-    <div style={{ width: '100%', height: 100, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+    <div className="gecko-row" style={{ width: '100%', height: 100, justifyContent: 'center' }}>
       <div style={{
         width: width, height: height, border: `2px solid ${color}`,
         background: `rgba(255,255,255,0.5)`, position: 'relative',
@@ -48,17 +48,17 @@ export default function ContainerTypesPage() {
   const { toast } = useToast();
 
   return (
-    <div style={{ maxWidth: 'var(--gecko-container-max)', margin: '0 auto', display: 'flex', flexDirection: 'column', gap: 24, paddingBottom: 40 }}>
+    <div className="gecko-stack gecko-stack-xl" style={{ maxWidth: 'var(--gecko-container-max)', margin: '0 auto', paddingBottom: 40 }}>
 
       {/* Header */}
       <div className="gecko-page-actions">
         <div className="gecko-page-actions-left">
-          <div style={{ display: 'flex', alignItems: 'baseline', gap: 12 }}>
-            <h1 style={{ fontSize: 24, fontWeight: 700, margin: 0, color: 'var(--gecko-text-primary)' }}>ISO Container Types</h1>
+          <div className="gecko-row gecko-row-baseline gecko-stack-md">
+            <h1 className="gecko-page-title">ISO Container Types</h1>
             <span className="gecko-count-badge">58 types</span>
-            <span style={{ fontSize: 12, fontWeight: 600, color: 'var(--gecko-info-700)', background: 'var(--gecko-info-100)', padding: '2px 8px', borderRadius: 12 }}>ISO 6346</span>
+            <span className="gecko-badge gecko-badge-info">ISO 6346</span>
           </div>
-          <div style={{ fontSize: 13, color: 'var(--gecko-text-secondary)', marginTop: 4 }}>ISO 6346 type code catalog. Drives rate matrix, yard slot dimensions, and vessel stow.</div>
+          <div className="gecko-page-subtitle gecko-mt-1">ISO 6346 type code catalog. Drives rate matrix, yard slot dimensions, and vessel stow.</div>
         </div>
         <div className="gecko-toolbar">
           <ExportButton resource="Container types" iconSize={16} />
@@ -67,54 +67,54 @@ export default function ContainerTypesPage() {
         </div>
       </div>
 
-      <div style={{ display: 'flex', gap: 24 }}>
+      <div className="gecko-row gecko-row-start" style={{ gap: 24 }}>
 
         {/* Left Sidebar */}
-        <div style={{ width: 240, flexShrink: 0, display: 'flex', flexDirection: 'column', gap: 20 }}>
+        <div className="gecko-stack gecko-flex-shrink-0" style={{ width: 240, gap: 20 }}>
 
           {/* Categories */}
-          <div style={{ background: 'var(--gecko-bg-surface)', border: '1px solid var(--gecko-border)', borderRadius: 12, overflow: 'hidden', boxShadow: 'var(--gecko-shadow-sm)' }}>
-            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '12px 16px', background: 'var(--gecko-primary-50)', color: 'var(--gecko-primary-700)', fontWeight: 600, fontSize: 13, borderBottom: '1px solid var(--gecko-border)' }}>
+          <div className="gecko-table-card">
+            <div className="gecko-row gecko-row-between" style={{ padding: '12px 16px', background: 'var(--gecko-primary-50)', color: 'var(--gecko-primary-700)', fontWeight: 600, fontSize: 13, borderBottom: '1px solid var(--gecko-border)' }}>
               <span>All types</span>
-              <span style={{ background: 'var(--gecko-primary-600)', color: '#fff', padding: '2px 8px', borderRadius: 12, fontSize: 11 }}>12</span>
+              <span className="gecko-badge gecko-badge-xs gecko-badge-primary-solid">12</span>
             </div>
-            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '12px 16px', color: 'var(--gecko-text-secondary)', fontWeight: 500, fontSize: 13, borderBottom: '1px solid var(--gecko-border)' }}>
+            <div className="gecko-row gecko-row-between" style={{ padding: '12px 16px', color: 'var(--gecko-text-secondary)', fontWeight: 500, fontSize: 13, borderBottom: '1px solid var(--gecko-border)' }}>
               <span>Dry / General</span>
               <span>4</span>
             </div>
-            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '12px 16px', color: 'var(--gecko-text-secondary)', fontWeight: 500, fontSize: 13, borderBottom: '1px solid var(--gecko-border)' }}>
+            <div className="gecko-row gecko-row-between" style={{ padding: '12px 16px', color: 'var(--gecko-text-secondary)', fontWeight: 500, fontSize: 13, borderBottom: '1px solid var(--gecko-border)' }}>
               <span>Reefer</span>
               <span>3</span>
             </div>
-            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '12px 16px', color: 'var(--gecko-text-secondary)', fontWeight: 500, fontSize: 13 }}>
+            <div className="gecko-row gecko-row-between" style={{ padding: '12px 16px', color: 'var(--gecko-text-secondary)', fontWeight: 500, fontSize: 13 }}>
               <span>Special / Open</span>
               <span>5</span>
             </div>
           </div>
 
           {/* Size Filter */}
-          <div style={{ background: 'var(--gecko-bg-surface)', border: '1px solid var(--gecko-border)', borderRadius: 12, padding: 16, boxShadow: 'var(--gecko-shadow-sm)' }}>
-            <div style={{ fontSize: 11, fontWeight: 700, color: 'var(--gecko-text-disabled)', textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: 12 }}>Filter</div>
-            <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
-              <label style={{ display: 'flex', alignItems: 'center', gap: 8, fontSize: 13, fontWeight: 500 }}><input type="checkbox" checked readOnly /> 20'</label>
-              <label style={{ display: 'flex', alignItems: 'center', gap: 8, fontSize: 13, fontWeight: 500 }}><input type="checkbox" checked readOnly /> 40'</label>
-              <label style={{ display: 'flex', alignItems: 'center', gap: 8, fontSize: 13, fontWeight: 500 }}><input type="checkbox" checked readOnly /> 45'</label>
+          <div className="gecko-card">
+            <div className="gecko-eyebrow gecko-mb-3">Filter</div>
+            <div className="gecko-stack" style={{ gap: 10 }}>
+              <label className="gecko-row" style={{ fontSize: 13, fontWeight: 500 }}><input type="checkbox" checked readOnly /> 20'</label>
+              <label className="gecko-row" style={{ fontSize: 13, fontWeight: 500 }}><input type="checkbox" checked readOnly /> 40'</label>
+              <label className="gecko-row" style={{ fontSize: 13, fontWeight: 500 }}><input type="checkbox" checked readOnly /> 45'</label>
             </div>
           </div>
 
         </div>
 
         {/* Right Grid */}
-        <div style={{ flex: 1 }}>
+        <div className="gecko-flex-1">
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(280px, 1fr))', gap: 20 }}>
             {pageItems.map((c) => (
-              <div key={c.iso} style={{ background: 'var(--gecko-bg-surface)', border: '1px solid var(--gecko-border)', borderRadius: 12, overflow: 'hidden', boxShadow: 'var(--gecko-shadow-sm)', display: 'flex', flexDirection: 'column' }}>
+              <div key={c.iso} className="gecko-table-card gecko-stack" style={{ gap: 0 }}>
 
                 {/* Graphic Area */}
                 <div style={{ background: c.bg, padding: 16, borderBottom: '1px solid var(--gecko-border)' }}>
-                  <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 12 }}>
+                  <div className="gecko-row gecko-row-between gecko-mb-3">
                     <span style={{ fontSize: 10, fontWeight: 700, color: c.color, letterSpacing: '0.05em' }}>{c.cat}</span>
-                    <span style={{ fontSize: 12, fontWeight: 700, color: 'var(--gecko-text-primary)', fontFamily: 'var(--gecko-font-mono)' }}>{c.iso}</span>
+                    <span className="gecko-mono-strong" style={{ fontSize: 12 }}>{c.iso}</span>
                   </div>
 
                   <ContainerGraphic
@@ -125,34 +125,34 @@ export default function ContainerTypesPage() {
                 </div>
 
                 {/* Info Area */}
-                <div style={{ padding: 16, flex: 1 }}>
+                <div className="gecko-flex-1" style={{ padding: 16 }}>
                   <h3 style={{ fontSize: 16, fontWeight: 700, margin: '0 0 4px 0', color: 'var(--gecko-text-primary)' }}>{c.name}</h3>
-                  <div style={{ fontSize: 12, color: 'var(--gecko-text-secondary)', marginBottom: 16 }}>{c.dims} · {c.type}</div>
+                  <div className="gecko-card-subtitle gecko-mb-4" style={{ fontSize: 12 }}>{c.dims} · {c.type}</div>
 
-                  <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16 }}>
+                  <div className="gecko-grid-2">
                     <div>
-                      <div style={{ fontSize: 10, fontWeight: 700, color: 'var(--gecko-text-disabled)', textTransform: 'uppercase' }}>Payload</div>
-                      <div style={{ fontSize: 13, fontWeight: 600, fontFamily: 'var(--gecko-font-mono)' }}>{c.payload}</div>
+                      <div className="gecko-eyebrow" style={{ letterSpacing: '0.06em' }}>Payload</div>
+                      <div className="gecko-mono-strong" style={{ fontSize: 13 }}>{c.payload}</div>
                     </div>
                     <div>
-                      <div style={{ fontSize: 10, fontWeight: 700, color: 'var(--gecko-text-disabled)', textTransform: 'uppercase' }}>Tare</div>
-                      <div style={{ fontSize: 13, fontWeight: 600, fontFamily: 'var(--gecko-font-mono)' }}>{c.tare}</div>
+                      <div className="gecko-eyebrow" style={{ letterSpacing: '0.06em' }}>Tare</div>
+                      <div className="gecko-mono-strong" style={{ fontSize: 13 }}>{c.tare}</div>
                     </div>
                     <div>
-                      <div style={{ fontSize: 10, fontWeight: 700, color: 'var(--gecko-text-disabled)', textTransform: 'uppercase' }}>Cube</div>
-                      <div style={{ fontSize: 13, fontWeight: 600, fontFamily: 'var(--gecko-font-mono)' }}>{c.cube}</div>
+                      <div className="gecko-eyebrow" style={{ letterSpacing: '0.06em' }}>Cube</div>
+                      <div className="gecko-mono-strong" style={{ fontSize: 13 }}>{c.cube}</div>
                     </div>
                     <div>
-                      <div style={{ fontSize: 10, fontWeight: 700, color: 'var(--gecko-text-disabled)', textTransform: 'uppercase' }}>In Yard</div>
+                      <div className="gecko-eyebrow" style={{ letterSpacing: '0.06em' }}>In Yard</div>
                       <div style={{ fontSize: 13, fontWeight: 600, color: 'var(--gecko-primary-600)' }}>{c.active} active</div>
                     </div>
                   </div>
                 </div>
 
                 {/* Footer Link */}
-                <div style={{ padding: '12px 16px', borderTop: '1px solid var(--gecko-border)', display: 'flex', justifyContent: 'space-between', alignItems: 'center', background: 'var(--gecko-bg-subtle)' }}>
+                <div className="gecko-row gecko-row-between" style={{ padding: '12px 16px', borderTop: '1px solid var(--gecko-border)', background: 'var(--gecko-bg-subtle)' }}>
                   <span style={{ fontSize: 11, color: 'var(--gecko-text-secondary)' }}>Rate row in tariff</span>
-                  <Link href={`/masters/container-types/${c.iso}`} style={{ color: 'var(--gecko-primary-600)', fontSize: 12, fontWeight: 600 }}>View →</Link>
+                  <Link href={`/masters/container-types/${c.iso}`} className="gecko-link" style={{ fontSize: 12 }}>View →</Link>
                 </div>
               </div>
             ))}

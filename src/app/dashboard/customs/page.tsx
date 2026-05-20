@@ -5,9 +5,9 @@ import { Icon } from '@/components/ui/Icon';
 
 function KpiCard({ label, value, sub, accent, trend }: { label: string; value: string; sub?: string; accent?: string; trend?: 'up'|'down'|'neutral' }) {
   return (
-    <div style={{ background: 'var(--gecko-bg-surface)', border: '1px solid var(--gecko-border)', borderRadius: 12, padding: '18px 20px', borderTop: `3px solid ${accent ?? 'var(--gecko-primary-400)'}` }}>
-      <div style={{ fontSize: 11, fontWeight: 600, color: 'var(--gecko-text-secondary)', textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: 8 }}>{label}</div>
-      <div style={{ fontSize: 28, fontWeight: 800, color: 'var(--gecko-text-primary)', fontFamily: 'var(--gecko-font-mono)', lineHeight: 1 }}>{value}</div>
+    <div className="gecko-card gecko-card-padded" style={{ borderTop: `3px solid ${accent ?? 'var(--gecko-primary-400)'}` }}>
+      <div className="gecko-stat-label gecko-mb-2">{label}</div>
+      <div className="gecko-stat-num" style={{ fontFamily: 'var(--gecko-font-mono)', fontWeight: 800, fontSize: 28 }}>{value}</div>
       {sub && <div style={{ fontSize: 12, color: trend==='up' ? 'var(--gecko-success-600)' : trend==='down' ? 'var(--gecko-error-600)' : 'var(--gecko-text-secondary)', marginTop: 6 }}>{sub}</div>}
     </div>
   );
@@ -107,13 +107,13 @@ function priorityStyle(p: string) {
 
 export default function CustomsDashboardPage() {
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', gap: 20 }}>
-      <div>
-        <h1 style={{ fontSize: 26, fontWeight: 700, margin: 0, letterSpacing: '-0.02em', marginBottom: 4 }}>Customs & Holds Dashboard</h1>
-        <div style={{ fontSize: 13, color: 'var(--gecko-text-secondary)' }}>Container holds, customs examination queue, hold aging, and release tracking</div>
+    <div className="gecko-stack" style={{ gap: 20 }}>
+      <div className="gecko-page-header-left">
+        <h1 className="gecko-page-title-lg">Customs & Holds Dashboard</h1>
+        <p className="gecko-page-subtitle">Container holds, customs examination queue, hold aging, and release tracking</p>
       </div>
 
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(5, 1fr)', gap: 14 }}>
+      <div className="gecko-grid-5" style={{ gap: 14 }}>
         <KpiCard label="Containers on Hold"  value="28"      sub="Across 4 hold types"      accent="var(--gecko-error-400)" />
         <KpiCard label="Customs Exam Queue"  value="7"       sub="Awaiting examination"      accent="var(--gecko-warning-400)" />
         <KpiCard label="Avg Release Time"    value="2.4 days" sub="Target: ≤ 3 days ✓"      accent="var(--gecko-success-400)" />
@@ -121,7 +121,7 @@ export default function CustomsDashboardPage() {
         <KpiCard label="Holds > 7 Days"      value="8"       sub="Escalation required"      accent="var(--gecko-error-400)" trend="down" />
       </div>
 
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 20 }}>
+      <div className="gecko-grid-3" style={{ gap: 20 }}>
         <Widget title="Hold Type Breakdown">
           <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
             {HOLD_TYPES.map((ht) => (
