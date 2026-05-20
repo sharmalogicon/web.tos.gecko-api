@@ -286,9 +286,9 @@ function StickyHeader({
         <Icon name="arrowLeft" size={16} />
       </Link>
 
-      <div style={{ flex: 1, minWidth: 0 }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: 10, flexWrap: 'wrap' }}>
-          <span style={{ fontFamily: 'var(--gecko-font-mono)', fontSize: 12, fontWeight: 700, color: 'var(--gecko-primary-600)' }}>
+      <div className="gecko-flex-1">
+        <div className="gecko-row gecko-row-wrap" style={{ gap: 10 }}>
+          <span className="gecko-id-link">
             {scheduleId}
           </span>
           <span className={`gecko-pill gecko-pill-${statusTone[status]}`}>{status}</span>
@@ -296,13 +296,13 @@ function StickyHeader({
             <Icon name={tt.icon} size={11} style={{ marginBottom: -1, marginRight: 4 }} /> {tt.label}
           </span>
           {dirty && (
-            <span style={{ fontSize: 11, color: 'var(--gecko-warning-700)', fontWeight: 600, display: 'inline-flex', alignItems: 'center', gap: 4 }}>
+            <span className="gecko-inline-row" style={{ fontSize: 11, color: 'var(--gecko-warning-700)', fontWeight: 600, gap: 4 }}>
               <span style={{ width: 6, height: 6, borderRadius: '50%', background: 'var(--gecko-warning-500)' }} />
               Unsaved changes
             </span>
           )}
         </div>
-        <div style={{ marginTop: 4, display: 'flex', alignItems: 'baseline', gap: 12, flexWrap: 'wrap' }}>
+        <div className="gecko-row gecko-row-baseline gecko-row-wrap gecko-mt-1" style={{ gap: 12 }}>
           <h1 style={{ margin: 0, fontSize: 18, fontWeight: 700, color: 'var(--gecko-text-primary)' }}>
             {name || <span style={{ color: 'var(--gecko-text-disabled)', fontStyle: 'italic', fontWeight: 500 }}>Untitled Tariff Schedule</span>}
           </h1>
@@ -314,7 +314,7 @@ function StickyHeader({
         </div>
       </div>
 
-      <div style={{ display: 'flex', gap: 8 }}>
+      <div className="gecko-row">
         <button className="gecko-btn gecko-btn-outline gecko-btn-sm" onClick={onSave}>
           <Icon name="save" size={14} /> Save Draft
         </button>
@@ -331,18 +331,9 @@ function SectionCard({ title, subtitle, right, children }: {
   title: string; subtitle?: string; right?: React.ReactNode; children: React.ReactNode;
 }) {
   return (
-    <div style={{
-      background: 'var(--gecko-bg-surface)',
-      border: '1px solid var(--gecko-border)',
-      borderRadius: 12,
-      overflow: 'hidden',
-    }}>
-      <div style={{
-        padding: '14px 18px',
-        borderBottom: '1px solid var(--gecko-border)',
-        display: 'flex', alignItems: 'center', gap: 12,
-      }}>
-        <div style={{ flex: 1, minWidth: 0 }}>
+    <div className="gecko-table-card">
+      <div className="gecko-row" style={{ padding: '14px 18px', borderBottom: '1px solid var(--gecko-border)', gap: 12 }}>
+        <div className="gecko-flex-1">
           <div className="gecko-section-header-title">{title}</div>
           {subtitle && <div className="gecko-section-header-subtitle">{subtitle}</div>}
         </div>
@@ -405,13 +396,13 @@ function ConditionInlineForm({
   };
 
   return (
-    <div style={{
-      display: 'flex', flexWrap: 'wrap', gap: 6, alignItems: 'center',
+    <div className="gecko-row gecko-row-wrap" style={{
+      gap: 6,
       padding: 10, background: 'var(--gecko-bg-surface)',
       border: '1px solid var(--gecko-primary-300)', borderRadius: 8,
       boxShadow: '0 0 0 3px var(--gecko-primary-100)',
     }}>
-      <span style={{ fontSize: 10, fontWeight: 700, color: 'var(--gecko-text-secondary)', textTransform: 'uppercase', letterSpacing: '0.05em' }}>WHEN</span>
+      <span className="gecko-eyebrow">WHEN</span>
       <select
         className="gecko-select gecko-input-sm"
         value={draft.when.axis}
@@ -465,7 +456,7 @@ function ConditionInlineForm({
 
       <Icon name="arrowRight" size={12} style={{ color: 'var(--gecko-text-disabled)' }} />
 
-      <span style={{ fontSize: 10, fontWeight: 700, color: 'var(--gecko-text-secondary)', textTransform: 'uppercase', letterSpacing: '0.05em' }}>THEN</span>
+      <span className="gecko-eyebrow">THEN</span>
       <select
         className="gecko-select gecko-input-sm"
         value={draft.then.op}
@@ -485,7 +476,7 @@ function ConditionInlineForm({
         style={{ width: 80, fontFamily: 'var(--gecko-font-mono)', fontWeight: 700 }}
       />
 
-      <div style={{ display: 'flex', gap: 4, marginLeft: 'auto' }}>
+      <div className="gecko-row gecko-ml-auto" style={{ gap: 4 }}>
         <button className="gecko-btn gecko-btn-ghost gecko-btn-sm" onClick={onCancel}>Cancel</button>
         <button className="gecko-btn gecko-btn-primary gecko-btn-sm" onClick={onSave}>
           <Icon name="check" size={12} /> Add
@@ -811,7 +802,7 @@ function MovementChargesTab({
   }
 
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
+    <div className="gecko-stack gecko-stack-lg">
 
       {/* Order Type tab strip */}
       <div className="gecko-tabs">
@@ -834,7 +825,7 @@ function MovementChargesTab({
 
       {/* Movement strip */}
       {activeOtObj && (
-        <div style={{ display: 'flex', alignItems: 'center', gap: 0, overflowX: 'auto', padding: '4px 0' }}>
+        <div className="gecko-row" style={{ gap: 0, overflowX: 'auto', padding: '4px 0' }}>
           {activeOtObj.movements.map((m, idx) => {
             const isActive = m.seq === activeMov;
             const pricedCount = prices.filter(p => p.orderTypeId === activeOT && p.movementSeq === m.seq).length;
@@ -886,14 +877,14 @@ function MovementChargesTab({
       )}
 
       {/* Priced charges + Add + Import */}
-      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12 }}>
+      <div className="gecko-row gecko-row-between" style={{ gap: 12 }}>
         <div className="gecko-section-header-title">
           {activeMovObj?.code} — Priced Charges
           <span style={{ fontWeight: 500, color: 'var(--gecko-text-secondary)', marginLeft: 8 }}>
             ({pricedForActive.length} of {(activeMovObj?.charges.length ?? 0) + (activeMovObj?.vas.length ?? 0)} catalog items)
           </span>
         </div>
-        <div style={{ display: 'flex', gap: 8 }}>
+        <div className="gecko-row">
           <button className="gecko-btn gecko-btn-outline gecko-btn-sm" onClick={() => setShowImport(s => !s)}>
             <Icon name="upload" size={14} />
             Import from CSV
@@ -914,16 +905,16 @@ function MovementChargesTab({
 
       {/* Catalog drawer */}
       {showCatalog && activeMovObj && (
-        <div style={{
+        <div className="gecko-stack gecko-stack-sm" style={{
           background: 'var(--gecko-bg-subtle)',
           border: '1px solid var(--gecko-border)',
           borderRadius: 12,
           padding: 14,
-          display: 'flex', flexDirection: 'column', gap: 10,
+          gap: 10,
         }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+          <div className="gecko-row">
             <Icon name="fileText" size={13} style={{ color: 'var(--gecko-primary-600)' }} />
-            <span style={{ fontSize: 11, fontWeight: 700, color: 'var(--gecko-text-secondary)', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
+            <span className="gecko-eyebrow">
               Movement Charges
             </span>
           </div>
@@ -946,9 +937,9 @@ function MovementChargesTab({
 
           {activeMovObj.vas.length > 0 && (
             <>
-              <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginTop: 6 }}>
+              <div className="gecko-row" style={{ marginTop: 6 }}>
                 <Icon name="tag" size={13} style={{ color: 'var(--gecko-accent-600)' }} />
-                <span style={{ fontSize: 11, fontWeight: 700, color: 'var(--gecko-text-secondary)', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
+                <span className="gecko-eyebrow">
                   VAS — Value-Added Services (opt-in)
                 </span>
               </div>
@@ -984,7 +975,7 @@ function MovementChargesTab({
         </div>
       )}
 
-      <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
+      <div className="gecko-stack">
         {pricedForActive.map(c => (
           <ChargeCard
             key={c.id}
@@ -1013,7 +1004,7 @@ function StorageCard({
       title={title}
       subtitle={config.mode === 'FLEET_TEU_SLAB' ? 'Regressive slab by fleet TEU at depot' : 'Free days + per-day slab'}
       right={
-        <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+        <div className="gecko-row">
           <span style={{ fontSize: 11, color: 'var(--gecko-text-secondary)', fontWeight: 600 }}>Pricing mode:</span>
           <div className="gecko-segctrl">
             <button
@@ -1034,8 +1025,8 @@ function StorageCard({
         </div>
       }
     >
-      <div style={{ display: 'flex', alignItems: 'center', gap: 16, marginBottom: 14, padding: 12, background: `linear-gradient(135deg, ${accent}10, transparent)`, borderRadius: 8, border: `1px solid ${accent}40` }}>
-        <div style={{ width: 36, height: 36, borderRadius: 9, background: accent, color: '#fff', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+      <div className="gecko-row" style={{ gap: 16, marginBottom: 14, padding: 12, background: `linear-gradient(135deg, ${accent}10, transparent)`, borderRadius: 8, border: `1px solid ${accent}40` }}>
+        <div className="gecko-mini-icon" style={{ width: 36, height: 36, borderRadius: 9, background: accent, color: '#fff' }}>
           <Icon name="clock" size={18} />
         </div>
         <div className="gecko-field" style={{ flex: 0, minWidth: 120 }}>
@@ -1052,7 +1043,7 @@ function StorageCard({
       </div>
 
       {config.mode === 'PER_DAY_SLAB' ? (
-        <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+        <div className="gecko-stack gecko-stack-sm" style={{ gap: 10 }}>
           <div className="gecko-band-row gecko-band-row-header" style={{ background: 'transparent', border: 'none', gridTemplateColumns: '110px 110px 1fr auto' }}>
             <div>From day</div>
             <div>To day</div>
@@ -1066,7 +1057,7 @@ function StorageCard({
             const tone = TONES[i % TONES.length];
             return (
               <div key={s.id} className="gecko-band-row" style={{ gridTemplateColumns: '110px 110px 1fr auto', alignItems: 'center' }}>
-                <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+                <div className="gecko-row" style={{ gap: 6 }}>
                   <span style={{ width: 8, height: 8, borderRadius: '50%', background: tone, flexShrink: 0 }} />
                   <input type="number" min="1" className="gecko-input gecko-input-sm"
                     value={s.fromDay} onChange={e => {
@@ -1085,7 +1076,7 @@ function StorageCard({
                   }}
                   style={{ textAlign: 'right', fontFamily: 'var(--gecko-font-mono)', fontWeight: 700 }}
                 />
-                <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                <div className="gecko-row">
                   <input type="number" min="0" step="0.01" className="gecko-input gecko-input-sm"
                     value={s.ratePerDay} onChange={e => {
                       const next = [...config.perDaySlabs];
@@ -1141,11 +1132,10 @@ function StorageCard({
           </div>
         </div>
       ) : (
-        <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
-          <div style={{
+        <div className="gecko-stack gecko-stack-sm" style={{ gap: 10 }}>
+          <div className="gecko-row gecko-row-start" style={{
             padding: 10, background: 'var(--gecko-info-50)', border: '1px solid var(--gecko-info-200)',
             borderRadius: 8, fontSize: 11, color: 'var(--gecko-info-700)',
-            display: 'flex', alignItems: 'flex-start', gap: 8,
           }}>
             <Icon name="info" size={14} style={{ flexShrink: 0, marginTop: 1 }} />
             <div>
@@ -1177,7 +1167,7 @@ function StorageCard({
                   onChange({ ...config, fleetTeuBands: next });
                 }}
               />
-              <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+              <div className="gecko-row" style={{ gap: 6 }}>
                 <input type="number" min="0" step="0.01" className="gecko-input gecko-input-sm"
                   value={b.ratePerDay} onChange={e => {
                     const next = [...config.fleetTeuBands];
@@ -1226,15 +1216,15 @@ function ReeferEventCard({
   const REEFER_SIZES = ['20RF', '40RF', '40HC-RF'];
   return (
     <SectionCard title={title} subtitle="Per-event flat rate by reefer container size">
-      <div style={{ display: 'flex', alignItems: 'center', gap: 16 }}>
-        <div style={{ width: 44, height: 44, borderRadius: 11, background: accent, color: '#fff', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+      <div className="gecko-row" style={{ gap: 16 }}>
+        <div className="gecko-mini-icon" style={{ width: 44, height: 44, borderRadius: 11, background: accent, color: '#fff' }}>
           <Icon name={icon} size={20} />
         </div>
-        <div style={{ display: 'flex', gap: 14, flex: 1 }}>
+        <div className="gecko-row gecko-flex-1" style={{ gap: 14 }}>
           {REEFER_SIZES.map(sz => (
-            <div key={sz} className="gecko-field" style={{ minWidth: 130, flex: 1 }}>
+            <div key={sz} className="gecko-field gecko-flex-1" style={{ minWidth: 130 }}>
               <div className="gecko-field-label">{sz}</div>
-              <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+              <div className="gecko-row" style={{ gap: 6 }}>
                 <input
                   type="number" min="0" step="0.01" className="gecko-input gecko-input-sm"
                   value={rates[sz] ?? 0}
@@ -1271,11 +1261,11 @@ function FreeTimeTab({ matrix, onChange }: { matrix: FreeTimeMatrix; onChange: (
       title="Free Time / Storage Free Days"
       subtitle="Days of free storage by container category and trade direction. Storage charges accrue after this."
     >
-      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 20 }}>
+      <div className="gecko-grid-2" style={{ gap: 20 }}>
 
         {/* FULL */}
         <div style={{ border: '1px solid var(--gecko-border)', borderRadius: 12, overflow: 'hidden' }}>
-          <div style={{ padding: '10px 14px', background: 'var(--gecko-success-50)', borderBottom: '1px solid var(--gecko-success-200)', display: 'flex', alignItems: 'center', gap: 8 }}>
+          <div className="gecko-row" style={{ padding: '10px 14px', background: 'var(--gecko-success-50)', borderBottom: '1px solid var(--gecko-success-200)' }}>
             <Icon name="package" size={14} style={{ color: 'var(--gecko-success-700)' }} />
             <span style={{ fontSize: 13, fontWeight: 700, color: 'var(--gecko-success-700)' }}>FULL (Laden)</span>
           </div>
@@ -1307,7 +1297,7 @@ function FreeTimeTab({ matrix, onChange }: { matrix: FreeTimeMatrix; onChange: (
 
         {/* EMPTY */}
         <div style={{ border: '1px solid var(--gecko-border)', borderRadius: 12, overflow: 'hidden' }}>
-          <div style={{ padding: '10px 14px', background: 'var(--gecko-info-50)', borderBottom: '1px solid var(--gecko-info-200)', display: 'flex', alignItems: 'center', gap: 8 }}>
+          <div className="gecko-row" style={{ padding: '10px 14px', background: 'var(--gecko-info-50)', borderBottom: '1px solid var(--gecko-info-200)' }}>
             <Icon name="box" size={14} style={{ color: 'var(--gecko-info-700)' }} />
             <span style={{ fontSize: 13, fontWeight: 700, color: 'var(--gecko-info-700)' }}>EMPTY</span>
           </div>
@@ -1338,7 +1328,7 @@ function FreeTimeTab({ matrix, onChange }: { matrix: FreeTimeMatrix; onChange: (
         </div>
       </div>
 
-      <div style={{ marginTop: 18, padding: 14, background: 'var(--gecko-bg-subtle)', border: '1px solid var(--gecko-border)', borderRadius: 10, display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 14 }}>
+      <div className="gecko-row gecko-row-between" style={{ marginTop: 18, padding: 14, background: 'var(--gecko-bg-subtle)', border: '1px solid var(--gecko-border)', borderRadius: 10, gap: 14 }}>
         <div>
           <div style={{ fontSize: 13, fontWeight: 600, color: 'var(--gecko-text-primary)' }}>Waive Storage for MTY DM Containers</div>
           <div style={{ fontSize: 11, color: 'var(--gecko-text-secondary)', marginTop: 2 }}>
@@ -1675,13 +1665,13 @@ function TestAMoveTab({
   const fallbackCount = results?.filter(r => !r.matched).length ?? 0;
 
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
+    <div className="gecko-stack gecko-stack-lg">
 
       <SectionCard
         title="Test a Move"
         subtitle="Simulate how a real move resolves against this schedule. See per-charge rate, axis match quality, and fallbacks to the Public tariff."
       >
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 14, marginBottom: 16 }}>
+        <div className="gecko-grid-4" style={{ gap: 14, marginBottom: 16 }}>
           <div className="gecko-field">
             <div className="gecko-field-label">Order Type</div>
             <select className="gecko-select" value={orderTypeId} onChange={e => {
@@ -1749,7 +1739,7 @@ function TestAMoveTab({
 
       {results && (
         <>
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 12 }}>
+          <div className="gecko-grid-3">
             <div className="gecko-kpi-tile">
               <div className="gecko-kpi-tile-icon gecko-kpi-tile-icon-success"><Icon name="check" size={16} /></div>
               <div className="gecko-kpi-tile-value">{matchedCount}</div>
@@ -1770,7 +1760,7 @@ function TestAMoveTab({
           </div>
 
           <SectionCard title="Per-charge resolution" subtitle={`${results.length} catalog charges on this movement`}>
-            <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+            <div className="gecko-stack gecko-stack-sm">
               {results.map((r, i) => (
                 <div key={i} className="gecko-resolution-row">
                   <div className="gecko-resolution-row-charge">
@@ -1806,8 +1796,8 @@ function TestAMoveTab({
                   </div>
                   <div className="gecko-resolution-row-amount">
                     {r.matched ? (
-                      <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end' }}>
-                        <div style={{ display: 'flex', alignItems: 'baseline', gap: 4 }}>
+                      <div className="gecko-stack" style={{ alignItems: 'flex-end', gap: 0 }}>
+                        <div className="gecko-row gecko-row-baseline" style={{ gap: 4 }}>
                           <span style={{ fontFamily: 'var(--gecko-font-mono)', fontSize: 15, fontWeight: 800, color: 'var(--gecko-text-primary)' }}>
                             {fmtTHB(r.rate ?? 0)}
                           </span>
@@ -1908,23 +1898,23 @@ function ImportRatesPanel({
   const errorCount = preview ? preview.length - validCount : 0;
 
   return (
-    <div style={{
+    <div className="gecko-stack" style={{
       background: 'var(--gecko-bg-subtle)',
       border: '1px solid var(--gecko-border)',
       borderRadius: 12,
       padding: 18,
-      display: 'flex', flexDirection: 'column', gap: 14,
+      gap: 14,
     }}>
-      <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+      <div className="gecko-row" style={{ gap: 10 }}>
         <Icon name="upload" size={16} style={{ color: 'var(--gecko-primary-600)' }} />
-        <div className="gecko-section-header-title" style={{ flex: 1 }}>Import rates from CSV / Excel</div>
+        <div className="gecko-section-header-title gecko-flex-1">Import rates from CSV / Excel</div>
         <button className="gecko-btn gecko-btn-ghost gecko-btn-sm" onClick={onClose}>
           <Icon name="x" size={14} />
         </button>
       </div>
 
-      <div style={{ display: 'flex', alignItems: 'center', gap: 14, padding: 14, background: 'var(--gecko-bg-surface)', border: '1px solid var(--gecko-border)', borderRadius: 10 }}>
-        <div style={{ flex: 1 }}>
+      <div className="gecko-row" style={{ gap: 14, padding: 14, background: 'var(--gecko-bg-surface)', border: '1px solid var(--gecko-border)', borderRadius: 10 }}>
+        <div className="gecko-flex-1">
           <div style={{ fontSize: 13, fontWeight: 600, color: 'var(--gecko-text-primary)' }}>
             Step 1 — Download the template
           </div>
@@ -1960,7 +1950,7 @@ function ImportRatesPanel({
 
       {preview && (
         <>
-          <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+          <div className="gecko-row" style={{ gap: 10 }}>
             <span className="gecko-pill gecko-pill-success">{validCount} valid</span>
             {errorCount > 0 && <span className="gecko-pill gecko-pill-danger">{errorCount} with errors</span>}
             <span style={{ fontSize: 11, color: 'var(--gecko-text-secondary)' }}>
@@ -1991,7 +1981,7 @@ function ImportRatesPanel({
                     </td>
                     <td>{r.paymentTerm}</td>
                     <td>{r.billedTo}</td>
-                    <td style={{ textAlign: 'right', fontFamily: 'var(--gecko-font-mono)', fontWeight: 700 }}>
+                    <td className="gecko-money gecko-money-md">
                       {fmtTHB(r.amount)}
                     </td>
                     <td>
@@ -2012,7 +2002,7 @@ function ImportRatesPanel({
             </div>
           )}
 
-          <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 8 }}>
+          <div className="gecko-action-toolbar">
             <button className="gecko-btn gecko-btn-outline" onClick={() => { setPreview(null); setFilename(''); }}>
               Cancel
             </button>
@@ -2174,12 +2164,12 @@ export default function NewTariffSchedulePage() {
       </div>
 
       {/* Tab content */}
-      <div style={{ flex: 1, padding: 24, maxWidth: 'var(--gecko-container-max)', width: '100%', margin: '0 auto', display: 'flex', flexDirection: 'column', gap: 16 }}>
+      <div className="gecko-stack gecko-stack-lg" style={{ flex: 1, padding: 24, maxWidth: 'var(--gecko-container-max)', width: '100%', margin: '0 auto' }}>
 
         {tab === 'overview' && (
           <>
             <SectionCard title="Scope" subtitle="Who this schedule applies to and when it's valid.">
-              <div style={{ display: 'flex', flexDirection: 'column', gap: 18 }}>
+              <div className="gecko-stack" style={{ gap: 18 }}>
 
                 <div className="gecko-field">
                   <div className="gecko-field-label">Schedule type</div>
@@ -2198,10 +2188,10 @@ export default function NewTariffSchedulePage() {
 
                 {type !== 'PUBLIC' && (
                   <div>
-                    <div style={{ fontSize: 12, fontWeight: 700, color: 'var(--gecko-text-secondary)', textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: 10 }}>
+                    <div className="gecko-eyebrow gecko-mb-3">
                       Assigned parties {!hasMandatoryParty && <span style={{ color: 'var(--gecko-error-600)', textTransform: 'none', letterSpacing: 0, fontSize: 11 }}>— at least one required</span>}
                     </div>
-                    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 14 }}>
+                    <div className="gecko-grid-3" style={{ gap: 14 }}>
                       <div className="gecko-field">
                         <div className="gecko-field-label">Liner</div>
                         <EntitySearch
@@ -2233,7 +2223,7 @@ export default function NewTariffSchedulePage() {
                   </div>
                 )}
 
-                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 14 }}>
+                <div className="gecko-grid-4" style={{ gap: 14 }}>
                   <div className="gecko-field">
                     <div className="gecko-field-label gecko-field-required">Effective date</div>
                     <DateField value={effective} onChange={v => { setDirty(true); setEffective(v); }} placeholder="Pick effective date" />
@@ -2258,7 +2248,7 @@ export default function NewTariffSchedulePage() {
               title="Coverage"
               subtitle="Which order types this schedule prices. Charges outside selected order types fall back to the Public tariff."
             >
-              <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8 }}>
+              <div className="gecko-row gecko-row-wrap">
                 {ORDER_TYPE_CATALOG.map(ot => {
                   const isOn = orderTypesInScope.includes(ot.id);
                   return (
@@ -2304,8 +2294,8 @@ export default function NewTariffSchedulePage() {
                       className="gecko-workflow-card"
                       data-selected={selected ? 'true' : undefined}
                     >
-                      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 8 }}>
-                        <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                      <div className="gecko-row gecko-row-between">
+                        <div className="gecko-row">
                           <Icon name="gitBranch" size={14} style={{ color: selected ? 'var(--gecko-primary-600)' : 'var(--gecko-text-secondary)' }} />
                           <span style={{ fontSize: 13, fontWeight: 700, color: selected ? 'var(--gecko-primary-700)' : 'var(--gecko-text-primary)' }}>
                             {w.name}
@@ -2316,7 +2306,7 @@ export default function NewTariffSchedulePage() {
                       <div style={{ fontSize: 11, color: 'var(--gecko-text-secondary)', textAlign: 'left', lineHeight: 1.4 }}>
                         {w.description}
                       </div>
-                      <div style={{ display: 'flex', alignItems: 'center', gap: 4, flexWrap: 'wrap' }}>
+                      <div className="gecko-row gecko-row-wrap" style={{ gap: 4 }}>
                         {w.steps.map((s, i) => (
                           <React.Fragment key={s.id}>
                             <span style={{
@@ -2341,7 +2331,7 @@ export default function NewTariffSchedulePage() {
                 const autoSteps = wf?.steps.filter(s => s.threshold && describeThreshold(s.threshold));
                 if (!autoSteps?.length) return null;
                 return (
-                  <div style={{ marginTop: 12, padding: 10, background: 'var(--gecko-info-50)', border: '1px solid var(--gecko-info-200)', borderRadius: 8, fontSize: 11, color: 'var(--gecko-info-700)', display: 'flex', alignItems: 'flex-start', gap: 8 }}>
+                  <div className="gecko-row gecko-row-start" style={{ marginTop: 12, padding: 10, background: 'var(--gecko-info-50)', border: '1px solid var(--gecko-info-200)', borderRadius: 8, fontSize: 11, color: 'var(--gecko-info-700)' }}>
                     <Icon name="info" size={14} style={{ flexShrink: 0, marginTop: 1 }} />
                     <div>
                       <strong>Auto-approval rules in this workflow:</strong>
@@ -2354,7 +2344,7 @@ export default function NewTariffSchedulePage() {
               })()}
             </SectionCard>
 
-            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 12 }}>
+            <div className="gecko-grid-4">
               <div className="gecko-kpi-tile">
                 <div className="gecko-kpi-tile-icon gecko-kpi-tile-icon-primary"><Icon name="dollarSign" size={16} /></div>
                 <div className="gecko-kpi-tile-value">{totalPricedCharges}</div>
@@ -2434,21 +2424,21 @@ export default function NewTariffSchedulePage() {
 
         {tab === 'activity' && (
           <SectionCard title="Activity & Approval Trail" subtitle="A timeline of who created, edited, and approved this schedule.">
-            <div style={{ display: 'flex', flexDirection: 'column', gap: 0 }}>
+            <div className="gecko-stack" style={{ gap: 0 }}>
               {[
                 { who: 'You', what: 'Started new tariff schedule', when: 'just now', icon: 'plus', tone: 'var(--gecko-primary-500)' },
               ].map((e, i) => (
-                <div key={i} style={{ display: 'flex', gap: 12, padding: '10px 0', borderBottom: i < 0 ? '1px solid var(--gecko-border)' : 'none' }}>
-                  <div style={{ width: 28, height: 28, borderRadius: 8, background: e.tone, color: '#fff', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+                <div key={i} className="gecko-row gecko-row-start" style={{ gap: 12, padding: '10px 0', borderBottom: i < 0 ? '1px solid var(--gecko-border)' : 'none' }}>
+                  <div className="gecko-mini-icon" style={{ width: 28, height: 28, background: e.tone, color: '#fff' }}>
                     <Icon name={e.icon} size={13} />
                   </div>
-                  <div style={{ flex: 1 }}>
+                  <div className="gecko-flex-1">
                     <div style={{ fontSize: 13, color: 'var(--gecko-text-primary)' }}><strong>{e.who}</strong> {e.what}</div>
-                    <div style={{ fontSize: 11, color: 'var(--gecko-text-secondary)', marginTop: 2 }}>{e.when}</div>
+                    <div className="gecko-cell-meta">{e.when}</div>
                   </div>
                 </div>
               ))}
-              <div style={{ marginTop: 16, padding: 14, background: 'var(--gecko-bg-subtle)', border: '1px dashed var(--gecko-border)', borderRadius: 8, fontSize: 12, color: 'var(--gecko-text-secondary)', fontStyle: 'italic', textAlign: 'center' }}>
+              <div className="gecko-empty-card gecko-mt-4" style={{ border: '1px dashed var(--gecko-border)', fontStyle: 'italic' }}>
                 More activity will appear here as the schedule is edited and approved.
               </div>
             </div>
