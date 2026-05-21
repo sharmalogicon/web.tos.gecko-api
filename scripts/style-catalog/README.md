@@ -108,12 +108,17 @@ runs the same enforcement.
    ```
    into the target app's repo root.
 
-4. **Add npm script** to the target app's `package.json`:
+4. **Add npm script + tsx devDep** to the target app's `package.json`:
    ```json
    "scripts": {
      "audit:styles": "tsx scripts/style-catalog/detect.ts"
+   },
+   "devDependencies": {
+     "tsx": "^4.22.3"
    }
    ```
+   Then run `npm install -D tsx` once per app (or `npm install` if the
+   devDep is already declared via the package.json copy).
 
 5. **Run the audit**:
    ```bash
