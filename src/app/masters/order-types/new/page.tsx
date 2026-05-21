@@ -335,9 +335,9 @@ function Step1({ state, onChange }: { state: WizardState; onChange: (patch: Part
             ))}
           </div>
         </div>
-        <div className="gecko-row gecko-row-start" style={{ background: 'var(--gecko-info-50)', border: '1px solid var(--gecko-info-200)', borderRadius: 10, padding: 14, gap: 10 }}>
-          <Icon name="info" size={15} style={{ color: 'var(--gecko-info-600)', flexShrink: 0, marginTop: 1 }} />
-          <div style={{ fontSize: 12, color: 'var(--gecko-info-800)', lineHeight: 1.5 }}>
+        <div className="gecko-banner gecko-banner-info">
+          <Icon name="info" size={15} className="gecko-banner-icon" />
+          <div style={{ lineHeight: 1.5 }}>
             The order type code is used across bookings, gate operations, and billing. Use a short, memorable code that reflects the flow direction and mode.
           </div>
         </div>
@@ -1299,9 +1299,9 @@ export default function NewOrderTypePage() {
       {step === 4 && <Step4 state={state} />}
 
       {errors.length > 0 && (
-        <div className="gecko-row gecko-row-start" style={{ marginTop: 16, padding: '12px 16px', background: 'var(--gecko-error-50)', border: '1px solid var(--gecko-error-200)', borderRadius: 10, gap: 10 }}>
-          <Icon name="alertTriangle" size={15} style={{ color: 'var(--gecko-error-500)', marginTop: 1, flexShrink: 0 }} />
-          <div>{errors.map(e => <div key={e} style={{ fontSize: 13, color: 'var(--gecko-error-700)', fontWeight: 500 }}>{e}</div>)}</div>
+        <div className="gecko-banner gecko-banner-error gecko-mt-4">
+          <Icon name="alertTriangle" size={15} className="gecko-banner-icon" />
+          <div>{errors.map(e => <div key={e} style={{ fontSize: 13, fontWeight: 500 }}>{e}</div>)}</div>
         </div>
       )}
 

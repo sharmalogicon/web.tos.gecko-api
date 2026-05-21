@@ -110,19 +110,19 @@ function nextClosureDate(holidays: PublicHoliday[], schedule: DaySchedule[]): st
 function KpiCard({ label, value, sub, accent }: { label: string; value: string | number; sub?: string; accent?: string }) {
   return (
     <div
-      className="gecko-card"
+      className="gecko-card gecko-card-accent-top"
       style={{
         flex: 1, minWidth: 150, padding: '14px 20px',
-        borderTop: `3px solid ${accent ?? 'var(--gecko-primary-500)'}`,
+        ['--gecko-accent-color' as string]: accent ?? 'var(--gecko-primary-500)',
       }}
     >
-      <div className="gecko-eyebrow" style={{ marginBottom: 6 }}>
+      <div className="gecko-eyebrow gecko-mb-2">
         {label}
       </div>
       <div className="gecko-stat-num">
         {value}
       </div>
-      {sub && <div style={{ fontSize: 11, color: 'var(--gecko-text-secondary)', marginTop: 4 }}>{sub}</div>}
+      {sub && <div className="gecko-cell-meta">{sub}</div>}
     </div>
   );
 }
@@ -808,11 +808,7 @@ export default function GateHoursPage() {
 
       {/* Tabs */}
       <div>
-        <div style={{
-          display: 'flex', gap: 0,
-          borderBottom: '2px solid var(--gecko-border)',
-          marginBottom: 16,
-        }}>
+        <div className="gecko-tab-bar gecko-mb-4">
           {([
             { key: 'schedule', label: 'Weekly Schedule', icon: 'clock' },
             { key: 'holidays', label: 'Public Holidays',  icon: 'calendar' },
@@ -820,21 +816,7 @@ export default function GateHoursPage() {
             <button
               key={tab.key}
               onClick={() => setActiveTab(tab.key)}
-              style={{
-                display: 'flex', alignItems: 'center', gap: 7,
-                padding: '10px 18px',
-                border: 'none',
-                borderBottom: activeTab === tab.key
-                  ? '2px solid var(--gecko-primary-600)'
-                  : '2px solid transparent',
-                marginBottom: -2,
-                background: 'none',
-                cursor: 'pointer',
-                fontFamily: 'inherit',
-                fontSize: 13, fontWeight: activeTab === tab.key ? 700 : 500,
-                color: activeTab === tab.key ? 'var(--gecko-primary-700)' : 'var(--gecko-text-secondary)',
-                transition: 'color 0.15s',
-              }}
+              className={`gecko-tab-item${activeTab === tab.key ? ' gecko-tab-item-active' : ''}`}
             >
               <Icon
                 name={tab.icon}
@@ -851,15 +833,9 @@ export default function GateHoursPage() {
       </div>
 
       {/* Info footer */}
-      <div className="gecko-row gecko-row-start" style={{
-        padding: '12px 16px',
-        background: 'var(--gecko-primary-50)',
-        border: '1px solid var(--gecko-primary-100)',
-        borderRadius: 8,
-        gap: 12,
-      }}>
-        <Icon name="info" size={16} style={{ color: 'var(--gecko-primary-600)', flexShrink: 0, marginTop: 1 }} />
-        <div style={{ fontSize: 12, color: 'var(--gecko-primary-800)', lineHeight: 1.6 }}>
+      <div className="gecko-banner gecko-banner-info">
+        <Icon name="info" size={16} className="gecko-banner-icon" />
+        <div style={{ lineHeight: 1.6 }}>
           <strong>How gate hours work:</strong> The weekly schedule defines the default operating window
           for all gate lanes at Laem Chabang ICD. Public holidays automatically override the weekly
           schedule and close all gates for the configured scope. Changes take effect on the next

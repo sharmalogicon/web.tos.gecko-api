@@ -260,18 +260,15 @@ function Toggle({ label, value, onChange, description }: { label: string; value:
     <div className="gecko-row gecko-row-between" style={{ padding: '8px 0',
       borderBottom: '1px solid var(--gecko-bg-subtle)' }}>
       <div>
-        <div style={{ fontSize: 13, fontWeight: 500, color: 'var(--gecko-text-primary)' }}>{label}</div>
-        {description && <div style={{ fontSize: 11, color: 'var(--gecko-text-secondary)', marginTop: 2 }}>{description}</div>}
+        <div className="gecko-form-label">{label}</div>
+        {description && <div className="gecko-helper-text">{description}</div>}
       </div>
-      <button
-        onClick={() => onChange(!value)}
-        style={{ width: 42, height: 24, borderRadius: 12, border: 'none', cursor: 'pointer', flexShrink: 0,
-          background: value ? 'var(--gecko-success-500)' : 'var(--gecko-gray-300)',
-          position: 'relative', transition: 'background 0.2s' }}>
-        <span style={{ position: 'absolute', top: 3, left: value ? 21 : 3, width: 18, height: 18,
-          borderRadius: '50%', background: '#fff', transition: 'left 0.2s',
-          boxShadow: '0 1px 3px rgba(0,0,0,0.2)' }} />
-      </button>
+      <label className="gecko-toggle gecko-flex-shrink-0">
+        <input type="checkbox" checked={value} onChange={e => onChange(e.target.checked)} />
+        <span className="gecko-toggle-track">
+          <span className="gecko-toggle-thumb" />
+        </span>
+      </label>
     </div>
   );
 }
@@ -416,8 +413,7 @@ function EmailForm({ cfg, onChange, direction }: { cfg: EmailConfig; onChange: (
     <>
       {direction === 'inbound' ? (
         <>
-          <div style={{ fontSize: 12, fontWeight: 700, color: 'var(--gecko-primary-700)', marginBottom: 10,
-            padding: '6px 10px', background: 'var(--gecko-primary-50)', borderRadius: 6 }}>
+          <div className="gecko-banner gecko-banner-info gecko-mb-2" style={{ fontWeight: 700 }}>
             IMAP — Incoming Mail Server
           </div>
           <Row>
@@ -439,8 +435,7 @@ function EmailForm({ cfg, onChange, direction }: { cfg: EmailConfig; onChange: (
         </>
       ) : (
         <>
-          <div style={{ fontSize: 12, fontWeight: 700, color: 'var(--gecko-success-700)', marginBottom: 10,
-            padding: '6px 10px', background: 'var(--gecko-success-50)', borderRadius: 6 }}>
+          <div className="gecko-banner gecko-banner-success gecko-mb-2" style={{ fontWeight: 700 }}>
             SMTP — Outgoing Mail Server
           </div>
           <Row>
@@ -563,10 +558,9 @@ function WebhookForm({ cfg, onChange }: { cfg: WebhookConfig; onChange: (p: Part
   const [regenState, setRegenState] = useState(false);
   return (
     <>
-      <div className="gecko-row gecko-row-start" style={{ padding: '10px 14px', background: 'var(--gecko-primary-50)', borderRadius: 8, marginBottom: 14,
-        border: '1px solid var(--gecko-primary-100)', gap: 10 }}>
-        <Icon name="info" size={15} style={{ color: 'var(--gecko-primary-600)', flexShrink: 0, marginTop: 1 }} />
-        <div style={{ fontSize: 12, color: 'var(--gecko-primary-800)' }}>
+      <div className="gecko-banner gecko-banner-info gecko-mb-3">
+        <Icon name="info" size={15} className="gecko-banner-icon" />
+        <div>
           Webhook mode means the partner <strong>pushes messages to us</strong>. Share the URL below with your partner.
           All requests are validated against the signing secret.
         </div>
@@ -785,9 +779,8 @@ export default function EdiPartnerProfilePage() {
               <Icon name="arrowLeft" size={16} />
             </button>
           </Link>
-          <div className="gecko-mini-icon gecko-mini-icon-lg gecko-flex-shrink-0" style={{ background: partner.color,
-            color: '#fff', borderRadius: 10, width: 44, height: 44,
-            fontSize: 15, fontWeight: 800 }}>
+          <div className="gecko-mini-icon gecko-mini-icon-xl gecko-flex-shrink-0" style={{ background: partner.color,
+            color: '#fff', fontSize: 15, fontWeight: 800 }}>
             {partner.initials}
           </div>
           <div>
@@ -823,15 +816,10 @@ export default function EdiPartnerProfilePage() {
       </div>
 
       {/* ── Tabs ── */}
-      <div className="gecko-row gecko-mb-5" style={{ gap: 0, borderBottom: '2px solid var(--gecko-border)' }}>
+      <div className="gecko-tab-bar gecko-mb-5">
         {TABS.map(t => (
           <button key={t.id} onClick={() => setTab(t.id)}
-            style={{ display: 'flex', alignItems: 'center', gap: 7, padding: '10px 18px',
-              border: 'none', background: 'none', cursor: 'pointer', fontFamily: 'inherit',
-              fontSize: 13, fontWeight: tab === t.id ? 700 : 500,
-              color: tab === t.id ? 'var(--gecko-primary-700)' : 'var(--gecko-text-secondary)',
-              borderBottom: tab === t.id ? '2px solid var(--gecko-primary-600)' : '2px solid transparent',
-              marginBottom: -2, transition: 'color 0.15s' }}>
+            className={`gecko-tab-item gecko-inline-row${tab === t.id ? ' gecko-tab-item-active' : ''}`}>
             <Icon name={t.icon} size={14} />
             {t.label}
           </button>
@@ -992,14 +980,13 @@ export default function EdiPartnerProfilePage() {
                         {active ? '2026-05-04 09:14' : '—'}
                       </td>
                       <td style={{ padding: '10px 12px' }}>
-                        <button onClick={() => setMsgActive(ma => ({ ...ma, [m.code]: !ma[m.code] }))}
-                          style={{ width: 38, height: 22, borderRadius: 11, border: 'none', cursor: 'pointer',
-                            background: active ? 'var(--gecko-success-500)' : 'var(--gecko-gray-300)',
-                            position: 'relative', transition: 'background 0.2s' }}>
-                          <span style={{ position: 'absolute', top: 3, left: active ? 18 : 3, width: 16, height: 16,
-                            borderRadius: '50%', background: '#fff', transition: 'left 0.2s',
-                            boxShadow: '0 1px 2px rgba(0,0,0,0.2)' }} />
-                        </button>
+                        <label className="gecko-toggle">
+                          <input type="checkbox" checked={!!active}
+                            onChange={() => setMsgActive(ma => ({ ...ma, [m.code]: !ma[m.code] }))} />
+                          <span className="gecko-toggle-track">
+                            <span className="gecko-toggle-thumb" />
+                          </span>
+                        </label>
                       </td>
                     </tr>
                   );

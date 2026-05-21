@@ -682,11 +682,12 @@ function ChargeCard({
               {/* Conditions strip — surcharges that modify this row's base rate */}
               <div className="gecko-conditions-strip">
                 {(r.conditions ?? []).map(c => (
-                  <span key={c.id} className="gecko-pill gecko-pill-warning" style={{ fontSize: 10, display: 'inline-flex', alignItems: 'center', gap: 4 }}>
+                  <span key={c.id} className="gecko-pill gecko-pill-warning gecko-inline-row" style={{ fontSize: 10, gap: 4 }}>
                     {describeCondition(c)}
                     <button
                       onClick={() => removeCondition(r.id, c.id)}
-                      style={{ background: 'transparent', border: 'none', cursor: 'pointer', color: 'inherit', padding: 0, lineHeight: 1, fontFamily: 'inherit', fontSize: 12 }}
+                      className="gecko-icon-btn-ghost"
+                      style={{ padding: 0, lineHeight: 1, fontSize: 12 }}
                       aria-label="Remove condition"
                     >×</button>
                   </span>
@@ -1026,7 +1027,7 @@ function StorageCard({
       }
     >
       <div className="gecko-row" style={{ gap: 16, marginBottom: 14, padding: 12, background: `linear-gradient(135deg, ${accent}10, transparent)`, borderRadius: 8, border: `1px solid ${accent}40` }}>
-        <div className="gecko-mini-icon" style={{ width: 36, height: 36, borderRadius: 9, background: accent, color: '#fff' }}>
+        <div className="gecko-mini-icon gecko-mini-icon-lg" style={{ background: accent, color: '#fff' }}>
           <Icon name="clock" size={18} />
         </div>
         <div className="gecko-field" style={{ flex: 0, minWidth: 120 }}>
@@ -1133,11 +1134,8 @@ function StorageCard({
         </div>
       ) : (
         <div className="gecko-stack gecko-stack-sm" style={{ gap: 10 }}>
-          <div className="gecko-row gecko-row-start" style={{
-            padding: 10, background: 'var(--gecko-info-50)', border: '1px solid var(--gecko-info-200)',
-            borderRadius: 8, fontSize: 11, color: 'var(--gecko-info-700)',
-          }}>
-            <Icon name="info" size={14} style={{ flexShrink: 0, marginTop: 1 }} />
+          <div className="gecko-banner gecko-banner-info">
+            <Icon name="info" size={14} className="gecko-banner-icon" />
             <div>
               <strong>Fleet-TEU slab:</strong> rate is determined by the line&apos;s <em>total fleet TEU</em> at the depot on the storage day —
               so the more boxes the line has parked, the lower the per-box per-day rate. Regressive volume pricing across the line&apos;s whole footprint, not per-container slab.
@@ -1217,7 +1215,7 @@ function ReeferEventCard({
   return (
     <SectionCard title={title} subtitle="Per-event flat rate by reefer container size">
       <div className="gecko-row" style={{ gap: 16 }}>
-        <div className="gecko-mini-icon" style={{ width: 44, height: 44, borderRadius: 11, background: accent, color: '#fff' }}>
+        <div className="gecko-mini-icon gecko-mini-icon-xl" style={{ background: accent, color: '#fff' }}>
           <Icon name={icon} size={20} />
         </div>
         <div className="gecko-row gecko-flex-1" style={{ gap: 14 }}>
@@ -1328,10 +1326,10 @@ function FreeTimeTab({ matrix, onChange }: { matrix: FreeTimeMatrix; onChange: (
         </div>
       </div>
 
-      <div className="gecko-row gecko-row-between" style={{ marginTop: 18, padding: 14, background: 'var(--gecko-bg-subtle)', border: '1px solid var(--gecko-border)', borderRadius: 10, gap: 14 }}>
+      <div className="gecko-row gecko-row-between gecko-mt-4" style={{ padding: 14, background: 'var(--gecko-bg-subtle)', border: '1px solid var(--gecko-border)', borderRadius: 10, gap: 14 }}>
         <div>
-          <div style={{ fontSize: 13, fontWeight: 600, color: 'var(--gecko-text-primary)' }}>Waive Storage for MTY DM Containers</div>
-          <div style={{ fontSize: 11, color: 'var(--gecko-text-secondary)', marginTop: 2 }}>
+          <div className="gecko-card-title">Waive Storage for MTY DM Containers</div>
+          <div className="gecko-card-subtitle">
             Damaged empties waiting on M&amp;R disposition won't accrue storage charges.
           </div>
         </div>
@@ -2331,8 +2329,8 @@ export default function NewTariffSchedulePage() {
                 const autoSteps = wf?.steps.filter(s => s.threshold && describeThreshold(s.threshold));
                 if (!autoSteps?.length) return null;
                 return (
-                  <div className="gecko-row gecko-row-start" style={{ marginTop: 12, padding: 10, background: 'var(--gecko-info-50)', border: '1px solid var(--gecko-info-200)', borderRadius: 8, fontSize: 11, color: 'var(--gecko-info-700)' }}>
-                    <Icon name="info" size={14} style={{ flexShrink: 0, marginTop: 1 }} />
+                  <div className="gecko-banner gecko-banner-info gecko-mt-3">
+                    <Icon name="info" size={14} className="gecko-banner-icon" />
                     <div>
                       <strong>Auto-approval rules in this workflow:</strong>
                       <ul style={{ margin: '4px 0 0', paddingLeft: 18 }}>
@@ -2429,7 +2427,7 @@ export default function NewTariffSchedulePage() {
                 { who: 'You', what: 'Started new tariff schedule', when: 'just now', icon: 'plus', tone: 'var(--gecko-primary-500)' },
               ].map((e, i) => (
                 <div key={i} className="gecko-row gecko-row-start" style={{ gap: 12, padding: '10px 0', borderBottom: i < 0 ? '1px solid var(--gecko-border)' : 'none' }}>
-                  <div className="gecko-mini-icon" style={{ width: 28, height: 28, background: e.tone, color: '#fff' }}>
+                  <div className="gecko-mini-icon" style={{ background: e.tone, color: '#fff' }}>
                     <Icon name={e.icon} size={13} />
                   </div>
                   <div className="gecko-flex-1">

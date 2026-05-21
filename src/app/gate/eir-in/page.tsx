@@ -286,7 +286,7 @@ function DamagePanel({ move, onChange }: { move: DropMove; onChange: (p: Partial
             <select className="gecko-input gecko-input-sm" value={d.liability} onChange={e => updRow(i, { liability: e.target.value })} style={{ fontFamily: 'var(--gecko-font-mono)', fontSize: 12 }}>
               {LIABILITY_CODES.map(l => <option key={l.code} value={l.code}>{l.code} · {l.label}</option>)}
             </select>
-            <button onClick={() => delRow(i)} title="Remove" style={{ height: 28, width: 28, border: 'none', background: 'transparent', color: 'var(--gecko-error-600)', cursor: 'pointer', borderRadius: 4, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+            <button onClick={() => delRow(i)} title="Remove" className="gecko-icon-btn-ghost" style={{ color: 'var(--gecko-error-600)' }}>
               <Icon name="x" size={14} />
             </button>
           </div>
@@ -486,7 +486,7 @@ function PickupForm({ move, onChange }: { move: PickMove; onChange: (p: Partial<
           </Field>
         </div>
         {!ctrMatches && (
-          <div className="gecko-row gecko-mt-2" style={{ padding: 8, background: 'var(--gecko-warning-50)', color: 'var(--gecko-warning-700)', borderRadius: 6, fontSize: 11, gap: 6 }}>
+          <div className="gecko-banner gecko-banner-warning gecko-mt-2">
             <Icon name="warning" size={13} />
             Container number does not match the planned unit. Confirm with yard supervisor before releasing.
           </div>
@@ -832,16 +832,16 @@ function VisitSummaryRail({ moves, dropTeu, pickTeu, teuCap, teuUsed, teuRemaini
       </div>
 
       {/* Move counters */}
-      <div className="gecko-grid-2" style={{ padding: '14px 16px', gap: 10, borderBottom: '1px solid var(--gecko-border)' }}>
+      <div className="gecko-grid-2 gecko-stack-sm" style={{ padding: '14px 16px', borderBottom: '1px solid var(--gecko-border)' }}>
         <div style={{ padding: 10, background: 'var(--gecko-info-50)', borderRadius: 6 }}>
           <div style={{ fontSize: 9, fontWeight: 700, color: 'var(--gecko-info-700)', letterSpacing: '0.06em', textTransform: 'uppercase' }}>Drop-offs</div>
-          <div style={{ fontSize: 22, fontFamily: 'var(--gecko-font-mono)', fontWeight: 700, lineHeight: 1.1, color: 'var(--gecko-info-700)' }}>
+          <div className="gecko-stat-num-22" style={{ fontFamily: 'var(--gecko-font-mono)', fontWeight: 700, lineHeight: 1.1, color: 'var(--gecko-info-700)' }}>
             {dropCount}<span style={{ fontSize: 11, color: 'var(--gecko-text-secondary)', fontWeight: 500, marginLeft: 4 }}>· {dropTeu} TEU</span>
           </div>
         </div>
         <div style={{ padding: 10, background: 'var(--gecko-primary-50)', borderRadius: 6 }}>
           <div style={{ fontSize: 9, fontWeight: 700, color: 'var(--gecko-primary-700)', letterSpacing: '0.06em', textTransform: 'uppercase' }}>Pickups</div>
-          <div style={{ fontSize: 22, fontFamily: 'var(--gecko-font-mono)', fontWeight: 700, lineHeight: 1.1, color: 'var(--gecko-primary-700)' }}>
+          <div className="gecko-stat-num-22" style={{ fontFamily: 'var(--gecko-font-mono)', fontWeight: 700, lineHeight: 1.1, color: 'var(--gecko-primary-700)' }}>
             {pickCount}<span style={{ fontSize: 11, color: 'var(--gecko-text-secondary)', fontWeight: 500, marginLeft: 4 }}>· {pickTeu} TEU</span>
           </div>
         </div>
@@ -891,7 +891,7 @@ function VisitSummaryRail({ moves, dropTeu, pickTeu, teuCap, teuUsed, teuRemaini
           <div style={{ fontSize: 9, fontWeight: 700, color: 'var(--gecko-text-secondary)', letterSpacing: '0.08em' }}>NET PAYABLE</div>
           <div style={{ fontSize: 9, color: 'var(--gecko-text-disabled)' }}>THB · this visit</div>
         </div>
-        <div style={{ fontSize: 22, fontWeight: 700, fontFamily: 'var(--gecko-font-mono)', letterSpacing: '-0.02em' }}>฿{net.toLocaleString()}</div>
+        <div className="gecko-stat-num-22" style={{ fontWeight: 700, fontFamily: 'var(--gecko-font-mono)', letterSpacing: '-0.02em' }}>฿{net.toLocaleString()}</div>
       </div>
 
       {/* Validation state */}
@@ -1066,7 +1066,7 @@ export default function GateInPage() {
           </div>
           <button
             onClick={() => setPrefillBadge(null)}
-            style={{ background: 'transparent', border: 'none', color: 'var(--gecko-text-disabled)', cursor: 'pointer', padding: 4, fontFamily: 'inherit' }}
+            className="gecko-icon-btn-ghost"
             aria-label="Dismiss prefill banner"
           >
             <Icon name="x" size={14} />

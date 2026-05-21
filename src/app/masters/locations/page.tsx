@@ -156,13 +156,8 @@ function NewLocationModal({ onClose }: { onClose: () => void }) {
           </div>
           <button
             onClick={onClose}
-            style={{
-              width: 32, height: 32, border: '1px solid var(--gecko-border)',
-              borderRadius: 7, background: 'var(--gecko-bg-surface)',
-              color: 'var(--gecko-text-secondary)', fontSize: 17, cursor: 'pointer',
-              display: 'flex', alignItems: 'center', justifyContent: 'center',
-              fontFamily: 'inherit', flexShrink: 0,
-            }}
+            className="gecko-icon-btn-ghost"
+            style={{ width: 32, height: 32, border: '1px solid var(--gecko-border)', borderRadius: 7, background: 'var(--gecko-bg-surface)', fontSize: 17, flexShrink: 0 }}
           >
             ×
           </button>
@@ -309,22 +304,13 @@ function NewLocationModal({ onClose }: { onClose: () => void }) {
               }}>
                 <button
                   onClick={() => set({ active: !form.active })}
-                  style={{
-                    width: 36, height: 20, borderRadius: 10, border: 'none',
-                    cursor: 'pointer', flexShrink: 0, marginTop: 2,
-                    background: form.active ? 'var(--gecko-success-600)' : 'var(--gecko-gray-300)',
-                    position: 'relative', transition: 'background 0.2s',
-                  }}
+                  className={`gecko-toggle ${form.active ? 'gecko-toggle-on' : ''}`}
                   role="switch"
                   aria-checked={form.active}
                   type="button"
+                  style={{ marginTop: 2 }}
                 >
-                  <span style={{
-                    position: 'absolute', top: 2,
-                    left: form.active ? 18 : 2,
-                    width: 16, height: 16, borderRadius: '50%', background: '#fff',
-                    transition: 'left 0.2s', display: 'block',
-                  }} />
+                  <span className="gecko-toggle-thumb" />
                 </button>
                 <div>
                   <div style={{

@@ -258,7 +258,7 @@ export default function TariffScheduleDetailPage({ params }: { params: Promise<{
             <div>
               {schedule.activity.map((e, i) => (
                 <div key={e.id} className="gecko-row gecko-row-start" style={{ gap: 12, padding: '12px 0', borderBottom: i < schedule.activity.length - 1 ? '1px solid var(--gecko-border)' : 'none' }}>
-                  <div className="gecko-mini-icon" style={{ width: 30, height: 30, background: `var(--gecko-${e.tone}-500)`, color: '#fff' }}>
+                  <div className="gecko-mini-icon" style={{ background: `var(--gecko-${e.tone}-500)`, color: '#fff' }}>
                     <Icon name={e.icon} size={14} />
                   </div>
                   <div className="gecko-flex-1">
@@ -348,7 +348,7 @@ function WorkflowChain({ steps }: { steps: WorkflowProgressStep[] }) {
           <React.Fragment key={s.stepId}>
             <div className="gecko-stack gecko-stack-sm" style={{ flex: '0 0 auto', minWidth: 180, padding: '8px 14px', background: 'var(--gecko-bg-surface)', border: '1px solid var(--gecko-border)', borderRadius: 10, borderLeft: `3px solid ${tone}` }}>
               <div className="gecko-row">
-                <div className="gecko-mini-icon" style={{ width: 24, height: 24, borderRadius: 6, background: tone, color: '#fff' }}>
+                <div className="gecko-mini-icon gecko-mini-icon-sm" style={{ background: tone, color: '#fff' }}>
                   <Icon name={icon} size={12} />
                 </div>
                 <div style={{ fontSize: 12, fontWeight: 700, color: 'var(--gecko-text-primary)' }}>{s.stepName}</div>
@@ -413,7 +413,7 @@ function MovementChargesView({ prices }: { prices: PricedCharge[] }) {
               return (
                 <div key={seq} style={{ marginBottom: 16 }}>
                   <div className="gecko-row gecko-mb-2">
-                    <div className="gecko-mini-icon" style={{ width: 22, height: 22, borderRadius: 6, background: 'var(--gecko-primary-600)', color: '#fff', fontWeight: 800, fontSize: 11 }}>{seq}</div>
+                    <div className="gecko-mini-icon gecko-mini-icon-sm" style={{ background: 'var(--gecko-primary-600)', color: '#fff', fontWeight: 800, fontSize: 11 }}>{seq}</div>
                     <span className="gecko-mono-strong" style={{ fontSize: 12, fontWeight: 700 }}>{mov?.code}</span>
                     <span style={{ fontSize: 11, color: 'var(--gecko-text-secondary)' }}>{mov?.name}</span>
                   </div>

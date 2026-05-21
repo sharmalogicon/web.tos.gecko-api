@@ -280,9 +280,9 @@ function EntryModal({ entry, isNew, catMeta, groupColor, groupBg, onClose }: Ent
 
         {/* ── System lock notice ── */}
         {locked && (
-          <div className="gecko-row gecko-row-start gecko-stack-md gecko-flex-shrink-0" style={{ margin: '16px 24px 0', padding: '10px 14px', background: 'var(--gecko-warning-50)', border: '1px solid var(--gecko-warning-200)', borderRadius: 8 }}>
-            <Icon name="lock" size={13} style={{ color: 'var(--gecko-warning-600)', marginTop: 1, flexShrink: 0 }} />
-            <div style={{ fontSize: 11.5, color: 'var(--gecko-warning-800)', lineHeight: 1.55 }}>
+          <div className="gecko-banner gecko-banner-warning gecko-flex-shrink-0" style={{ margin: '16px 24px 0' }}>
+            <Icon name="lock" size={13} className="gecko-banner-icon" />
+            <div style={{ lineHeight: 1.55 }}>
               <strong>SYSTEM</strong> entry — sourced from {entry.smdgCode ? 'SMDG' : entry.edifactCode ? 'EDIFACT' : 'ISO'}. Code and external mappings are read-only. You may update description and lifecycle state only.
             </div>
           </div>
@@ -648,13 +648,14 @@ export default function LookupMasterPage() {
                           <div className="gecko-row gecko-row-right" style={{ gap: 2 }}>
                             <button
                               onClick={() => { setEditEntry(e); setIsNewEntry(false); }}
-                              style={{ background: 'none', border: 'none', cursor: locked ? 'not-allowed' : 'pointer', color: 'var(--gecko-text-disabled)', padding: '3px 5px', borderRadius: 4, opacity: locked ? 0.4 : 1 }}
+                              className="gecko-icon-btn-ghost"
+                              style={locked ? { cursor: 'not-allowed', opacity: 0.4 } : undefined}
                               title={locked ? 'System entry — limited edit' : 'Edit'}
                             >
                               <Icon name="edit" size={13} />
                             </button>
                             <button
-                              style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--gecko-text-disabled)', padding: '3px 5px', borderRadius: 4 }}
+                              className="gecko-icon-btn-ghost"
                               onClick={() => { setEditEntry(e); setIsNewEntry(false); }}
                             >
                               <Icon name="moreHorizontal" size={13} />

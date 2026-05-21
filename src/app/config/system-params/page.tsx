@@ -79,22 +79,15 @@ function Sel({ value, onChange, options }: { value: string; onChange: (v: string
 
 function Toggle({ on, onChange, label }: { on: boolean; onChange: (v: boolean) => void; label?: string }) {
   return (
-    <label style={{ display: 'flex', alignItems: 'center', gap: 10, cursor: 'pointer' }}>
-      <div
-        onClick={() => onChange(!on)}
-        style={{
-          width: 40, height: 22, borderRadius: 11, background: on ? 'var(--gecko-primary-600)' : 'var(--gecko-gray-300)',
-          position: 'relative', cursor: 'pointer', transition: 'background 0.2s', flexShrink: 0,
-        }}
-      >
-        <div style={{
-          position: 'absolute', top: 3, left: on ? 21 : 3, width: 16, height: 16,
-          borderRadius: '50%', background: '#fff', transition: 'left 0.2s',
-          boxShadow: '0 1px 3px rgba(0,0,0,0.2)',
-        }} />
-      </div>
+    <span className="gecko-row" style={{ gap: 10 }}>
+      <label className="gecko-toggle">
+        <input type="checkbox" checked={on} onChange={e => onChange(e.target.checked)} />
+        <span className="gecko-toggle-track">
+          <span className="gecko-toggle-thumb" />
+        </span>
+      </label>
       {label && <span style={{ fontSize: 13, color: 'var(--gecko-text-secondary)' }}>{label}</span>}
-    </label>
+    </span>
   );
 }
 

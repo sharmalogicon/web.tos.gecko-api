@@ -331,7 +331,7 @@ function ReleaseForm({ move, onChange }: { move: ReleaseMove; onChange: (p: Part
           </Field>
         </div>
         {move.ctrAssigned && move.ctrPlanned && !ctrMatches && (
-          <div className="gecko-row gecko-mt-2" style={{ padding: 8, background: 'var(--gecko-error-50)', color: 'var(--gecko-error-700)', borderRadius: 6, fontSize: 11, gap: 6 }}>
+          <div className="gecko-banner gecko-banner-error gecko-mt-2">
             <Icon name="warning" size={13} />
             Container number does not match the yard plan. Confirm with yard supervisor before releasing.
           </div>
@@ -418,7 +418,7 @@ function ReleaseForm({ move, onChange }: { move: ReleaseMove; onChange: (p: Part
           )}
         </div>
         {move.condition === 'damaged' && (
-          <div className="gecko-row gecko-mt-2" style={{ padding: 8, background: 'var(--gecko-warning-50)', color: 'var(--gecko-warning-700)', borderRadius: 6, fontSize: 11, gap: 6 }}>
+          <div className="gecko-banner gecko-banner-warning gecko-mt-2">
             <Icon name="warning" size={13} />
             Container will be released; M&amp;R work order auto-created for detailed assessment + line chargeback.
           </div>
@@ -758,7 +758,7 @@ function VisitSummaryRail({ moves, teuUsed, teuCap, teuRemaining, errCount, warn
       <div style={{ padding: '14px 16px', borderBottom: '1px solid var(--gecko-border)' }}>
         <div style={{ padding: 10, background: 'var(--gecko-primary-50)', borderRadius: 6 }}>
           <div style={{ fontSize: 9, fontWeight: 700, color: 'var(--gecko-primary-700)', letterSpacing: '0.06em', textTransform: 'uppercase' }}>Containers out</div>
-          <div style={{ fontSize: 22, fontFamily: 'var(--gecko-font-mono)', fontWeight: 700, lineHeight: 1.1, color: 'var(--gecko-primary-700)' }}>
+          <div className="gecko-stat-num-22" style={{ fontFamily: 'var(--gecko-font-mono)', fontWeight: 700, lineHeight: 1.1, color: 'var(--gecko-primary-700)' }}>
             {count}<span style={{ fontSize: 11, color: 'var(--gecko-text-secondary)', fontWeight: 500, marginLeft: 4 }}>· {teuUsed} TEU</span>
           </div>
         </div>

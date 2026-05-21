@@ -142,13 +142,13 @@ function UtilBar({ pct, status }: { pct: number; status: SlotStatus }) {
 function KpiCard({ label, value, sub, accent }: { label: string; value: string | number; sub?: string; accent?: string }) {
   return (
     <div
-      className="gecko-card"
+      className="gecko-card gecko-card-accent-top"
       style={{ flex: 1, minWidth: 150, padding: '14px 20px',
-        borderTop: accent ? `3px solid ${accent}` : '3px solid var(--gecko-primary-500)' }}
+        ['--gecko-accent-color' as string]: accent ?? 'var(--gecko-primary-500)' }}
     >
-      <div className="gecko-eyebrow" style={{ marginBottom: 6 }}>{label}</div>
+      <div className="gecko-eyebrow gecko-mb-2">{label}</div>
       <div className="gecko-stat-num">{value}</div>
-      {sub && <div style={{ fontSize: 11, color: 'var(--gecko-text-secondary)', marginTop: 4 }}>{sub}</div>}
+      {sub && <div className="gecko-cell-meta">{sub}</div>}
     </div>
   );
 }
@@ -329,9 +329,7 @@ export default function GateSlotConfigPage() {
             <Icon name="chevronDown" size={12} style={{ marginLeft: 'auto', color: 'var(--gecko-text-secondary)' }} />
           </button>
           {yardOpen && (
-            <div style={{ position: 'absolute', top: '100%', left: 0, zIndex: 50, marginTop: 4,
-              background: 'var(--gecko-bg-surface)', border: '1px solid var(--gecko-border)',
-              borderRadius: 8, boxShadow: '0 8px 24px rgba(0,0,0,0.12)', minWidth: 180, overflow: 'hidden' }}>
+            <div className="gecko-floating-card" style={{ position: 'absolute', top: '100%', left: 0, zIndex: 50, marginTop: 4, minWidth: 180, overflow: 'hidden' }}>
               {YARDS.map(y => (
                 <button key={y}
                   onClick={() => { setYard(y); setYardOpen(false); }}
@@ -360,9 +358,7 @@ export default function GateSlotConfigPage() {
             <Icon name="chevronDown" size={12} style={{ opacity: 0.8 }} />
           </button>
           {tplOpen && (
-            <div style={{ position: 'absolute', top: '100%', left: 0, zIndex: 50, marginTop: 4,
-              background: 'var(--gecko-bg-surface)', border: '1px solid var(--gecko-border)',
-              borderRadius: 10, boxShadow: '0 8px 28px rgba(0,0,0,0.14)', minWidth: 340, overflow: 'hidden' }}>
+            <div className="gecko-floating-card" style={{ position: 'absolute', top: '100%', left: 0, zIndex: 50, marginTop: 4, minWidth: 340, overflow: 'hidden' }}>
               <div style={{ padding: '8px 14px 6px', borderBottom: '1px solid var(--gecko-border)' }}>
                 <div style={{ fontSize: 10, fontWeight: 700, letterSpacing: '0.08em', textTransform: 'uppercase', color: 'var(--gecko-text-secondary)' }}>
                   Quick-Apply Templates
@@ -741,11 +737,9 @@ export default function GateSlotConfigPage() {
       </div>
 
       {/* ── How-to guide ── */}
-      <div style={{ padding: '12px 16px', background: 'var(--gecko-primary-50)',
-        border: '1px solid var(--gecko-primary-100)', borderRadius: 8,
-        display: 'flex', gap: 12, alignItems: 'flex-start' }}>
-        <Icon name="info" size={16} style={{ color: 'var(--gecko-primary-600)', flexShrink: 0, marginTop: 1 }} />
-        <div style={{ fontSize: 12, color: 'var(--gecko-primary-800)', lineHeight: 1.6 }}>
+      <div className="gecko-banner gecko-banner-info">
+        <Icon name="info" size={16} className="gecko-banner-icon" />
+        <div style={{ lineHeight: 1.6 }}>
           <strong>How slot capacity works:</strong> Each time window defines the maximum number of trucks
           the gate can process. <em>Laden</em> containers count against export/import limits.
           <em>Empty</em> containers (returns/releases) have separate counters.

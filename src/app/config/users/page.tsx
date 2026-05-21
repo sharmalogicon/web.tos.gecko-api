@@ -110,10 +110,10 @@ function KpiCard({ label, value, sub, icon, accent }: {
 }) {
   return (
     <div
-      className="gecko-card"
+      className="gecko-card gecko-card-accent-top"
       style={{
         flex: 1, minWidth: 160, padding: '16px 20px',
-        borderTop: `3px solid ${accent}`,
+        ['--gecko-accent-color' as string]: accent,
       }}
     >
       <div className="gecko-row gecko-row-between gecko-mb-3">
@@ -675,11 +675,7 @@ export default function UsersRolesPage() {
       </div>
 
       {/* ── Tab Bar ── */}
-      <div style={{
-        display: 'flex', alignItems: 'center', gap: 2,
-        borderBottom: '2px solid var(--gecko-border)',
-        paddingBottom: 0,
-      }}>
+      <div className="gecko-tab-bar">
         {([
           { key: 'users', label: 'Users', icon: 'users' },
           { key: 'roles', label: 'Roles & Permissions', icon: 'shieldCheck' },
@@ -687,15 +683,7 @@ export default function UsersRolesPage() {
           <button
             key={t.key}
             onClick={() => setTab(t.key)}
-            style={{
-              display: 'flex', alignItems: 'center', gap: 7,
-              padding: '10px 18px', background: 'none', border: 'none',
-              cursor: 'pointer', fontSize: 13, fontWeight: tab === t.key ? 700 : 500,
-              color: tab === t.key ? 'var(--gecko-primary-600)' : 'var(--gecko-text-secondary)',
-              borderBottom: tab === t.key ? '2px solid var(--gecko-primary-600)' : '2px solid transparent',
-              marginBottom: -2, transition: 'all 0.12s',
-              fontFamily: 'inherit',
-            }}
+            className={`gecko-tab-item${tab === t.key ? ' gecko-tab-item-active' : ''}`}
           >
             <Icon name={t.icon} size={15} />
             {t.label}
@@ -875,34 +863,10 @@ export default function UsersRolesPage() {
                     {/* Actions */}
                     <td style={{ padding: '11px 14px', textAlign: 'right' }}>
                       <div className="gecko-row gecko-row-right" style={{ gap: 4 }}>
-                        <button
-                          style={{
-                            background: 'none', border: '1px solid var(--gecko-border)',
-                            borderRadius: 6, padding: '5px 8px', cursor: 'pointer',
-                            color: 'var(--gecko-text-secondary)', display: 'flex', alignItems: 'center',
-                            transition: 'all 0.1s',
-                          }}
-                          title="Edit user"
-                          onMouseEnter={e => {
-                            (e.currentTarget as HTMLButtonElement).style.borderColor = 'var(--gecko-primary-400)';
-                            (e.currentTarget as HTMLButtonElement).style.color = 'var(--gecko-primary-600)';
-                          }}
-                          onMouseLeave={e => {
-                            (e.currentTarget as HTMLButtonElement).style.borderColor = 'var(--gecko-border)';
-                            (e.currentTarget as HTMLButtonElement).style.color = 'var(--gecko-text-secondary)';
-                          }}
-                        >
+                        <button className="gecko-icon-btn-ghost" title="Edit user">
                           <Icon name="edit" size={14} />
                         </button>
-                        <button
-                          style={{
-                            background: 'none', border: '1px solid var(--gecko-border)',
-                            borderRadius: 6, padding: '5px 8px', cursor: 'pointer',
-                            color: 'var(--gecko-text-secondary)', display: 'flex', alignItems: 'center',
-                            transition: 'all 0.1s',
-                          }}
-                          title="More actions"
-                        >
+                        <button className="gecko-icon-btn-ghost" title="More actions">
                           <Icon name="moreH" size={14} />
                         </button>
                       </div>
@@ -940,13 +904,9 @@ export default function UsersRolesPage() {
           </div>
 
           {/* Info banner */}
-          <div className="gecko-row gecko-row-start" style={{
-            padding: '11px 16px', borderRadius: 8,
-            background: 'var(--gecko-primary-50)', border: '1px solid var(--gecko-primary-100)',
-            gap: 10,
-          }}>
-            <Icon name="info" size={15} style={{ color: 'var(--gecko-primary-600)', flexShrink: 0, marginTop: 1 }} />
-            <div style={{ fontSize: 12, color: 'var(--gecko-primary-800)', lineHeight: 1.6 }}>
+          <div className="gecko-banner gecko-banner-info">
+            <Icon name="info" size={15} className="gecko-banner-icon" />
+            <div style={{ lineHeight: 1.6 }}>
               <strong>Laem Chabang Terminal — Logicon TOS.</strong> Role assignments control gate lane access, billing authority, and yard plan visibility.
               Suspended accounts cannot log in but audit history is preserved. Use the <em>Roles &amp; Permissions</em> tab to review module-level access before assigning roles.
             </div>
