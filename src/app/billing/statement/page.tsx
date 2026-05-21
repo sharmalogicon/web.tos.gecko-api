@@ -263,16 +263,31 @@ function PaymentTermBadge({ term }: { term: PaymentTerm }) {
 
 function BookingTypeBadge({ type }: { type: BookingType }) {
   const tone = type === 'EXPORT' ? 'primary' : 'info';
-  return <span className={`gecko-pill gecko-pill-${tone}`} style={{ fontWeight: 800, letterSpacing: '0.04em' }}>{type}</span>;
+  return <span className={`gecko-pill gecko-pill-${tone}`}>{type}</span>;
 }
 
 // ─── Section Header ───────────────────────────────────────────────────────────
 
 function SectionHead({ title }: { title: string }) {
   return (
-    <div className="gecko-eyebrow" style={{ fontSize: 10.5, fontWeight: 800, color: 'var(--gecko-primary-600)', marginBottom: 14, paddingBottom: 7, borderBottom: '2px solid rgba(37,99,235,0.12)' }}>
+    <div
+      className="gecko-eyebrow gecko-mb-3"
+      style={{
+        color: 'var(--gecko-primary-600)',
+        paddingBottom: 7,
+        borderBottom: '2px solid rgba(37,99,235,0.12)',
+      }}
+    >
       {title}
     </div>
+  );
+}
+
+// ─── Modal Close ──────────────────────────────────────────────────────────────
+
+function ModalCloseBtn({ onClose }: { onClose: () => void }) {
+  return (
+    <button onClick={onClose} className="gecko-icon-btn-ghost" style={{ width: 32, height: 32, fontSize: 17 }}>×</button>
   );
 }
 
@@ -395,31 +410,37 @@ function ChargeDetailModal({ charge, isNew, containers, onClose }: ChargeDetailM
 
   return (
     <div className="gecko-overlay" onClick={e => { if (e.target === e.currentTarget) onClose(); }}>
-      <div className="gecko-modal gecko-modal-lg gecko-stack" style={{ gap: 0 }}>
+      <div className="gecko-modal gecko-modal-lg gecko-stack gecko-stack-xs">
 
         {/* Header */}
-        <div className="gecko-row gecko-row-between gecko-row-start" style={{ padding: '18px 24px', borderBottom: '1px solid var(--gecko-border)', background: 'var(--gecko-primary-50)', borderRadius: '12px 12px 0 0', flexShrink: 0, gap: 16 }}>
+        <div
+          className="gecko-modal-header gecko-row-start"
+          style={{ background: 'var(--gecko-primary-50)', borderRadius: '12px 12px 0 0' }}
+        >
           <div>
             <div className="gecko-row">
               <Icon name="fileText" size={16} style={{ color: 'var(--gecko-primary-600)' }} />
-              <span style={{ fontSize: 16, fontWeight: 800, color: 'var(--gecko-text-primary)' }}>
+              <span className="gecko-modal-title">
                 {isNew ? 'New Manual Charge' : `Edit Charge — ${charge.chargeCode}`}
               </span>
             </div>
-            <div style={{ fontSize: 12, color: 'var(--gecko-text-secondary)', marginTop: 3 }}>
+            <div className="gecko-cell-meta">
               {isNew ? 'Add a manual charge to the booking statement.' : 'Editing charge line. Changes update the cost sheet.'}
             </div>
           </div>
-          <button onClick={onClose} className="gecko-icon-btn-ghost" style={{ width: 32, height: 32, fontSize: 17 }}>×</button>
+          <ModalCloseBtn onClose={onClose} />
         </div>
 
         {/* Body */}
-        <div className="gecko-stack gecko-stack-xl" style={{ padding: '22px 24px', flex: 1, overflowY: 'auto' }}>
+        <div className="gecko-modal-body gecko-stack gecko-stack-xl">
 
           {/* Section 1: Charge Identity */}
           <div>
             <SectionHead title="Charge Identity" />
-            <div style={{ display: 'grid', gridTemplateColumns: '180px 1fr', gap: 16, marginBottom: 16 }}>
+            <div
+              className="gecko-mb-4"
+              style={{ display: 'grid', gridTemplateColumns: '180px 1fr', gap: 16 }}
+            >
               <div className="gecko-form-group">
                 <label className="gecko-label gecko-label-required">Charge Code</label>
                 <input className="gecko-input gecko-text-mono" placeholder="e.g. SA001-CA" value={form.chargeCode} onChange={e => set({ chargeCode: e.target.value.toUpperCase() })} style={{ textTransform: 'uppercase', fontWeight: 700 }} />
@@ -429,7 +450,10 @@ function ChargeDetailModal({ charge, isNew, containers, onClose }: ChargeDetailM
                 <input className="gecko-input" placeholder="e.g. Terminal Access Fee" value={form.chargeDesc} onChange={e => set({ chargeDesc: e.target.value })} />
               </div>
             </div>
-            <div style={{ display: 'grid', gridTemplateColumns: '1fr 80px 80px', gap: 16, marginBottom: 16 }}>
+            <div
+              className="gecko-mb-4"
+              style={{ display: 'grid', gridTemplateColumns: '1fr 80px 80px', gap: 16 }}
+            >
               <div className="gecko-form-group">
                 <label className="gecko-label">Container No</label>
                 <select className="gecko-input gecko-text-mono" value={form.containerNo} onChange={e => set({ containerNo: e.target.value })}>
@@ -467,9 +491,20 @@ function ChargeDetailModal({ charge, isNew, containers, onClose }: ChargeDetailM
                 ))}
               </div>
               {applyTo === 'select' && (
-                <div className="gecko-row gecko-row-wrap" style={{ marginTop: 10 }}>
+                <div className="gecko-row gecko-row-wrap gecko-mt-2">
                   {containers.map(c => (
-                    <label key={c} style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 12, fontFamily: 'var(--gecko-font-mono)', cursor: 'pointer', padding: '4px 10px', border: `1px solid ${selectedContainers.has(c) ? 'var(--gecko-primary-400)' : 'var(--gecko-border)'}`, borderRadius: 6, background: selectedContainers.has(c) ? 'var(--gecko-primary-50)' : 'var(--gecko-bg-surface)' }}>
+                    <label
+                      key={c}
+                      className="gecko-row gecko-mono"
+                      style={{
+                        gap: 6,
+                        cursor: 'pointer',
+                        padding: '4px 10px',
+                        border: `1px solid ${selectedContainers.has(c) ? 'var(--gecko-primary-400)' : 'var(--gecko-border)'}`,
+                        borderRadius: 6,
+                        background: selectedContainers.has(c) ? 'var(--gecko-primary-50)' : 'var(--gecko-bg-surface)',
+                      }}
+                    >
                       <input type="checkbox" checked={selectedContainers.has(c)} onChange={() => toggleCtr(c)} />
                       {c}
                     </label>
@@ -503,7 +538,7 @@ function ChargeDetailModal({ charge, isNew, containers, onClose }: ChargeDetailM
           {/* Section 3: Rates & Discount */}
           <div>
             <SectionHead title="Rates & Discount" />
-            <div className="gecko-grid-4" style={{ marginBottom: 16 }}>
+            <div className="gecko-grid-4 gecko-mb-4">
               <div className="gecko-form-group">
                 <label className="gecko-label gecko-label-required">Original Rate</label>
                 <div style={{ position: 'relative' }}>
@@ -521,7 +556,15 @@ function ChargeDetailModal({ charge, isNew, containers, onClose }: ChargeDetailM
               </div>
               <div className="gecko-form-group">
                 <label className="gecko-label">Discount Rate</label>
-                <input className="gecko-input gecko-text-mono" type="number" step="0.01" value={form.discountRate} onChange={e => set({ discountRate: parseFloat(e.target.value) || 0 })} disabled={form.discountType === 'NONE'} style={{ textAlign: 'right', opacity: form.discountType === 'NONE' ? 0.4 : 1 }} />
+                <input
+                  className="gecko-input gecko-text-mono"
+                  type="number"
+                  step="0.01"
+                  value={form.discountRate}
+                  onChange={e => set({ discountRate: parseFloat(e.target.value) || 0 })}
+                  disabled={form.discountType === 'NONE'}
+                  style={{ textAlign: 'right', opacity: form.discountType === 'NONE' ? 0.4 : 1 }}
+                />
               </div>
               <div className="gecko-form-group">
                 <label className="gecko-label">Selling Rate</label>
@@ -540,10 +583,15 @@ function ChargeDetailModal({ charge, isNew, containers, onClose }: ChargeDetailM
                 <label className="gecko-label">Total Amount</label>
                 <div style={{ position: 'relative' }}>
                   <span style={{ position: 'absolute', left: 10, top: '50%', transform: 'translateY(-50%)', color: 'var(--gecko-text-secondary)', fontSize: 12 }}>฿</span>
-                  <input className="gecko-input gecko-text-mono" value={totalAmount.toFixed(2)} readOnly style={{ paddingLeft: 22, textAlign: 'right', background: 'var(--gecko-bg-subtle)', color: 'var(--gecko-primary-700)', fontWeight: 700 }} />
+                  <input
+                    className="gecko-input gecko-text-mono"
+                    value={totalAmount.toFixed(2)}
+                    readOnly
+                    style={{ paddingLeft: 22, textAlign: 'right', background: 'var(--gecko-bg-subtle)', color: 'var(--gecko-primary-700)', fontWeight: 700 }}
+                  />
                 </div>
               </div>
-              <div className="gecko-banner gecko-banner-info" style={{ fontSize: 12 }}>
+              <div className="gecko-banner gecko-banner-info">
                 <span className="gecko-mono-strong" style={{ color: 'var(--gecko-primary-700)' }}>
                   {fmt(form.sellingRate)} × {form.qty.toFixed(3)} {form.billingUnit} = {fmt(totalAmount)}
                 </span>
@@ -554,10 +602,20 @@ function ChargeDetailModal({ charge, isNew, containers, onClose }: ChargeDetailM
           {/* Section 4: Payment & Waiver */}
           <div>
             <SectionHead title="Payment & Waiver" />
-            <div className="gecko-row gecko-row-start" style={{ gap: 12, padding: '12px 14px', border: `1px solid ${form.isWaived ? 'var(--gecko-warning-200)' : 'var(--gecko-border)'}`, borderRadius: 8, background: form.isWaived ? 'var(--gecko-warning-50)' : 'var(--gecko-bg-surface)', marginBottom: form.isWaived ? 12 : 0 }}>
+            <div
+              className="gecko-row gecko-row-start"
+              style={{
+                gap: 12,
+                padding: '12px 14px',
+                border: `1px solid ${form.isWaived ? 'var(--gecko-warning-200)' : 'var(--gecko-border)'}`,
+                borderRadius: 8,
+                background: form.isWaived ? 'var(--gecko-warning-50)' : 'var(--gecko-bg-surface)',
+                marginBottom: form.isWaived ? 12 : 0,
+              }}
+            >
               <Toggle value={form.isWaived} onChange={v => set({ isWaived: v })} colorOn="var(--gecko-warning-600)" />
               <div>
-                <div style={{ fontSize: 12.5, fontWeight: 700, color: form.isWaived ? 'var(--gecko-warning-700)' : 'var(--gecko-text-primary)' }}>Waived</div>
+                <div style={{ fontWeight: 700, color: form.isWaived ? 'var(--gecko-warning-700)' : 'var(--gecko-text-primary)' }}>Waived</div>
                 <div className="gecko-cell-meta">Mark this charge as waived — amount excluded from billing</div>
               </div>
             </div>
@@ -578,8 +636,8 @@ function ChargeDetailModal({ charge, isNew, containers, onClose }: ChargeDetailM
         </div>
 
         {/* Footer */}
-        <div className="gecko-row" style={{ padding: '14px 24px', borderTop: '1px solid var(--gecko-border)', background: 'var(--gecko-bg-surface)', borderRadius: '0 0 12px 12px', flexShrink: 0, gap: 10 }}>
-          {isNew && <div style={{ flex: 1, fontSize: 11, color: 'var(--gecko-text-disabled)' }}>* Charge Code and Description are required</div>}
+        <div className="gecko-modal-footer gecko-modal-footer-split">
+          {isNew && <div className="gecko-modal-footer-note">* Charge Code and Description are required</div>}
           <div className="gecko-row" style={{ marginLeft: isNew ? undefined : 'auto' }}>
             <button className="gecko-btn gecko-btn-outline gecko-btn-sm" onClick={onClose}>Cancel</button>
             <button className="gecko-btn gecko-btn-primary gecko-btn-sm" onClick={handleSaveCharge} disabled={!canSave}>
@@ -626,21 +684,27 @@ function BulkChargeModal({ containers, mode, onClose }: BulkChargeModalProps) {
 
   return (
     <div className="gecko-overlay" onClick={e => { if (e.target === e.currentTarget) onClose(); }}>
-      <div className="gecko-modal gecko-modal-lg gecko-stack" style={{ gap: 0 }}>
+      <div className="gecko-modal gecko-modal-lg gecko-stack gecko-stack-xs">
 
-        <div className="gecko-row gecko-row-between gecko-row-start" style={{ padding: '18px 24px', borderBottom: '1px solid var(--gecko-border)', background: 'var(--gecko-warning-50)', borderRadius: '12px 12px 0 0', flexShrink: 0, gap: 16 }}>
+        <div
+          className="gecko-modal-header"
+          style={{ background: 'var(--gecko-warning-50)', borderRadius: '12px 12px 0 0' }}
+        >
           <div className="gecko-row">
             <Icon name="layers" size={16} style={{ color: 'var(--gecko-warning-600)' }} />
-            <span style={{ fontSize: 16, fontWeight: 800 }}>{title}</span>
+            <span className="gecko-modal-title">{title}</span>
           </div>
-          <button onClick={onClose} className="gecko-icon-btn-ghost" style={{ width: 32, height: 32, fontSize: 17 }}>×</button>
+          <ModalCloseBtn onClose={onClose} />
         </div>
 
-        <div className="gecko-stack gecko-stack-lg" style={{ padding: '22px 24px', flex: 1, overflowY: 'auto', gap: 20 }}>
+        <div className="gecko-modal-body gecko-stack gecko-stack-lg">
 
           <div>
             <SectionHead title="Charge" />
-            <div style={{ display: 'grid', gridTemplateColumns: '160px 1fr', gap: 16, marginBottom: 14 }}>
+            <div
+              className="gecko-mb-3"
+              style={{ display: 'grid', gridTemplateColumns: '160px 1fr', gap: 16 }}
+            >
               <div className="gecko-form-group">
                 <label className="gecko-label gecko-label-required">Charge Code</label>
                 <input className="gecko-input gecko-text-mono" value={chargeCode} onChange={e => setChargeCode(e.target.value.toUpperCase())} style={{ fontWeight: 700 }} />
@@ -703,7 +767,7 @@ function BulkChargeModal({ containers, mode, onClose }: BulkChargeModalProps) {
           <div>
             <SectionHead title={`Preview — Will be applied to ${includedCtrs.size} container${includedCtrs.size !== 1 ? 's' : ''}:`} />
             <div className="gecko-table-card">
-              <table className="gecko-table gecko-table-compact" style={{ fontSize: 12.5 }}>
+              <table className="gecko-table gecko-table-compact">
                 <thead>
                   <tr>
                     <th style={{ width: 32, textAlign: 'center' }}>✓</th>
@@ -726,7 +790,7 @@ function BulkChargeModal({ containers, mode, onClose }: BulkChargeModalProps) {
 
         </div>
 
-        <div className="gecko-action-toolbar" style={{ padding: '14px 24px', borderTop: '1px solid var(--gecko-border)', borderRadius: '0 0 12px 12px' }}>
+        <div className="gecko-modal-footer">
           <button className="gecko-btn gecko-btn-outline gecko-btn-sm" onClick={onClose}>Cancel</button>
           <button className="gecko-btn gecko-btn-primary gecko-btn-sm" onClick={handleApply} disabled={includedCtrs.size === 0 || !chargeCode.trim()}>
             Apply to {includedCtrs.size} Container{includedCtrs.size !== 1 ? 's' : ''}
@@ -756,17 +820,20 @@ function RegenerateModal({ charges, onClose }: RegenerateModalProps) {
 
   return (
     <div className="gecko-overlay" onClick={e => { if (e.target === e.currentTarget) onClose(); }}>
-      <div className="gecko-modal gecko-stack" style={{ gap: 0 }}>
+      <div className="gecko-modal gecko-stack gecko-stack-xs">
 
-        <div className="gecko-row gecko-row-between gecko-row-start" style={{ padding: '18px 24px', borderBottom: '1px solid var(--gecko-border)', background: 'var(--gecko-info-50)', borderRadius: '12px 12px 0 0', flexShrink: 0, gap: 16 }}>
+        <div
+          className="gecko-modal-header"
+          style={{ background: 'var(--gecko-info-50)', borderRadius: '12px 12px 0 0' }}
+        >
           <div className="gecko-row">
             <Icon name="refreshCcw" size={16} style={{ color: 'var(--gecko-info-600)' }} />
-            <span style={{ fontSize: 16, fontWeight: 800 }}>Regenerate Charges</span>
+            <span className="gecko-modal-title">Regenerate Charges</span>
           </div>
-          <button onClick={onClose} className="gecko-icon-btn-ghost" style={{ width: 32, height: 32, fontSize: 17 }}>×</button>
+          <ModalCloseBtn onClose={onClose} />
         </div>
 
-        <div className="gecko-stack gecko-stack-lg" style={{ padding: '22px 24px', flex: 1, overflowY: 'auto' }}>
+        <div className="gecko-modal-body gecko-stack gecko-stack-lg">
 
           <div className="gecko-banner gecko-banner-info">
             <Icon name="info" size={16} className="gecko-banner-icon" />
@@ -785,9 +852,9 @@ function RegenerateModal({ charges, onClose }: RegenerateModalProps) {
               <div className="gecko-eyebrow gecko-mb-2" style={{ color: 'var(--gecko-success-700)' }}>Will be updated ({willUpdate.length} charges)</div>
               <div className="gecko-stack gecko-stack-xs">
                 {willUpdate.map(c => (
-                  <div key={c.id} className="gecko-banner gecko-banner-success gecko-row-between" style={{ padding: '6px 10px', fontSize: 12 }}>
+                  <div key={c.id} className="gecko-banner gecko-banner-success gecko-row-between">
                     <span className="gecko-id-link">{c.chargeCode}</span>
-                    <span style={{ color: 'var(--gecko-text-secondary)' }}>{c.chargeDesc}</span>
+                    <span className="gecko-cell-meta">{c.chargeDesc}</span>
                     <span className="gecko-money gecko-money-sm" style={{ color: 'var(--gecko-success-700)' }}>{fmt(c.sellingRate)}</span>
                   </div>
                 ))}
@@ -800,10 +867,20 @@ function RegenerateModal({ charges, onClose }: RegenerateModalProps) {
               <div className="gecko-eyebrow gecko-mb-2">Will be skipped ({willSkip.length} charges)</div>
               <div className="gecko-stack gecko-stack-xs">
                 {willSkip.map(c => (
-                  <div key={c.id} className="gecko-row gecko-row-between" style={{ padding: '6px 10px', background: 'var(--gecko-bg-subtle)', border: '1px solid var(--gecko-border)', borderRadius: 6, fontSize: 12, opacity: 0.7 }}>
+                  <div
+                    key={c.id}
+                    className="gecko-row gecko-row-between"
+                    style={{
+                      padding: '6px 10px',
+                      background: 'var(--gecko-bg-subtle)',
+                      border: '1px solid var(--gecko-border)',
+                      borderRadius: 6,
+                      opacity: 0.7,
+                    }}
+                  >
                     <span className="gecko-mono-strong">{c.chargeCode}</span>
-                    <span style={{ color: 'var(--gecko-text-secondary)' }}>{c.chargeDesc}</span>
-                    <span style={{ color: 'var(--gecko-text-disabled)', fontSize: 11 }}>{c.isLocked ? 'Rate locked' : 'Invoiced'}</span>
+                    <span className="gecko-cell-meta">{c.chargeDesc}</span>
+                    <span className="gecko-helper-text">{c.isLocked ? 'Rate locked' : 'Invoiced'}</span>
                   </div>
                 ))}
               </div>
@@ -812,7 +889,7 @@ function RegenerateModal({ charges, onClose }: RegenerateModalProps) {
 
         </div>
 
-        <div className="gecko-action-toolbar" style={{ padding: '14px 24px', borderTop: '1px solid var(--gecko-border)', borderRadius: '0 0 12px 12px' }}>
+        <div className="gecko-modal-footer">
           <button className="gecko-btn gecko-btn-outline gecko-btn-sm" onClick={onClose}>Cancel</button>
           <button onClick={handleRegenerate} className="gecko-btn gecko-btn-danger gecko-btn-sm">
             <Icon name="refreshCcw" size={13} /> Regenerate Now
@@ -846,31 +923,46 @@ function WaiveModal({ selectedCharges, customerName, onClose }: WaiveModalProps)
 
   return (
     <div className="gecko-overlay" onClick={e => { if (e.target === e.currentTarget) onClose(); }}>
-      <div className="gecko-modal gecko-modal-sm gecko-stack" style={{ gap: 0 }}>
+      <div className="gecko-modal gecko-modal-sm gecko-stack gecko-stack-xs">
 
-        <div className="gecko-row gecko-row-between gecko-row-start" style={{ padding: '18px 24px', borderBottom: '1px solid var(--gecko-border)', background: 'var(--gecko-warning-50)', borderRadius: '12px 12px 0 0', flexShrink: 0, gap: 16 }}>
+        <div
+          className="gecko-modal-header"
+          style={{ background: 'var(--gecko-warning-50)', borderRadius: '12px 12px 0 0' }}
+        >
           <div className="gecko-row">
             <Icon name="warning" size={16} style={{ color: 'var(--gecko-warning-600)' }} />
-            <span style={{ fontSize: 16, fontWeight: 800 }}>Waive Selected Charges</span>
+            <span className="gecko-modal-title">Waive Selected Charges</span>
           </div>
-          <button onClick={onClose} className="gecko-icon-btn-ghost" style={{ width: 32, height: 32, fontSize: 17 }}>×</button>
+          <ModalCloseBtn onClose={onClose} />
         </div>
 
-        <div className="gecko-stack gecko-stack-lg" style={{ padding: '22px 24px', flex: 1, overflowY: 'auto' }}>
+        <div className="gecko-modal-body gecko-stack gecko-stack-lg">
 
-          <div style={{ fontSize: 13, color: 'var(--gecko-text-secondary)' }}>
+          <div className="gecko-modal-description">
             Waiving <strong style={{ color: 'var(--gecko-text-primary)' }}>{selectedCharges.length} charge{selectedCharges.length !== 1 ? 's' : ''}</strong> for <strong style={{ color: 'var(--gecko-text-primary)' }}>{customerName}</strong>
           </div>
 
           <div className="gecko-stack gecko-stack-xs">
             {selectedCharges.map(c => (
-              <div key={c.id} className="gecko-row gecko-row-between" style={{ padding: '6px 10px', background: 'var(--gecko-bg-subtle)', border: '1px solid var(--gecko-border)', borderRadius: 6, fontSize: 12 }}>
+              <div
+                key={c.id}
+                className="gecko-row gecko-row-between"
+                style={{
+                  padding: '6px 10px',
+                  background: 'var(--gecko-bg-subtle)',
+                  border: '1px solid var(--gecko-border)',
+                  borderRadius: 6,
+                }}
+              >
                 <span className="gecko-id-link">{c.chargeCode}</span>
-                <span style={{ color: 'var(--gecko-text-secondary)' }}>{c.chargeDesc}</span>
+                <span className="gecko-cell-meta">{c.chargeDesc}</span>
                 <span className="gecko-money gecko-money-sm">{fmt(c.sellingRate * c.qty)}</span>
               </div>
             ))}
-            <div className="gecko-row gecko-row-right" style={{ padding: '8px 10px 0', borderTop: '2px solid var(--gecko-border)', marginTop: 4 }}>
+            <div
+              className="gecko-row gecko-row-right gecko-mt-1"
+              style={{ padding: '8px 10px 0', borderTop: '2px solid var(--gecko-border)' }}
+            >
               <span className="gecko-money gecko-money-lg" style={{ color: 'var(--gecko-warning-700)' }}>Total waived: {fmt(totalWaived)}</span>
             </div>
           </div>
@@ -894,12 +986,19 @@ function WaiveModal({ selectedCharges, customerName, onClose }: WaiveModalProps)
 
           <div className="gecko-form-group">
             <label className="gecko-label">Notes (optional)</label>
-            <textarea className="gecko-input" value={notes} onChange={e => setNotes(e.target.value)} rows={3} style={{ resize: 'vertical', lineHeight: 1.55 }} placeholder="Additional context..." />
+            <textarea
+              className="gecko-input"
+              value={notes}
+              onChange={e => setNotes(e.target.value)}
+              rows={3}
+              style={{ resize: 'vertical', lineHeight: 1.55 }}
+              placeholder="Additional context..."
+            />
           </div>
 
         </div>
 
-        <div className="gecko-action-toolbar" style={{ padding: '14px 24px', borderTop: '1px solid var(--gecko-border)', borderRadius: '0 0 12px 12px' }}>
+        <div className="gecko-modal-footer">
           <button className="gecko-btn gecko-btn-outline gecko-btn-sm" onClick={onClose}>Cancel</button>
           <button onClick={handleWaive} disabled={!canConfirm} className="gecko-btn gecko-btn-warning gecko-btn-sm">
             <Icon name="check" size={13} /> Confirm Waiver
@@ -988,28 +1087,20 @@ function GroupedSelectMenu({ charges, onSetSelection, onDeselectAll }: {
     <button
       onClick={onClick}
       disabled={disabled}
-      className="gecko-row gecko-row-between"
+      className="gecko-dropdown-item gecko-row gecko-row-between"
       style={{
-        width: '100%', padding: '7px 14px',
-        background: 'transparent', border: 'none',
-        cursor: disabled ? 'not-allowed' : 'pointer',
-        textAlign: 'left', fontFamily: 'inherit',
         gap: 12,
+        cursor: disabled ? 'not-allowed' : 'pointer',
         opacity: disabled ? 0.45 : 1,
       }}
-      onMouseEnter={e => { if (!disabled) e.currentTarget.style.background = 'var(--gecko-bg-subtle)'; }}
-      onMouseLeave={e => { e.currentTarget.style.background = 'transparent'; }}
     >
-      <span className="gecko-row" style={{
-        fontSize: 12, fontWeight: 600, color: 'var(--gecko-text-primary)',
-        fontFamily: mono ? 'var(--gecko-font-mono)' : 'inherit',
-      }}>
+      <span className={mono ? 'gecko-row gecko-mono gecko-cell-primary' : 'gecko-row gecko-cell-primary'}>
         {tone === 'success' && <span style={{ width: 6, height: 6, borderRadius: '50%', background: 'var(--gecko-success-500)' }} />}
         {tone === 'info'    && <span style={{ width: 6, height: 6, borderRadius: '50%', background: 'var(--gecko-info-500)' }} />}
         {label}
       </span>
       {meta && (
-        <span style={{ fontSize: 11, fontFamily: 'var(--gecko-font-mono)', color: 'var(--gecko-text-secondary)' }}>
+        <span className="gecko-mono gecko-cell-meta">
           {meta}
         </span>
       )}
@@ -1019,20 +1110,26 @@ function GroupedSelectMenu({ charges, onSetSelection, onDeselectAll }: {
   return (
     <div ref={ref} style={{ position: 'relative' }}>
       <button
-        className="gecko-btn gecko-btn-outline gecko-btn-sm"
+        className="gecko-btn gecko-btn-outline gecko-btn-sm gecko-inline-row"
         onClick={() => setOpen(o => !o)}
-        style={{ display: 'inline-flex', alignItems: 'center', gap: 5 }}
       >
         <Icon name="checkSquare" size={13} />
         Select
         <Icon name="chevronDown" size={12} />
       </button>
       {open && (
-        <div className="gecko-floating-card" style={{
-          position: 'absolute', left: 0, top: 'calc(100% + 6px)',
-          width: 320, maxHeight: 480, overflowY: 'auto',
-          zIndex: 200,
-        }}>
+        <div
+          className="gecko-floating-card"
+          style={{
+            position: 'absolute',
+            left: 0,
+            top: 'calc(100% + 6px)',
+            width: 320,
+            maxHeight: 480,
+            overflowY: 'auto',
+            zIndex: 200,
+          }}
+        >
           <Section title="Quick">
             <Row
               label={`Select all pending`}
@@ -1206,12 +1303,15 @@ export default function BillingStatementPage() {
 
   if (!activeStatement) {
     return (
-      <div className="gecko-stack gecko-stack-xl" style={{ maxWidth: 'var(--gecko-container-max)', margin: '0 auto', paddingBottom: 40 }}>
+      <div
+        className="gecko-stack gecko-stack-xl"
+        style={{ maxWidth: 'var(--gecko-container-max)', margin: '0 auto', paddingBottom: 40 }}
+      >
 
         {/* Header */}
         <div className="gecko-page-actions">
           <div className="gecko-page-actions-left">
-            <div className="gecko-row gecko-row-baseline" style={{ gap: 12 }}>
+            <div className="gecko-row gecko-row-baseline gecko-stack-md">
               <h1 className="gecko-page-title">Billing Statements</h1>
               <span className="gecko-count-badge">{STATEMENTS.length} total</span>
             </div>
@@ -1262,7 +1362,7 @@ export default function BillingStatementPage() {
                 <tr>
                   <td colSpan={13} style={{ textAlign: 'center', padding: '48px 24px', color: 'var(--gecko-text-secondary)' }}>
                     <Icon name="filter" size={28} style={{ color: 'var(--gecko-text-disabled)', display: 'block', margin: '0 auto 10px' }} />
-                    <div style={{ fontWeight: 600, fontSize: 14 }}>No statements match the current filters</div>
+                    <div className="gecko-card-title">No statements match the current filters</div>
                   </td>
                 </tr>
               )}
@@ -1279,12 +1379,12 @@ export default function BillingStatementPage() {
                         {s.bookingNo}
                       </span>
                     </td>
-                    <td className="gecko-mono" style={{ fontSize: 12, color: 'var(--gecko-text-secondary)' }}>{s.orderNo}</td>
+                    <td className="gecko-mono gecko-cell-meta">{s.orderNo}</td>
                     <td><BookingTypeBadge type={s.bookingType} /></td>
-                    <td style={{ fontSize: 12, color: 'var(--gecko-text-secondary)' }}>{s.orderType}</td>
-                    <td className="gecko-truncate" style={{ fontSize: 12, color: 'var(--gecko-text-secondary)' }}>{s.vesselVoyage}</td>
-                    <td className="gecko-mono-strong" style={{ fontSize: 12 }}>{s.agentCode}</td>
-                    <td className="gecko-truncate" style={{ fontSize: 12.5 }} title={s.customerName}>{s.customerName}</td>
+                    <td className="gecko-cell-meta">{s.orderType}</td>
+                    <td className="gecko-truncate gecko-cell-meta">{s.vesselVoyage}</td>
+                    <td className="gecko-mono-strong">{s.agentCode}</td>
+                    <td className="gecko-truncate gecko-cell-primary" title={s.customerName}>{s.customerName}</td>
                     <td className="gecko-num-tabular" style={{ textAlign: 'center', fontWeight: 700 }}>{s.containers.length}</td>
                     <td className="gecko-money gecko-money-sm" style={{ color: 'var(--gecko-primary-600)' }}>{fmt(s.totalBillable)}</td>
                     <td className="gecko-money gecko-money-sm" style={{ fontWeight: 600, color: 'var(--gecko-success-700)' }}>{fmt(s.billedAmount)}</td>
@@ -1331,66 +1431,78 @@ export default function BillingStatementPage() {
   const unbilledDetail = activeStatement.totalBillable - activeStatement.billedAmount;
 
   return (
-    <div className="gecko-stack gecko-stack-lg" style={{ maxWidth: 'var(--gecko-container-max)', margin: '0 auto', gap: 20, paddingBottom: 40 }}>
+    <div
+      className="gecko-stack gecko-stack-lg"
+      style={{ maxWidth: 'var(--gecko-container-max)', margin: '0 auto', gap: 20, paddingBottom: 40 }}
+    >
 
       {/* Breadcrumb + back */}
-      <div className="gecko-row" style={{ fontSize: 13, color: 'var(--gecko-text-secondary)' }}>
+      <div className="gecko-row gecko-cell-meta">
         <button
           onClick={() => setActiveStatement(null)}
           className="gecko-row gecko-icon-btn-ghost"
-          style={{ gap: 6, color: 'var(--gecko-primary-600)', fontWeight: 600, fontSize: 13 }}
+          style={{ gap: 6, color: 'var(--gecko-primary-600)', fontWeight: 600 }}
         >
           <Icon name="arrowLeft" size={14} /> Billing Statements
         </button>
         <span style={{ color: 'var(--gecko-text-disabled)' }}>/</span>
-        <span className="gecko-mono-strong" style={{ fontSize: 13 }}>{activeStatement.bookingNo}</span>
+        <span className="gecko-mono-strong">{activeStatement.bookingNo}</span>
       </div>
 
       {/* Header Card */}
-      <div className="gecko-card" style={{ boxShadow: 'var(--gecko-shadow-sm)', padding: '18px 24px' }}>
-        <div className="gecko-row gecko-row-start" style={{ gap: 24 }}>
+      <div className="gecko-card gecko-card-padded">
+        <div className="gecko-row gecko-row-start gecko-stack-xl">
 
           {/* Left */}
-          <div style={{ flex: '1 1 0', minWidth: 0 }}>
-            <div className="gecko-row gecko-row-wrap" style={{ gap: 10, marginBottom: 10 }}>
-              <span className="gecko-mono" style={{ fontWeight: 800, fontSize: 20, color: 'var(--gecko-text-primary)', letterSpacing: '0.02em' }}>{activeStatement.bookingNo}</span>
+          <div className="gecko-flex-1">
+            <div className="gecko-row gecko-row-wrap gecko-stack-md gecko-mb-3">
+              <span
+                className="gecko-mono"
+                style={{ fontWeight: 800, fontSize: 20, color: 'var(--gecko-text-primary)', letterSpacing: '0.02em' }}
+              >
+                {activeStatement.bookingNo}
+              </span>
               <BookingTypeBadge type={activeStatement.bookingType} />
               <StatementStatusBadge status={activeStatement.status} />
             </div>
             <div className="gecko-stack gecko-stack-xs">
               <div className="gecko-page-subtitle">
-                <span style={{ fontWeight: 700, color: 'var(--gecko-text-primary)' }}>Agent:</span>{' '}
+                <strong style={{ color: 'var(--gecko-text-primary)' }}>Agent:</strong>{' '}
                 <span className="gecko-id-link">{activeStatement.agentCode}</span>
                 {' — '}{activeStatement.agentName}
               </div>
               <div className="gecko-page-subtitle">
-                <span style={{ fontWeight: 700, color: 'var(--gecko-text-primary)' }}>Customer:</span>{' '}
+                <strong style={{ color: 'var(--gecko-text-primary)' }}>Customer:</strong>{' '}
                 <span className="gecko-id-link">{activeStatement.customerCode}</span>
                 {' — '}{activeStatement.customerName}
               </div>
               <div className="gecko-page-subtitle">
-                <span style={{ fontWeight: 700, color: 'var(--gecko-text-primary)' }}>Order Type:</span> {activeStatement.orderType}
+                <strong style={{ color: 'var(--gecko-text-primary)' }}>Order Type:</strong> {activeStatement.orderType}
                 {'  '}
-                <span style={{ fontWeight: 700, color: 'var(--gecko-text-primary)' }}>Vessel:</span> {activeStatement.vesselVoyage}
+                <strong style={{ color: 'var(--gecko-text-primary)' }}>Vessel:</strong> {activeStatement.vesselVoyage}
               </div>
               <div className="gecko-page-subtitle">
-                <span style={{ fontWeight: 700, color: 'var(--gecko-text-primary)' }}>Sub-B/L:</span>{' '}
+                <strong style={{ color: 'var(--gecko-text-primary)' }}>Sub-B/L:</strong>{' '}
                 <span className="gecko-mono">{activeStatement.subBlNo}</span>
                 {'  '}
-                <span style={{ fontWeight: 700, color: 'var(--gecko-text-primary)' }}>Order No:</span>{' '}
+                <strong style={{ color: 'var(--gecko-text-primary)' }}>Order No:</strong>{' '}
                 <span className="gecko-mono">{activeStatement.orderNo}</span>
               </div>
             </div>
           </div>
 
           {/* Right — stat boxes */}
-          <div className="gecko-row gecko-flex-shrink-0" style={{ gap: 10 }}>
+          <div className="gecko-row gecko-flex-shrink-0 gecko-stack-md">
             {[
               { label: 'Total Billable', value: activeStatement.totalBillable, color: 'var(--gecko-primary-700)' },
               { label: 'Billed',         value: activeStatement.billedAmount,  color: 'var(--gecko-success-700)' },
               { label: 'Unbilled',       value: unbilledDetail,                color: unbilledDetail > 0 ? 'var(--gecko-danger-700)' : 'var(--gecko-success-700)' },
             ].map(stat => (
-              <div key={stat.label} className="gecko-stat-card" style={{ textAlign: 'right', minWidth: 120, padding: '10px 18px' }}>
+              <div
+                key={stat.label}
+                className="gecko-stat-card"
+                style={{ textAlign: 'right', minWidth: 120, padding: '10px 18px' }}
+              >
                 <div className="gecko-eyebrow">{stat.label}</div>
                 <div className="gecko-money gecko-money-lg" style={{ color: stat.color }}>{fmt(stat.value)}</div>
               </div>
@@ -1400,9 +1512,9 @@ export default function BillingStatementPage() {
       </div>
 
       {/* Detail Toolbar */}
-      <div className="gecko-page-actions" style={{ paddingTop: 0 }}>
-        <div className="gecko-page-actions-left gecko-row" style={{ gap: 10 }}>
-          <span style={{ fontSize: 15, fontWeight: 700, color: 'var(--gecko-text-primary)' }}>Charges</span>
+      <div className="gecko-page-actions">
+        <div className="gecko-page-actions-left gecko-row gecko-stack-md">
+          <span className="gecko-card-title">Charges</span>
           <span className="gecko-count-badge">{charges.length} lines</span>
           {selectedRows.size > 0 && (
             <span className="gecko-pill gecko-pill-primary">
@@ -1426,14 +1538,16 @@ export default function BillingStatementPage() {
           {/* Add Charge dropdown */}
           <div style={{ position: 'relative' }} ref={actionMenuRef}>
             <button
-              className="gecko-btn gecko-btn-outline gecko-btn-sm gecko-row"
+              className="gecko-btn gecko-btn-outline gecko-btn-sm gecko-inline-row"
               onClick={() => setShowActionMenu(v => !v)}
-              style={{ gap: 5 }}
             >
               Add Charge <Icon name="chevronDown" size={13} />
             </button>
             {showActionMenu && (
-              <div className="gecko-floating-card" style={{ position: 'absolute', top: '100%', right: 0, marginTop: 4, zIndex: 200, minWidth: 260, overflow: 'hidden' }}>
+              <div
+                className="gecko-floating-card"
+                style={{ position: 'absolute', top: '100%', right: 0, marginTop: 4, zIndex: 200, minWidth: 260, overflow: 'hidden' }}
+              >
                 <button className="gecko-dropdown-item" onClick={() => { selectAll(); setShowActionMenu(false); }}>Select All</button>
                 <button className="gecko-dropdown-item" onClick={() => { deselectAll(); setShowActionMenu(false); }}>Unselect All</button>
                 <div className="gecko-dropdown-divider" />
@@ -1465,12 +1579,15 @@ export default function BillingStatementPage() {
         {charges.length === 0 ? (
           <div style={{ padding: '56px 24px', textAlign: 'center', color: 'var(--gecko-text-secondary)' }}>
             <Icon name="fileText" size={32} style={{ color: 'var(--gecko-text-disabled)', display: 'block', margin: '0 auto 12px' }} />
-            <div style={{ fontWeight: 600, fontSize: 14, marginBottom: 4 }}>No charges yet</div>
-            <div style={{ fontSize: 12 }}>Use &quot;+ Manual Charge&quot; to add the first line.</div>
+            <div className="gecko-card-title gecko-mb-1">No charges yet</div>
+            <div className="gecko-helper-text">Use &quot;+ Manual Charge&quot; to add the first line.</div>
           </div>
         ) : (
           <>
-            <table className="gecko-table gecko-table-comfortable" style={{ fontSize: 12.5, tableLayout: 'fixed', width: '100%' }}>
+            <table
+              className="gecko-table gecko-table-comfortable"
+              style={{ fontSize: 12.5, tableLayout: 'fixed', width: '100%' }}
+            >
               <thead>
                 <tr>
                   <th style={{ width: 36, textAlign: 'center' }}>
@@ -1507,7 +1624,7 @@ export default function BillingStatementPage() {
                       <td style={{ textAlign: 'center' }}>
                         <input type="checkbox" checked={isSelected} onChange={() => toggleRow(charge.id)} style={{ cursor: 'pointer' }} />
                       </td>
-                      <td style={{ textAlign: 'center', color: 'var(--gecko-text-disabled)', fontSize: 11 }}>{chargesPagination.startRow + idx}</td>
+                      <td className="gecko-helper-text" style={{ textAlign: 'center', marginTop: 0 }}>{chargesPagination.startRow + idx}</td>
                       <td>
                         <span
                           className="gecko-id-link"
@@ -1519,22 +1636,26 @@ export default function BillingStatementPage() {
                       </td>
                       <td style={{ textAlign: 'center', background: charge.isLocked ? 'var(--gecko-warning-50)' : undefined }}>
                         {charge.isLocked && (
-                          <span title="Rate locked — excluded from Regenerate" style={{ color: 'var(--gecko-warning-600)', display: 'inline-flex', alignItems: 'center' }}>
+                          <span
+                            title="Rate locked — excluded from Regenerate"
+                            className="gecko-inline-row"
+                            style={{ color: 'var(--gecko-warning-600)' }}
+                          >
                             <Icon name="lock" size={12} />
                           </span>
                         )}
                       </td>
                       <td style={{ textDecoration: charge.isWaived ? 'line-through' : undefined, color: 'var(--gecko-text-primary)' }}>{charge.chargeDesc}</td>
-                      <td className="gecko-mono" style={{ fontSize: 12 }}>{charge.containerNo}</td>
-                      <td className="gecko-mono-strong" style={{ textAlign: 'center', fontSize: 12, color: 'var(--gecko-text-secondary)' }}>{charge.size} {charge.ctrType}</td>
-                      <td style={{ fontSize: 12, color: 'var(--gecko-text-secondary)' }}>{charge.movementCode}</td>
+                      <td className="gecko-mono gecko-cell-meta">{charge.containerNo}</td>
+                      <td className="gecko-mono-strong gecko-cell-meta" style={{ textAlign: 'center', marginTop: 0, fontFamily: 'var(--gecko-font-mono)' }}>{charge.size} {charge.ctrType}</td>
+                      <td className="gecko-cell-meta">{charge.movementCode}</td>
                       <td style={{ textAlign: 'center' }}><PaymentTermBadge term={charge.paymentTerm} /></td>
-                      <td style={{ fontSize: 11.5, color: 'var(--gecko-text-secondary)', fontWeight: 600 }}>{charge.paymentTo}</td>
-                      <td className="gecko-num-tabular" style={{ color: 'var(--gecko-text-secondary)' }}>{charge.qty.toFixed(3)}</td>
+                      <td className="gecko-cell-meta" style={{ marginTop: 0, fontWeight: 600 }}>{charge.paymentTo}</td>
+                      <td className="gecko-num-tabular gecko-cell-meta">{charge.qty.toFixed(3)}</td>
                       <td className="gecko-money gecko-money-sm" style={{ textDecoration: charge.isWaived ? 'line-through' : undefined }}>
                         {fmt(charge.sellingRate)}
                       </td>
-                      <td className="gecko-num-tabular" style={{ fontSize: 11.5, color: 'var(--gecko-text-secondary)' }}>
+                      <td className="gecko-num-tabular gecko-cell-meta">
                         {charge.quotation || <span style={{ color: 'var(--gecko-text-disabled)' }}>—</span>}
                       </td>
                       <td style={{ textAlign: 'center' }}><ChargeStatusBadge status={charge.status} /></td>
@@ -1553,7 +1674,7 @@ export default function BillingStatementPage() {
               </tbody>
               <tfoot>
                 <tr style={{ background: 'var(--gecko-bg-subtle)', borderTop: '2px solid var(--gecko-border)' }}>
-                  <td colSpan={11} style={{ textAlign: 'right', fontWeight: 700, fontSize: 12, color: 'var(--gecko-text-secondary)', paddingRight: 12 }}>Subtotal (non-waived)</td>
+                  <td className="gecko-eyebrow" colSpan={11} style={{ textAlign: 'right', paddingRight: 12 }}>Subtotal (non-waived)</td>
                   <td className="gecko-money gecko-money-md" style={{ fontWeight: 800, color: 'var(--gecko-primary-700)', paddingRight: 12 }}>{fmt(chargesSubtotal)}</td>
                   <td colSpan={3} />
                 </tr>

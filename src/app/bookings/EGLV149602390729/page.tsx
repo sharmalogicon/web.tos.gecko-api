@@ -152,7 +152,7 @@ function ContainerDrawer({ container, onClose, onDuplicate, onDelete }: {
       {/* Drawer */}
       <div className="gecko-drawer" style={{ width: 480 }}>
 
-        {/* Drawer header */}
+        {/* Drawer header — branded primary-600 bar (kept inline: header tone is dynamic per drawer) */}
         <div style={{ padding: '16px 20px', background: 'var(--gecko-primary-600)', flexShrink: 0 }}>
           <div className="gecko-row gecko-row-between">
             <div className="gecko-row" style={{ gap: 10 }}>
@@ -172,15 +172,15 @@ function ContainerDrawer({ container, onClose, onDuplicate, onDelete }: {
         </div>
 
         {/* Drawer body */}
-        <div style={{ flex: 1, overflowY: 'auto', padding: '0 20px 20px' }}>
+        <div className="gecko-flex-1" style={{ overflowY: 'auto', padding: '0 20px 20px' }}>
 
           {/* ── Container Info ── */}
-          <div style={{ paddingTop: 20 }}>
+          <div className="gecko-mt-5">
             <div className="gecko-eyebrow gecko-mb-3">Container Info</div>
 
             {/* Container No (full width) */}
             <div className="gecko-form-group gecko-mb-3">
-              <label className="gecko-label">Container No <span style={{ fontSize: 10, color: 'var(--gecko-text-disabled)' }}>(leave blank if not yet nominated)</span></label>
+              <label className="gecko-label">Container No <span className="gecko-helper-text" style={{ marginTop: 0, display: 'inline' }}>(leave blank if not yet nominated)</span></label>
               <input className="gecko-input gecko-text-mono" value={form.containerNo} onChange={e => set('containerNo', e.target.value)} placeholder="e.g. EITU9845677" />
             </div>
 
@@ -188,7 +188,7 @@ function ContainerDrawer({ container, onClose, onDuplicate, onDelete }: {
             <div className="gecko-grid-2">
               <div className="gecko-form-group">
                 <label className="gecko-label gecko-label-required">Type — Size</label>
-                <div className="gecko-grid-2" style={{ gap: 6 }}>
+                <div className="gecko-grid-2 gecko-stack-sm" style={{ gap: 6 }}>
                   <select className="gecko-input" value={form.size} onChange={e => set('size', e.target.value)}>
                     {['20', '40', '45'].map(s => <option key={s}>{s}</option>)}
                   </select>
@@ -349,7 +349,7 @@ function ContainerDrawer({ container, onClose, onDuplicate, onDelete }: {
             </div>
 
             {/* Pre-Cool — always editable */}
-            <div className="gecko-form-group" style={{ marginTop: 4 }}>
+            <div className="gecko-form-group gecko-mt-1">
               <label className="gecko-label">Pre-Cool</label>
               <input
                 className="gecko-input" value={form.preCool}
@@ -391,7 +391,7 @@ function ContainerDrawer({ container, onClose, onDuplicate, onDelete }: {
         </div>
 
         {/* Drawer footer */}
-        <div className="gecko-row" style={{ padding: '12px 20px', borderTop: '1px solid var(--gecko-border)', background: 'var(--gecko-bg-subtle)', flexShrink: 0 }}>
+        <div className="gecko-drawer-footer" style={{ justifyContent: 'flex-start' }}>
           <button onClick={onDuplicate} className="gecko-btn gecko-btn-ghost gecko-btn-sm" style={{ color: 'var(--gecko-text-secondary)' }}><Icon name="copy" size={13} /> Duplicate</button>
           <button onClick={onDelete}    className="gecko-btn gecko-btn-ghost gecko-btn-sm" style={{ color: 'var(--gecko-danger-600)' }}><Icon name="trash" size={13} /> Delete</button>
           <div className="gecko-flex-1" />
@@ -419,7 +419,7 @@ function TabVoyage() {
     <div className="gecko-stack gecko-stack-xs">
       <div className="gecko-eyebrow">{label}</div>
       {editMode
-        ? <input className="gecko-input gecko-input-sm" defaultValue={value} style={mono ? { fontFamily: 'var(--gecko-font-mono)' } : {}} />
+        ? <input className={`gecko-input gecko-input-sm${mono ? ' gecko-text-mono' : ''}`} defaultValue={value} />
         : <div style={{ fontSize: 13, fontWeight: 600, color: value ? 'var(--gecko-text-primary)' : 'var(--gecko-text-disabled)', fontFamily: mono ? 'var(--gecko-font-mono)' : 'inherit' }}>{value || '—'}</div>
       }
     </div>
@@ -600,14 +600,14 @@ function TabContainers({ onSelectContainer, onAddContainer, onDeleteContainer, o
   return (
     <div className="gecko-stack gecko-stack-lg" style={{ padding: '20px 24px' }}>
       {/* Mini stats */}
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 1, background: 'var(--gecko-border)', border: '1px solid var(--gecko-border)', borderRadius: 10, overflow: 'hidden' }}>
+      <div className="gecko-kpi-strip">
         {[
           { label: 'Total Containers', val: summary.total,    color: 'var(--gecko-text-primary)'    },
           { label: 'Full In',          val: summary.fullIn,   color: 'var(--gecko-primary-600)'     },
           { label: 'Awaiting',         val: summary.awaiting, color: 'var(--gecko-warning-600)'     },
           { label: 'On Booking',       val: '40HC × 8',       color: 'var(--gecko-text-secondary)'  },
         ].map(s => (
-          <div key={s.label} style={{ padding: '12px 16px', background: 'var(--gecko-bg-surface)', textAlign: 'center' }}>
+          <div key={s.label} className="gecko-kpi-cell" style={{ textAlign: 'center' }}>
             <div className="gecko-stat-num-22" style={{ fontWeight: 800, color: s.color, fontFamily: 'var(--gecko-font-mono)', lineHeight: 1 }}>{s.val}</div>
             <div className="gecko-eyebrow gecko-mt-1">{s.label}</div>
           </div>
@@ -616,13 +616,13 @@ function TabContainers({ onSelectContainer, onAddContainer, onDeleteContainer, o
 
       {/* Toolbar */}
       <div className="gecko-row gecko-stack-md">
-        <div style={{ position: 'relative', flex: 1, maxWidth: 280 }}>
+        <div className="gecko-flex-1" style={{ position: 'relative', maxWidth: 280 }}>
           <Icon name="search" size={13} style={{ position: 'absolute', left: 9, top: '50%', transform: 'translateY(-50%)', color: 'var(--gecko-text-disabled)', pointerEvents: 'none' }} />
           <input className="gecko-input gecko-input-sm" placeholder="Search container no…" value={search} onChange={e => setSearch(e.target.value)} style={{ paddingLeft: 28 }} />
         </div>
-        <div className="gecko-row" style={{ marginLeft: 'auto' }}>
+        <div className="gecko-row gecko-ml-auto">
           {selected.size > 0 && (
-            <span style={{ fontSize: 11, color: 'var(--gecko-primary-700)', background: 'var(--gecko-primary-50)', border: '1px solid var(--gecko-primary-200)', padding: '4px 10px', borderRadius: 6, fontWeight: 600 }}>
+            <span className="gecko-pill gecko-pill-primary" style={{ fontSize: 11, padding: '4px 10px' }}>
               {selected.size} selected
             </span>
           )}
@@ -643,7 +643,7 @@ function TabContainers({ onSelectContainer, onAddContainer, onDeleteContainer, o
       </div>
 
       {/* Table */}
-      <div style={{ border: '1px solid var(--gecko-border)', borderRadius: 10, overflow: 'hidden' }}>
+      <div className="gecko-table-card">
         <table className="gecko-table gecko-table-comfortable" style={{ fontSize: 12.5 }}>
           <thead>
             <tr>
@@ -834,7 +834,7 @@ function TabCargo() {
 function TabAudit() {
   return (
     <div style={{ padding: '24px' }}>
-      <div style={{ border: '1px solid var(--gecko-border)', borderRadius: 10, overflow: 'hidden' }}>
+      <div className="gecko-table-card">
         <table className="gecko-table gecko-table-comfortable" style={{ fontSize: 12 }}>
           <thead>
             <tr>
@@ -847,14 +847,14 @@ function TabAudit() {
           <tbody>
             {AUDIT_LOG.map((a, i) => (
               <tr key={i}>
-                <td style={{ fontFamily: 'var(--gecko-font-mono)', fontSize: 11, color: 'var(--gecko-text-secondary)', whiteSpace: 'nowrap' }}>
+                <td className="gecko-cell-sub" style={{ marginTop: 0, whiteSpace: 'nowrap' }}>
                   {new Date(a.on).toLocaleString('en-GB', { day: '2-digit', month: 'short', hour: '2-digit', minute: '2-digit' })}
                 </td>
                 <td style={{ fontSize: 12, fontWeight: 600, color: a.by.startsWith('System') ? 'var(--gecko-info-700)' : 'var(--gecko-text-primary)' }}>
                   {a.by.startsWith('System') ? <span className="gecko-row" style={{ gap: 5 }}><Icon name="zap" size={11} style={{ color: 'var(--gecko-info-500)' }} />{a.by}</span> : a.by}
                 </td>
                 <td style={{ fontWeight: 500 }}>{a.action}</td>
-                <td style={{ color: 'var(--gecko-text-secondary)', fontSize: 11, fontFamily: 'var(--gecko-font-mono)' }}>{a.field}</td>
+                <td className="gecko-cell-sub" style={{ marginTop: 0 }}>{a.field}</td>
               </tr>
             ))}
           </tbody>
@@ -1036,7 +1036,7 @@ export default function BookingDetailPage() {
             <span style={{ fontWeight: 700, color: 'var(--gecko-text-primary)' }}>{new Date(b.etd).toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' })}</span>
           </div>
 
-          <div className="gecko-row" style={{ marginLeft: 'auto' }}>
+          <div className="gecko-row gecko-ml-auto">
             <Icon name="clock" size={13} style={{ color: urgency.color }} />
             <span style={{ fontSize: 11, color: urgency.color, fontWeight: 600 }}>CY Cut-off in</span>
             <span style={{ fontSize: 13, fontWeight: 800, color: urgency.color, fontFamily: 'var(--gecko-font-mono)', background: urgency.bg, padding: '2px 8px', borderRadius: 6 }}>{cutoffDays}d</span>
@@ -1104,7 +1104,7 @@ export default function BookingDetailPage() {
                 </div>
               ))}
             </div>
-            <div className="gecko-row gecko-row-between" style={{ marginTop: 8, padding: '8px 10px', background: 'var(--gecko-bg-surface)', borderRadius: 8, border: '1px solid var(--gecko-border)' }}>
+            <div className="gecko-row gecko-row-between gecko-mt-2" style={{ padding: '8px 10px', background: 'var(--gecko-bg-surface)', borderRadius: 8, border: '1px solid var(--gecko-border)' }}>
               <span style={{ fontSize: 11, color: 'var(--gecko-text-secondary)' }}>Container mix</span>
               <span style={{ fontSize: 11, fontWeight: 700, fontFamily: 'var(--gecko-font-mono)', color: 'var(--gecko-text-primary)' }}>40HC × {CONTAINERS.length}</span>
             </div>
@@ -1126,7 +1126,7 @@ export default function BookingDetailPage() {
                 const pct = Math.max(3, Math.min(97, (d / 60) * 100));
                 return (
                   <div key={co.label} style={{ padding: '8px 10px', background: 'var(--gecko-bg-surface)', borderRadius: 8, border: '1px solid var(--gecko-border)' }}>
-                    <div className="gecko-row gecko-row-between" style={{ marginBottom: 5 }}>
+                    <div className="gecko-row gecko-row-between gecko-mb-1">
                       <span style={{ fontSize: 10.5, fontWeight: 600, color: 'var(--gecko-text-secondary)' }}>{co.label}</span>
                       <span style={{ fontSize: 11, fontWeight: 800, color: u.color, fontFamily: 'var(--gecko-font-mono)' }}>{d}d</span>
                     </div>
@@ -1159,7 +1159,7 @@ export default function BookingDetailPage() {
           </div>
 
           {/* Barcode Card */}
-          <div className="gecko-card" style={{ padding: 14 }}>
+          <div className="gecko-card gecko-card-tight">
             <div className="gecko-eyebrow gecko-mb-3">Document Barcodes</div>
             <div className="gecko-stack" style={{ gap: 10 }}>
               <div>
@@ -1179,11 +1179,11 @@ export default function BookingDetailPage() {
               { label: 'Created by', val: b.createdBy,   sub: new Date(b.createdOn).toLocaleString('en-GB', { day:'2-digit', month:'short', hour:'2-digit', minute:'2-digit' }) },
               { label: 'Modified by', val: b.modifiedBy, sub: new Date(b.modifiedOn).toLocaleString('en-GB', { day:'2-digit', month:'short', hour:'2-digit', minute:'2-digit' }) },
             ].map(m => (
-              <div key={m.label} className="gecko-row gecko-row-between" style={{ marginBottom: 6 }}>
+              <div key={m.label} className="gecko-row gecko-row-between gecko-mb-2">
                 <span style={{ fontSize: 10, color: 'var(--gecko-text-disabled)' }}>{m.label}</span>
                 <div style={{ textAlign: 'right' }}>
                   <div style={{ fontSize: 11, fontWeight: 600, color: 'var(--gecko-text-secondary)' }}>{m.val}</div>
-                  <div style={{ fontSize: 10, color: 'var(--gecko-text-disabled)', fontFamily: 'var(--gecko-font-mono)' }}>{m.sub}</div>
+                  <div className="gecko-cell-sub" style={{ marginTop: 0 }}>{m.sub}</div>
                 </div>
               </div>
             ))}
@@ -1386,7 +1386,7 @@ function ExpandedContainerPanel({ container, orderType, onManageVAS, onEdit }: {
           Edit container
         </button>
         <span style={{ fontSize: 10, color: 'var(--gecko-text-disabled)', marginLeft: 'auto' }}>
-          Container <strong style={{ fontFamily: 'var(--gecko-font-mono)' }}>{container.containerNo || 'TBA'}</strong>
+          Container <strong className="gecko-mono">{container.containerNo || 'TBA'}</strong>
         </span>
       </div>
     </div>
@@ -1476,23 +1476,23 @@ function AddMultipleContainersModal({ onCancel, onConfirm }: {
           <Icon name="plus" size={16} style={{ color: 'var(--gecko-primary-600)' }} />
           <div className="gecko-flex-1">
             <div style={{ fontSize: 15, fontWeight: 700 }}>Add multiple containers</div>
-            <div style={{ fontSize: 11, color: 'var(--gecko-text-secondary)', marginTop: 2 }}>Containers are added with blank container numbers — fill them in as each truck arrives.</div>
+            <div className="gecko-card-subtitle">Containers are added with blank container numbers — fill them in as each truck arrives.</div>
           </div>
           <button onClick={onCancel} className="gecko-btn gecko-btn-ghost gecko-btn-sm gecko-btn-icon"><Icon name="x" size={14} /></button>
         </div>
 
-        <div className="gecko-stack" style={{ padding: 20, gap: 14 }}>
+        <div className="gecko-stack gecko-stack-lg" style={{ padding: 20 }}>
           <div className="gecko-field">
             <div className="gecko-field-label gecko-field-required">Number of containers</div>
             <input
               type="number" min="1" max="500"
-              className="gecko-input"
+              className="gecko-input gecko-text-mono"
               value={count}
               onChange={e => setCount(Math.max(1, Math.min(500, parseInt(e.target.value) || 1)))}
-              style={{ fontFamily: 'var(--gecko-font-mono)', fontWeight: 700 }}
+              style={{ fontWeight: 700 }}
               autoFocus
             />
-            <div className="gecko-field-helper" style={{ marginTop: 4 }}>Max 500 per batch.</div>
+            <div className="gecko-field-helper gecko-mt-1">Max 500 per batch.</div>
           </div>
 
           <div className="gecko-grid-2">
@@ -1624,7 +1624,7 @@ function VasDrawer({ mode, containerIds, availableVAS, orderTypeCode, initialSel
         </div>
 
         <div className="gecko-row gecko-row-between" style={{ padding: '14px 20px', borderTop: '1px solid var(--gecko-border)', background: 'var(--gecko-bg-subtle)' }}>
-          <span style={{ fontSize: 11, color: 'var(--gecko-text-secondary)' }}>
+          <span className="gecko-card-subtitle" style={{ marginTop: 0 }}>
             <strong>{picked.size}</strong> VAS line{picked.size === 1 ? '' : 's'} selected
           </span>
           <div className="gecko-row">
@@ -1661,7 +1661,7 @@ function OrderTypeChangeConfirm({ from, to, onCancel, onConfirm }: {
         </div>
         <div style={{ padding: 20, fontSize: 13, color: 'var(--gecko-text-primary)', lineHeight: 1.6 }}>
           <p style={{ margin: 0 }}>
-            You&apos;re switching from <strong style={{ fontFamily: 'var(--gecko-font-mono)' }}>{from}</strong> ({fromOT?.description ?? '—'}) to <strong style={{ fontFamily: 'var(--gecko-font-mono)' }}>{to}</strong> ({toOT?.description ?? '—'}).
+            You&apos;re switching from <strong className="gecko-mono">{from}</strong> ({fromOT?.description ?? '—'}) to <strong className="gecko-mono">{to}</strong> ({toOT?.description ?? '—'}).
           </p>
           <ul style={{ margin: '12px 0 0', paddingLeft: 18, fontSize: 12, color: 'var(--gecko-text-secondary)' }}>
             <li><strong>Existing transactions</strong> (FULL IN, LOAD, etc.) <em>are preserved</em>.</li>
@@ -1761,10 +1761,10 @@ function TransferContainersModal({
           </button>
         </div>
 
-        <div className="gecko-stack" style={{ flex: 1, overflowY: 'auto', padding: 20, gap: 18 }}>
+        <div className="gecko-stack gecko-flex-1" style={{ overflowY: 'auto', padding: 20, gap: 18 }}>
 
           <div>
-            <div className="gecko-eyebrow gecko-row gecko-mb-3" style={{ marginBottom: 10 }}>
+            <div className="gecko-eyebrow gecko-row gecko-mb-2">
               <Icon name="anchor" size={11} />
               Same vessel · voyage — top {similar.length}
               <span style={{ fontWeight: 500, color: 'var(--gecko-text-disabled)', textTransform: 'none', letterSpacing: 0 }}>
@@ -1772,7 +1772,7 @@ function TransferContainersModal({
               </span>
             </div>
             {similar.length === 0 ? (
-              <div style={{ padding: 12, fontSize: 11, color: 'var(--gecko-text-disabled)', fontStyle: 'italic', textAlign: 'center', background: 'var(--gecko-bg-subtle)', borderRadius: 8 }}>
+              <div className="gecko-empty-card" style={{ fontStyle: 'italic', fontSize: 11 }}>
                 No other bookings on this vessel / voyage.
               </div>
             ) : (
@@ -1781,7 +1781,7 @@ function TransferContainersModal({
           </div>
 
           <div>
-            <div className="gecko-eyebrow gecko-row" style={{ marginBottom: 10 }}>
+            <div className="gecko-eyebrow gecko-row gecko-mb-2">
               <Icon name="search" size={11} />
               Or search any booking
             </div>
@@ -1797,9 +1797,9 @@ function TransferContainersModal({
               />
             </div>
             {search.trim().length >= 2 && (
-              <div style={{ marginTop: 10 }}>
+              <div className="gecko-mt-3">
                 {searchResults.length === 0 ? (
-                  <div style={{ padding: 12, fontSize: 11, color: 'var(--gecko-text-disabled)', fontStyle: 'italic', textAlign: 'center', background: 'var(--gecko-bg-subtle)', borderRadius: 8 }}>
+                  <div className="gecko-empty-card" style={{ fontStyle: 'italic', fontSize: 11 }}>
                     No bookings match <strong>&ldquo;{search}&rdquo;</strong>.
                   </div>
                 ) : (
@@ -1814,7 +1814,7 @@ function TransferContainersModal({
           <div className="gecko-flex-1" style={{ fontSize: 12, color: 'var(--gecko-text-secondary)' }}>
             {pickedBooking ? (
               <>
-                Destination: <strong style={{ fontFamily: 'var(--gecko-font-mono)', color: 'var(--gecko-text-primary)' }}>{pickedBooking.bookingNo}</strong>
+                Destination: <strong className="gecko-mono" style={{ color: 'var(--gecko-text-primary)' }}>{pickedBooking.bookingNo}</strong>
                 <span style={{ marginLeft: 6, color: 'var(--gecko-text-disabled)' }}>· {pickedBooking.customer}</span>
               </>
             ) : (
@@ -1887,17 +1887,15 @@ function ChangeOrderTypeModal({
           <div className="gecko-flex-1">
             <div style={{ fontSize: 15, fontWeight: 700, color: 'var(--gecko-warning-700)' }}>Change order type · booking-level change</div>
             <div style={{ fontSize: 12, color: 'var(--gecko-warning-700)', marginTop: 2 }}>
-              Order type is set <strong>per booking</strong> — this affects all <strong>{totalContainers} container{totalContainers === 1 ? '' : 's'}</strong> under <span style={{ fontFamily: 'var(--gecko-font-mono)' }}>{bookingNo}</span>.
+              Order type is set <strong>per booking</strong> — this affects all <strong>{totalContainers} container{totalContainers === 1 ? '' : 's'}</strong> under <span className="gecko-mono">{bookingNo}</span>.
             </div>
           </div>
-          <button onClick={onCancel} className="gecko-btn gecko-btn-ghost gecko-btn-sm gecko-btn-icon">
-            <Icon name="x" size={14} />
-          </button>
+          <button onClick={onCancel} className="gecko-icon-btn-ghost"><Icon name="x" size={14} /></button>
         </div>
 
         {/* Cascading-impact callout */}
         <div style={{ padding: '12px 20px', background: 'var(--gecko-bg-subtle)', borderBottom: '1px solid var(--gecko-border)' }}>
-          <div className="gecko-eyebrow" style={{ marginBottom: 6 }}>What changes</div>
+          <div className="gecko-eyebrow gecko-mb-2">What changes</div>
           <ul style={{ margin: 0, paddingLeft: 18, fontSize: 12, color: 'var(--gecko-text-primary)', lineHeight: 1.6 }}>
             <li>Movement templates re-seed across all <strong>{totalContainers}</strong> containers</li>
             <li>VAS catalog refreshes to match the new order type</li>
@@ -1911,7 +1909,7 @@ function ChangeOrderTypeModal({
         </div>
 
         {/* Body */}
-        <div className="gecko-stack gecko-stack-md" style={{ flex: 1, overflowY: 'auto', padding: 18 }}>
+        <div className="gecko-stack gecko-stack-md gecko-flex-1" style={{ overflowY: 'auto', padding: 18 }}>
 
           {/* Picker */}
           <div>
@@ -1948,8 +1946,8 @@ function ChangeOrderTypeModal({
                         {isCurrent && <span className="gecko-pill gecko-pill-neutral" style={{ fontSize: 9 }}>CURRENT</span>}
                         <span className="gecko-pill gecko-pill-info" style={{ fontSize: 9 }}>{ot.bookingMode}</span>
                       </div>
-                      <div style={{ fontSize: 11.5, color: 'var(--gecko-text-secondary)', marginTop: 2 }}>{ot.description}</div>
-                      <div style={{ fontSize: 10, color: 'var(--gecko-text-disabled)', marginTop: 2, fontFamily: 'var(--gecko-font-mono)' }}>
+                      <div className="gecko-cell-meta">{ot.description}</div>
+                      <div className="gecko-cell-sub">
                         {ot.movements.map(m => m.code).join(' → ')}
                       </div>
                     </div>
@@ -2003,12 +2001,12 @@ function ChangeOrderTypeModal({
               />
               {typedBL && !blMatches && (
                 <div style={{ fontSize: 11, color: 'var(--gecko-warning-700)' }}>
-                  Doesn&apos;t match — must equal <span style={{ fontFamily: 'var(--gecko-font-mono)', fontWeight: 700 }}>{bookingNo}</span>
+                  Doesn&apos;t match — must equal <span className="gecko-mono" style={{ fontWeight: 700 }}>{bookingNo}</span>
                 </div>
               )}
 
               <div className="gecko-field">
-                <div className="gecko-field-label">Remarks for audit log <span style={{ fontSize: 10, color: 'var(--gecko-text-disabled)', fontWeight: 500 }}>(optional)</span></div>
+                <div className="gecko-field-label">Remarks for audit log <span className="gecko-helper-text" style={{ marginTop: 0, display: 'inline', fontWeight: 500 }}>(optional)</span></div>
                 <textarea
                   className="gecko-textarea"
                   rows={2}
@@ -2027,7 +2025,7 @@ function ChangeOrderTypeModal({
             {!isDifferent
               ? <span style={{ color: 'var(--gecko-text-disabled)' }}>Pick a different order type to continue.</span>
               : !blMatches
-                ? <span>Changing <strong style={{ fontFamily: 'var(--gecko-font-mono)' }}>{currentOrderTypeCode}</strong> → <strong style={{ fontFamily: 'var(--gecko-font-mono)' }}>{picked}</strong> · type B/L to enable.</span>
+                ? <span>Changing <strong className="gecko-mono">{currentOrderTypeCode}</strong> → <strong className="gecko-mono">{picked}</strong> · type B/L to enable.</span>
                 : <span style={{ color: 'var(--gecko-success-700)', fontWeight: 600 }}>
                     <Icon name="check" size={12} style={{ marginBottom: -1, marginRight: 4 }} />
                     B/L verified · ready to apply.
@@ -2074,18 +2072,18 @@ function DeleteContainerModal({ container, onCancel, onConfirm }: {
           </div>
         </div>
 
-        <div className="gecko-stack" style={{ padding: 20, gap: 14 }}>
-          <div style={{ padding: '10px 12px', background: 'var(--gecko-bg-subtle)', border: '1px solid var(--gecko-border)', borderRadius: 8, fontSize: 12 }}>
+        <div className="gecko-stack gecko-stack-lg" style={{ padding: 20 }}>
+          <div className="gecko-card gecko-card-tight" style={{ background: 'var(--gecko-bg-subtle)', fontSize: 12 }}>
             <div style={{ fontFamily: 'var(--gecko-font-mono)', fontWeight: 800, fontSize: 14 }}>
               {container.containerNo || <span style={{ color: 'var(--gecko-text-disabled)', fontStyle: 'italic' }}>TBA (no container number yet)</span>}
             </div>
             <div className="gecko-row gecko-row-wrap" style={{ fontSize: 11, color: 'var(--gecko-text-secondary)', marginTop: 4, gap: 14 }}>
-              <span>Size/Type: <strong style={{ fontFamily: 'var(--gecko-font-mono)' }}>{container.size}{container.type}</strong></span>
+              <span>Size/Type: <strong className="gecko-mono">{container.size}{container.type}</strong></span>
               <span>Mode: <strong>{container.containerMode}</strong></span>
               <span>Cargo: <strong>{container.cargoCategory}</strong></span>
             </div>
             {container.movements.some(m => m.status) && (
-              <div className="gecko-banner gecko-banner-warning" style={{ marginTop: 8 }}>
+              <div className="gecko-banner gecko-banner-warning gecko-mt-2">
                 <Icon name="alertTriangle" size={13} />
                 <span>This container has recorded transactions ({container.movements.filter(m => m.status).map(m => m.code).join(', ')}). Deletion will also remove those gate records.</span>
               </div>
@@ -2105,7 +2103,7 @@ function DeleteContainerModal({ container, onCancel, onConfirm }: {
           </div>
 
           <div className="gecko-field">
-            <div className="gecko-field-label">Reason for deletion <span style={{ fontSize: 10, color: 'var(--gecko-text-disabled)', fontWeight: 500 }}>(audit trail)</span></div>
+            <div className="gecko-field-label">Reason for deletion <span className="gecko-helper-text" style={{ marginTop: 0, display: 'inline', fontWeight: 500 }}>(audit trail)</span></div>
             <textarea
               className="gecko-textarea"
               rows={2}
@@ -2171,11 +2169,11 @@ function CandidateTable({ items, pickedId, onPick }: {
                 </td>
                 <td><span className="gecko-id-link">{c.bookingNo}</span></td>
                 <td>
-                  <div className="gecko-truncate" style={{ fontSize: 12, fontWeight: 600, color: 'var(--gecko-text-primary)', maxWidth: 200 }}>
+                  <div className="gecko-cell-primary gecko-truncate" style={{ maxWidth: 200 }}>
                     {c.customer}
                   </div>
                 </td>
-                <td style={{ fontFamily: 'var(--gecko-font-mono)', fontSize: 11, fontWeight: 600 }}>{c.agent}</td>
+                <td className="gecko-mono-strong">{c.agent}</td>
                 <td>
                   <div className="gecko-cell-two-line">
                     <div style={{ fontSize: 11.5, fontWeight: 600, color: 'var(--gecko-text-primary)' }}>{c.vessel}</div>
