@@ -306,8 +306,7 @@ export default function RolesPage() {
             <h1 className="gecko-page-title">
               Roles &amp; Rights
             </h1>
-            <span style={{
-              fontSize: 10, fontWeight: 700, letterSpacing: '0.06em', textTransform: 'uppercase',
+            <span className="gecko-eyebrow" style={{
               padding: '2px 8px', borderRadius: 4,
               background: 'var(--gecko-primary-50)', color: 'var(--gecko-primary-700)',
               border: '1px solid var(--gecko-primary-200)',
@@ -441,7 +440,7 @@ export default function RolesPage() {
                   <td colSpan={6} style={{ padding: '52px 16px', textAlign: 'center' }}>
                     <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 10, color: 'var(--gecko-text-secondary)' }}>
                       <Icon name="shieldCheck" size={32} style={{ opacity: 0.25 }} />
-                      <div style={{ fontSize: 14, fontWeight: 600, color: 'var(--gecko-text-primary)' }}>
+                      <div className="gecko-card-title">
                         No roles match your search
                       </div>
                       <div style={{ fontSize: 12 }}>
@@ -541,7 +540,7 @@ export default function RolesPage() {
                       {/* ── Permissions ── */}
                       <td style={{ padding: '12px 14px', minWidth: 180 }}>
                         <PermBar granted={role.granted} total={role.total} />
-                        <div style={{ fontSize: 10, color: 'var(--gecko-text-secondary)', marginTop: 4 }}>
+                        <div className="gecko-cell-meta" style={{ marginTop: 4 }}>
                           {pct}% of all permissions
                         </div>
                       </td>

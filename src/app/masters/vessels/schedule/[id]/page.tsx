@@ -115,9 +115,9 @@ function KpiBox({ label, value, sub, color, bg, icon }: {
         <Icon name={icon} size={18} style={{ color }} />
       </div>
       <div>
-        <div style={{ fontSize: 22, fontWeight: 800, color: 'var(--gecko-text-primary)', lineHeight: 1 }}>{value}</div>
+        <div className="gecko-stat-num gecko-stat-num-22">{value}</div>
         {sub && <div style={{ fontSize: 11, color, fontWeight: 600, marginTop: 1 }}>{sub}</div>}
-        <div style={{ fontSize: 11, color: 'var(--gecko-text-secondary)', marginTop: 2 }}>{label}</div>
+        <div className="gecko-cell-meta">{label}</div>
       </div>
     </div>
   );
@@ -354,10 +354,10 @@ export default function VoyageDetailPage() {
                       </td>
                       <td style={{ textAlign: 'right' }}>
                         <span style={{ fontFamily: 'var(--gecko-font-mono)', fontWeight: 700 }}>{b.qty}</span>
-                        <span style={{ fontSize: 11, color: 'var(--gecko-text-secondary)', marginLeft: 3 }}>ctrs</span>
+                        <span className="gecko-cell-meta" style={{ marginLeft: 3 }}>ctrs</span>
                       </td>
                       <td style={{ color: 'var(--gecko-text-secondary)', maxWidth: 200 }}>
-                        <div style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{b.cargo}</div>
+                        <div className="gecko-truncate">{b.cargo}</div>
                       </td>
                       <td style={{ textAlign: 'right' }}>
                         <span style={{ fontFamily: 'var(--gecko-font-mono)', fontSize: 12, fontWeight: 600 }}>
@@ -455,13 +455,13 @@ export default function VoyageDetailPage() {
                 { label: 'ETA at Destination',   value: voyage.eta,   color: 'var(--gecko-info-600)'    },
               ].map(row => (
                 <div key={row.label}>
-                  <div style={{ fontSize: 11, fontWeight: 600, color: 'var(--gecko-text-secondary)', marginBottom: 4 }}>{row.label}</div>
+                  <div className="gecko-cell-meta" style={{ fontWeight: 600, marginTop: 0, marginBottom: 4 }}>{row.label}</div>
                   <div style={{ fontSize: 15, fontWeight: 700, fontFamily: 'var(--gecko-font-mono)', color: row.color }}>{row.value}</div>
                 </div>
               ))}
 
               <div style={{ marginTop: 8, paddingTop: 14, borderTop: '1px solid var(--gecko-border)' }}>
-                <div style={{ fontSize: 11, fontWeight: 700, color: 'var(--gecko-text-secondary)', marginBottom: 8, textTransform: 'uppercase', letterSpacing: '0.05em' }}>TEU Utilisation</div>
+                <div className="gecko-eyebrow" style={{ marginBottom: 8 }}>TEU Utilisation</div>
                 <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 12, marginBottom: 6 }}>
                   <span style={{ color: 'var(--gecko-text-secondary)' }}>{voyage.filled.toLocaleString()} booked</span>
                   <span style={{ fontWeight: 700, color: fillPct > 85 ? 'var(--gecko-error-600)' : fillPct > 60 ? 'var(--gecko-warning-600)' : 'var(--gecko-success-600)' }}>{fillPct}%</span>
@@ -469,7 +469,7 @@ export default function VoyageDetailPage() {
                 <div style={{ height: 8, background: 'var(--gecko-gray-100)', borderRadius: 4, overflow: 'hidden' }}>
                   <div style={{ height: '100%', width: `${fillPct}%`, borderRadius: 4, background: fillPct > 85 ? 'var(--gecko-error-500)' : fillPct > 60 ? 'var(--gecko-warning-500)' : 'var(--gecko-success-500)', transition: 'width 400ms' }} />
                 </div>
-                <div style={{ fontSize: 11, color: 'var(--gecko-text-disabled)', marginTop: 4 }}>{voyage.teu.toLocaleString()} TEU total capacity</div>
+                <div className="gecko-helper-text">{voyage.teu.toLocaleString()} TEU total capacity</div>
               </div>
             </div>
           </div>
@@ -495,10 +495,10 @@ export default function VoyageDetailPage() {
                 <div className="gecko-flex-1">
                   <div className="gecko-row gecko-row-baseline" style={{ gap: 10, marginBottom: 2 }}>
                     <span style={{ fontSize: 13, fontWeight: 700, color: 'var(--gecko-text-primary)' }}>{e.action}</span>
-                    <span style={{ fontSize: 11, color: 'var(--gecko-text-secondary)' }}>{e.user}</span>
+                    <span className="gecko-cell-meta">{e.user}</span>
                     <span style={{ fontSize: 11, color: 'var(--gecko-text-disabled)', marginLeft: 'auto', fontFamily: 'var(--gecko-font-mono)' }}>{e.date}</span>
                   </div>
-                  <div style={{ fontSize: 12, color: 'var(--gecko-text-secondary)' }}>{e.detail}</div>
+                  <div className="gecko-page-subtitle">{e.detail}</div>
                 </div>
               </div>
             ))}

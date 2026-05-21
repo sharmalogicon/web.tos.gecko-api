@@ -204,7 +204,7 @@ function CoordCell({ lat, lon }: { lat?: number; lon?: number }) {
   if (lat == null || lon == null) return <span style={{ color: 'var(--gecko-text-disabled)', fontSize: 11 }}>—</span>;
   const fmt = (n: number, pos: string, neg: string) => `${Math.abs(n).toFixed(2)}°${n >= 0 ? pos : neg}`;
   return (
-    <div className="gecko-text-mono" style={{ fontSize: 11, color: 'var(--gecko-text-secondary)', lineHeight: 1.3 }}>
+    <div className="gecko-text-mono gecko-cell-meta" style={{ lineHeight: 1.3 }}>
       <div>{fmt(lat, 'N', 'S')}</div>
       <div>{fmt(lon, 'E', 'W')}</div>
     </div>
@@ -698,7 +698,7 @@ export default function PortsListPage() {
                   </td>
                   <td>
                     {p.mappingCode
-                      ? <span className="gecko-text-mono" style={{ fontSize: 11, color: 'var(--gecko-text-secondary)' }}>{p.mappingCode}</span>
+                      ? <span className="gecko-text-mono gecko-cell-meta">{p.mappingCode}</span>
                       : <span style={{ color: 'var(--gecko-text-disabled)', fontSize: 11 }}>—</span>
                     }
                   </td>

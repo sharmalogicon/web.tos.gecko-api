@@ -457,7 +457,7 @@ function Step5({ form }: { form: FormState }) {
   ].filter(Boolean);
 
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', gap: 24 }}>
+    <div className="gecko-stack gecko-stack-xl">
       {missing.length > 0 && (
         <div style={{ padding: '14px 18px', background: 'var(--gecko-danger-50)', border: '1px solid var(--gecko-danger-200)', borderRadius: 10, display: 'flex', gap: 10 }}>
           <Icon name="alertCircle" size={16} style={{ color: 'var(--gecko-danger-600)', flexShrink: 0, marginTop: 1 }} />
@@ -475,7 +475,7 @@ function Step5({ form }: { form: FormState }) {
         <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 0 }}>
           {sections.map((s, i) => (
             <div key={s.label} style={{ padding: '12px 20px', borderBottom: i < sections.length - 2 ? '1px solid var(--gecko-border)' : 'none', borderRight: i % 2 === 0 ? '1px solid var(--gecko-border)' : 'none' }}>
-              <div style={{ fontSize: 10, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.06em', color: 'var(--gecko-text-secondary)', marginBottom: 3 }}>{s.label}</div>
+              <div className="gecko-eyebrow" style={{ marginBottom: 3 }}>{s.label}</div>
               <div style={{ fontSize: 13, fontWeight: 600, color: s.value === '—' ? 'var(--gecko-text-disabled)' : 'var(--gecko-text-primary)', fontFamily: ['Charge Code', 'Revenue GL'].includes(s.label) ? 'var(--gecko-font-mono)' : undefined }}>{s.value}</div>
             </div>
           ))}
@@ -512,7 +512,7 @@ export default function NewChargeCodePage() {
 
       {/* Title */}
       <div style={{ paddingBottom: 20, borderBottom: '1px solid var(--gecko-border)' }}>
-        <h1 style={{ fontSize: 22, fontWeight: 700, margin: 0, color: 'var(--gecko-text-primary)' }}>New Charge Code</h1>
+        <h1 className="gecko-stat-num gecko-stat-num-22" style={{ margin: 0 }}>New Charge Code</h1>
         <div style={{ fontSize: 13, color: 'var(--gecko-text-secondary)', marginTop: 6 }}>
           Define a billable service unit. It will be available immediately in tariff plans and rate cards.
         </div>
@@ -530,7 +530,7 @@ export default function NewChargeCodePage() {
       </div>
 
       {/* Nav Buttons */}
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+      <div className="gecko-row gecko-row-between">
         <button
           className="gecko-btn gecko-btn-outline"
           onClick={() => setStep(s => Math.max(1, s - 1))}

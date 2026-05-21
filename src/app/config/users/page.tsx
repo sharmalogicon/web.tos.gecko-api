@@ -238,7 +238,7 @@ function NewUserPanel({
             <div style={{ fontSize: 14, fontWeight: 700, color: '#fff', display: 'flex', alignItems: 'center', gap: 8 }}>
               <Icon name="user" size={16} /> New User
             </div>
-            <div style={{ fontSize: 11, color: 'rgba(255,255,255,0.72)', marginTop: 2 }}>
+            <div className="gecko-cell-meta" style={{ color: 'rgba(255,255,255,0.72)' }}>
               Add a system account and assign a role
             </div>
           </div>
@@ -384,7 +384,7 @@ function NewUserPanel({
               <div style={{ fontSize: 13, fontWeight: 600, color: 'var(--gecko-text-primary)' }}>
                 Must change on first login
               </div>
-              <div style={{ fontSize: 11, color: 'var(--gecko-text-secondary)', marginTop: 1 }}>
+              <div className="gecko-cell-meta">
                 User will be prompted to set a new password
               </div>
             </div>
@@ -448,10 +448,9 @@ function PermissionsTab() {
           <table style={{ width: '100%', borderCollapse: 'collapse', minWidth: 700 }}>
             <thead>
               <tr style={{ borderBottom: '2px solid var(--gecko-border)' }}>
-                <th style={{
-                  padding: '12px 16px', textAlign: 'left', fontSize: 11, fontWeight: 700,
-                  letterSpacing: '0.06em', textTransform: 'uppercase',
-                  color: 'var(--gecko-text-secondary)', background: 'var(--gecko-bg-subtle)',
+                <th className="gecko-eyebrow" style={{
+                  padding: '12px 16px', textAlign: 'left',
+                  background: 'var(--gecko-bg-subtle)',
                   minWidth: 200, position: 'sticky', left: 0, zIndex: 2,
                   borderRight: '1px solid var(--gecko-border)',
                 }}>
@@ -553,7 +552,7 @@ function PermissionsTab() {
             <span style={{ fontSize: 15, lineHeight: 1, color: 'var(--gecko-text-disabled)' }}>—</span>
             Not permitted
           </span>
-          <span className="gecko-ml-auto" style={{ fontSize: 11, color: 'var(--gecko-text-secondary)' }}>
+          <span className="gecko-ml-auto gecko-cell-meta">
             {columns.length} roles · {PERMISSION_MODULES.length} modules
           </span>
         </div>
@@ -618,8 +617,7 @@ export default function UsersRolesPage() {
             <h1 className="gecko-page-title">
               Users &amp; Roles
             </h1>
-            <span style={{
-              fontSize: 10, fontWeight: 700, letterSpacing: '0.06em', textTransform: 'uppercase',
+            <span className="gecko-eyebrow" style={{
               padding: '2px 8px', borderRadius: 4,
               background: 'var(--gecko-primary-50)', color: 'var(--gecko-primary-700)',
               border: '1px solid var(--gecko-primary-200)',
@@ -772,7 +770,7 @@ export default function UsersRolesPage() {
 
           {/* Result count */}
           {(search || roleFilter || statusFilter) && (
-            <div style={{ fontSize: 12, color: 'var(--gecko-text-secondary)' }}>
+            <div className="gecko-page-subtitle">
               Showing {filtered.length} of {totalUsers} users
             </div>
           )}
@@ -822,7 +820,7 @@ export default function UsersRolesPage() {
                         <Avatar name={user.name} role={user.role} />
                         <div>
                           <div className="gecko-cell-primary">{user.name}</div>
-                          <div className="gecko-row" style={{ fontSize: 11, color: 'var(--gecko-text-secondary)', marginTop: 1, gap: 4 }}>
+                          <div className="gecko-row gecko-cell-meta" style={{ marginTop: 1, gap: 4 }}>
                             <Icon name="mail" size={11} />
                             {user.email}
                           </div>

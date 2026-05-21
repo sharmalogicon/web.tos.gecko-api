@@ -157,7 +157,7 @@ export default function VoyageDashboardPage() {
                   <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: 8 }}>
                     <div>
                       <div style={{ fontSize: 13, fontWeight: 800, color: 'var(--gecko-text-primary)', fontFamily: 'var(--gecko-font-mono)', lineHeight: 1.2 }}>{v.vessel}</div>
-                      <div style={{ fontSize: 11, fontFamily: 'var(--gecko-font-mono)', color: 'var(--gecko-text-secondary)', marginTop: 2 }}>{v.voyageNo}</div>
+                      <div className="gecko-cell-sub">{v.voyageNo}</div>
                     </div>
                     <span style={{ ...badge, fontSize: 10, padding: '2px 8px', borderRadius: 4, fontWeight: 700, whiteSpace: 'nowrap' }}>{v.status}</span>
                   </div>
@@ -167,14 +167,14 @@ export default function VoyageDashboardPage() {
                   </div>
 
                   <div style={{ display: 'flex', flexDirection: 'column', gap: 5 }}>
-                    <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 11, color: 'var(--gecko-text-secondary)' }}>
+                    <div className="gecko-cell-meta" style={{ display: 'flex', justifyContent: 'space-between' }}>
                       <span>TEU Fill</span>
                       <span style={{ fontWeight: 700, fontFamily: 'var(--gecko-font-mono)', color: fillColor }}>{v.teuBooked} / {v.teuTotal} TEU</span>
                     </div>
                     <div style={{ height: 8, background: fillBg, borderRadius: 4, overflow: 'hidden' }}>
                       <div style={{ height: '100%', width: `${pct}%`, background: fillColor, borderRadius: 4 }} />
                     </div>
-                    <div style={{ fontSize: 10, color: 'var(--gecko-text-secondary)', textAlign: 'right' }}>{pct}% filled</div>
+                    <div className="gecko-cell-meta" style={{ textAlign: 'right' }}>{pct}% filled</div>
                   </div>
 
                   <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 4, fontSize: 11 }}>
@@ -224,11 +224,11 @@ export default function VoyageDashboardPage() {
               return (
                 <div key={i} style={{ display: 'flex', alignItems: 'stretch', borderBottom: i < CUTOFFS.length - 1 ? '1px solid var(--gecko-border)' : 'none', padding: '8px 0' }}>
                   <div style={{ width: 4, borderRadius: 2, background: col, marginRight: 10, flexShrink: 0 }} />
-                  <div style={{ flex: 1, minWidth: 0 }}>
+                  <div className="gecko-flex-1">
                     <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: 8 }}>
                       <div>
                         <div style={{ fontFamily: 'var(--gecko-font-mono)', fontSize: 11, fontWeight: 700, color: 'var(--gecko-text-primary)' }}>{c.voyageNo}</div>
-                        <div style={{ fontSize: 10, color: 'var(--gecko-text-secondary)', marginTop: 1 }}>{c.vessel}</div>
+                        <div className="gecko-cell-sub">{c.vessel}</div>
                       </div>
                       <div style={{ textAlign: 'right', flexShrink: 0 }}>
                         <div style={{ fontSize: 10, padding: '2px 6px', borderRadius: 4, background: bg, color: col, fontWeight: 700, border: `1px solid ${col}40` }}>{c.type}</div>

@@ -102,7 +102,7 @@ export default function LoginPage() {
               </svg>
             </div>
             <div>
-              <div style={{ fontSize: 26, fontWeight: 700, letterSpacing: '-0.02em', lineHeight: 1.1 }}>Gecko TOS</div>
+              <div className="gecko-page-title-lg">Gecko TOS</div>
               <div style={{ fontSize: 13, opacity: 0.85, marginTop: 4, letterSpacing: '0.02em' }}>End-to-End Terminal Operating System</div>
             </div>
           </div>

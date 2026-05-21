@@ -142,10 +142,10 @@ export default function GateTrafficDashboardPage() {
           <table className="gecko-table" style={{ width: '100%', borderCollapse: 'collapse', fontSize: 12 }}>
             <thead>
               <tr>
-                <th style={{ padding: '6px 8px', textAlign: 'left', fontSize: 11, color: 'var(--gecko-text-secondary)', fontWeight: 600 }}>Lane</th>
-                <th style={{ padding: '6px 8px', textAlign: 'left', fontSize: 11, color: 'var(--gecko-text-secondary)', fontWeight: 600 }}>Status</th>
-                <th style={{ padding: '6px 8px', textAlign: 'left', fontSize: 11, color: 'var(--gecko-text-secondary)', fontWeight: 600 }}>Queue</th>
-                <th style={{ padding: '6px 8px', textAlign: 'left', fontSize: 11, color: 'var(--gecko-text-secondary)', fontWeight: 600 }}>Last Truck</th>
+                <th className="gecko-cell-meta" style={{ padding: '6px 8px', textAlign: 'left', fontWeight: 600 }}>Lane</th>
+                <th className="gecko-cell-meta" style={{ padding: '6px 8px', textAlign: 'left', fontWeight: 600 }}>Status</th>
+                <th className="gecko-cell-meta" style={{ padding: '6px 8px', textAlign: 'left', fontWeight: 600 }}>Queue</th>
+                <th className="gecko-cell-meta" style={{ padding: '6px 8px', textAlign: 'left', fontWeight: 600 }}>Last Truck</th>
               </tr>
             </thead>
             <tbody>
@@ -158,8 +158,8 @@ export default function GateTrafficDashboardPage() {
                       <span style={{ fontSize: 11, fontWeight: 600, color: lane.status === 'Active' ? 'var(--gecko-success-600)' : 'var(--gecko-error-600)' }}>{lane.status}</span>
                     </span>
                   </td>
-                  <td style={{ padding: '7px 8px', fontSize: 11, color: 'var(--gecko-text-secondary)' }}>{lane.queue}</td>
-                  <td style={{ padding: '7px 8px', fontSize: 10, fontFamily: 'var(--gecko-font-mono)', color: 'var(--gecko-text-secondary)' }}>{lane.last}</td>
+                  <td className="gecko-cell-meta" style={{ padding: '7px 8px' }}>{lane.queue}</td>
+                  <td className="gecko-cell-sub" style={{ padding: '7px 8px' }}>{lane.last}</td>
                 </tr>
               ))}
             </tbody>
@@ -170,7 +170,7 @@ export default function GateTrafficDashboardPage() {
           <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
             {COMPLIANCE_HOURS.map(row => (
               <div key={row.hour} style={{ display: 'grid', gridTemplateColumns: '44px 1fr 36px', gap: 8, alignItems: 'center' }}>
-                <span style={{ fontSize: 11, fontFamily: 'var(--gecko-font-mono)', color: 'var(--gecko-text-secondary)', textAlign: 'right' }}>{row.hour}</span>
+                <span className="gecko-cell-meta" style={{ fontFamily: 'var(--gecko-font-mono)', textAlign: 'right' }}>{row.hour}</span>
                 <div style={{ height: 14, background: 'var(--gecko-bg-subtle)', borderRadius: 4, overflow: 'hidden' }}>
                   <div style={{ height: '100%', width: `${row.pct}%`, background: complianceBarColor(row.pct), borderRadius: 4, transition: 'width 0.3s' }} />
                 </div>
@@ -186,23 +186,23 @@ export default function GateTrafficDashboardPage() {
               <thead>
                 <tr>
                   {['#', 'Plate No.', 'Driver', 'Haulier', 'Container', 'Status', 'Appt. Time', 'Wait'].map(h => (
-                    <th key={h} style={{ padding: '7px 10px', textAlign: 'left', fontSize: 11, color: 'var(--gecko-text-secondary)', fontWeight: 600, whiteSpace: 'nowrap', borderBottom: '1px solid var(--gecko-border)' }}>{h}</th>
+                    <th key={h} className="gecko-cell-meta" style={{ padding: '7px 10px', textAlign: 'left', fontWeight: 600, whiteSpace: 'nowrap', borderBottom: '1px solid var(--gecko-border)' }}>{h}</th>
                   ))}
                 </tr>
               </thead>
               <tbody>
                 {QUEUE_TRUCKS.map(row => (
                   <tr key={row.n} style={{ borderBottom: '1px solid var(--gecko-border)' }}>
-                    <td style={{ padding: '8px 10px', fontSize: 11, color: 'var(--gecko-text-secondary)', fontWeight: 600 }}>{row.n}</td>
+                    <td className="gecko-cell-meta" style={{ padding: '8px 10px', fontWeight: 600 }}>{row.n}</td>
                     <td style={{ padding: '8px 10px', fontFamily: 'var(--gecko-font-mono)', fontWeight: 700, fontSize: 12 }}>{row.plate}</td>
                     <td style={{ padding: '8px 10px', fontSize: 12 }}>{row.driver}</td>
-                    <td style={{ padding: '8px 10px', fontSize: 11, color: 'var(--gecko-text-secondary)' }}>{row.haulier}</td>
+                    <td className="gecko-cell-meta" style={{ padding: '8px 10px' }}>{row.haulier}</td>
                     <td style={{ padding: '8px 10px', fontFamily: 'var(--gecko-font-mono)', fontSize: 11 }}>{row.container}</td>
                     <td style={{ padding: '8px 10px' }}>
                       <span className="gecko-badge gecko-badge-sm" style={{ ...statusBadgeStyle(row.status), fontSize: 10, padding: '2px 7px', borderRadius: 4, fontWeight: 700, whiteSpace: 'nowrap' }}>{row.status}</span>
                     </td>
                     <td style={{ padding: '8px 10px', fontFamily: 'var(--gecko-font-mono)', fontSize: 11 }}>{row.appt}</td>
-                    <td style={{ padding: '8px 10px', fontSize: 11, color: 'var(--gecko-text-secondary)' }}>{row.wait}</td>
+                    <td className="gecko-cell-meta" style={{ padding: '8px 10px' }}>{row.wait}</td>
                   </tr>
                 ))}
               </tbody>
@@ -211,7 +211,7 @@ export default function GateTrafficDashboardPage() {
         </Widget>
 
         <Widget title="Turn Time Distribution">
-          <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+          <div className="gecko-stack gecko-stack-sm">
             {[
               { range: '< 10 min', count: 8, pct: 15, color: 'var(--gecko-success-600)' },
               { range: '10–15 min', count: 22, pct: 41, color: 'var(--gecko-success-600)' },
@@ -220,14 +220,14 @@ export default function GateTrafficDashboardPage() {
               { range: '> 30 min', count: 2, pct: 4, color: 'var(--gecko-error-600)' },
             ].map(r => (
               <div key={r.range} style={{ display: 'grid', gridTemplateColumns: '72px 1fr 28px', gap: 8, alignItems: 'center' }}>
-                <span style={{ fontSize: 11, color: 'var(--gecko-text-secondary)' }}>{r.range}</span>
+                <span className="gecko-cell-meta">{r.range}</span>
                 <div style={{ height: 12, background: 'var(--gecko-bg-subtle)', borderRadius: 3, overflow: 'hidden' }}>
                   <div style={{ height: '100%', width: `${r.pct}%`, background: r.color, borderRadius: 3 }} />
                 </div>
-                <span style={{ fontSize: 11, fontWeight: 700, color: 'var(--gecko-text-secondary)', textAlign: 'right' }}>{r.count}</span>
+                <span className="gecko-cell-meta" style={{ fontWeight: 700, textAlign: 'right' }}>{r.count}</span>
               </div>
             ))}
-            <div style={{ marginTop: 8, paddingTop: 8, borderTop: '1px solid var(--gecko-border)', fontSize: 11, color: 'var(--gecko-text-secondary)', display: 'flex', justifyContent: 'space-between' }}>
+            <div className="gecko-cell-meta" style={{ marginTop: 8, paddingTop: 8, borderTop: '1px solid var(--gecko-border)', display: 'flex', justifyContent: 'space-between' }}>
               <span>Avg turn time today</span>
               <span style={{ fontWeight: 800, fontFamily: 'var(--gecko-font-mono)', color: 'var(--gecko-text-primary)' }}>18 min</span>
             </div>

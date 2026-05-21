@@ -50,7 +50,7 @@ export default function CreditNotesPage() {
             <h1 style={{ fontSize: 24, fontWeight: 700, margin: 0, color: 'var(--gecko-text-primary)' }}>Credit Notes</h1>
             <span className="gecko-count-badge">4 shown</span>
           </div>
-          <div style={{ fontSize: 13, color: 'var(--gecko-text-secondary)' }}>Formal adjustments and refunds applied to finalized invoices.</div>
+          <div className="gecko-page-subtitle">Formal adjustments and refunds applied to finalized invoices.</div>
         </div>
         <div className="gecko-toolbar">
           <ExportButton resource="Credit notes" iconSize={16} />

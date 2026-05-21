@@ -177,7 +177,7 @@ export default function ApprovalWorkflowsPage() {
                   <span style={{ fontSize: 13, fontWeight: 700, color: active ? 'var(--gecko-primary-700)' : 'var(--gecko-text-primary)' }}>{w.name}</span>
                   {w.isDefault && <span className="gecko-pill gecko-pill-primary" style={{ fontSize: 9 }}>DEFAULT</span>}
                 </div>
-                <div style={{ fontSize: 11, color: 'var(--gecko-text-secondary)', lineHeight: 1.4 }}>{w.description || <em style={{ color: 'var(--gecko-text-disabled)' }}>No description</em>}</div>
+                <div className="gecko-cell-meta" style={{ lineHeight: 1.4 }}>{w.description || <em style={{ color: 'var(--gecko-text-disabled)' }}>No description</em>}</div>
                 <div className="gecko-row" style={{ gap: 6, fontSize: 10, color: 'var(--gecko-text-disabled)' }}>
                   <Icon name="layers" size={10} /> {w.steps.length} step{w.steps.length === 1 ? '' : 's'}
                   <span>·</span>

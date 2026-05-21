@@ -76,8 +76,8 @@ export default function FreeTimePage() {
                 }}
               >
                 <div style={{ fontWeight: 600, color: activeGroup.id === group.id ? 'var(--gecko-primary-800)' : 'var(--gecko-text-primary)', marginBottom: 4 }}>{group.name}</div>
-                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                  <div style={{ fontSize: 12, color: 'var(--gecko-text-secondary)' }}>Base: <span style={{ fontWeight: 700, color: 'var(--gecko-text-primary)' }}>{group.baseDays} Days</span></div>
+                <div className="gecko-row gecko-row-between">
+                  <div className="gecko-page-subtitle">Base: <span style={{ fontWeight: 700, color: 'var(--gecko-text-primary)' }}>{group.baseDays} Days</span></div>
                   <div style={{ fontSize: 11, color: 'var(--gecko-info-600)', fontWeight: 600 }}>{group.rules.length} rules</div>
                 </div>
               </div>
@@ -98,7 +98,7 @@ export default function FreeTimePage() {
               <div style={{ textAlign: 'right' }}>
                 <div className="gecko-eyebrow">Base Free Days</div>
                 <div className="gecko-row gecko-mt-1">
-                  <input className="gecko-input" type="number" value={activeGroup.baseDays} readOnly style={{ width: 80, fontSize: 24, fontWeight: 800, fontFamily: 'var(--gecko-font-mono)', height: 44, color: 'var(--gecko-primary-700)', borderColor: 'var(--gecko-primary-300)', textAlign: 'right' }} />
+                  <input className="gecko-input gecko-money" type="number" value={activeGroup.baseDays} readOnly style={{ width: 80, fontSize: 24, height: 44, color: 'var(--gecko-primary-700)', borderColor: 'var(--gecko-primary-300)' }} />
                   <span style={{ fontSize: 14, fontWeight: 700, color: 'var(--gecko-text-secondary)' }}>Days</span>
                 </div>
               </div>

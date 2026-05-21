@@ -112,7 +112,7 @@ function SubBlock({ title, desc, children }: { title: string; desc?: string; chi
     <div>
       <div className="gecko-row gecko-row-baseline gecko-mb-3" style={{ gap: 10 }}>
         <div style={{ fontSize: 11.5, fontWeight: 700, color: 'var(--gecko-text-primary)', letterSpacing: '0.04em', textTransform: 'uppercase' }}>{title}</div>
-        {desc && <div style={{ fontSize: 11, color: 'var(--gecko-text-secondary)' }}>{desc}</div>}
+        {desc && <div className="gecko-cell-meta">{desc}</div>}
       </div>
       {children}
     </div>
@@ -195,7 +195,7 @@ function CapacityBar({ teuUsed, cap }: { teuUsed: number; cap: number }) {
   const pct = Math.min(100, (teuUsed / cap) * 100);
   return (
     <div style={{ padding: '10px 18px', borderBottom: '1px solid var(--gecko-border)', background: '#fff', display: 'grid', gridTemplateColumns: 'auto 1fr auto', gap: 14, alignItems: 'center' }}>
-      <span style={{ color: 'var(--gecko-text-secondary)', fontWeight: 600, letterSpacing: '0.04em', textTransform: 'uppercase', fontSize: 10 }}>Release Capacity</span>
+      <span className="gecko-eyebrow" style={{ fontWeight: 600 }}>Release Capacity</span>
       <div style={{ position: 'relative', height: 8, background: 'var(--gecko-bg-subtle)', borderRadius: 4, overflow: 'hidden', border: '1px solid var(--gecko-border)' }}>
         <div style={{ position: 'absolute', inset: '0 auto 0 0', width: `${pct}%`, background: teuUsed >= cap ? 'var(--gecko-warning-500)' : 'var(--gecko-primary-600)', borderRadius: '3px 0 0 3px', transition: 'width 0.2s' }} />
         {Array.from({ length: cap - 1 }).map((_, i) => (
@@ -204,7 +204,7 @@ function CapacityBar({ teuUsed, cap }: { teuUsed: number; cap: number }) {
       </div>
       <div style={{ textAlign: 'right' }}>
         <div style={{ fontSize: 18, fontWeight: 700, fontFamily: 'var(--gecko-font-mono)', lineHeight: 1 }}>
-          {teuUsed}<span style={{ fontSize: 11, color: 'var(--gecko-text-secondary)', fontWeight: 500 }}> / {cap} TEU</span>
+          {teuUsed}<span className="gecko-cell-meta" style={{ fontWeight: 500 }}> / {cap} TEU</span>
         </div>
         <div style={{ fontSize: 10, color: teuUsed >= cap ? 'var(--gecko-warning-700)' : 'var(--gecko-text-secondary)', marginTop: 2, fontWeight: teuUsed >= cap ? 700 : 500 }}>
           {teuUsed >= cap ? 'AT CAPACITY' : `${cap - teuUsed} TEU available`}
@@ -236,7 +236,7 @@ function AutoFillContext({ move }: { move: ReleaseMove }) {
   return (
     <div style={{ background: 'var(--gecko-bg-subtle)', border: '1px solid var(--gecko-border)', borderRadius: 8, padding: '12px 14px' }}>
       <div className="gecko-row gecko-mb-3" style={{ gap: 8 }}>
-        <span style={{ fontSize: 10, fontWeight: 700, color: 'var(--gecko-text-secondary)', letterSpacing: '0.06em', textTransform: 'uppercase' }}>From booking</span>
+        <span className="gecko-eyebrow">From booking</span>
         <span style={{ display: 'inline-flex', alignItems: 'center', padding: '2px 7px', fontSize: 9.5, fontWeight: 700, letterSpacing: '0.05em', borderRadius: 4, background: directionPill.bg, color: directionPill.fg }}>{directionPill.l}</span>
         {move.cargoClass === 'REEFER' && <span style={{ display: 'inline-flex', alignItems: 'center', padding: '2px 7px', fontSize: 9.5, fontWeight: 700, borderRadius: 4, background: 'var(--gecko-info-50)', color: 'var(--gecko-info-700)' }}>REEFER</span>}
         {move.cargoClass === 'HAZ'    && <span className="gecko-pill gecko-pill-warning">HAZ · IMO {move.hazImoClass}</span>}
@@ -266,7 +266,7 @@ function AutoFillContext({ move }: { move: ReleaseMove }) {
       {/* Reefer line */}
       {move.cargoClass === 'REEFER' && (
         <div style={{ marginTop: 10, paddingTop: 10, borderTop: '1px dashed var(--gecko-border)', display: 'flex', flexWrap: 'wrap', gap: '4px 18px', fontSize: 11.5 }}>
-          <span style={{ color: 'var(--gecko-text-secondary)', fontWeight: 600, fontSize: 10, letterSpacing: '0.06em', textTransform: 'uppercase' }}>Reefer</span>
+          <span className="gecko-eyebrow" style={{ fontWeight: 600 }}>Reefer</span>
           <span><span style={{ color: 'var(--gecko-text-secondary)' }}>Set:</span> <strong>{move.reeferSetPoint}</strong></span>
           <span><span style={{ color: 'var(--gecko-text-secondary)' }}>Vent:</span> <strong>{move.reeferVent}</strong></span>
           {move.reeferGensetNo && <span><span style={{ color: 'var(--gecko-text-secondary)' }}>Genset:</span> <strong style={{ fontFamily: 'var(--gecko-font-mono)' }}>{move.reeferGensetNo}</strong></span>}
@@ -281,7 +281,7 @@ function AutoFillContext({ move }: { move: ReleaseMove }) {
       {/* HAZ line */}
       {move.cargoClass === 'HAZ' && (
         <div style={{ marginTop: 10, paddingTop: 10, borderTop: '1px dashed var(--gecko-border)', display: 'flex', flexWrap: 'wrap', gap: '4px 18px', fontSize: 11.5 }}>
-          <span style={{ color: 'var(--gecko-text-secondary)', fontWeight: 600, fontSize: 10, letterSpacing: '0.06em', textTransform: 'uppercase' }}>HAZ</span>
+          <span className="gecko-eyebrow" style={{ fontWeight: 600 }}>HAZ</span>
           <span><span style={{ color: 'var(--gecko-text-secondary)' }}>IMO class:</span> <strong>{move.hazImoClass}</strong></span>
           <span><span style={{ color: 'var(--gecko-text-secondary)' }}>UN no:</span> <strong style={{ fontFamily: 'var(--gecko-font-mono)' }}>{move.hazUnNo}</strong></span>
         </div>
@@ -521,12 +521,12 @@ function MoveRow({ move, index, open, issues, onToggle, onRemove, onChange }: {
             <span style={{ fontFamily: 'var(--gecko-font-mono)', fontSize: 11, fontWeight: 600, padding: '2px 6px', background: 'var(--gecko-bg-subtle)', border: '1px solid var(--gecko-border)', borderRadius: 3, color: 'var(--gecko-text-secondary)' }}>
               {move.isoReq}
             </span>
-            <span style={{ fontFamily: 'var(--gecko-font-mono)', fontSize: 10, fontWeight: 600, color: 'var(--gecko-text-secondary)' }}>{move.teu} TEU</span>
-            <span style={{ fontSize: 10, fontWeight: 700, color: 'var(--gecko-text-secondary)', letterSpacing: '0.04em' }}>{ladenTag}</span>
+            <span className="gecko-cell-sub" style={{ fontWeight: 600, marginTop: 0 }}>{move.teu} TEU</span>
+            <span className="gecko-eyebrow" style={{ letterSpacing: '0.04em' }}>{ladenTag}</span>
             {move.cargoClass === 'REEFER' && <MoveStatusBadge code="REF" />}
             {move.statusCode === 'DMG'    && <MoveStatusBadge code="DMG" />}
           </div>
-          <div className="gecko-row" style={{ fontSize: 11, color: 'var(--gecko-text-secondary)', gap: 8, fontFamily: 'var(--gecko-font-mono)' }}>
+          <div className="gecko-row gecko-cell-meta" style={{ fontFamily: 'var(--gecko-font-mono)' }}>
             <span>EDO {move.edo || '—'}</span>
             <span>·</span>
             <span>{move.line || 'line —'}{move.agentCode ? ` (${move.agentCode})` : ''}</span>
@@ -555,7 +555,7 @@ function MoveRow({ move, index, open, issues, onToggle, onRemove, onChange }: {
         <div style={{ padding: '18px 22px 22px', background: '#fff', borderTop: `1px solid ${accent}`, borderLeft: `3px solid ${accent}` }}>
           <ReleaseForm move={move} onChange={onChange} />
           <div className="gecko-row" style={{ gap: 10, paddingTop: 16, marginTop: 18, borderTop: '1px solid var(--gecko-border)' }}>
-            <div className="gecko-flex-1" style={{ fontSize: 11, color: 'var(--gecko-text-secondary)' }}>
+            <div className="gecko-flex-1 gecko-cell-meta">
               Container <strong style={{ color: 'var(--gecko-text-primary)' }}>#{index}</strong> · Release · auto-saved
             </div>
             <button className="gecko-btn gecko-btn-ghost gecko-btn-sm" onClick={onRemove} style={{ color: 'var(--gecko-error-600)' }}>
@@ -586,7 +586,7 @@ function ReleasesCard({ moves, activeId, setActiveId, addMove, removeMove, updat
         <Icon name="box" size={15} style={{ color: 'var(--gecko-text-secondary)' }} />
         <div className="gecko-flex-1">
           <div style={{ fontSize: 13, fontWeight: 700 }}>Container Releases</div>
-          <div style={{ fontSize: 11, color: 'var(--gecko-text-secondary)' }}>
+          <div className="gecko-cell-meta">
             {moves.length} container{moves.length !== 1 ? 's' : ''} · {teuUsed} TEU out · cap {teuCap} TEU
           </div>
         </div>
@@ -648,7 +648,7 @@ function TruckHeaderCard({ truck }: { truck: any }) {
         <Icon name="truck" size={15} style={{ color: 'var(--gecko-text-secondary)' }} />
         <div className="gecko-flex-1">
           <div style={{ fontSize: 13, fontWeight: 700 }}>Truck &amp; Driver</div>
-          <div style={{ fontSize: 11, color: 'var(--gecko-text-secondary)' }}>Arrived {truck.arrivedAt} · waiting {truck.waitMins} min · {truck.lane}</div>
+          <div className="gecko-cell-meta">Arrived {truck.arrivedAt} · waiting {truck.waitMins} min · {truck.lane}</div>
         </div>
         <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: 3 }}>
           {truck.waitMins > 30 && (
@@ -746,7 +746,7 @@ function VisitSummaryRail({ moves, teuUsed, teuCap, teuRemaining, errCount, warn
         <div className="gecko-row gecko-row-between">
           <div>
             <div style={{ fontSize: 13, fontWeight: 700 }}>Visit Summary</div>
-            <div style={{ fontSize: 11, color: 'var(--gecko-text-secondary)' }}>Live · auto-saved</div>
+            <div className="gecko-cell-meta">Live · auto-saved</div>
           </div>
           <span className="gecko-pill gecko-pill-success">
             <Icon name="lock" size={10} />PAID AT GATE-IN
@@ -759,14 +759,14 @@ function VisitSummaryRail({ moves, teuUsed, teuCap, teuRemaining, errCount, warn
         <div style={{ padding: 10, background: 'var(--gecko-primary-50)', borderRadius: 6 }}>
           <div style={{ fontSize: 9, fontWeight: 700, color: 'var(--gecko-primary-700)', letterSpacing: '0.06em', textTransform: 'uppercase' }}>Containers out</div>
           <div className="gecko-stat-num-22" style={{ fontFamily: 'var(--gecko-font-mono)', fontWeight: 700, lineHeight: 1.1, color: 'var(--gecko-primary-700)' }}>
-            {count}<span style={{ fontSize: 11, color: 'var(--gecko-text-secondary)', fontWeight: 500, marginLeft: 4 }}>· {teuUsed} TEU</span>
+            {count}<span className="gecko-cell-meta" style={{ fontWeight: 500, marginLeft: 4, marginTop: 0 }}>· {teuUsed} TEU</span>
           </div>
         </div>
       </div>
 
       {/* Capacity */}
       <div style={{ padding: '12px 16px', borderBottom: '1px solid var(--gecko-border)' }}>
-        <div className="gecko-row gecko-row-between gecko-mb-2" style={{ fontSize: 10, fontWeight: 600, color: 'var(--gecko-text-secondary)', letterSpacing: '0.06em', textTransform: 'uppercase' }}>
+        <div className="gecko-row gecko-row-between gecko-mb-2 gecko-eyebrow" style={{ fontWeight: 600 }}>
           <span>Truck capacity</span>
           <span>{teuUsed} / {teuCap} TEU</span>
         </div>
@@ -776,7 +776,7 @@ function VisitSummaryRail({ moves, teuUsed, teuCap, teuRemaining, errCount, warn
             <div key={i} style={{ position: 'absolute', top: 0, bottom: 0, left: `${((i + 1) / teuCap) * 100}%`, width: 1, background: 'var(--gecko-border-strong)' }} />
           ))}
         </div>
-        <div style={{ marginTop: 5, fontSize: 10, color: 'var(--gecko-text-secondary)' }}>
+        <div className="gecko-cell-meta" style={{ marginTop: 5 }}>
           {teuRemaining > 0 ? `${teuRemaining} TEU slot available` : 'At capacity'}
         </div>
       </div>
@@ -784,7 +784,7 @@ function VisitSummaryRail({ moves, teuUsed, teuCap, teuRemaining, errCount, warn
       {/* Validation */}
       <div style={{ padding: '12px 16px', borderBottom: '1px solid var(--gecko-border)' }}>
         <div className="gecko-row gecko-row-between gecko-mb-2">
-          <div style={{ fontSize: 10, fontWeight: 700, color: 'var(--gecko-text-secondary)', letterSpacing: '0.06em', textTransform: 'uppercase' }}>Validation</div>
+          <div className="gecko-eyebrow">Validation</div>
           {hasIssues && (
             <button
               type="button"

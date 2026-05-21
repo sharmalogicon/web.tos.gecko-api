@@ -431,7 +431,7 @@ function StatTile({ icon, label, value, tone = 'primary' }: { icon: string; labe
 
 function TabButton({ active, onClick, icon, label }: { active: boolean; onClick: () => void; icon: string; label: string }) {
   return (
-    <button onClick={onClick} className={`gecko-segctrl-btn${active ? ' gecko-segctrl-btn-active' : ''}`} style={{ display: 'inline-flex', alignItems: 'center', gap: 6 }}>
+    <button onClick={onClick} className={`gecko-segctrl-btn${active ? ' gecko-segctrl-btn-active' : ''} gecko-inline-row`}>
       <Icon name={icon} size={13} />
       {label}
     </button>
@@ -573,7 +573,7 @@ function ChannelCard({ meta, state, expanded, onToggleExpand, onToggle, updateCh
 
         <div style={{ minWidth: 0 }}>
           <div style={{ fontSize: 13.5, fontWeight: 700, color: 'var(--gecko-text-primary)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{meta.label}</div>
-          <div style={{ fontSize: 11, color: 'var(--gecko-text-secondary)', marginTop: 2, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{meta.subtitle}</div>
+          <div className="gecko-cell-meta" style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{meta.subtitle}</div>
         </div>
 
         {/* Status pill */}
@@ -790,7 +790,7 @@ function TriggersTab({ config, toggleTrigger }: { config: IntegrationsConfig; to
       <div className="gecko-row gecko-row-start gecko-row-between gecko-row-wrap" style={{ padding: '14px 18px', borderBottom: '1px solid var(--gecko-border)', background: 'var(--gecko-bg-subtle)', gap: 12 }}>
         <div>
           <div style={{ fontSize: 13, fontWeight: 700, color: 'var(--gecko-text-primary)' }}>Event triggers</div>
-          <div style={{ fontSize: 11, color: 'var(--gecko-text-secondary)', marginTop: 2 }}>
+          <div className="gecko-cell-meta">
             For each Gecko event, choose which channels fire. Disabled channels don&apos;t send even if checked here.
           </div>
         </div>
@@ -823,7 +823,7 @@ function TriggersTab({ config, toggleTrigger }: { config: IntegrationsConfig; to
                       <span style={{ display: 'inline-flex', width: 22, height: 22, borderRadius: 5, background: m.iconFill, color: '#fff', alignItems: 'center', justifyContent: 'center', fontSize: 10, fontWeight: 800 }}>
                         <ChannelBrandIcon channel={cid} />
                       </span>
-                      <span style={{ fontSize: 10, color: 'var(--gecko-text-secondary)', fontWeight: 700, letterSpacing: '0.04em', textTransform: 'uppercase' }}>{m.label.split(' ')[0]}</span>
+                      <span className="gecko-eyebrow">{m.label.split(' ')[0]}</span>
                       {!config.channels[cid]?.enabled && (
                         <span style={{ fontSize: 9, color: 'var(--gecko-text-disabled)', fontStyle: 'italic' }}>off</span>
                       )}
@@ -838,8 +838,8 @@ function TriggersTab({ config, toggleTrigger }: { config: IntegrationsConfig; to
               <tr key={e.id} style={{ borderBottom: idx === visibleEvents.length - 1 ? 'none' : '1px solid var(--gecko-border)' }}>
                 <td style={{ padding: '12px 16px', verticalAlign: 'top' }}>
                   <div style={{ fontWeight: 600, color: 'var(--gecko-text-primary)' }}>{e.label}</div>
-                  <div style={{ fontSize: 11, color: 'var(--gecko-text-secondary)', marginTop: 3 }}>{e.description}</div>
-                  <div style={{ fontSize: 10, color: 'var(--gecko-text-disabled)', marginTop: 4, fontFamily: 'var(--gecko-font-mono)' }}>{e.id}</div>
+                  <div className="gecko-cell-meta">{e.description}</div>
+                  <div className="gecko-cell-sub">{e.id}</div>
                 </td>
                 <td style={{ padding: '12px 8px', verticalAlign: 'top', textAlign: 'center' }}>
                   <AudiencePill cat={e.category} />
@@ -960,7 +960,7 @@ function PreviewsTab({ config }: { config: IntegrationsConfig }) {
         )}
       </div>
 
-      <div style={{ fontSize: 11, color: 'var(--gecko-text-secondary)', textAlign: 'center' }}>
+      <div className="gecko-cell-meta" style={{ textAlign: 'center' }}>
         Previews use the same content templates that fire in production. Variables like container number and yard spot interpolate from the event payload.
       </div>
     </div>
@@ -1031,7 +1031,7 @@ function LineChatPreview({ template, config }: { template: TemplateContent; conf
       <div style={{ background: '#06C755', color: '#fff', padding: '10px 14px', display: 'flex', alignItems: 'center', gap: 10, flexShrink: 0 }}>
         <span style={{ fontSize: 18 }}>‹</span>
         <div style={{ width: 30, height: 30, borderRadius: '50%', background: '#fff', color: '#06C755', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 800, fontSize: 14 }}>G</div>
-        <div style={{ flex: 1, minWidth: 0 }}>
+        <div className="gecko-flex-1">
           <div style={{ fontSize: 13, fontWeight: 700, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>Gecko LCB Operations</div>
           <div style={{ fontSize: 10, opacity: 0.85 }}>{oaName} · Official Account</div>
         </div>
@@ -1086,7 +1086,7 @@ function WhatsAppChatPreview({ template, config: _config }: { template: Template
       <div style={{ background: '#075E54', color: '#fff', padding: '10px 14px', display: 'flex', alignItems: 'center', gap: 10, flexShrink: 0 }}>
         <span style={{ fontSize: 18 }}>‹</span>
         <div style={{ width: 30, height: 30, borderRadius: '50%', background: '#25D366', color: '#fff', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 800, fontSize: 13 }}>G</div>
-        <div style={{ flex: 1, minWidth: 0 }}>
+        <div className="gecko-flex-1">
           <div style={{ fontSize: 13, fontWeight: 700, display: 'inline-flex', alignItems: 'center', gap: 4 }}>
             Gecko LCB
             <span style={{ fontSize: 10, color: '#25D366' }}>✓</span>
@@ -1140,7 +1140,7 @@ function SlackMessagePreview({ template, config }: { template: TemplateContent; 
 
       <div style={{ display: 'flex', gap: 10 }}>
         <div style={{ width: 36, height: 36, borderRadius: 6, background: '#4A154B', color: '#fff', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 800, fontSize: 14, flexShrink: 0 }}>G</div>
-        <div style={{ flex: 1, minWidth: 0 }}>
+        <div className="gecko-flex-1">
           <div style={{ display: 'flex', alignItems: 'baseline', gap: 8, marginBottom: 4 }}>
             <span style={{ fontSize: 13, fontWeight: 700, color: '#1d1c1d' }}>Gecko TOS</span>
             <span style={{ fontSize: 10, fontWeight: 700, padding: '1px 5px', background: '#e8e8e8', color: '#616061', borderRadius: 2 }}>BOT</span>
@@ -1239,7 +1239,7 @@ function KV({ label, value }: { label: string; value: string }) {
   return (
     <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 11, gap: 8 }}>
       <span style={{ color: '#6b7280', fontWeight: 500 }}>{label}</span>
-      <span style={{ color: '#1f2937', fontFamily: 'var(--gecko-font-mono)', fontWeight: 700, textAlign: 'right' }}>{value}</span>
+      <span className="gecko-money" style={{ color: '#1f2937' }}>{value}</span>
     </div>
   );
 }

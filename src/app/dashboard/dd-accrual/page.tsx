@@ -124,7 +124,7 @@ export default function DDAccrualPage() {
               );
             })}
           </svg>
-          <div style={{ display: 'flex', gap: 16, marginTop: 8, fontSize: 11, color: 'var(--gecko-text-secondary)' }}>
+          <div className="gecko-cell-meta" style={{ display: 'flex', gap: 16, marginTop: 8 }}>
             <span style={{ display: 'flex', alignItems: 'center', gap: 5 }}><span style={{ width: 10, height: 10, background: 'var(--gecko-text-disabled)', borderRadius: 2, display: 'inline-block' }} />Past days</span>
             <span style={{ display: 'flex', alignItems: 'center', gap: 5 }}><span style={{ width: 10, height: 10, background: 'var(--gecko-primary-500)', borderRadius: 2, display: 'inline-block' }} />Recent week</span>
             <span style={{ display: 'flex', alignItems: 'center', gap: 5 }}><span style={{ width: 10, height: 10, background: 'var(--gecko-primary-700)', borderRadius: 2, display: 'inline-block' }} />Today</span>
@@ -156,7 +156,7 @@ export default function DDAccrualPage() {
               <thead>
                 <tr style={{ background: 'var(--gecko-bg-subtle)' }}>
                   {['Container', 'Customer', 'Size', 'Days Used', 'Free Time', 'Days Left', 'Daily Rate', 'Exposure'].map(h => (
-                    <th key={h} style={{ padding: '8px 12px', textAlign: 'left', fontWeight: 600, color: 'var(--gecko-text-secondary)', fontSize: 11, textTransform: 'uppercase', letterSpacing: '0.04em', whiteSpace: 'nowrap', borderBottom: '1px solid var(--gecko-border)' }}>{h}</th>
+                    <th key={h} className="gecko-eyebrow" style={{ padding: '8px 12px', textAlign: 'left', whiteSpace: 'nowrap', borderBottom: '1px solid var(--gecko-border)' }}>{h}</th>
                   ))}
                 </tr>
               </thead>
@@ -169,7 +169,7 @@ export default function DDAccrualPage() {
                       <td style={{ padding: '9px 12px', fontFamily: 'var(--gecko-font-mono)', fontWeight: 600 }}>{row.ctr}</td>
                       <td style={{ padding: '9px 12px' }}>{row.customer}</td>
                       <td style={{ padding: '9px 12px' }}>
-                        <span style={{ fontSize: 11, fontWeight: 600, padding: '2px 7px', borderRadius: 4, background: 'var(--gecko-bg-subtle)', border: '1px solid var(--gecko-border)', color: 'var(--gecko-text-secondary)' }}>{row.size}</span>
+                        <span className="gecko-cell-meta" style={{ fontWeight: 600, padding: '2px 7px', borderRadius: 4, background: 'var(--gecko-bg-subtle)', border: '1px solid var(--gecko-border)' }}>{row.size}</span>
                       </td>
                       <td style={{ padding: '9px 12px', textAlign: 'center', fontFamily: 'var(--gecko-font-mono)' }}>{row.used}</td>
                       <td style={{ padding: '9px 12px', textAlign: 'center', fontFamily: 'var(--gecko-font-mono)' }}>{row.free}</td>
@@ -187,25 +187,25 @@ export default function DDAccrualPage() {
         </Widget>
 
         <Widget title="Free Time Status Breakdown">
-          <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
+          <div className="gecko-stack gecko-stack-lg">
             {STATUS_BREAKDOWN.map((s) => (
               <div key={s.label}>
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', marginBottom: 6 }}>
-                  <span style={{ fontSize: 12, fontWeight: 600, color: 'var(--gecko-text-primary)' }}>{s.label}</span>
+                  <span className="gecko-cell-primary">{s.label}</span>
                   <span style={{ fontSize: 12, fontFamily: 'var(--gecko-font-mono)', fontWeight: 700, color: s.color }}>{s.count} ctrs</span>
                 </div>
                 <div style={{ height: 14, borderRadius: 6, background: 'var(--gecko-bg-subtle)', overflow: 'hidden', position: 'relative' }}>
                   <div style={{ height: '100%', width: `${s.pct}%`, background: s.color, borderRadius: 6, transition: 'width 0.4s ease' }} />
                 </div>
-                <div style={{ fontSize: 11, color: 'var(--gecko-text-secondary)', marginTop: 4, display: 'flex', alignItems: 'center', gap: 4 }}>
+                <div className="gecko-cell-meta" style={{ marginTop: 4, display: 'flex', alignItems: 'center', gap: 4 }}>
                   <span style={{ fontWeight: 600, color: s.color }}>{s.pct}%</span>
                   of total container inventory
                 </div>
               </div>
             ))}
             <div style={{ marginTop: 4, padding: '10px 14px', borderRadius: 8, background: 'var(--gecko-bg-subtle)', border: '1px solid var(--gecko-border)' }}>
-              <div style={{ fontSize: 11, fontWeight: 600, color: 'var(--gecko-text-secondary)', marginBottom: 4 }}>TOTAL TRACKED</div>
-              <div style={{ fontSize: 22, fontWeight: 800, fontFamily: 'var(--gecko-font-mono)', color: 'var(--gecko-text-primary)' }}>254 ctrs</div>
+              <div className="gecko-cell-meta" style={{ fontWeight: 600, marginBottom: 4 }}>TOTAL TRACKED</div>
+              <div className="gecko-stat-num gecko-stat-num-22" style={{ fontFamily: 'var(--gecko-font-mono)' }}>254 ctrs</div>
             </div>
           </div>
         </Widget>

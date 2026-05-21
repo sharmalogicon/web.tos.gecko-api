@@ -88,7 +88,7 @@ export default function RateCardsPage() {
                   <div style={{ fontWeight: 700, fontFamily: 'var(--gecko-font-mono)', color: activeItem.id === item.id ? 'var(--gecko-primary-800)' : 'var(--gecko-text-primary)' }}>{item.id}</div>
                   <div style={{ fontWeight: 700, fontFamily: 'var(--gecko-font-mono)', color: 'var(--gecko-success-700)' }}>฿{item.base}</div>
                 </div>
-                <div style={{ fontSize: 12, color: 'var(--gecko-text-secondary)' }}>{item.desc}</div>
+                <div className="gecko-page-subtitle">{item.desc}</div>
                 <div style={{ fontSize: 11, color: 'var(--gecko-primary-600)', marginTop: 8, fontWeight: 600 }}>{item.conditions.length} active constraints</div>
               </div>
             ))}
@@ -110,7 +110,7 @@ export default function RateCardsPage() {
                 <div className="gecko-eyebrow">Base Rate (THB)</div>
                 <div className="gecko-row gecko-mt-1">
                   <span style={{ fontSize: 18, fontWeight: 700, color: 'var(--gecko-text-disabled)' }}>฿</span>
-                  <input className="gecko-input" type="number" value={activeItem.base} readOnly style={{ width: 120, fontSize: 24, fontWeight: 800, fontFamily: 'var(--gecko-font-mono)', height: 44, color: 'var(--gecko-success-700)', borderColor: 'var(--gecko-success-300)', textAlign: 'right' }} />
+                  <input className="gecko-input gecko-money" type="number" value={activeItem.base} readOnly style={{ width: 120, fontSize: 24, height: 44, color: 'var(--gecko-success-700)', borderColor: 'var(--gecko-success-300)' }} />
                 </div>
               </div>
             </div>

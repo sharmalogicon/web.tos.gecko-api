@@ -392,13 +392,12 @@ export function EntitySearch({
           )}
 
           {showHint && (
-            <div style={{
+            <div className="gecko-cell-meta" style={{
               padding: '8px 14px',
               background: 'var(--gecko-bg-surface)',
               border: '1px solid var(--gecko-border)',
               borderRadius: 8,
-              fontSize: 11,
-              color: 'var(--gecko-text-secondary)',
+              marginTop: 0,
             }}>
               Type at least <strong>3 characters</strong> to search…
             </div>

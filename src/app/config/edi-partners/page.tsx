@@ -556,7 +556,7 @@ export default function EdiPartnersPage() {
               }} />
             </div>
 
-            <div className="gecko-ml-auto" style={{ fontSize: 11, color: 'var(--gecko-text-secondary)' }}>
+            <div className="gecko-ml-auto gecko-cell-meta">
               {filtered.length} partner{filtered.length !== 1 ? 's' : ''}
             </div>
           </div>
@@ -567,9 +567,8 @@ export default function EdiPartnersPage() {
               <thead>
                 <tr style={{ borderBottom: '1px solid var(--gecko-border)', background: 'var(--gecko-bg-subtle)' }}>
                   {['Partner', 'Type', 'Connection', 'Message Types', 'Last Activity', 'Status', 'Actions'].map(h => (
-                    <th key={h} style={{
-                      padding: '9px 14px', textAlign: 'left', fontWeight: 600,
-                      fontSize: 11, letterSpacing: '0.04em', color: 'var(--gecko-text-secondary)',
+                    <th key={h} className="gecko-eyebrow" style={{
+                      padding: '9px 14px', textAlign: 'left',
                       whiteSpace: 'nowrap',
                     }}>{h}</th>
                   ))}
@@ -691,9 +690,8 @@ export default function EdiPartnersPage() {
           </div>
 
           {/* Table footer */}
-          <div className="gecko-row" style={{
+          <div className="gecko-row gecko-cell-meta" style={{
             padding: '8px 16px', borderTop: '1px solid var(--gecko-border)',
-            fontSize: 11, color: 'var(--gecko-text-secondary)',
           }}>
             <Icon name="info" size={13} />
             Click a row to view and edit the partner&apos;s connection profile.
@@ -897,7 +895,7 @@ export default function EdiPartnersPage() {
                             padding: '7px 12px',
                             borderBottom: i < 3 ? '1px solid var(--gecko-border)' : 'none',
                           }}>
-                            <span style={{ fontSize: 11, color: 'var(--gecko-text-secondary)', fontWeight: 500 }}>{label}</span>
+                            <span className="gecko-cell-meta" style={{ fontWeight: 500 }}>{label}</span>
                             {badge ? (
                               <Badge label={value} bg={CONNECTION_COLORS[p.connection].bg} color={CONNECTION_COLORS[p.connection].color} />
                             ) : (
@@ -910,7 +908,7 @@ export default function EdiPartnersPage() {
                         <div className="gecko-row gecko-row-between" style={{
                           padding: '7px 12px', borderTop: '1px solid var(--gecko-border)',
                         }}>
-                          <span style={{ fontSize: 11, color: 'var(--gecko-text-secondary)', fontWeight: 500 }}>Password</span>
+                          <span className="gecko-cell-meta" style={{ fontWeight: 500 }}>Password</span>
                           <div className="gecko-row" style={{ gap: 6 }}>
                             <span style={{ fontSize: 12, fontWeight: 600, color: 'var(--gecko-text-primary)', fontFamily: 'monospace', letterSpacing: '0.12em' }}>
                               {showPassword ? 'L0g!c0n_s3cure' : '••••••••'}
@@ -933,7 +931,7 @@ export default function EdiPartnersPage() {
                           <div key={label} className="gecko-row gecko-row-between" style={{
                             padding: '7px 12px', borderTop: '1px solid var(--gecko-border)',
                           }}>
-                            <span style={{ fontSize: 11, color: 'var(--gecko-text-secondary)', fontWeight: 500 }}>{label}</span>
+                            <span className="gecko-cell-meta" style={{ fontWeight: 500 }}>{label}</span>
                             <span style={{ fontSize: 11, fontWeight: 600, color: 'var(--gecko-text-primary)', fontFamily: 'monospace' }}>{value}</span>
                           </div>
                         ))}

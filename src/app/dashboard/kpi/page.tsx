@@ -190,7 +190,7 @@ export default function KpiDashboardPage() {
               );
             })}
           </svg>
-          <div className="gecko-row" style={{ gap: 16, marginTop: 6, fontSize: 11, color: 'var(--gecko-text-secondary)' }}>
+          <div className="gecko-row gecko-cell-meta" style={{ gap: 16, marginTop: 6 }}>
             <span className="gecko-inline-row" style={{ gap: 5 }}><span style={{ width: 10, height: 10, background: 'var(--gecko-success-600)', borderRadius: 2, display: 'inline-block' }} />Above target</span>
             <span className="gecko-inline-row" style={{ gap: 5 }}><span style={{ width: 10, height: 10, background: 'var(--gecko-error-600)', borderRadius: 2, display: 'inline-block' }} />Below target</span>
             <span className="gecko-inline-row" style={{ gap: 5 }}><span style={{ width: 14, height: 2, background: 'var(--gecko-error-600)', display: 'inline-block', borderTop: '2px dashed var(--gecko-error-600)' }} />Target line</span>
@@ -202,7 +202,7 @@ export default function KpiDashboardPage() {
             <thead>
               <tr style={{ background: 'var(--gecko-bg-subtle)' }}>
                 {['KPI','Actual','Target','Status'].map(h => (
-                  <th key={h} style={{ padding: '7px 8px', textAlign: 'left', fontWeight: 600, color: 'var(--gecko-text-secondary)', fontSize: 10, textTransform: 'uppercase', letterSpacing: '0.04em', borderBottom: '1px solid var(--gecko-border)', whiteSpace: 'nowrap' }}>{h}</th>
+                  <th key={h} className="gecko-eyebrow" style={{ padding: '7px 8px', textAlign: 'left', borderBottom: '1px solid var(--gecko-border)', whiteSpace: 'nowrap' }}>{h}</th>
                 ))}
               </tr>
             </thead>
@@ -213,7 +213,7 @@ export default function KpiDashboardPage() {
                   <tr key={row.kpi} style={{ borderBottom: '1px solid var(--gecko-border)' }}>
                     <td style={{ padding: '7px 8px', fontSize: 11, color: 'var(--gecko-text-primary)' }}>{row.kpi}</td>
                     <td style={{ padding: '7px 8px', fontFamily: 'var(--gecko-font-mono)', fontWeight: 700, fontSize: 11 }}>{row.actual}</td>
-                    <td style={{ padding: '7px 8px', fontSize: 11, color: 'var(--gecko-text-secondary)', fontFamily: 'var(--gecko-font-mono)' }}>{row.target}</td>
+                    <td className="gecko-cell-meta" style={{ padding: '7px 8px', fontFamily: 'var(--gecko-font-mono)' }}>{row.target}</td>
                     <td style={{ padding: '7px 8px' }}>
                       <span style={{ fontSize: 10, fontWeight: 700, padding: '2px 7px', borderRadius: 4, background: badge.bg, color: badge.color }}>{badge.label}</span>
                     </td>
@@ -230,7 +230,7 @@ export default function KpiDashboardPage() {
               <thead>
                 <tr style={{ background: 'var(--gecko-bg-subtle)' }}>
                   {['Unit ID','Type','Status','Hours (MTD)','Utilization %','Last Service'].map(h => (
-                    <th key={h} style={{ padding: '8px 10px', textAlign: 'left', fontWeight: 600, color: 'var(--gecko-text-secondary)', fontSize: 11, textTransform: 'uppercase', letterSpacing: '0.04em', borderBottom: '1px solid var(--gecko-border)', whiteSpace: 'nowrap' }}>{h}</th>
+                    <th key={h} className="gecko-eyebrow" style={{ padding: '8px 10px', textAlign: 'left', borderBottom: '1px solid var(--gecko-border)', whiteSpace: 'nowrap' }}>{h}</th>
                   ))}
                 </tr>
               </thead>
@@ -254,7 +254,7 @@ export default function KpiDashboardPage() {
                           <span style={{ fontSize: 11, fontFamily: 'var(--gecko-font-mono)', fontWeight: 600, color: utilColor, minWidth: 32 }}>{eq.util}%</span>
                         </div>
                       </td>
-                      <td style={{ padding: '8px 10px', fontSize: 11, color: 'var(--gecko-text-secondary)', fontFamily: 'var(--gecko-font-mono)' }}>{eq.service}</td>
+                      <td className="gecko-cell-meta" style={{ padding: '8px 10px', fontFamily: 'var(--gecko-font-mono)' }}>{eq.service}</td>
                     </tr>
                   );
                 })}
@@ -271,7 +271,7 @@ export default function KpiDashboardPage() {
                   <span style={{ fontSize: 12, fontWeight: 500, color: 'var(--gecko-text-primary)' }}>{op.label}</span>
                   <div className="gecko-row gecko-row-baseline">
                     <span style={{ fontSize: 13, fontWeight: 700, fontFamily: 'var(--gecko-font-mono)', color: 'var(--gecko-text-primary)' }}>{op.teu.toLocaleString()}</span>
-                    <span style={{ fontSize: 11, color: 'var(--gecko-text-secondary)' }}>TEU</span>
+                    <span className="gecko-cell-meta">TEU</span>
                     <span style={{ fontSize: 11, fontFamily: 'var(--gecko-font-mono)', color: op.color, fontWeight: 600 }}>{op.pct}%</span>
                   </div>
                 </div>
@@ -311,7 +311,7 @@ export default function KpiDashboardPage() {
               );
             })}
           </div>
-          <div className="gecko-row gecko-row-wrap" style={{ gap: 16, fontSize: 11, color: 'var(--gecko-text-secondary)' }}>
+          <div className="gecko-row gecko-row-wrap gecko-cell-meta" style={{ gap: 16 }}>
             <span className="gecko-inline-row" style={{ gap: 5 }}><span style={{ width: 12, height: 12, background: 'var(--gecko-success-600)', borderRadius: 3, display: 'inline-block' }} />&lt;70% Available</span>
             <span className="gecko-inline-row" style={{ gap: 5 }}><span style={{ width: 12, height: 12, background: '#f59e0b', borderRadius: 3, display: 'inline-block' }} />70–85% Busy</span>
             <span className="gecko-inline-row" style={{ gap: 5 }}><span style={{ width: 12, height: 12, background: '#f97316', borderRadius: 3, display: 'inline-block' }} />85–95% Near Full</span>

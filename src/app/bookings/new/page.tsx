@@ -91,7 +91,7 @@ export default function NewBookingPage() {
 
         {/* Booking type toggle */}
         <div style={{ padding: '20px 28px', background: 'var(--gecko-bg-subtle)', borderBottom: '1px solid var(--gecko-border)' }}>
-          <div style={{ fontSize: 11, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.08em', color: 'var(--gecko-text-secondary)', marginBottom: 12 }}>Booking Type</div>
+          <div className="gecko-eyebrow" style={{ marginBottom: 12 }}>Booking Type</div>
           <div style={{ display: 'flex', gap: 12 }}>
             {(['EXPORT', 'IMPORT'] as const).map(t => (
               <button
@@ -123,7 +123,7 @@ export default function NewBookingPage() {
 
           {/* Order Type */}
           <div>
-            <div style={{ fontSize: 11, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.08em', color: 'var(--gecko-text-secondary)', marginBottom: 12 }}>Order Type — Container Mode</div>
+            <div className="gecko-eyebrow" style={{ marginBottom: 12 }}>Order Type — Container Mode</div>
             <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 8 }}>
               {orderTypes.map(ot => (
                 <button
@@ -137,13 +137,13 @@ export default function NewBookingPage() {
                   }}
                 >
                   <div style={{ fontSize: 13, fontWeight: 700, color: orderType === ot.code ? 'var(--gecko-primary-700)' : 'var(--gecko-text-primary)', fontFamily: 'var(--gecko-font-mono)' }}>{ot.label}</div>
-                  <div style={{ fontSize: 10.5, color: 'var(--gecko-text-secondary)', marginTop: 3, lineHeight: 1.4 }}>{ot.desc}</div>
+                  <div className="gecko-cell-meta" style={{ lineHeight: 1.4 }}>{ot.desc}</div>
                 </button>
               ))}
             </div>
             {/* Movement preview */}
             <div style={{ marginTop: 10, padding: '10px 14px', background: 'var(--gecko-bg-subtle)', borderRadius: 8, display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
-              <span style={{ fontSize: 10, fontWeight: 700, color: 'var(--gecko-text-disabled)', textTransform: 'uppercase', letterSpacing: '0.06em', marginRight: 4 }}>Movements:</span>
+              <span className="gecko-eyebrow" style={{ color: 'var(--gecko-text-disabled)', marginRight: 4 }}>Movements:</span>
               {selectedOT.movements.map((m, i) => (
                 <React.Fragment key={m}>
                   <span style={{ fontSize: 11, fontWeight: 700, fontFamily: 'var(--gecko-font-mono)', color: 'var(--gecko-primary-700)', background: 'var(--gecko-primary-100)', padding: '2px 7px', borderRadius: 4 }}>{m}</span>
@@ -158,7 +158,7 @@ export default function NewBookingPage() {
 
           {/* Booking Reference */}
           <div>
-            <div style={{ fontSize: 11, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.08em', color: 'var(--gecko-text-secondary)', marginBottom: 12 }}>Booking Reference</div>
+            <div className="gecko-eyebrow" style={{ marginBottom: 12 }}>Booking Reference</div>
             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 180px', gap: 14 }}>
               <FieldGroup label={blLabel} required>
                 <input className="gecko-input gecko-text-mono" placeholder="e.g. EGLV149602390729" value={bookingNo} onChange={e => setBookingNo(e.target.value)} />
@@ -177,7 +177,7 @@ export default function NewBookingPage() {
 
           {/* Parties */}
           <div>
-            <div style={{ fontSize: 11, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.08em', color: 'var(--gecko-text-secondary)', marginBottom: 12 }}>Parties</div>
+            <div className="gecko-eyebrow" style={{ marginBottom: 12 }}>Parties</div>
             <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
 
               <FieldGroup label="Shipping Agent / Line" required hint="Line operator — drives EDO linkage and container ownership">
@@ -225,7 +225,7 @@ export default function NewBookingPage() {
 
         {/* Footer */}
         <div style={{ padding: '16px 28px', borderTop: '1px solid var(--gecko-border)', background: 'var(--gecko-bg-subtle)', display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12 }}>
-          <div style={{ fontSize: 12, color: 'var(--gecko-text-secondary)' }}>
+          <div className="gecko-page-subtitle">
             {canCreate
               ? <span style={{ display: 'flex', alignItems: 'center', gap: 6, color: 'var(--gecko-success-700)' }}><Icon name="checkCircle" size={14} /> Ready to create — voyage, containers and cargo added in next steps</span>
               : `Fill in Booking No${!agent ? ', Shipping Agent' : ''}${!shipper ? ` and ${custLabel}` : ''} to continue`}

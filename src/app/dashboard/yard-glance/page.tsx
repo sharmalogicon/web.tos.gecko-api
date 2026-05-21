@@ -487,7 +487,7 @@ export default function YardGlancePage() {
             {/* Legend */}
             <div className="gecko-row gecko-row-wrap" style={{ marginTop: 12, gap: 12, justifyContent: 'center' }}>
               {LENS_LEGENDS[lens].bands.map(band => (
-                <span key={band.label} className="gecko-inline-row" style={{ fontSize: 11, color: 'var(--gecko-text-secondary)' }}>
+                <span key={band.label} className="gecko-inline-row gecko-cell-meta">
                   <span style={{ width: 14, height: 14, borderRadius: 3, background: band.fill, border: `1.5px solid ${band.stroke}` }} />
                   {band.label}
                 </span>
@@ -524,7 +524,7 @@ export default function YardGlancePage() {
           <div className="gecko-row" style={{ padding: '14px 18px', borderBottom: '1px solid var(--gecko-border)' }}>
             <Icon name="alertTriangle" size={14} style={{ color: 'var(--gecko-warning-600)' }} />
             <div className="gecko-section-header-title gecko-flex-1">Hotspots</div>
-            <span style={{ fontSize: 10, color: 'var(--gecko-text-secondary)', fontWeight: 600 }}>top 5</span>
+            <span className="gecko-cell-meta" style={{ fontWeight: 600 }}>top 5</span>
           </div>
           <div style={{ padding: '4px 0' }}>
             {hotspots.map(({ b, m }, idx) => {
@@ -546,9 +546,9 @@ export default function YardGlancePage() {
                       {idx + 1}
                     </div>
                     <span style={{ fontFamily: 'var(--gecko-font-mono)', fontSize: 13, fontWeight: 800, color: t.stroke }}>{b.code}</span>
-                    <span style={{ fontSize: 10, color: 'var(--gecko-text-secondary)', fontWeight: 600, textTransform: 'uppercase' }}>{t.label}</span>
+                    <span className="gecko-eyebrow">{t.label}</span>
                   </div>
-                  <div className="gecko-row gecko-row-wrap" style={{ fontSize: 11, color: 'var(--gecko-text-secondary)' }}>
+                  <div className="gecko-row gecko-row-wrap gecko-cell-meta">
                     <span><strong style={{ color: 'var(--gecko-text-primary)' }}>{(m.occupancyPct * 100).toFixed(0)}%</strong> util</span>
                     <span>·</span>
                     <span><strong style={{ color: 'var(--gecko-text-primary)' }}>{m.avgDwellDays}d</strong> dwell</span>
@@ -602,11 +602,11 @@ export default function YardGlancePage() {
                       <td>
                         <span className="gecko-pill" style={{ background: t.fill, color: t.stroke, border: `1px solid ${t.stroke}40`, fontSize: 10 }}>{t.label}</span>
                       </td>
-                      <td style={{ fontSize: 10, color: 'var(--gecko-text-secondary)' }}>
+                      <td className="gecko-cell-meta">
                         {b.allocation === 'OPEN' ? 'Open' : b.reservedParty || '—'}
                       </td>
                       <td style={{ textAlign: 'right', fontFamily: 'var(--gecko-font-mono)' }}>{m.capacityTeu}</td>
-                      <td style={{ textAlign: 'right', fontFamily: 'var(--gecko-font-mono)', fontWeight: 700 }}>{m.occupiedTeu}</td>
+                      <td className="gecko-money">{m.occupiedTeu}</td>
                       <td>
                         <div className="gecko-row" style={{ gap: 6 }}>
                           <div className="gecko-progress gecko-progress-sm" style={{ flex: 1, minWidth: 80, background: 'var(--gecko-gray-100)' }}>
@@ -621,7 +621,7 @@ export default function YardGlancePage() {
                               }}
                             />
                           </div>
-                          <span style={{ fontFamily: 'var(--gecko-font-mono)', fontSize: 11, fontWeight: 700, minWidth: 36, textAlign: 'right' }}>
+                          <span className="gecko-money" style={{ fontSize: 11, minWidth: 36 }}>
                             {(m.occupancyPct * 100).toFixed(0)}%
                           </span>
                         </div>
@@ -663,7 +663,7 @@ function KpiTile({ icon, tone, label, value, sub }: {
       <div className={`gecko-kpi-tile-icon gecko-kpi-tile-icon-${tone}`}><Icon name={icon} size={16} /></div>
       <div className="gecko-kpi-tile-value">{value}</div>
       <div className="gecko-kpi-tile-label">{label}</div>
-      <div style={{ fontSize: 10, color: 'var(--gecko-text-disabled)', marginTop: 2 }}>{sub}</div>
+      <div className="gecko-cell-sub">{sub}</div>
     </div>
   );
 }

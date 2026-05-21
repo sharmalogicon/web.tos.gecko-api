@@ -134,8 +134,8 @@ export default function EdiDashboard() {
                     <span style={{ fontSize: 11, fontWeight: 700, color: 'var(--gecko-text-primary)', fontFamily: 'var(--gecko-font-mono)' }}>{p.code}</span>
                     <span style={{ fontSize: 10, fontWeight: 700, color: 'var(--gecko-text-primary)', fontFamily: 'var(--gecko-font-mono)' }}>{p.count > 0 ? p.count : '—'}</span>
                   </div>
-                  <div style={{ fontSize: 10, color: 'var(--gecko-text-secondary)', marginBottom: 3 }}>{p.name}</div>
-                  <div style={{ display: 'flex', alignItems: 'center', fontSize: 10, color: 'var(--gecko-text-secondary)' }}>
+                  <div className="gecko-cell-meta" style={{ marginBottom: 3 }}>{p.name}</div>
+                  <div className="gecko-cell-meta" style={{ display: 'flex', alignItems: 'center' }}>
                     {statusDot(p.status)}
                     <span style={{ fontWeight: 600 }}>{p.status}</span>
                     <span style={{ marginLeft: 'auto' }}>{p.last}</span>
@@ -155,7 +155,7 @@ export default function EdiDashboard() {
                   <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 4 }}>
                     <div>
                       <span style={{ fontSize: 11, fontWeight: 700, color: 'var(--gecko-text-primary)', fontFamily: 'var(--gecko-font-mono)', marginRight: 8 }}>{m.code}</span>
-                      <span style={{ fontSize: 11, color: 'var(--gecko-text-secondary)' }}>{m.name}</span>
+                      <span className="gecko-cell-meta">{m.name}</span>
                     </div>
                     <span style={{ fontSize: 11, fontWeight: 700, color: 'var(--gecko-text-primary)', fontFamily: 'var(--gecko-font-mono)' }}>{m.count}</span>
                   </div>
@@ -174,7 +174,7 @@ export default function EdiDashboard() {
               <thead>
                 <tr style={{ borderBottom: '1px solid var(--gecko-border)' }}>
                   {['Time', 'Partner', 'Type', 'Error', 'Status'].map((h) => (
-                    <th key={h} style={{ padding: '4px 8px', textAlign: 'left', fontSize: 10, fontWeight: 700, color: 'var(--gecko-text-secondary)', textTransform: 'uppercase', letterSpacing: '0.04em', whiteSpace: 'nowrap' }}>{h}</th>
+                    <th key={h} className="gecko-eyebrow" style={{ padding: '4px 8px', textAlign: 'left', whiteSpace: 'nowrap' }}>{h}</th>
                   ))}
                 </tr>
               </thead>

@@ -22,7 +22,7 @@ function EntityCard({ entity }: { entity: any }) {
           <div className="gecko-cell-sub" style={{ fontSize: 10.5, marginTop: 1 }}>Updated {entity.updated}</div>
         </div>
         <div style={{ textAlign: 'right' }}>
-          <div style={{ fontSize: 22, fontWeight: 700, fontFamily: 'var(--gecko-font-mono)', letterSpacing: '-0.02em', lineHeight: 1 }}>{entity.count.toLocaleString()}</div>
+          <div className="gecko-page-title" style={{ fontFamily: 'var(--gecko-font-mono)', lineHeight: 1 }}>{entity.count.toLocaleString()}</div>
           <div style={{ fontSize: 10, color: 'var(--gecko-text-disabled)' }}>records</div>
         </div>
       </div>
@@ -101,7 +101,7 @@ export default function MastersHubPage() {
         <div>
           <div className="gecko-row gecko-row-between gecko-mb-3">
             <span className="gecko-eyebrow">Catalogs</span>
-            <span style={{ fontWeight: 500, fontSize: 11, color: 'var(--gecko-text-secondary)' }}>{entities.reduce((s, e) => s + e.count, 0).toLocaleString()} records total</span>
+            <span className="gecko-cell-meta" style={{ fontWeight: 500 }}>{entities.reduce((s, e) => s + e.count, 0).toLocaleString()} records total</span>
           </div>
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: 12 }}>
             {entities.map(e => <EntityCard key={e.id} entity={e} />)}
@@ -146,7 +146,7 @@ export default function MastersHubPage() {
                   </div>
                   <div className="gecko-flex-1">
                     <div style={{ fontSize: 12, fontWeight: 600 }}>{q.label}</div>
-                    <div style={{ fontSize: 10.5, color: 'var(--gecko-text-secondary)', marginTop: 1 }}>{q.sub}</div>
+                    <div className="gecko-cell-sub">{q.sub}</div>
                   </div>
                   <Icon name="arrowRight" size={12} style={{ color: 'var(--gecko-text-disabled)' }} />
                 </button>

@@ -86,7 +86,7 @@ function Toggle({ on, onChange, label }: { on: boolean; onChange: (v: boolean) =
           <span className="gecko-toggle-thumb" />
         </span>
       </label>
-      {label && <span style={{ fontSize: 13, color: 'var(--gecko-text-secondary)' }}>{label}</span>}
+      {label && <span className="gecko-page-subtitle">{label}</span>}
     </span>
   );
 }
@@ -361,7 +361,7 @@ function FinancialSection({ onDirty }: { onDirty: () => void }) {
         <FieldRow label="Late Payment Penalty">
           <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
             <TF value={penalty} onChange={d(setPenalty)} type="number" />
-            <span style={{ fontSize: 13, color: 'var(--gecko-text-secondary)' }}>% per</span>
+            <span className="gecko-page-subtitle">% per</span>
             <Sel value={penUnit} onChange={v => { setPenUnit(v); onDirty(); }} options={[
               { v: 'month', l: 'month' }, { v: 'week', l: 'week' }, { v: 'year', l: 'year' },
             ]} />
@@ -471,9 +471,9 @@ function GateSection({ onDirty }: { onDirty: () => void }) {
         </FieldRow>
         <FieldRow label="VGM Tolerance" hint="Allowed variance in kg from declared weight">
           <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-            <span style={{ fontSize: 13, color: 'var(--gecko-text-secondary)' }}>±</span>
+            <span className="gecko-page-subtitle">±</span>
             <TF value={vgmTol} onChange={d(setVgmTol)} type="number" mono />
-            <span style={{ fontSize: 13, color: 'var(--gecko-text-secondary)' }}>kg</span>
+            <span className="gecko-page-subtitle">kg</span>
           </div>
         </FieldRow>
       </Card>
@@ -483,7 +483,7 @@ function GateSection({ onDirty }: { onDirty: () => void }) {
         <FieldRow label="Overdue Threshold" hint="Minutes a truck may wait before flagged overdue">
           <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
             <TF value={overdue} onChange={d(setOverdue)} type="number" mono />
-            <span style={{ fontSize: 13, color: 'var(--gecko-text-secondary)' }}>minutes</span>
+            <span className="gecko-page-subtitle">minutes</span>
           </div>
         </FieldRow>
         <FieldRow label="Alert At (% of threshold)" hint="Early-warning trigger percentage">
@@ -495,7 +495,7 @@ function GateSection({ onDirty }: { onDirty: () => void }) {
         <FieldRow label="Auto-escalate After" hint="Escalate alert after this many minutes">
           <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
             <TF value={escalate} onChange={d(setEscalate)} type="number" mono />
-            <span style={{ fontSize: 13, color: 'var(--gecko-text-secondary)' }}>minutes</span>
+            <span className="gecko-page-subtitle">minutes</span>
           </div>
         </FieldRow>
         <FieldRow label="Escalation Recipient">
@@ -577,25 +577,25 @@ function YardSection({ onDirty }: { onDirty: () => void }) {
         <FieldRow label="40ft Standard">
           <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
             <TF value={t40std} onChange={d(setT40std)} type="number" mono />
-            <span style={{ fontSize: 13, color: 'var(--gecko-text-secondary)' }}>TEU</span>
+            <span className="gecko-page-subtitle">TEU</span>
           </div>
         </FieldRow>
         <FieldRow label="45ft HC">
           <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
             <TF value={t45hc} onChange={d(setT45hc)} type="number" mono />
-            <span style={{ fontSize: 13, color: 'var(--gecko-text-secondary)' }}>TEU</span>
+            <span className="gecko-page-subtitle">TEU</span>
           </div>
         </FieldRow>
         <FieldRow label="20ft Reefer">
           <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
             <TF value={t20rf} onChange={d(setT20rf)} type="number" mono />
-            <span style={{ fontSize: 13, color: 'var(--gecko-text-secondary)' }}>TEU</span>
+            <span className="gecko-page-subtitle">TEU</span>
           </div>
         </FieldRow>
         <FieldRow label="40ft Reefer">
           <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
             <TF value={t40rf} onChange={d(setT40rf)} type="number" mono />
-            <span style={{ fontSize: 13, color: 'var(--gecko-text-secondary)' }}>TEU</span>
+            <span className="gecko-page-subtitle">TEU</span>
           </div>
         </FieldRow>
       </Card>
@@ -614,7 +614,7 @@ function YardSection({ onDirty }: { onDirty: () => void }) {
         <FieldRow label="Segregation Distance (Hazmat)" hint="Minimum clearance between DG containers (metres)">
           <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
             <TF value={hzSeg} onChange={d(setHzSeg)} type="number" mono />
-            <span style={{ fontSize: 13, color: 'var(--gecko-text-secondary)' }}>metres</span>
+            <span className="gecko-page-subtitle">metres</span>
           </div>
         </FieldRow>
         <FieldRow label="Auto-reposition on Overflow" hint="Automatically move containers when zone is full">
@@ -678,19 +678,19 @@ function ReeferSection({ onDirty }: { onDirty: () => void }) {
         <FieldRow label="Logging interval (hours)" hint="How often crew records a reading on laden reefers. Default 4h.">
           <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
             <TF value={cadenceHrs} onChange={d(setCadenceHrs)} type="number" mono />
-            <span style={{ fontSize: 13, color: 'var(--gecko-text-secondary)' }}>hours</span>
+            <span className="gecko-page-subtitle">hours</span>
           </div>
         </FieldRow>
         <FieldRow label="Grace period (minutes)" hint="Buffer after cadence elapses before NO_READING alarm fires">
           <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
             <TF value={graceMins} onChange={d(setGraceMins)} type="number" mono />
-            <span style={{ fontSize: 13, color: 'var(--gecko-text-secondary)' }}>min</span>
+            <span className="gecko-page-subtitle">min</span>
           </div>
         </FieldRow>
         <FieldRow label="Deviation grace (minutes)" hint="Minimum duration a temp must stay outside band before DEVIATION alarm fires">
           <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
             <TF value={devGraceMins} onChange={d(setDevGraceMins)} type="number" mono />
-            <span style={{ fontSize: 13, color: 'var(--gecko-text-secondary)' }}>min</span>
+            <span className="gecko-page-subtitle">min</span>
           </div>
         </FieldRow>
       </Card>
@@ -700,19 +700,19 @@ function ReeferSection({ onDirty }: { onDirty: () => void }) {
         <FieldRow label="Pharma (± °C)" hint="Tightest band — temperature excursions outside this trigger DEVIATION alarms">
           <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
             <TF value={tolPharma} onChange={d(setTolPharma)} type="number" mono />
-            <span style={{ fontSize: 13, color: 'var(--gecko-text-secondary)' }}>°C</span>
+            <span className="gecko-page-subtitle">°C</span>
           </div>
         </FieldRow>
         <FieldRow label="Food (± °C)" hint="Standard band for frozen / chilled foods">
           <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
             <TF value={tolFood} onChange={d(setTolFood)} type="number" mono />
-            <span style={{ fontSize: 13, color: 'var(--gecko-text-secondary)' }}>°C</span>
+            <span className="gecko-page-subtitle">°C</span>
           </div>
         </FieldRow>
         <FieldRow label="Non-critical (± °C)" hint="Loose band for transit, ambient, or non-sensitive cargo">
           <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
             <TF value={tolNonCrit} onChange={d(setTolNonCrit)} type="number" mono />
-            <span style={{ fontSize: 13, color: 'var(--gecko-text-secondary)' }}>°C</span>
+            <span className="gecko-page-subtitle">°C</span>
           </div>
         </FieldRow>
       </Card>
@@ -722,7 +722,7 @@ function ReeferSection({ onDirty }: { onDirty: () => void }) {
         <FieldRow label="Target hours before stuffing" hint="Pre-cool ETA — typically 6h for a 40RF from ambient to -18°C">
           <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
             <TF value={preCoolHrs} onChange={d(setPreCoolHrs)} type="number" mono />
-            <span style={{ fontSize: 13, color: 'var(--gecko-text-secondary)' }}>hours</span>
+            <span className="gecko-page-subtitle">hours</span>
           </div>
         </FieldRow>
         <FieldRow label="Auto-create from booking" hint="When a reefer is assigned to an export booking with a target temp, auto-create the pre-cool task">
@@ -809,8 +809,7 @@ function NotificationsSection({ onDirty }: { onDirty: () => void }) {
             <thead>
               <tr style={{ borderBottom: '1px solid var(--gecko-border)' }}>
                 {['Event', 'Trigger', 'Recipients', 'Channel', 'Active'].map(h => (
-                  <th key={h} style={{ padding: '8px 12px', textAlign: 'left', fontSize: 10, fontWeight: 700,
-                    letterSpacing: '0.07em', textTransform: 'uppercase', color: 'var(--gecko-text-secondary)' }}>
+                  <th key={h} className="gecko-eyebrow" style={{ padding: '8px 12px', textAlign: 'left' }}>
                     {h}
                   </th>
                 ))}
@@ -921,7 +920,7 @@ function IntegrationSection({ onDirty }: { onDirty: () => void }) {
           <TF value="https://api.logicon-lcb.th/v2" readOnly mono />
         </FieldRow>
         <FieldRow label="API Key (Production)" hint="Use in Authorization: Bearer header">
-          <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+          <div className="gecko-row">
             <TF value={prodRevealed ? 'lc_prod_sk_4a8f923b1de04c2e3f9a' : 'lc_prod_••••••••••••3f9a'} readOnly mono />
             <button className="gecko-btn gecko-btn-outline gecko-btn-sm" onClick={() => setProdRevealed(v => !v)}
               style={{ display: 'flex', alignItems: 'center', gap: 5, whiteSpace: 'nowrap' }}>
@@ -935,7 +934,7 @@ function IntegrationSection({ onDirty }: { onDirty: () => void }) {
           </div>
         </FieldRow>
         <FieldRow label="API Key (Staging)">
-          <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+          <div className="gecko-row">
             <TF value={stgRevealed ? 'lc_stg_sk_9c12e456af874d017b2c' : 'lc_stg_••••••••••••7b2c'} readOnly mono />
             <button className="gecko-btn gecko-btn-outline gecko-btn-sm" onClick={() => setStgRevealed(v => !v)}
               style={{ display: 'flex', alignItems: 'center', gap: 5, whiteSpace: 'nowrap' }}>
@@ -951,7 +950,7 @@ function IntegrationSection({ onDirty }: { onDirty: () => void }) {
         <FieldRow label="Rate Limit" hint="Maximum API requests allowed per minute">
           <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
             <TF value={rateLimit} onChange={v => { setRateLimit(v); onDirty(); }} type="number" mono />
-            <span style={{ fontSize: 13, color: 'var(--gecko-text-secondary)' }}>req / min</span>
+            <span className="gecko-page-subtitle">req / min</span>
           </div>
         </FieldRow>
       </Card>
@@ -963,8 +962,7 @@ function IntegrationSection({ onDirty }: { onDirty: () => void }) {
             <thead>
               <tr style={{ borderBottom: '1px solid var(--gecko-border)' }}>
                 {['Event', 'URL', 'Secret', 'Last Triggered', 'Status', ''].map((h, i) => (
-                  <th key={i} style={{ padding: '8px 12px', textAlign: 'left', fontSize: 10, fontWeight: 700,
-                    letterSpacing: '0.07em', textTransform: 'uppercase', color: 'var(--gecko-text-secondary)' }}>
+                  <th key={i} className="gecko-eyebrow" style={{ padding: '8px 12px', textAlign: 'left' }}>
                     {h}
                   </th>
                 ))}
@@ -976,14 +974,14 @@ function IntegrationSection({ onDirty }: { onDirty: () => void }) {
                   background: i % 2 === 0 ? 'transparent' : 'var(--gecko-bg-subtle)' }}>
                   <td style={{ padding: '10px 12px', fontWeight: 600, color: 'var(--gecko-text-primary)',
                     fontFamily: 'var(--gecko-font-mono)', fontSize: 12 }}>{wh.event}</td>
-                  <td style={{ padding: '10px 12px', color: 'var(--gecko-text-secondary)', fontSize: 11,
+                  <td className="gecko-cell-meta" style={{ padding: '10px 12px',
                     fontFamily: 'var(--gecko-font-mono)', maxWidth: 220, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
                     {wh.url}
                   </td>
                   <td style={{ padding: '10px 12px', color: 'var(--gecko-text-disabled)', fontFamily: 'var(--gecko-font-mono)', fontSize: 12 }}>
                     {wh.secret}
                   </td>
-                  <td style={{ padding: '10px 12px', color: 'var(--gecko-text-secondary)', fontSize: 11, whiteSpace: 'nowrap' }}>
+                  <td className="gecko-cell-meta" style={{ padding: '10px 12px', whiteSpace: 'nowrap' }}>
                     {wh.lastTriggered}
                   </td>
                   <td style={{ padding: '10px 12px' }}>{statusBadge(wh.status)}</td>
@@ -1020,7 +1018,7 @@ function IntegrationSection({ onDirty }: { onDirty: () => void }) {
           padding: '12px 0', borderBottom: '1px solid var(--gecko-border)' }}>
           <div>
             <div style={{ fontSize: 13, fontWeight: 600, color: 'var(--gecko-text-primary)' }}>CargoWise Integration</div>
-            <div style={{ fontSize: 11, color: 'var(--gecko-text-secondary)', marginTop: 2 }}>
+            <div className="gecko-cell-meta">
               Sync shipments, customs events, and billing with CargoWise One
             </div>
           </div>
@@ -1037,7 +1035,7 @@ function IntegrationSection({ onDirty }: { onDirty: () => void }) {
           padding: '12px 0', borderBottom: '1px solid var(--gecko-border)' }}>
           <div>
             <div style={{ fontSize: 13, fontWeight: 600, color: 'var(--gecko-text-primary)' }}>Port Community System (PCS)</div>
-            <div style={{ fontSize: 11, color: 'var(--gecko-text-secondary)', marginTop: 2 }}>
+            <div className="gecko-cell-meta">
               Real-time data exchange with the national port community platform
             </div>
           </div>
@@ -1056,7 +1054,7 @@ function IntegrationSection({ onDirty }: { onDirty: () => void }) {
           padding: '12px 0', borderBottom: '1px solid var(--gecko-border)' }}>
           <div>
             <div style={{ fontSize: 13, fontWeight: 600, color: 'var(--gecko-text-primary)' }}>Customs API (Thai Customs)</div>
-            <div style={{ fontSize: 11, color: 'var(--gecko-text-secondary)', marginTop: 2 }}>
+            <div className="gecko-cell-meta">
               Electronic customs declaration and release notifications
             </div>
           </div>
@@ -1075,7 +1073,7 @@ function IntegrationSection({ onDirty }: { onDirty: () => void }) {
         <div className="gecko-row gecko-row-between" style={{ padding: '12px 0' }}>
           <div>
             <div style={{ fontSize: 13, fontWeight: 600, color: 'var(--gecko-text-primary)' }}>{"Lloyd's Register API"}</div>
-            <div style={{ fontSize: 11, color: 'var(--gecko-text-secondary)', marginTop: 2 }}>
+            <div className="gecko-cell-meta">
               Vessel register, IMO data, and classification society lookups
             </div>
           </div>
@@ -1152,8 +1150,7 @@ export default function SystemParamsPage() {
           position: 'sticky', top: 80,
         }}>
           <div style={{ padding: '10px 14px 8px', borderBottom: '1px solid var(--gecko-border)' }}>
-            <div style={{ fontSize: 10, fontWeight: 700, letterSpacing: '0.08em', textTransform: 'uppercase',
-              color: 'var(--gecko-text-secondary)' }}>
+            <div className="gecko-eyebrow">
               Configuration
             </div>
           </div>
@@ -1202,14 +1199,14 @@ export default function SystemParamsPage() {
             display: 'flex', gap: 8, alignItems: 'flex-start',
             background: 'var(--gecko-bg-subtle)' }}>
             <Icon name="shieldCheck" size={13} style={{ color: 'var(--gecko-success-600)', flexShrink: 0, marginTop: 1 }} />
-            <div style={{ fontSize: 10, color: 'var(--gecko-text-secondary)', lineHeight: 1.5 }}>
+            <div className="gecko-cell-meta" style={{ lineHeight: 1.5 }}>
               Changes saved per section. All edits are audit-logged.
             </div>
           </div>
         </div>
 
         {/* ── Content Panel ── */}
-        <div style={{ flex: 1, minWidth: 0 }}>
+        <div className="gecko-flex-1">
           {renderSection()}
         </div>
       </div>

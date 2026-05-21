@@ -517,7 +517,7 @@ function TabUsage() {
         ].map(k => (
           <div key={k.label} className="gecko-kpi-cell">
             <div className="gecko-eyebrow">{k.label}</div>
-            <div style={{ fontSize: 22, fontWeight: 800, color: 'var(--gecko-text-primary)' }}>{k.value}</div>
+            <div className="gecko-stat-num gecko-stat-num-22">{k.value}</div>
             <div className="gecko-cell-meta">{k.sub}</div>
           </div>
         ))}
@@ -543,8 +543,8 @@ function TabUsage() {
                 <td>
                   <span style={{ fontSize: 11, fontWeight: 700, padding: '2px 6px', borderRadius: 4, background: b.type === 'Contract' ? 'var(--gecko-warning-100)' : 'var(--gecko-primary-50)', color: b.type === 'Contract' ? 'var(--gecko-warning-700)' : 'var(--gecko-primary-700)' }}>{b.type}</span>
                 </td>
-                <td style={{ textAlign: 'right', fontFamily: 'var(--gecko-font-mono)', fontWeight: 700 }}>{b.rate}</td>
-                <td style={{ color: 'var(--gecko-text-secondary)', fontSize: 12 }}>{b.notes}</td>
+                <td className="gecko-money">{b.rate}</td>
+                <td className="gecko-page-subtitle">{b.notes}</td>
                 <td><button style={{ background: 'none', border: 'none', color: 'var(--gecko-primary-600)', cursor: 'pointer', fontSize: 12, fontWeight: 600 }}>View →</button></td>
               </tr>
             ))}
@@ -574,7 +574,7 @@ function TabUsage() {
                 <td style={{ color: 'var(--gecko-text-secondary)' }}>{r.type}</td>
                 <td style={{ fontWeight: 600 }}>{r.customer}</td>
                 <td style={{ color: 'var(--gecko-primary-600)', fontFamily: 'var(--gecko-font-mono)', fontSize: 12 }}>{r.invoice}</td>
-                <td style={{ textAlign: 'right', fontFamily: 'var(--gecko-font-mono)', fontWeight: 700 }}>{r.amt}</td>
+                <td className="gecko-money">{r.amt}</td>
               </tr>
             ))}
           </tbody>
@@ -595,7 +595,7 @@ function TabUsage() {
               <div style={{ width: 100, flexShrink: 0, fontSize: 12, fontWeight: 600, color: 'var(--gecko-text-secondary)' }}>{log.user}</div>
               <div>
                 <div style={{ fontSize: 13, fontWeight: 600, color: 'var(--gecko-text-primary)' }}>{log.action}</div>
-                <div style={{ fontSize: 12, color: 'var(--gecko-text-secondary)', marginTop: 2 }}>{log.detail}</div>
+                <div className="gecko-page-subtitle" style={{ marginTop: 2 }}>{log.detail}</div>
               </div>
             </div>
           ))}
@@ -720,7 +720,7 @@ export default function ChargeCodeDetailPage({ params }: { params: { code: strin
                   <div className="gecko-flex-1">
                     <div className="gecko-eyebrow" style={{ fontSize: 9, marginBottom: 2 }}>{fact.label}</div>
                     <div style={{ fontSize: 12.5, fontWeight: 700, color: 'var(--gecko-text-primary)', lineHeight: 1.2 }}>{fact.value}</div>
-                    <div style={{ fontSize: 11, color: 'var(--gecko-text-secondary)', marginTop: 2 }}>{fact.sub}</div>
+                    <div className="gecko-cell-meta">{fact.sub}</div>
                   </div>
                 </div>
               ))}
@@ -737,8 +737,8 @@ export default function ChargeCodeDetailPage({ params }: { params: { code: strin
 
             <div style={{ marginTop: 16, padding: '10px 12px', background: 'var(--gecko-bg-subtle)', borderRadius: 8 }}>
               <div className="gecko-eyebrow gecko-mb-1">Last Modified</div>
-              <div style={{ fontSize: 12, fontWeight: 600, color: 'var(--gecko-text-primary)' }}>Jan 15, 2026</div>
-              <div style={{ fontSize: 11, color: 'var(--gecko-text-secondary)' }}>by Somchai K. — rate review</div>
+              <div className="gecko-cell-primary">Jan 15, 2026</div>
+              <div className="gecko-cell-meta">by Somchai K. — rate review</div>
             </div>
           </div>
         </div>

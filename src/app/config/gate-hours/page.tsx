@@ -185,7 +185,7 @@ function WeeklyScheduleTab() {
       >
         <div className="gecko-row" style={{ gap: 7 }}>
           <Icon name="calendar" size={14} style={{ color: 'var(--gecko-primary-500)' }} />
-          <span style={{ fontSize: 12, color: 'var(--gecko-text-secondary)' }}>Effective from:</span>
+          <span className="gecko-page-subtitle">Effective from:</span>
           <span style={{ fontSize: 13, fontWeight: 700, color: 'var(--gecko-text-primary)' }}>01 May 2026</span>
         </div>
 
@@ -328,7 +328,7 @@ function WeeklyScheduleTab() {
                             className="gecko-input gecko-input-sm"
                             style={{ width: 100, fontVariantNumeric: 'tabular-nums' }}
                           />
-                          <span style={{ fontSize: 11, color: 'var(--gecko-text-secondary)', flexShrink: 0 }}>–</span>
+                          <span className="gecko-cell-meta" style={{ flexShrink: 0 }}>–</span>
                           <input
                             type="time"
                             value={day.breakEnd}
@@ -380,26 +380,26 @@ function WeeklyScheduleTab() {
         }}>
           <div className="gecko-row" style={{ gap: 7 }}>
             <Icon name="clock" size={14} style={{ color: 'var(--gecko-primary-500)' }} />
-            <span style={{ fontSize: 11, color: 'var(--gecko-text-secondary)' }}>Total operating hours this week:</span>
+            <span className="gecko-cell-meta">Total operating hours this week:</span>
             <span style={{ fontSize: 13, fontWeight: 700, color: 'var(--gecko-text-primary)' }}>
               {summary.totalHours % 1 === 0 ? `${summary.totalHours} hrs` : `${summary.totalHours.toFixed(1)} hrs`}
             </span>
           </div>
           <div className="gecko-row" style={{ gap: 7 }}>
             <Icon name="checkCircle" size={14} style={{ color: 'var(--gecko-success-500)' }} />
-            <span style={{ fontSize: 11, color: 'var(--gecko-text-secondary)' }}>Days open:</span>
+            <span className="gecko-cell-meta">Days open:</span>
             <span style={{ fontSize: 13, fontWeight: 700, color: 'var(--gecko-text-primary)' }}>
               {summary.daysOpen} / 7 days
             </span>
           </div>
           <div className="gecko-row" style={{ gap: 7 }}>
             <Icon name="arrowUp" size={13} style={{ color: 'var(--gecko-success-600)' }} />
-            <span style={{ fontSize: 11, color: 'var(--gecko-text-secondary)' }}>Earliest open:</span>
+            <span className="gecko-cell-meta">Earliest open:</span>
             <span style={{ fontSize: 13, fontWeight: 700, color: 'var(--gecko-text-primary)' }}>{summary.earliest}</span>
           </div>
           <div className="gecko-row" style={{ gap: 7 }}>
             <Icon name="arrowDown" size={13} style={{ color: 'var(--gecko-warning-600)' }} />
-            <span style={{ fontSize: 11, color: 'var(--gecko-text-secondary)' }}>Latest close:</span>
+            <span className="gecko-cell-meta">Latest close:</span>
             <span style={{ fontSize: 13, fontWeight: 700, color: 'var(--gecko-text-primary)' }}>{summary.latest}</span>
           </div>
         </div>
@@ -601,7 +601,7 @@ function PublicHolidaysTab() {
                         />
                       ) : (
                         <div>
-                          <div style={{ fontSize: 12, fontWeight: 600, color: 'var(--gecko-text-primary)' }}>
+                          <div className="gecko-cell-primary">
                             {formatHolidayDate(h.date)}
                           </div>
                         </div>
@@ -660,7 +660,7 @@ function PublicHolidaysTab() {
                             ? <Icon name="globe" size={12} style={{ color: 'var(--gecko-primary-500)' }} />
                             : <Icon name="settings" size={12} style={{ color: 'var(--gecko-text-secondary)' }} />
                           }
-                          <span style={{ fontSize: 12, color: 'var(--gecko-text-secondary)' }}>{h.scope}</span>
+                          <span className="gecko-page-subtitle">{h.scope}</span>
                         </div>
                       )}
                     </td>

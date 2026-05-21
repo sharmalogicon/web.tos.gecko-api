@@ -7,7 +7,7 @@ function SectionHead({ title, sub }: { title: string; sub?: string }) {
   return (
     <div style={{ marginBottom: 18, paddingBottom: 10, borderBottom: '1px solid var(--gecko-border)' }}>
       <h3 style={{ fontSize: 14, fontWeight: 700, margin: 0, color: 'var(--gecko-text-primary)' }}>{title}</h3>
-      {sub && <div style={{ fontSize: 12, color: 'var(--gecko-text-secondary)', marginTop: 3 }}>{sub}</div>}
+      {sub && <div className="gecko-cell-meta" style={{ marginTop: 3 }}>{sub}</div>}
     </div>
   );
 }
@@ -99,8 +99,8 @@ export default function NewVesselPage() {
           <Icon name="arrowLeft" size={16} />
         </Link>
         <div>
-          <h1 style={{ fontSize: 22, fontWeight: 700, margin: 0, color: 'var(--gecko-text-primary)' }}>New Vessel</h1>
-          <div style={{ fontSize: 13, color: 'var(--gecko-text-secondary)', marginTop: 3 }}>Register a new vessel in the IMO-keyed vessel catalog.</div>
+          <h1 className="gecko-stat-num gecko-stat-num-22" style={{ margin: 0 }}>New Vessel</h1>
+          <div className="gecko-cell-meta" style={{ marginTop: 3 }}>Register a new vessel in the IMO-keyed vessel catalog.</div>
         </div>
       </div>
 

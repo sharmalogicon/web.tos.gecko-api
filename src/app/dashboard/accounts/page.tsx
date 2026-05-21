@@ -142,14 +142,14 @@ export default function AccountsRevenuePage() {
         </Widget>
 
         <Widget title="AR Aging Breakdown">
-          <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
+          <div className="gecko-stack">
             {AR_BUCKETS.map((b) => (
               <div key={b.label}>
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', marginBottom: 5 }}>
                   <span style={{ fontSize: 12, fontWeight: 500, color: 'var(--gecko-text-primary)' }}>{b.label}</span>
                   <div style={{ display: 'flex', alignItems: 'baseline', gap: 6 }}>
                     <span style={{ fontSize: 12, fontWeight: 700, fontFamily: 'var(--gecko-font-mono)', color: b.color }}>฿{b.amount.toLocaleString()}</span>
-                    <span style={{ fontSize: 10, color: 'var(--gecko-text-secondary)' }}>{b.pct}%</span>
+                    <span className="gecko-cell-meta">{b.pct}%</span>
                   </div>
                 </div>
                 <div style={{ height: 10, borderRadius: 5, background: 'var(--gecko-bg-subtle)', overflow: 'hidden' }}>
@@ -176,8 +176,8 @@ export default function AccountsRevenuePage() {
                   <div style={{ height: 8, borderRadius: 4, background: 'var(--gecko-bg-subtle)', overflow: 'hidden' }}>
                     <div style={{ height: '100%', width: `${barPct}%`, background: i === 0 ? 'var(--gecko-primary-600)' : 'var(--gecko-primary-300)', borderRadius: 4 }} />
                   </div>
-                  <span style={{ fontSize: 12, fontWeight: 700, fontFamily: 'var(--gecko-font-mono)', color: 'var(--gecko-text-primary)', textAlign: 'right' }}>฿{c.rev.toLocaleString()}</span>
-                  <span style={{ fontSize: 10, color: 'var(--gecko-text-secondary)', textAlign: 'right' }}>{totalPct}%</span>
+                  <span className="gecko-money" style={{ fontSize: 12 }}>฿{c.rev.toLocaleString()}</span>
+                  <span className="gecko-cell-meta" style={{ textAlign: 'right' }}>{totalPct}%</span>
                 </div>
               );
             })}
@@ -195,7 +195,7 @@ export default function AccountsRevenuePage() {
                   </div>
                 </div>
                 <span style={{ fontSize: 12, fontWeight: 700, fontFamily: 'var(--gecko-font-mono)', color: 'var(--gecko-text-primary)', minWidth: 24, textAlign: 'center' }}>{s.count}</span>
-                <span style={{ fontSize: 10, color: 'var(--gecko-text-secondary)', minWidth: 32, textAlign: 'right' }}>{s.pct}%</span>
+                <span className="gecko-cell-meta" style={{ minWidth: 32, textAlign: 'right' }}>{s.pct}%</span>
                 <span style={{ fontSize: 11, fontWeight: 600, fontFamily: 'var(--gecko-font-mono)', color: s.color, minWidth: 70, textAlign: 'right' }}>{s.amount}</span>
               </div>
             ))}
@@ -241,7 +241,7 @@ export default function AccountsRevenuePage() {
               <text key={m} x={ptX(i)} y={PT_H - 8} textAnchor="middle" fontSize={9} fill="var(--gecko-text-secondary)">{m}</text>
             ))}
           </svg>
-          <div style={{ display: 'flex', gap: 20, marginTop: 8, fontSize: 11, color: 'var(--gecko-text-secondary)' }}>
+          <div className="gecko-cell-meta" style={{ display: 'flex', gap: 20, marginTop: 8 }}>
             <span style={{ display: 'flex', alignItems: 'center', gap: 5 }}>
               <span style={{ width: 12, height: 3, background: 'var(--gecko-primary-600)', borderRadius: 2, display: 'inline-block' }} />
               Invoiced (฿k)

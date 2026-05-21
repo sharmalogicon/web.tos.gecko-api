@@ -177,7 +177,7 @@ function NewLineModal({ onClose }: NewLineModalProps) {
                     style={{ width: 36, height: 34, padding: 2, border: '1px solid var(--gecko-border)', borderRadius: 6, cursor: 'pointer', background: 'var(--gecko-bg-surface)' }}
                   />
                   <div className="gecko-flex-shrink-0" style={{ width: 20, height: 20, borderRadius: 4, background: form.brandColor, border: '1px solid var(--gecko-border)' }} />
-                  <span className="gecko-text-mono" style={{ fontSize: 11, color: 'var(--gecko-text-secondary)' }}>{form.brandColor}</span>
+                  <span className="gecko-text-mono gecko-cell-meta">{form.brandColor}</span>
                 </div>
               </div>
             </div>
@@ -456,7 +456,7 @@ export default function ShippingLinesPage() {
                     <span className="gecko-id-link" style={{ color: 'var(--gecko-primary-700)' }}>{line.id}</span>
                   </div>
                 </td>
-                <td className="gecko-text-mono" style={{ fontSize: 12, color: 'var(--gecko-text-secondary)' }}>{line.scac}</td>
+                <td className="gecko-text-mono gecko-page-subtitle">{line.scac}</td>
                 <td><span className="gecko-cell-primary" style={{ fontSize: 13 }}>{line.name}</span></td>
                 <td style={{ color: 'var(--gecko-text-secondary)' }}>{line.hq}</td>
                 <td className="gecko-mono-strong" style={{ fontSize: 12 }}>{line.prefix}</td>

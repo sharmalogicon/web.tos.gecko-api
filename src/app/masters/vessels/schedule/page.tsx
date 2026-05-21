@@ -133,11 +133,11 @@ function VoyagePopover({ voyage, anchorRect, containerRect, onClose }: {
         {/* ETD / ETA */}
         <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8 }}>
           <div>
-            <div style={{ fontSize: 10, fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.06em', color: 'var(--gecko-text-secondary)', marginBottom: 2 }}>ETD</div>
+            <div className="gecko-eyebrow" style={{ marginBottom: 2 }}>ETD</div>
             <div style={{ fontSize: 12, fontWeight: 600, fontFamily: 'var(--gecko-font-mono)', color: 'var(--gecko-text-primary)' }}>{voyage.etd}</div>
           </div>
           <div>
-            <div style={{ fontSize: 10, fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.06em', color: 'var(--gecko-text-secondary)', marginBottom: 2 }}>ETA</div>
+            <div className="gecko-eyebrow" style={{ marginBottom: 2 }}>ETA</div>
             <div style={{ fontSize: 12, fontWeight: 600, fontFamily: 'var(--gecko-font-mono)', color: 'var(--gecko-text-primary)' }}>{voyage.eta}</div>
           </div>
         </div>
@@ -154,7 +154,7 @@ function VoyagePopover({ voyage, anchorRect, containerRect, onClose }: {
               background: fillPct > 85 ? 'var(--gecko-error-500)' : fillPct > 60 ? 'var(--gecko-warning-500)' : 'var(--gecko-success-500)',
             }} />
           </div>
-          <div style={{ fontSize: 10, color: 'var(--gecko-text-disabled)', marginTop: 3 }}>{voyage.filled.toLocaleString()} / {voyage.teu.toLocaleString()} TEU</div>
+          <div className="gecko-cell-meta" style={{ color: 'var(--gecko-text-disabled)', marginTop: 3 }}>{voyage.filled.toLocaleString()} / {voyage.teu.toLocaleString()} TEU</div>
         </div>
 
         {/* Berth + Wharf */}
@@ -413,7 +413,7 @@ export default function VesselSchedulePage() {
         {/* Day-of-week header */}
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(7, 1fr)', gap: 4, padding: '12px 16px 4px', background: 'var(--gecko-bg-subtle)' }}>
           {DAY_LABELS.map(d => (
-            <div key={d} style={{ textAlign: 'center', fontSize: 11, fontWeight: 700, color: 'var(--gecko-text-secondary)', textTransform: 'uppercase', letterSpacing: '0.05em', padding: '4px 0' }}>
+            <div key={d} className="gecko-eyebrow" style={{ textAlign: 'center', padding: '4px 0' }}>
               {d}
             </div>
           ))}
@@ -482,8 +482,8 @@ export default function VesselSchedulePage() {
               <Icon name={stat.icon} size={18} style={{ color: stat.color }} />
             </div>
             <div>
-              <div style={{ fontSize: 22, fontWeight: 800, color: 'var(--gecko-text-primary)', lineHeight: 1 }}>{stat.value}</div>
-              <div style={{ fontSize: 11, color: 'var(--gecko-text-secondary)', marginTop: 3 }}>{stat.label}</div>
+              <div className="gecko-stat-num gecko-stat-num-22">{stat.value}</div>
+              <div className="gecko-cell-meta" style={{ marginTop: 3 }}>{stat.label}</div>
             </div>
           </div>
         ))}

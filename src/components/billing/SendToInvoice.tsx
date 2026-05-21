@@ -80,7 +80,7 @@ export function SendToInvoiceMenu({ disabled, onPick, label = 'Send to Invoice',
 function MenuSection({ label, children }: { label: string; children: React.ReactNode }) {
   return (
     <div style={{ padding: '6px 0', borderBottom: '1px solid var(--gecko-border)' }}>
-      <div style={{ padding: '6px 14px 4px', fontSize: 10, fontWeight: 700, color: 'var(--gecko-text-disabled)', textTransform: 'uppercase', letterSpacing: '0.06em' }}>{label}</div>
+      <div className="gecko-eyebrow" style={{ padding: '6px 14px 4px', color: 'var(--gecko-text-disabled)' }}>{label}</div>
       {children}
     </div>
   );
@@ -105,7 +105,7 @@ function MenuItem({ icon, label, sub, onClick }: { icon: string; label: string; 
       </div>
       <div className="gecko-flex-1">
         <div className="gecko-cell-primary">{label}</div>
-        <div style={{ fontSize: 10, color: 'var(--gecko-text-secondary)', marginTop: 1 }}>{sub}</div>
+        <div className="gecko-cell-sub" style={{ marginTop: 1 }}>{sub}</div>
       </div>
     </button>
   );

@@ -525,14 +525,14 @@ export default function CountriesPage() {
 
                   {/* Alpha-3 */}
                   <td>
-                    <span className="gecko-mono-strong" style={{ fontSize: 12, color: 'var(--gecko-text-secondary)' }}>
+                    <span className="gecko-mono-strong gecko-page-subtitle">
                       {c.alpha3 || <span style={{ color: 'var(--gecko-text-disabled)' }}>—</span>}
                     </span>
                   </td>
 
                   {/* Numeric */}
                   <td>
-                    <span className="gecko-text-mono" style={{ fontSize: 12, color: 'var(--gecko-text-secondary)' }}>
+                    <span className="gecko-text-mono gecko-page-subtitle">
                       {c.numeric || <span style={{ color: 'var(--gecko-text-disabled)' }}>—</span>}
                     </span>
                   </td>
@@ -551,7 +551,7 @@ export default function CountriesPage() {
                   {/* Mapping Code */}
                   <td>
                     {c.mappingCode
-                      ? <span className="gecko-text-mono" style={{ fontSize: 12, color: 'var(--gecko-text-secondary)' }}>{c.mappingCode}</span>
+                      ? <span className="gecko-text-mono gecko-page-subtitle">{c.mappingCode}</span>
                       : <span style={{ color: 'var(--gecko-text-disabled)' }}>—</span>
                     }
                   </td>

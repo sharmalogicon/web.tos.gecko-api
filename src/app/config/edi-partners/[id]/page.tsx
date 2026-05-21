@@ -605,7 +605,7 @@ function WebhookForm({ cfg, onChange }: { cfg: WebhookConfig; onChange: (p: Part
           className="gecko-input" rows={3}
           style={{ width: '100%', fontFamily: 'monospace', fontSize: 12, resize: 'vertical', boxSizing: 'border-box', padding: '8px 10px' }}
           placeholder="185.45.12.0/24&#10;203.116.88.0/24" />
-        <div style={{ fontSize: 11, color: 'var(--gecko-text-secondary)', marginTop: 3 }}>
+        <div className="gecko-cell-meta">
           Leave blank to accept from any IP (not recommended for production)
         </div>
       </div>
@@ -664,7 +664,7 @@ function DirectionBlock({
           <div style={{ fontSize: 13, fontWeight: 700, color: 'var(--gecko-text-primary)' }}>
             {isIn ? 'Inbound Channel' : 'Outbound Channel'}
           </div>
-          <div style={{ fontSize: 11, color: 'var(--gecko-text-secondary)' }}>
+          <div className="gecko-cell-meta">
             {isIn
               ? 'Partner → Our System · We receive EDI messages from the partner'
               : 'Our System → Partner · We send EDI messages to the partner'}
@@ -901,7 +901,7 @@ export default function EdiPartnerProfilePage() {
                         color: active ? 'var(--gecko-primary-700)' : 'var(--gecko-text-primary)' }}>
                         {opt.label}
                       </div>
-                      <div style={{ fontSize: 11, color: 'var(--gecko-text-secondary)', marginTop: 1 }}>
+                      <div className="gecko-cell-meta" style={{ marginTop: 1 }}>
                         {opt.desc}
                       </div>
                     </div>
@@ -913,7 +913,7 @@ export default function EdiPartnerProfilePage() {
                 );
               })}
             </div>
-            <div className="gecko-row gecko-row-start gecko-mt-3" style={{ fontSize: 11, color: 'var(--gecko-text-secondary)', gap: 6 }}>
+            <div className="gecko-row gecko-row-start gecko-mt-3 gecko-cell-meta" style={{ gap: 6 }}>
               <Icon name="info" size={13} style={{ flexShrink: 0, marginTop: 1 }} />
               Direction defines which channel blocks appear below. Each channel is fully independent —
               inbound and outbound can use different protocols, servers, and credentials.
@@ -1034,7 +1034,7 @@ export default function EdiPartnerProfilePage() {
                       </span>
                     </td>
                     <td style={{ padding: '9px 12px', fontSize: 12, color: 'var(--gecko-text-secondary)' }}>{row.size}</td>
-                    <td style={{ padding: '9px 12px', fontSize: 11, fontFamily: 'monospace', color: 'var(--gecko-text-secondary)' }}>{row.ref}</td>
+                    <td className="gecko-cell-meta" style={{ padding: '9px 12px', fontFamily: 'monospace' }}>{row.ref}</td>
                     <td style={{ padding: '9px 12px' }}>
                       <span className={`gecko-badge gecko-badge-${row.status === 'ok' ? 'success' : row.status === 'warn' ? 'warning' : 'error'}`} style={{ fontSize: 10 }}>
                         {row.status === 'ok' ? '✓ OK' : row.status === 'warn' ? '⚠ Warn' : '✗ Error'}
@@ -1076,7 +1076,7 @@ export default function EdiPartnerProfilePage() {
                   background: cert.status === 'expiring' ? 'var(--gecko-warning-50)' : 'var(--gecko-bg-subtle)' }}>
                   <div>
                     <div style={{ fontSize: 13, fontWeight: 600, color: 'var(--gecko-text-primary)' }}>{cert.label}</div>
-                    <div style={{ fontSize: 11, color: 'var(--gecko-text-secondary)', marginTop: 2 }}>Expires {cert.exp}</div>
+                    <div className="gecko-cell-meta">Expires {cert.exp}</div>
                   </div>
                   <div className="gecko-row">
                     <span className={`gecko-badge gecko-badge-${cert.status === 'valid' ? 'success' : 'warning'}`} style={{ fontSize: 10 }}>
@@ -1095,9 +1095,9 @@ export default function EdiPartnerProfilePage() {
               { ts: '2026-04-28 03:15', event: 'Failed authentication — wrong password (IP blocked after 5 attempts)', ip: '91.108.56.7' },
             ].map((e, i) => (
               <div key={i} className="gecko-row" style={{ gap: 12, padding: '8px 0', borderBottom: '1px solid var(--gecko-bg-subtle)' }}>
-                <span style={{ fontSize: 11, fontFamily: 'monospace', color: 'var(--gecko-text-secondary)', flexShrink: 0 }}>{e.ts}</span>
+                <span className="gecko-cell-meta" style={{ fontFamily: 'monospace', flexShrink: 0 }}>{e.ts}</span>
                 <span style={{ fontSize: 12, color: e.event.includes('Failed') ? 'var(--gecko-error-700)' : 'var(--gecko-text-primary)', flex: 1 }}>{e.event}</span>
-                <code style={{ fontSize: 11, color: 'var(--gecko-text-secondary)' }}>{e.ip}</code>
+                <code className="gecko-cell-meta">{e.ip}</code>
               </div>
             ))}
           </SectionCard>

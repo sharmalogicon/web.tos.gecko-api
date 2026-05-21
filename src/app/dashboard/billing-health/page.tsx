@@ -142,7 +142,7 @@ export default function BillingHealthPage() {
               );
             })}
           </svg>
-          <div style={{ display: 'flex', gap: 16, marginTop: 8, fontSize: 11, color: 'var(--gecko-text-secondary)', flexWrap: 'wrap' }}>
+          <div className="gecko-cell-meta" style={{ display: 'flex', gap: 16, marginTop: 8, flexWrap: 'wrap' }}>
             <span style={{ display: 'flex', alignItems: 'center', gap: 5 }}><span style={{ width: 10, height: 10, background: 'var(--gecko-success-600)', borderRadius: 2, display: 'inline-block' }} />0–2 days</span>
             <span style={{ display: 'flex', alignItems: 'center', gap: 5 }}><span style={{ width: 10, height: 10, background: '#f59e0b', borderRadius: 2, display: 'inline-block' }} />3–5 days</span>
             <span style={{ display: 'flex', alignItems: 'center', gap: 5 }}><span style={{ width: 10, height: 10, background: '#f97316', borderRadius: 2, display: 'inline-block' }} />6–7 days</span>
@@ -176,7 +176,7 @@ export default function BillingHealthPage() {
               <thead>
                 <tr style={{ background: 'var(--gecko-bg-subtle)' }}>
                   {['SO Number', 'Exception', 'Container', 'Amount', 'Charge'].map(h => (
-                    <th key={h} style={{ padding: '7px 10px', textAlign: 'left', fontWeight: 600, color: 'var(--gecko-text-secondary)', fontSize: 10, textTransform: 'uppercase', letterSpacing: '0.04em', whiteSpace: 'nowrap', borderBottom: '1px solid var(--gecko-border)' }}>{h}</th>
+                    <th key={h} className="gecko-eyebrow" style={{ padding: '7px 10px', textAlign: 'left', whiteSpace: 'nowrap', borderBottom: '1px solid var(--gecko-border)' }}>{h}</th>
                   ))}
                 </tr>
               </thead>
@@ -189,10 +189,10 @@ export default function BillingHealthPage() {
                       <td style={{ padding: '8px 10px' }}>
                         <span style={{ fontSize: 10, fontWeight: 700, padding: '2px 7px', borderRadius: 20, background: badge.bg, color: badge.color, whiteSpace: 'nowrap' }}>{ex.type}</span>
                       </td>
-                      <td style={{ padding: '8px 10px', fontFamily: 'var(--gecko-font-mono)', fontSize: 11, color: 'var(--gecko-text-secondary)', whiteSpace: 'nowrap' }}>{ex.container}</td>
+                      <td className="gecko-cell-meta" style={{ padding: '8px 10px', fontFamily: 'var(--gecko-font-mono)', whiteSpace: 'nowrap' }}>{ex.container}</td>
                       <td style={{ padding: '8px 10px', fontFamily: 'var(--gecko-font-mono)', fontWeight: 700, color: 'var(--gecko-text-primary)', whiteSpace: 'nowrap' }}>{ex.amount}</td>
                       <td style={{ padding: '8px 10px' }}>
-                        <span style={{ fontSize: 10, fontWeight: 600, padding: '2px 7px', borderRadius: 4, background: 'var(--gecko-bg-subtle)', border: '1px solid var(--gecko-border)', color: 'var(--gecko-text-secondary)', fontFamily: 'var(--gecko-font-mono)' }}>{ex.charge}</span>
+                        <span className="gecko-cell-sub" style={{ fontWeight: 600, padding: '2px 7px', borderRadius: 4, background: 'var(--gecko-bg-subtle)', border: '1px solid var(--gecko-border)' }}>{ex.charge}</span>
                       </td>
                     </tr>
                   );
@@ -240,14 +240,14 @@ export default function BillingHealthPage() {
         </Widget>
 
         <Widget title="Top 5 Unbilled by Customer">
-          <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
+          <div className="gecko-stack">
             {UNBILLED_CUSTOMERS.map((c) => (
               <div key={c.name} style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
                 <span style={{ width: 10, height: 10, borderRadius: '50%', background: c.color, flexShrink: 0 }} />
                 <span style={{ flex: 1, fontSize: 13, fontWeight: 500, color: 'var(--gecko-text-primary)' }}>{c.name}</span>
                 <span style={{ fontSize: 11, fontWeight: 700, padding: '2px 8px', borderRadius: 20, background: 'var(--gecko-primary-50)', color: 'var(--gecko-primary-600)', fontFamily: 'var(--gecko-font-mono)' }}>{c.sos} SOs</span>
-                <span style={{ fontSize: 12, fontWeight: 700, fontFamily: 'var(--gecko-font-mono)', color: 'var(--gecko-text-primary)', minWidth: 58, textAlign: 'right' }}>{c.amount}</span>
-                <button style={{ fontSize: 11, fontWeight: 600, padding: '3px 10px', borderRadius: 6, border: '1px solid var(--gecko-border)', background: 'transparent', color: 'var(--gecko-text-secondary)', cursor: 'pointer' }}>View</button>
+                <span className="gecko-money" style={{ fontSize: 12, minWidth: 58 }}>{c.amount}</span>
+                <button className="gecko-cell-meta" style={{ fontWeight: 600, padding: '3px 10px', borderRadius: 6, border: '1px solid var(--gecko-border)', background: 'transparent', cursor: 'pointer' }}>View</button>
               </div>
             ))}
           </div>

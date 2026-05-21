@@ -160,7 +160,7 @@ function PrintOptionsModal({ open, onClose, onPick, data }: {
           <Icon name="print" size={18} style={{ color: 'var(--gecko-primary-600)' }} />
           <div style={{ flex: 1 }}>
             <div style={{ fontSize: 15, fontWeight: 700, color: 'var(--gecko-text-primary)' }}>Print this gate visit</div>
-            <div style={{ fontSize: 12, color: 'var(--gecko-text-secondary)', marginTop: 2 }}>
+            <div className="gecko-page-subtitle" style={{ marginTop: 2 }}>
               {data.documentNo} · pick the format below — the same data prints to all three
             </div>
           </div>
@@ -236,7 +236,7 @@ function PrintOptionsModal({ open, onClose, onPick, data }: {
           />
         </div>
 
-        <div style={{ padding: '12px 20px', borderTop: '1px solid var(--gecko-border)', background: 'var(--gecko-bg-subtle)', fontSize: 11, color: 'var(--gecko-text-secondary)', display: 'flex', alignItems: 'center', gap: 8 }}>
+        <div className="gecko-cell-meta" style={{ padding: '12px 20px', borderTop: '1px solid var(--gecko-border)', background: 'var(--gecko-bg-subtle)', display: 'flex', alignItems: 'center', gap: 8, marginTop: 0 }}>
           <Icon name="info" size={13} />
           The browser print dialog opens next. Pick your installed printer. Production deploys ship a 4 MB <strong>Gecko Print Agent</strong> for one-click raw thermal / dot-matrix printing without the OS dialog.
         </div>
@@ -267,7 +267,7 @@ function PrintCard({ title, badge, description, printer, preview, onClick }: {
         e.currentTarget.style.background = 'var(--gecko-bg-surface)';
       }}
     >
-      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+      <div className="gecko-row gecko-row-between">
         <span style={{ fontSize: 14, fontWeight: 700, color: 'var(--gecko-text-primary)' }}>{title}</span>
         <span className="gecko-pill gecko-pill-neutral" style={{ fontSize: 9 }}>{badge}</span>
       </div>
@@ -275,7 +275,7 @@ function PrintCard({ title, badge, description, printer, preview, onClick }: {
         {preview}
       </div>
       <div>
-        <div style={{ fontSize: 11, color: 'var(--gecko-text-secondary)', lineHeight: 1.4 }}>{description}</div>
+        <div className="gecko-cell-meta" style={{ lineHeight: 1.4, marginTop: 0 }}>{description}</div>
         <div style={{ fontSize: 10, color: 'var(--gecko-text-disabled)', marginTop: 4, fontStyle: 'italic' }}>{printer}</div>
       </div>
     </button>

@@ -72,7 +72,7 @@ function sectionBarColor(pct: number) {
 function jobStatusBadge(status: string) {
   if (status === 'IN PROGRESS') return <span style={{ fontSize: 10, fontWeight: 700, padding: '2px 7px', borderRadius: 4, background: 'var(--gecko-info-100)', color: 'var(--gecko-info-600)' }}>IN PROGRESS</span>;
   if (status === 'COMPLETE') return <span style={{ fontSize: 10, fontWeight: 700, padding: '2px 7px', borderRadius: 4, background: 'var(--gecko-success-50)', color: 'var(--gecko-success-600)' }}>COMPLETE</span>;
-  return <span style={{ fontSize: 10, fontWeight: 700, padding: '2px 7px', borderRadius: 4, background: 'var(--gecko-bg-subtle)', color: 'var(--gecko-text-secondary)' }}>PENDING</span>;
+  return <span className="gecko-cell-meta" style={{ fontWeight: 700, padding: '2px 7px', borderRadius: 4, background: 'var(--gecko-bg-subtle)' }}>PENDING</span>;
 }
 
 function lclRowBg(days: number) {
@@ -106,7 +106,7 @@ export default function CfsOpsDashboard() {
               <thead>
                 <tr style={{ borderBottom: '1px solid var(--gecko-border)' }}>
                   {['Job No.', 'Type', 'Container', 'Customer', 'CBM', 'Crew', 'Start', 'Status', 'Progress'].map((h) => (
-                    <th key={h} style={{ padding: '4px 8px', textAlign: 'left', fontSize: 10, fontWeight: 700, color: 'var(--gecko-text-secondary)', textTransform: 'uppercase', letterSpacing: '0.04em', whiteSpace: 'nowrap' }}>{h}</th>
+                    <th key={h} className="gecko-eyebrow" style={{ padding: '4px 8px', textAlign: 'left', whiteSpace: 'nowrap' }}>{h}</th>
                   ))}
                 </tr>
               </thead>
@@ -128,7 +128,7 @@ export default function CfsOpsDashboard() {
                         <div style={{ flex: 1, height: 6, borderRadius: 3, background: 'var(--gecko-bg-subtle)', overflow: 'hidden' }}>
                           <div style={{ height: '100%', width: `${j.pct}%`, borderRadius: 3, background: j.pct === 100 ? 'var(--gecko-success-600)' : 'var(--gecko-primary-400)' }} />
                         </div>
-                        <span style={{ fontSize: 10, fontFamily: 'var(--gecko-font-mono)', color: 'var(--gecko-text-secondary)', minWidth: 28 }}>{j.pct}%</span>
+                        <span className="gecko-cell-sub" style={{ minWidth: 28 }}>{j.pct}%</span>
                       </div>
                     </td>
                   </tr>
@@ -146,10 +146,10 @@ export default function CfsOpsDashboard() {
               return (
                 <div key={s.id}>
                   <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 5 }}>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                    <div className="gecko-row">
                       <span style={{ fontSize: 12, fontWeight: 800, color: 'var(--gecko-text-primary)', width: 20 }}>Sec {s.id}</span>
                     </div>
-                    <div style={{ fontSize: 11, color: 'var(--gecko-text-secondary)' }}>
+                    <div className="gecko-cell-meta">
                       <span style={{ fontFamily: 'var(--gecko-font-mono)', fontWeight: 700, color: 'var(--gecko-text-primary)' }}>{s.used}</span> / {s.cap} cbm
                       <span style={{ marginLeft: 8, fontWeight: 700, color }}>{pct}%</span>
                     </div>
@@ -194,7 +194,7 @@ export default function CfsOpsDashboard() {
               <thead>
                 <tr style={{ borderBottom: '1px solid var(--gecko-border)' }}>
                   {['Lot No.', 'Customer', 'CBM', 'Section', 'Days', 'Status'].map((h) => (
-                    <th key={h} style={{ padding: '4px 8px', textAlign: 'left', fontSize: 10, fontWeight: 700, color: 'var(--gecko-text-secondary)', textTransform: 'uppercase', letterSpacing: '0.04em', whiteSpace: 'nowrap' }}>{h}</th>
+                    <th key={h} className="gecko-eyebrow" style={{ padding: '4px 8px', textAlign: 'left', whiteSpace: 'nowrap' }}>{h}</th>
                   ))}
                 </tr>
               </thead>

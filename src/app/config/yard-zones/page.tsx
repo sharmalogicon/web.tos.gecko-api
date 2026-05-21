@@ -631,7 +631,7 @@ function PropertiesPanel({ block, allBlocks, updateBlock, removeBlock, stats, te
           </div>
         )}
 
-        <div style={{ marginTop: 4, padding: 10, background: 'var(--gecko-bg-subtle)', borderRadius: 6, fontSize: 11, color: 'var(--gecko-text-secondary)', lineHeight: 1.5 }}>
+        <div className="gecko-cell-meta" style={{ marginTop: 4, padding: 10, background: 'var(--gecko-bg-subtle)', borderRadius: 6, lineHeight: 1.5 }}>
           Click any block on the canvas to edit its properties here.
         </div>
       </section>

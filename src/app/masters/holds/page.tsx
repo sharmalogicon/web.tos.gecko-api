@@ -503,7 +503,7 @@ function HoldModal({ hold, isNew, onClose }: HoldModalProps) {
 
             {/* Preview badges */}
             <div className="gecko-row gecko-row-wrap gecko-mt-3" style={{ padding: '10px 14px', background: 'var(--gecko-bg-subtle)', borderRadius: 8, border: '1px solid var(--gecko-border)', gap: 10 }}>
-              <span style={{ fontSize: 11, color: 'var(--gecko-text-secondary)', fontWeight: 600 }}>Preview:</span>
+              <span className="gecko-cell-meta" style={{ fontWeight: 600 }}>Preview:</span>
               <ScopeBadge scope={form.blockingScope} />
               <ReleaseAuthBadge auth={form.releaseAuthority} />
               <PriorityBadge priority={form.priority} />

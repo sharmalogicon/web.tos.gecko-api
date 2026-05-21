@@ -31,10 +31,10 @@ function QRBlock({ value, size, label, showValue }: { value: string; size: numbe
         />
       </div>
       {label && (
-        <div style={{ fontSize: 9.5, fontWeight: 700, color: 'var(--gecko-text-secondary)', textTransform: 'uppercase', letterSpacing: '0.06em', textAlign: 'center' }}>{label}</div>
+        <div className="gecko-eyebrow" style={{ fontSize: 9.5, textAlign: 'center' }}>{label}</div>
       )}
       {showValue && (
-        <div style={{ fontSize: 10, fontFamily: 'var(--gecko-font-mono)', color: 'var(--gecko-text-disabled)', textAlign: 'center', wordBreak: 'break-all', maxWidth: size + 16 }}>{value}</div>
+        <div className="gecko-cell-sub" style={{ textAlign: 'center', wordBreak: 'break-all', maxWidth: size + 16, marginTop: 0 }}>{value}</div>
       )}
     </div>
   );
@@ -58,10 +58,10 @@ function Code128Block({ value, label, showValue, width }: { value: string; label
         />
       </div>
       {label && (
-        <div style={{ fontSize: 9.5, fontWeight: 700, color: 'var(--gecko-text-secondary)', textTransform: 'uppercase', letterSpacing: '0.06em', textAlign: 'center' }}>{label}</div>
+        <div className="gecko-eyebrow" style={{ fontSize: 9.5, textAlign: 'center' }}>{label}</div>
       )}
       {showValue && (
-        <div style={{ fontSize: 10, fontFamily: 'var(--gecko-font-mono)', color: 'var(--gecko-text-disabled)', textAlign: 'center' }}>{value}</div>
+        <div className="gecko-cell-sub" style={{ textAlign: 'center', marginTop: 0 }}>{value}</div>
       )}
     </div>
   );
@@ -88,7 +88,7 @@ export function BarcodeDisplay({
       )}
       {variant === 'both' && showValue && (
         <div style={{ display: 'flex', flexDirection: 'column', justifyContent: 'center', gap: 4, flex: 1, minWidth: 120 }}>
-          {label && <div style={{ fontSize: 10, fontWeight: 700, color: 'var(--gecko-text-secondary)', textTransform: 'uppercase', letterSpacing: '0.06em' }}>{label}</div>}
+          {label && <div className="gecko-eyebrow">{label}</div>}
           <div style={{ fontSize: 12, fontFamily: 'var(--gecko-font-mono)', color: 'var(--gecko-text-primary)', fontWeight: 700, wordBreak: 'break-all' }}>{value}</div>
           <div style={{ fontSize: 10.5, color: 'var(--gecko-text-secondary)', marginTop: 2 }}>Scan to open in system</div>
         </div>
@@ -135,7 +135,7 @@ export function PrintDocumentModal({
         {/* Modal header */}
         <div style={{ padding: '16px 20px', borderBottom: '1px solid var(--gecko-border)', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
           <div>
-            <div style={{ fontSize: 11, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.08em', color: 'var(--gecko-text-secondary)' }}>{docType}</div>
+            <div className="gecko-eyebrow">{docType}</div>
             <div style={{ fontSize: 17, fontWeight: 800, fontFamily: 'var(--gecko-font-mono)', color: 'var(--gecko-text-primary)', marginTop: 2 }}>{docNo}</div>
           </div>
           <div style={{ display: 'flex', gap: 8 }}>
@@ -158,7 +158,7 @@ export function PrintDocumentModal({
 
         {/* Barcodes section */}
         <div style={{ padding: '20px 20px 0' }}>
-          <div style={{ fontSize: 10, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.08em', color: 'var(--gecko-text-secondary)', marginBottom: 12 }}>Document Barcodes</div>
+          <div className="gecko-eyebrow" style={{ marginBottom: 12 }}>Document Barcodes</div>
           <div style={{ padding: 16, background: 'var(--gecko-bg-subtle)', borderRadius: 10, border: '1px solid var(--gecko-border)' }}>
             <BarcodeDisplay value={barcodeValue} label={docType} variant="both" qrSize={90} showValue />
           </div>
@@ -168,7 +168,7 @@ export function PrintDocumentModal({
             <div style={{ marginTop: 10, display: 'flex', flexDirection: 'column', gap: 10 }}>
               {extraBarcodes.map(eb => (
                 <div key={eb.value} style={{ padding: '12px 16px', background: 'var(--gecko-bg-subtle)', borderRadius: 10, border: '1px solid var(--gecko-border)' }}>
-                  <div style={{ fontSize: 10, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.08em', color: 'var(--gecko-text-secondary)', marginBottom: 10 }}>{eb.label}</div>
+                  <div className="gecko-eyebrow" style={{ marginBottom: 10 }}>{eb.label}</div>
                   <BarcodeDisplay value={eb.value} variant="both" qrSize={72} showValue />
                 </div>
               ))}
@@ -179,7 +179,7 @@ export function PrintDocumentModal({
         {/* Key details grid */}
         {details && details.length > 0 && (
           <div style={{ padding: '16px 20px 0' }}>
-            <div style={{ fontSize: 10, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.08em', color: 'var(--gecko-text-secondary)', marginBottom: 10 }}>Document Details</div>
+            <div className="gecko-eyebrow" style={{ marginBottom: 10 }}>Document Details</div>
             <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: 10 }}>
               {details.map(d => (
                 <div key={d.label} style={{ padding: '8px 12px', background: 'var(--gecko-bg-subtle)', borderRadius: 8, border: '1px solid var(--gecko-border)' }}>
@@ -281,7 +281,7 @@ export function BarcodeScanInput({
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: 4, ...style }}>
       {label && (
-        <div style={{ fontSize: 10, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.08em', color: 'var(--gecko-text-secondary)' }}>{label}</div>
+        <div className="gecko-eyebrow">{label}</div>
       )}
       <div style={{ position: 'relative' }}>
         {/* Scanner icon */}

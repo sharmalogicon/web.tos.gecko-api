@@ -253,9 +253,8 @@ function TypeSelector({ value, onChange }: { value: ScheduleType; onChange: (v: 
         return (
           <button
             key={t}
-            className={`gecko-segctrl-btn ${active ? 'gecko-segctrl-btn-active' : ''}`}
+            className={`gecko-segctrl-btn ${active ? 'gecko-segctrl-btn-active' : ''} gecko-inline-row`}
             onClick={() => onChange(t)}
-            style={{ display: 'inline-flex', alignItems: 'center', gap: 6 }}
           >
             <Icon name={meta.icon} size={13} /> {meta.label}
           </button>
@@ -726,7 +725,7 @@ function ChargeCard({
         </div>
 
         {activeAxes.length === 0 && charge.rows.length > 1 && (
-          <div style={{ fontSize: 11, color: 'var(--gecko-text-secondary)', fontStyle: 'italic' }}>
+          <div className="gecko-cell-meta" style={{ fontStyle: 'italic' }}>
             Tip: when more than one rate row is shown for a flat charge, the engine picks by <strong>Pymt × Billed-To</strong> match.
           </div>
         )}
@@ -858,7 +857,7 @@ function MovementChargesTab({
                     <div style={{ fontFamily: 'var(--gecko-font-mono)', fontSize: 11, fontWeight: 700, color: isActive ? 'var(--gecko-primary-700)' : 'var(--gecko-text-primary)' }}>
                       {m.code}
                     </div>
-                    <div style={{ fontSize: 10, color: 'var(--gecko-text-secondary)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', maxWidth: 140 }}>
+                    <div className="gecko-cell-meta gecko-truncate" style={{ maxWidth: 140 }}>
                       {m.name}
                     </div>
                   </div>
@@ -1006,7 +1005,7 @@ function StorageCard({
       subtitle={config.mode === 'FLEET_TEU_SLAB' ? 'Regressive slab by fleet TEU at depot' : 'Free days + per-day slab'}
       right={
         <div className="gecko-row">
-          <span style={{ fontSize: 11, color: 'var(--gecko-text-secondary)', fontWeight: 600 }}>Pricing mode:</span>
+          <span className="gecko-cell-meta" style={{ fontWeight: 600 }}>Pricing mode:</span>
           <div className="gecko-segctrl">
             <button
               className={`gecko-segctrl-btn ${config.mode === 'PER_DAY_SLAB' ? 'gecko-segctrl-btn-active' : ''}`}
@@ -1060,33 +1059,31 @@ function StorageCard({
               <div key={s.id} className="gecko-band-row" style={{ gridTemplateColumns: '110px 110px 1fr auto', alignItems: 'center' }}>
                 <div className="gecko-row" style={{ gap: 6 }}>
                   <span style={{ width: 8, height: 8, borderRadius: '50%', background: tone, flexShrink: 0 }} />
-                  <input type="number" min="1" className="gecko-input gecko-input-sm"
+                  <input type="number" min="1" className="gecko-input gecko-input-sm gecko-money"
                     value={s.fromDay} onChange={e => {
                       const next = [...config.perDaySlabs];
                       next[i] = { ...s, fromDay: Number(e.target.value) || 1 };
                       onChange({ ...config, perDaySlabs: next });
                     }}
-                    style={{ textAlign: 'right', fontFamily: 'var(--gecko-font-mono)', fontWeight: 700 }}
                   />
                 </div>
-                <input type="number" min={s.fromDay} className="gecko-input gecko-input-sm"
+                <input type="number" min={s.fromDay} className="gecko-input gecko-input-sm gecko-money"
                   value={s.toDay} onChange={e => {
                     const next = [...config.perDaySlabs];
                     next[i] = { ...s, toDay: Number(e.target.value) || s.fromDay };
                     onChange({ ...config, perDaySlabs: next });
                   }}
-                  style={{ textAlign: 'right', fontFamily: 'var(--gecko-font-mono)', fontWeight: 700 }}
                 />
                 <div className="gecko-row">
-                  <input type="number" min="0" step="0.01" className="gecko-input gecko-input-sm"
+                  <input type="number" min="0" step="0.01" className="gecko-input gecko-input-sm gecko-money"
                     value={s.ratePerDay} onChange={e => {
                       const next = [...config.perDaySlabs];
                       next[i] = { ...s, ratePerDay: Number(e.target.value) || 0 };
                       onChange({ ...config, perDaySlabs: next });
                     }}
-                    style={{ width: 120, textAlign: 'right', fontFamily: 'var(--gecko-font-mono)', fontWeight: 700 }}
+                    style={{ width: 120 }}
                   />
-                  <span style={{ fontSize: 10, fontWeight: 700, color: 'var(--gecko-text-secondary)' }}>THB / day / cont</span>
+                  <span className="gecko-cell-meta" style={{ fontWeight: 700 }}>THB / day / cont</span>
                   {isLast && (
                     <span className="gecko-pill gecko-pill-neutral" style={{ fontSize: 9 }}>
                       and after
@@ -1166,16 +1163,16 @@ function StorageCard({
                 }}
               />
               <div className="gecko-row" style={{ gap: 6 }}>
-                <input type="number" min="0" step="0.01" className="gecko-input gecko-input-sm"
+                <input type="number" min="0" step="0.01" className="gecko-input gecko-input-sm gecko-money"
                   value={b.ratePerDay} onChange={e => {
                     const next = [...config.fleetTeuBands];
                     next[i] = { ...b, ratePerDay: Number(e.target.value) || 0 };
                     onChange({ ...config, fleetTeuBands: next });
                   }}
-                  style={{ width: 110, textAlign: 'right', fontFamily: 'var(--gecko-font-mono)', fontWeight: 700 }}
+                  style={{ width: 110 }}
                 />
-                <span style={{ fontSize: 10, fontWeight: 700, color: 'var(--gecko-text-secondary)' }}>THB</span>
-                <span style={{ fontSize: 11, color: 'var(--gecko-text-secondary)' }}>
+                <span className="gecko-cell-meta" style={{ fontWeight: 700 }}>THB</span>
+                <span className="gecko-cell-meta">
                   {b.ratePerDay === 0 ? '— FREE' : ''}
                 </span>
               </div>
@@ -1224,12 +1221,12 @@ function ReeferEventCard({
               <div className="gecko-field-label">{sz}</div>
               <div className="gecko-row" style={{ gap: 6 }}>
                 <input
-                  type="number" min="0" step="0.01" className="gecko-input gecko-input-sm"
+                  type="number" min="0" step="0.01" className="gecko-input gecko-input-sm gecko-money"
                   value={rates[sz] ?? 0}
                   onChange={e => onChange({ ...rates, [sz]: Number(e.target.value) || 0 })}
-                  style={{ flex: 1, textAlign: 'right', fontFamily: 'var(--gecko-font-mono)', fontWeight: 700 }}
+                  style={{ flex: 1 }}
                 />
-                <span style={{ fontSize: 10, fontWeight: 700, color: 'var(--gecko-text-secondary)' }}>THB</span>
+                <span className="gecko-cell-meta" style={{ fontWeight: 700 }}>THB</span>
               </div>
             </div>
           ))}
@@ -1270,10 +1267,10 @@ function FreeTimeTab({ matrix, onChange }: { matrix: FreeTimeMatrix; onChange: (
           <table style={{ width: '100%', borderCollapse: 'collapse' }}>
             <thead>
               <tr>
-                <th style={{ padding: '10px 14px', textAlign: 'left', fontSize: 11, fontWeight: 700, color: 'var(--gecko-text-secondary)', textTransform: 'uppercase', borderBottom: '1px solid var(--gecko-border)' }}>Direction</th>
-                <th style={{ padding: '10px 8px', textAlign: 'center', fontSize: 11, fontWeight: 700, color: 'var(--gecko-text-secondary)', textTransform: 'uppercase', borderBottom: '1px solid var(--gecko-border)' }}>Normal</th>
-                <th style={{ padding: '10px 8px', textAlign: 'center', fontSize: 11, fontWeight: 700, color: 'var(--gecko-text-secondary)', textTransform: 'uppercase', borderBottom: '1px solid var(--gecko-border)' }}>Reefer</th>
-                <th style={{ padding: '10px 8px', textAlign: 'center', fontSize: 11, fontWeight: 700, color: 'var(--gecko-text-secondary)', textTransform: 'uppercase', borderBottom: '1px solid var(--gecko-border)' }}>DG</th>
+                <th className="gecko-eyebrow" style={{ padding: '10px 14px', textAlign: 'left', borderBottom: '1px solid var(--gecko-border)' }}>Direction</th>
+                <th className="gecko-eyebrow" style={{ padding: '10px 8px', textAlign: 'center', borderBottom: '1px solid var(--gecko-border)' }}>Normal</th>
+                <th className="gecko-eyebrow" style={{ padding: '10px 8px', textAlign: 'center', borderBottom: '1px solid var(--gecko-border)' }}>Reefer</th>
+                <th className="gecko-eyebrow" style={{ padding: '10px 8px', textAlign: 'center', borderBottom: '1px solid var(--gecko-border)' }}>DG</th>
               </tr>
             </thead>
             <tbody>
@@ -1302,10 +1299,10 @@ function FreeTimeTab({ matrix, onChange }: { matrix: FreeTimeMatrix; onChange: (
           <table style={{ width: '100%', borderCollapse: 'collapse' }}>
             <thead>
               <tr>
-                <th style={{ padding: '10px 14px', textAlign: 'left', fontSize: 11, fontWeight: 700, color: 'var(--gecko-text-secondary)', textTransform: 'uppercase', borderBottom: '1px solid var(--gecko-border)' }}>Direction</th>
-                <th style={{ padding: '10px 8px', textAlign: 'center', fontSize: 11, fontWeight: 700, color: 'var(--gecko-text-secondary)', textTransform: 'uppercase', borderBottom: '1px solid var(--gecko-border)' }}>Normal</th>
-                <th style={{ padding: '10px 8px', textAlign: 'center', fontSize: 11, fontWeight: 700, color: 'var(--gecko-text-secondary)', textTransform: 'uppercase', borderBottom: '1px solid var(--gecko-border)' }}>Reefer</th>
-                <th style={{ padding: '10px 8px', textAlign: 'center', fontSize: 11, fontWeight: 700, color: 'var(--gecko-text-secondary)', textTransform: 'uppercase', borderBottom: '1px solid var(--gecko-border)' }}>—</th>
+                <th className="gecko-eyebrow" style={{ padding: '10px 14px', textAlign: 'left', borderBottom: '1px solid var(--gecko-border)' }}>Direction</th>
+                <th className="gecko-eyebrow" style={{ padding: '10px 8px', textAlign: 'center', borderBottom: '1px solid var(--gecko-border)' }}>Normal</th>
+                <th className="gecko-eyebrow" style={{ padding: '10px 8px', textAlign: 'center', borderBottom: '1px solid var(--gecko-border)' }}>Reefer</th>
+                <th className="gecko-eyebrow" style={{ padding: '10px 8px', textAlign: 'center', borderBottom: '1px solid var(--gecko-border)' }}>—</th>
               </tr>
             </thead>
             <tbody>
@@ -1765,7 +1762,7 @@ function TestAMoveTab({
                     <span className="gecko-charge-card-code">{r.chargeCode}</span>
                     <div>
                       <div style={{ fontSize: 13, fontWeight: 600, color: 'var(--gecko-text-primary)' }}>{r.chargeDesc}</div>
-                      <div style={{ fontSize: 11, color: 'var(--gecko-text-secondary)', marginTop: 2 }}>
+                      <div className="gecko-cell-meta">
                         {r.source === 'VAS' ? 'VAS' : 'Movement charge'}
                       </div>
                     </div>
@@ -1799,7 +1796,7 @@ function TestAMoveTab({
                           <span style={{ fontFamily: 'var(--gecko-font-mono)', fontSize: 15, fontWeight: 800, color: 'var(--gecko-text-primary)' }}>
                             {fmtTHB(r.rate ?? 0)}
                           </span>
-                          <span style={{ fontSize: 10, fontWeight: 700, color: 'var(--gecko-text-secondary)' }}>THB</span>
+                          <span className="gecko-cell-meta" style={{ fontWeight: 700 }}>THB</span>
                         </div>
                         {r.appliedConditions && r.appliedConditions.length > 0 && (
                           <div style={{ fontSize: 9, color: 'var(--gecko-warning-700)', marginTop: 2, fontStyle: 'italic' }}>
@@ -1916,7 +1913,7 @@ function ImportRatesPanel({
           <div style={{ fontSize: 13, fontWeight: 600, color: 'var(--gecko-text-primary)' }}>
             Step 1 — Download the template
           </div>
-          <div style={{ fontSize: 11, color: 'var(--gecko-text-secondary)', marginTop: 2 }}>
+          <div className="gecko-cell-meta">
             CSV with 13 columns and 6 sample rows. Edit in Excel, save as CSV, then upload below.
           </div>
         </div>
@@ -1930,7 +1927,7 @@ function ImportRatesPanel({
         <div style={{ fontSize: 13, fontWeight: 600, color: 'var(--gecko-text-primary)' }}>
           {filename || 'Step 2 — Drop or click to upload your CSV'}
         </div>
-        <div style={{ fontSize: 11, color: 'var(--gecko-text-secondary)' }}>
+        <div className="gecko-cell-meta">
           {parsing ? 'Parsing…' : '.csv or Excel "Save As CSV" — max ~10,000 rows'}
         </div>
         <input
@@ -1951,7 +1948,7 @@ function ImportRatesPanel({
           <div className="gecko-row" style={{ gap: 10 }}>
             <span className="gecko-pill gecko-pill-success">{validCount} valid</span>
             {errorCount > 0 && <span className="gecko-pill gecko-pill-danger">{errorCount} with errors</span>}
-            <span style={{ fontSize: 11, color: 'var(--gecko-text-secondary)' }}>
+            <span className="gecko-cell-meta">
               Source: <code style={{ fontFamily: 'var(--gecko-font-mono)' }}>{filename}</code>
             </span>
           </div>
@@ -1974,7 +1971,7 @@ function ImportRatesPanel({
                       <span style={{ fontFamily: 'var(--gecko-font-mono)', fontWeight: 700 }}>{r.chargeCode}</span>
                       {' '}<span style={{ color: 'var(--gecko-text-secondary)' }}>{r.chargeDesc}</span>
                     </td>
-                    <td style={{ fontSize: 10, color: 'var(--gecko-text-secondary)' }}>
+                    <td className="gecko-cell-meta">
                       {[r.size, r.type, r.truckCat, r.cargoCat].filter(Boolean).join(' · ') || '—'}
                     </td>
                     <td>{r.paymentTerm}</td>
@@ -2267,7 +2264,7 @@ export default function NewTariffSchedulePage() {
                 })}
               </div>
               {orderTypesInScope.length === 0 && (
-                <div style={{ marginTop: 14, fontSize: 11, color: 'var(--gecko-text-secondary)', fontStyle: 'italic' }}>
+                <div className="gecko-cell-meta" style={{ marginTop: 14, fontStyle: 'italic' }}>
                   Add at least one order type to start pricing movement charges.
                 </div>
               )}
@@ -2301,7 +2298,7 @@ export default function NewTariffSchedulePage() {
                         </div>
                         {w.isDefault && <span className="gecko-pill gecko-pill-neutral" style={{ fontSize: 9 }}>DEFAULT</span>}
                       </div>
-                      <div style={{ fontSize: 11, color: 'var(--gecko-text-secondary)', textAlign: 'left', lineHeight: 1.4 }}>
+                      <div className="gecko-cell-meta" style={{ textAlign: 'left', lineHeight: 1.4 }}>
                         {w.description}
                       </div>
                       <div className="gecko-row gecko-row-wrap" style={{ gap: 4 }}>

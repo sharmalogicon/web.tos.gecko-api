@@ -114,7 +114,7 @@ function SectionCard({ title, sub, accent, children }: {
     }}>
       <div style={{ padding: '14px 24px', borderBottom: '1px solid var(--gecko-border)', background: 'var(--gecko-bg-subtle)' }}>
         <div style={{ fontSize: 13, fontWeight: 700, color: 'var(--gecko-text-primary)', textTransform: 'uppercase', letterSpacing: '0.04em' }}>{title}</div>
-        {sub && <div style={{ fontSize: 12, color: 'var(--gecko-text-secondary)', marginTop: 3 }}>{sub}</div>}
+        {sub && <div className="gecko-cell-meta" style={{ marginTop: 3 }}>{sub}</div>}
       </div>
       <div style={{ padding: '22px 24px' }}>{children}</div>
     </div>
@@ -351,7 +351,7 @@ export default function NewVoyagePage() {
                   <span style={{ fontSize: 12, fontWeight: 700, color: f.color }}>{f.label}</span>
                 </div>
                 <DateField value={form[f.key]} onChange={v => set({ [f.key]: v } as Partial<FormState>)} withTime />
-                <div style={{ fontSize: 11, color: 'var(--gecko-text-secondary)' }}>{f.hint}</div>
+                <div className="gecko-cell-meta">{f.hint}</div>
               </div>
             ))}
           </div>
@@ -403,7 +403,7 @@ export default function NewVoyagePage() {
             ].map(col => (
               <div key={col.label}>
                 <div style={{ fontSize: 12, fontWeight: 700, color: col.color }}>{col.label}</div>
-                <div style={{ fontSize: 11, color: 'var(--gecko-text-secondary)' }}>{col.hint}</div>
+                <div className="gecko-cell-meta">{col.hint}</div>
               </div>
             ))}
           </div>
@@ -419,7 +419,7 @@ export default function NewVoyagePage() {
               background: idx % 2 === 0 ? 'var(--gecko-bg-subtle)' : 'transparent',
               alignItems: 'center', marginBottom: 4,
             }}>
-              <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+              <div className="gecko-row">
                 <div style={{ width: 10, height: 10, borderRadius: 3, background: row.color, flexShrink: 0 }} />
                 <span style={{ fontSize: 13, fontWeight: 600, color: row.color }}>{row.label}</span>
               </div>
@@ -452,7 +452,7 @@ export default function NewVoyagePage() {
         <div className="gecko-stack" style={{ gap: 18 }}>
           <div className="gecko-grid-3" style={{ gap: 18 }}>
             <Field label="VGM Cut-off" required hint="SOLAS regulation — mandatory for all laden export containers">
-              <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+              <div className="gecko-row">
                 <DateField value={form.vgmCutoff} onChange={v => set({ vgmCutoff: v })} withTime style={{ flex: 1 }} />
                 <span style={{
                   fontSize: 9, fontWeight: 800, color: 'var(--gecko-error-600)',
@@ -505,7 +505,7 @@ export default function NewVoyagePage() {
             <div style={{ width: 8, height: 8, borderRadius: '50%',
               background: form.status === 'Open' || form.status === 'Accepting' ? 'var(--gecko-success-500)' : 'var(--gecko-gray-400)',
             }} />
-            <span style={{ fontSize: 12, color: 'var(--gecko-text-secondary)' }}>
+            <span className="gecko-page-subtitle">
               {form.status === 'Open' && 'Bookings will be accepted from all customers.'}
               {form.status === 'Accepting' && 'Voyage accepting containers. Gate operations active.'}
               {form.status === 'Closed' && 'Cut-offs passed. No further bookings accepted.'}
@@ -526,7 +526,7 @@ export default function NewVoyagePage() {
         <Link href="/masters/vessels/schedule" className="gecko-btn gecko-btn-ghost gecko-btn-sm">
           <Icon name="chevronLeft" size={15} /> Back to Schedule
         </Link>
-        <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
+        <div className="gecko-row">
           {!canSave && (
             <span style={{ fontSize: 12, color: 'var(--gecko-text-secondary)', marginRight: 8 }}>
               Vessel Code, Voyage No, and Line are required

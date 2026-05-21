@@ -389,7 +389,7 @@ function EntryModal({ entry, isNew, catMeta, groupColor, groupBg, onClose }: Ent
                 <div className="gecko-ml-auto" style={{ textAlign: 'right' }}>
                   <div className="gecko-eyebrow" style={{ marginBottom: 2 }}>Last Modified</div>
                   <div className="gecko-mono-strong" style={{ fontSize: 12 }}>{entry.modifiedOn || '—'}</div>
-                  <div style={{ fontSize: 11, color: 'var(--gecko-text-secondary)' }}>by {entry.modifiedBy || '—'}</div>
+                  <div className="gecko-cell-meta">by {entry.modifiedBy || '—'}</div>
                 </div>
               </div>
             </div>
@@ -518,7 +518,7 @@ export default function LookupMasterPage() {
                     )}
                   </div>
                   <div className="gecko-flex-shrink-0" style={{ textAlign: 'right' }}>
-                    <div className="gecko-mono-strong" style={{ fontSize: 11, color: 'var(--gecko-text-secondary)' }}>{cat.entryCount}</div>
+                    <div className="gecko-mono-strong gecko-cell-meta">{cat.entryCount}</div>
                     {cat.activeCount < cat.entryCount && (
                       <div style={{ fontSize: 9, color: 'var(--gecko-warning-600)', fontWeight: 600 }}>{cat.entryCount - cat.activeCount} depr.</div>
                     )}
@@ -630,7 +630,7 @@ export default function LookupMasterPage() {
                           </div>
                         </td>
                         <td style={{ color: 'var(--gecko-text-primary)', fontWeight: 500, maxWidth: 300 }}>{e.description}</td>
-                        <td style={{ color: 'var(--gecko-text-secondary)', fontSize: 12 }}>{e.shortLabel}</td>
+                        <td className="gecko-page-subtitle">{e.shortLabel}</td>
                         <td>
                           <div className="gecko-row gecko-row-wrap" style={{ gap: 4 }}>
                             {e.smdgCode    && <span className="gecko-badge gecko-badge-xs gecko-badge-primary gecko-text-mono">S:{e.smdgCode}</span>}
@@ -673,7 +673,7 @@ export default function LookupMasterPage() {
           {/* Table footer */}
           {rawEntries.length > 0 && (
             <div className="gecko-row gecko-flex-shrink-0" style={{ padding: '8px 20px', borderTop: '1px solid var(--gecko-border)', background: 'var(--gecko-bg-subtle)', gap: 16 }}>
-              <span style={{ fontSize: 11, color: 'var(--gecko-text-secondary)' }}>
+              <span className="gecko-cell-meta">
                 Showing <strong>{entries.length}</strong> of <strong>{rawEntries.length}</strong> entries
                 {activeCatMeta?.compliance && <> · Standard: <CompliancePill compliance={activeCatMeta.compliance} /></>}
               </span>

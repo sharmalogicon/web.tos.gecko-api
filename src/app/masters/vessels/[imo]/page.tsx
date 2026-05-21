@@ -270,7 +270,7 @@ export default function VesselDetailPage() {
             <Icon name="anchor" size={24} style={{ color: 'var(--gecko-info-500)' }} />
             <h1 className="gecko-page-title-lg">{vessel.name}</h1>
             <StatusBadge status={vessel.status} />
-            <span className="gecko-mono-strong" style={{ fontSize: 12, color: 'var(--gecko-text-secondary)' }}>IMO {vessel.imo}</span>
+            <span className="gecko-mono-strong gecko-page-subtitle">IMO {vessel.imo}</span>
           </div>
           <div className="gecko-page-subtitle gecko-mt-2">
             {vessel.line} · {vessel.class} · Flag {vessel.flag} · Built {vessel.built}
@@ -293,7 +293,7 @@ export default function VesselDetailPage() {
               </div>
               <div className="gecko-eyebrow">{k.label}</div>
             </div>
-            <div style={{ fontSize: 22, fontWeight: 800, color: 'var(--gecko-text-primary)', lineHeight: 1.1 }}>{k.value}</div>
+            <div className="gecko-stat-num gecko-stat-num-22" style={{ lineHeight: 1.1 }}>{k.value}</div>
             <div style={{ fontSize: 11, color: 'var(--gecko-text-disabled)', lineHeight: 1.4 }}>{k.sub}</div>
           </div>
         ))}
@@ -508,8 +508,8 @@ export default function VesselDetailPage() {
                     <td style={{ fontFamily: 'var(--gecko-font-mono)', fontWeight: 700, color: 'var(--gecko-primary-600)' }}>{v.voyage}</td>
                     <td style={{ fontFamily: 'var(--gecko-font-mono)', fontWeight: 600, fontSize: 12 }}>{v.pol}</td>
                     <td style={{ fontFamily: 'var(--gecko-font-mono)', fontWeight: 600, fontSize: 12 }}>{v.pod}</td>
-                    <td style={{ color: 'var(--gecko-text-secondary)', fontSize: 12 }}>{v.etd}</td>
-                    <td style={{ color: 'var(--gecko-text-secondary)', fontSize: 12 }}>{v.eta}</td>
+                    <td className="gecko-page-subtitle">{v.etd}</td>
+                    <td className="gecko-page-subtitle">{v.eta}</td>
                     <td><StatusBadge status={v.status} /></td>
                     <td style={{ minWidth: 120 }}>{v.fill > 0 ? <FillBar pct={v.fill} /> : <span style={{ color: 'var(--gecko-text-disabled)', fontSize: 12 }}>—</span>}</td>
                   </tr>

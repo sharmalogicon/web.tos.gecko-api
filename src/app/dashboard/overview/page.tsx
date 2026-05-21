@@ -32,7 +32,7 @@ function KPICard({ label, value, delta, deltaKind = 'up', sublabel, spark, icon,
       <div className="gecko-row gecko-row-start gecko-row-between">
         <div>
           <div style={{ fontSize: 12, fontWeight: 500, color: 'var(--gecko-text-secondary)' }}>{label}</div>
-          {sublabel && <div style={{ fontSize: 10, color: 'var(--gecko-text-disabled)', marginTop: 2, letterSpacing: '0.04em' }}>{sublabel}</div>}
+          {sublabel && <div className="gecko-cell-sub" style={{ letterSpacing: '0.04em' }}>{sublabel}</div>}
         </div>
         <div className="gecko-mini-icon" style={{ background: c.bg, color: c.fg }}>
           <Icon name={icon} size={16} />
@@ -136,7 +136,7 @@ export default function DashboardOverviewPage() {
             </div>
             <div className="gecko-row" style={{ position: 'absolute', left: 36, right: 0, bottom: 0, gap: 6 }}>
               {movementData.map(d => (
-                <div key={d.m} style={{ flex: 1, textAlign: 'center', fontSize: 10, color: 'var(--gecko-text-secondary)', fontWeight: 500 }}>{d.m}</div>
+                <div key={d.m} className="gecko-cell-meta" style={{ flex: 1, textAlign: 'center', fontWeight: 500 }}>{d.m}</div>
               ))}
             </div>
           </div>
@@ -231,7 +231,7 @@ export default function DashboardOverviewPage() {
                   <Icon name="ship" size={14} style={{ color: 'var(--gecko-text-secondary)' }} />
                   <div>
                     <div style={{ fontSize: 12, fontWeight: 700, fontFamily: 'var(--gecko-font-mono)' }}>{v.voyage}</div>
-                    <div style={{ fontSize: 10, color: 'var(--gecko-text-secondary)' }}>{v.vessel}</div>
+                    <div className="gecko-cell-meta">{v.vessel}</div>
                   </div>
                 </div>
                 <div className="gecko-row" style={{ gap: 6 }}>
@@ -298,7 +298,7 @@ export default function DashboardOverviewPage() {
                   <td style={{ padding: '12px 16px' }}><span className="gecko-badge gecko-badge-gray" style={{ fontSize: 10 }}>{r.type}</span></td>
                   <td style={{ padding: '12px 16px' }}><span style={{ display: 'inline-flex', alignItems: 'center', gap: 5, fontSize: 12, fontFamily: 'var(--gecko-font-mono)', fontWeight: 600 }}><Icon name={r.mv === 'RCV' ? 'arrowDown' : r.mv === 'DLV' ? 'arrowUp' : 'refresh'} size={12} stroke={2} style={{ color: r.mv.includes('RCV') ? 'var(--gecko-success-600)' : r.mv.includes('DLV') ? 'var(--gecko-accent-600)' : 'var(--gecko-info-600)' }} />{r.mv}</span></td>
                   <td style={{ padding: '12px 16px', fontSize: 12, fontWeight: 600 }}>{r.liner}</td>
-                  <td style={{ padding: '12px 16px', fontFamily: 'var(--gecko-font-mono)', fontSize: 11, color: 'var(--gecko-text-secondary)' }}>{r.truck}</td>
+                  <td className="gecko-cell-meta" style={{ padding: '12px 16px', fontFamily: 'var(--gecko-font-mono)' }}>{r.truck}</td>
                   <td style={{ padding: '12px 16px', fontFamily: 'var(--gecko-font-mono)', fontSize: 11 }}>{r.t}</td>
                   <td style={{ padding: '12px 16px' }}>
                     {r.st === 'ok' && <span className="gecko-badge gecko-badge-success" style={{ fontSize: 10 }}>Complete</span>}

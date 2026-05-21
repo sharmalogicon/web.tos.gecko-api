@@ -263,12 +263,12 @@ export default function ChargeCodesPage() {
                 <td>
                   <span style={{ fontSize: 10, fontWeight: 700, padding: '2px 7px', borderRadius: 4, background: TYPE_STYLE[c.type].bg, color: TYPE_STYLE[c.type].color }}>{c.type}</span>
                 </td>
-                <td style={{ color: 'var(--gecko-text-secondary)', fontSize: 12 }}>{c.unit}</td>
-                <td style={{ color: 'var(--gecko-text-secondary)', fontSize: 12 }}>{c.basis}</td>
+                <td className="gecko-page-subtitle">{c.unit}</td>
+                <td className="gecko-page-subtitle">{c.basis}</td>
                 <td style={{ fontSize: 11, fontWeight: 600, color: c.currency === 'USD' ? 'var(--gecko-info-700)' : 'var(--gecko-text-secondary)' }}>{c.currency}</td>
                 <td className="gecko-money gecko-money-sm" style={{ fontSize: 12.5 }}>{c.base}</td>
                 <td style={{ color: 'var(--gecko-info-600)', fontWeight: 600, fontSize: 12 }}>{c.vat}</td>
-                <td className="gecko-num-tabular" style={{ color: 'var(--gecko-text-secondary)', fontSize: 12 }}>{c.inUse}</td>
+                <td className="gecko-num-tabular gecko-page-subtitle">{c.inUse}</td>
                 <td style={{ textAlign: 'right', fontWeight: 600, fontSize: 12 }}>{c.tariffs}</td>
                 <td className="gecko-text-mono" style={{ color: 'var(--gecko-text-disabled)', fontSize: 11 }}>{c.glRev}</td>
                 <td>

@@ -480,7 +480,7 @@ function WorkflowCanvas({
       <div className="gecko-stack" style={{ background: 'var(--gecko-bg-surface)', border: '1px solid var(--gecko-border)', borderRadius: 14, overflow: 'hidden', gap: 0 }}>
         <div style={{ padding: '12px 14px', borderBottom: '1px solid var(--gecko-border)', background: 'var(--gecko-bg-subtle)' }}>
           <div style={{ fontSize: 12, fontWeight: 700, color: 'var(--gecko-text-primary)' }}>Movement Catalog</div>
-          <div style={{ fontSize: 10, color: 'var(--gecko-text-secondary)', marginTop: 2 }}>Drag cards onto the canvas →</div>
+          <div className="gecko-cell-meta">Drag cards onto the canvas →</div>
         </div>
         <div className="gecko-flex-1" style={{ padding: '8px 8px 8px', overflowY: 'auto' }}>
           {CATALOG_GROUPS.map(grp => {
@@ -500,7 +500,7 @@ function WorkflowCanvas({
                     <div style={{ width: 26, height: 26, borderRadius: 7, background: grp.accent + '18', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
                       <Icon name={cat.icon} size={12} style={{ color: grp.accent }} />
                     </div>
-                    <div style={{ flex: 1, minWidth: 0 }}>
+                    <div className="gecko-flex-1">
                       <div style={{ fontFamily: 'var(--gecko-font-mono)', fontSize: 10, fontWeight: 700, color: 'var(--gecko-text-primary)' }}>{cat.code}</div>
                       <div style={{ fontSize: 9, color: 'var(--gecko-text-secondary)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{cat.name}</div>
                     </div>
@@ -518,7 +518,7 @@ function WorkflowCanvas({
         {/* Toolbar */}
         <div className="gecko-row" style={{ padding: '9px 14px', borderBottom: '1px solid var(--gecko-border)', background: 'var(--gecko-bg-subtle)', gap: 10 }}>
           <Icon name="info" size={13} style={{ color: 'var(--gecko-info-500)', flexShrink: 0 }} />
-          <span className="gecko-flex-1" style={{ fontSize: 11, color: 'var(--gecko-text-secondary)' }}>
+          <span className="gecko-flex-1 gecko-cell-meta">
             Drop movements onto the canvas · Connect by dragging from the{' '}
             <span style={{ display: 'inline-block', width: 9, height: 9, borderRadius: '50%', background: 'var(--gecko-primary-600)', verticalAlign: 'middle' }} />{' '}
             output port · Click a connector to delete it
@@ -641,7 +641,7 @@ function WorkflowCanvas({
                       <div style={{ width: 26, height: 26, borderRadius: 7, background: col.light, border: `1px solid ${col.border}`, display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
                         <Icon name={node.icon} size={13} style={{ color: col.bg }} />
                       </div>
-                      <div style={{ flex: 1, minWidth: 0 }}>
+                      <div className="gecko-flex-1">
                         <div style={{ fontFamily: 'var(--gecko-font-mono)', fontSize: 10, fontWeight: 800, color: col.bg, lineHeight: 1.2 }}>{node.code}</div>
                         <div style={{ fontSize: 9, color: 'var(--gecko-text-secondary)', lineHeight: 1.3, marginTop: 1 }}>{node.name}</div>
                       </div>
@@ -751,7 +751,7 @@ function Step2({ state, onChange }: { state: WizardState; onChange: (patch: Part
         <div className="gecko-row gecko-row-between">
           <div>
             <span style={{ fontSize: 13, fontWeight: 700, color: 'var(--gecko-text-primary)' }}>Advanced — Visual Workflow Builder</span>
-            <span style={{ fontSize: 11, color: 'var(--gecko-text-secondary)', marginLeft: 10 }}>Drag movements, draw connectors, build any flow shape</span>
+            <span className="gecko-cell-meta" style={{ marginLeft: 10 }}>Drag movements, draw connectors, build any flow shape</span>
           </div>
           <button onClick={exitAdvanced} className="gecko-btn gecko-btn-ghost gecko-btn-sm" style={{ gap: 6 }}>
             <Icon name="layers" size={14} /> Simple Mode
@@ -800,7 +800,7 @@ function Step2({ state, onChange }: { state: WizardState; onChange: (patch: Part
       <div className="gecko-row gecko-row-between">
         <div>
           <span style={{ fontSize: 13, fontWeight: 700, color: 'var(--gecko-text-primary)' }}>Movement Sequence</span>
-          <span style={{ fontSize: 11, color: 'var(--gecko-text-secondary)', marginLeft: 10 }}>Click to add legs, use ↑↓ to reorder</span>
+          <span className="gecko-cell-meta" style={{ marginLeft: 10 }}>Click to add legs, use ↑↓ to reorder</span>
         </div>
         <button onClick={enterAdvanced} className="gecko-btn gecko-btn-outline gecko-btn-sm" style={{ gap: 6 }}>
           <Icon name="activity" size={14} /> Advanced Mode
@@ -830,9 +830,9 @@ function Step2({ state, onChange }: { state: WizardState; onChange: (patch: Part
                       <div style={{ width: 28, height: 28, borderRadius: 7, background: grp.accent + '18', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
                         <Icon name={cat.icon} size={13} style={{ color: grp.accent }} />
                       </div>
-                      <div style={{ flex: 1, minWidth: 0 }}>
+                      <div className="gecko-flex-1">
                         <div style={{ fontFamily: 'var(--gecko-font-mono)', fontSize: 11, fontWeight: 700, color: 'var(--gecko-text-primary)' }}>{cat.code}</div>
-                        <div style={{ fontSize: 10, color: 'var(--gecko-text-secondary)', marginTop: 1, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{cat.name}</div>
+                        <div className="gecko-cell-sub gecko-truncate" style={{ marginTop: 1 }}>{cat.name}</div>
                       </div>
                       {cat.ediMessages.length > 0 && <div style={{ width: 7, height: 7, borderRadius: '50%', background: '#60A5FA', flexShrink: 0 }} />}
                       <div style={{ width: 20, height: 20, borderRadius: 5, background: grp.accent, color: '#fff', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
@@ -851,7 +851,7 @@ function Step2({ state, onChange }: { state: WizardState; onChange: (patch: Part
           <div className="gecko-row gecko-row-between" style={{ padding: '14px 16px', borderBottom: '1px solid var(--gecko-border)', background: 'var(--gecko-bg-subtle)' }}>
             <div>
               <div style={{ fontSize: 12, fontWeight: 700, color: 'var(--gecko-text-primary)' }}>Movement Sequence</div>
-              <div style={{ fontSize: 11, color: 'var(--gecko-text-secondary)', marginTop: 1 }}>Configure flags per leg · reorder with ↑↓</div>
+              <div className="gecko-cell-meta" style={{ marginTop: 1 }}>Configure flags per leg · reorder with ↑↓</div>
             </div>
             <span style={{ fontSize: 12, fontWeight: 700, color: 'var(--gecko-primary-700)', background: 'var(--gecko-primary-100)', padding: '3px 10px', borderRadius: 12 }}>
               {state.movements.length} leg{state.movements.length !== 1 ? 's' : ''}
@@ -876,7 +876,7 @@ function Step2({ state, onChange }: { state: WizardState; onChange: (patch: Part
                       </div>
                       <div className="gecko-flex-1">
                         <div style={{ fontFamily: 'var(--gecko-font-mono)', fontSize: 12, fontWeight: 800, color: col.bg }}>{mov.code}</div>
-                        <div style={{ fontSize: 10, color: 'var(--gecko-text-secondary)' }}>{mov.name}</div>
+                        <div className="gecko-cell-meta">{mov.name}</div>
                       </div>
                       <div className="gecko-row" style={{ gap: 4 }}>
                         <button onClick={() => moveUp(idx)} disabled={idx === 0} style={{ width: 26, height: 26, borderRadius: 6, border: '1px solid var(--gecko-border)', background: idx === 0 ? 'transparent' : '#fff', cursor: idx === 0 ? 'default' : 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', opacity: idx === 0 ? 0.3 : 1 }}>
@@ -986,7 +986,7 @@ function Step3({ state, onChange }: { state: WizardState; onChange: (patch: Part
                 <div key={c.tempId} style={{ display: 'grid', gridTemplateColumns: '1fr 70px 100px 52px 24px', gap: 6, alignItems: 'center', padding: '7px 10px', background: col.light, border: `1px solid ${col.border}`, borderRadius: 8 }}>
                   <div>
                     <span style={{ fontFamily: 'var(--gecko-font-mono)', fontSize: 11, fontWeight: 700, color: col.bg }}>{c.code}</span>
-                    <span style={{ fontSize: 10, color: 'var(--gecko-text-secondary)', marginLeft: 6 }}>{c.description}</span>
+                    <span className="gecko-cell-meta" style={{ marginLeft: 6 }}>{c.description}</span>
                   </div>
                   <SelectSm value={c.paymentTerm} options={['CASH', 'CREDIT']} onChange={v => patchCharge(c.tempId, { paymentTerm: v as PaymentTerm })} />
                   <SelectSm value={c.billedTo} options={['CUSTOMER', 'AGENT', 'FWD', 'LINE', 'CARRIER']} onChange={v => patchCharge(c.tempId, { billedTo: v as BilledTo })} />
@@ -1012,7 +1012,7 @@ function Step3({ state, onChange }: { state: WizardState; onChange: (patch: Part
                 <div key={cat.code + cat.defaultTerm} className="gecko-row" style={{ padding: '6px 8px', borderRadius: 7, border: '1px solid var(--gecko-border)', background: 'var(--gecko-bg-subtle)' }}>
                   <div className="gecko-flex-1">
                     <span style={{ fontFamily: 'var(--gecko-font-mono)', fontSize: 10, fontWeight: 700 }}>{cat.code}</span>
-                    <span style={{ fontSize: 10, color: 'var(--gecko-text-secondary)', marginLeft: 6 }}>{cat.description}</span>
+                    <span className="gecko-cell-meta" style={{ marginLeft: 6 }}>{cat.description}</span>
                   </div>
                   <span className="gecko-flex-shrink-0" style={{ fontSize: 9, fontWeight: 700, padding: '1.5px 5px', borderRadius: 3, background: cat.defaultTerm === 'CASH' ? '#D1FAE5' : '#DBEAFE', color: cat.defaultTerm === 'CASH' ? '#065F46' : '#1D4ED8' }}>{cat.defaultTerm}</span>
                   <button onClick={() => addCharge(cat)} className="gecko-flex-shrink-0" style={{ width: 22, height: 22, borderRadius: 6, background: 'var(--gecko-primary-600)', color: '#fff', border: 'none', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
@@ -1038,7 +1038,7 @@ function Step3({ state, onChange }: { state: WizardState; onChange: (patch: Part
                 <div key={v.tempId} style={{ display: 'grid', gridTemplateColumns: '1fr 70px 100px 52px 24px', gap: 6, alignItems: 'center', padding: '7px 10px', background: '#FFF7ED', border: '1px solid #FED7AA', borderRadius: 8 }}>
                   <div>
                     <span style={{ fontFamily: 'var(--gecko-font-mono)', fontSize: 11, fontWeight: 700, color: 'var(--gecko-accent-700)' }}>{v.code}</span>
-                    <span style={{ fontSize: 10, color: 'var(--gecko-text-secondary)', marginLeft: 6 }}>{v.description}</span>
+                    <span className="gecko-cell-meta" style={{ marginLeft: 6 }}>{v.description}</span>
                   </div>
                   <SelectSm value={v.paymentTerm} options={['CASH', 'CREDIT']} onChange={val => patchVAS(v.tempId, { paymentTerm: val as PaymentTerm })} />
                   <SelectSm value={v.paymentTo} options={['CUSTOMER', 'AGENT', 'FWD', 'LINE', 'CARRIER']} onChange={val => patchVAS(v.tempId, { paymentTo: val as BilledTo })} />
@@ -1064,7 +1064,7 @@ function Step3({ state, onChange }: { state: WizardState; onChange: (patch: Part
                 <div key={cat.code + cat.defaultTerm} className="gecko-row" style={{ padding: '6px 8px', borderRadius: 7, border: '1px solid var(--gecko-border)', background: 'var(--gecko-bg-subtle)' }}>
                   <div className="gecko-flex-1">
                     <span style={{ fontFamily: 'var(--gecko-font-mono)', fontSize: 10, fontWeight: 700 }}>{cat.code}</span>
-                    <span style={{ fontSize: 10, color: 'var(--gecko-text-secondary)', marginLeft: 6 }}>{cat.description}</span>
+                    <span className="gecko-cell-meta" style={{ marginLeft: 6 }}>{cat.description}</span>
                   </div>
                   <span className="gecko-flex-shrink-0" style={{ fontSize: 9, fontWeight: 700, padding: '1.5px 5px', borderRadius: 3, background: cat.defaultTerm === 'CASH' ? '#D1FAE5' : '#DBEAFE', color: cat.defaultTerm === 'CASH' ? '#065F46' : '#1D4ED8' }}>{cat.defaultTerm}</span>
                   <button onClick={() => addVAS(cat)} className="gecko-flex-shrink-0" style={{ width: 22, height: 22, borderRadius: 6, background: 'var(--gecko-accent-600)', color: '#fff', border: 'none', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
@@ -1090,7 +1090,7 @@ function Step4({ state }: { state: WizardState }) {
     <div className="gecko-stack gecko-stack-lg" style={{ animation: 'geckoFadeIn 220ms ease' }}>
       <div className="gecko-card" style={{ borderRadius: 14, padding: '20px 24px' }}>
         <div className="gecko-row gecko-mb-3" style={{ gap: 12 }}>
-          <h2 style={{ margin: 0, fontFamily: 'var(--gecko-font-mono)', fontSize: 22, fontWeight: 800 }}>{state.code || '—'}</h2>
+          <h2 className="gecko-stat-num gecko-stat-num-22" style={{ margin: 0, fontFamily: 'var(--gecko-font-mono)' }}>{state.code || '—'}</h2>
           <span style={{ fontSize: 10, fontWeight: 700, padding: '3px 8px', borderRadius: 4, background: bt.bg, color: bt.text }}>{state.bookingType}</span>
           <span style={{ fontSize: 10, fontWeight: 600, padding: '3px 8px', borderRadius: 4, background: 'var(--gecko-bg-subtle)', color: 'var(--gecko-text-secondary)', border: '1px solid var(--gecko-border)' }}>{state.bookingMode}</span>
           <div className="gecko-row gecko-ml-auto" style={{ gap: 6 }}>
@@ -1180,7 +1180,7 @@ function Step4({ state }: { state: WizardState }) {
               <div className="gecko-row gecko-mb-3">
                 <div style={{ width: 22, height: 22, borderRadius: 6, background: col.bg, color: '#fff', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 11, fontWeight: 800 }}>{mov.seq}</div>
                 <span style={{ fontFamily: 'var(--gecko-font-mono)', fontSize: 12, fontWeight: 700, color: col.bg }}>{mov.code}</span>
-                <span style={{ fontSize: 10, color: 'var(--gecko-text-secondary)' }}>{mov.name}</span>
+                <span className="gecko-cell-meta">{mov.name}</span>
               </div>
               {mov.charges.length === 0 && mov.vasCharges.length === 0 ? (
                 <div style={{ fontSize: 11, color: 'var(--gecko-text-disabled)', fontStyle: 'italic' }}>No charges configured</div>

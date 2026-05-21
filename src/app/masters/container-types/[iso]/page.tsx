@@ -339,7 +339,7 @@ function TabInYard({ iso }: { iso: string }) {
   return (
     <div className="gecko-stack" style={{ gap: 20 }}>
       <div className="gecko-row gecko-row-between">
-        <div style={{ fontSize: 13, color: 'var(--gecko-text-secondary)' }}>
+        <div className="gecko-page-subtitle">
           Containers currently in yard matching ISO type <span style={{ fontFamily: 'var(--gecko-font-mono)', fontWeight: 700, color: 'var(--gecko-text-primary)' }}>{iso}</span>
         </div>
         <button className="gecko-btn gecko-btn-outline gecko-btn-sm">
@@ -368,8 +368,8 @@ function TabInYard({ iso }: { iso: string }) {
                   {u.status}
                 </span>
               </td>
-              <td style={{ color: 'var(--gecko-text-secondary)', fontSize: 12 }}>{u.location}</td>
-              <td style={{ color: 'var(--gecko-text-secondary)', fontSize: 12 }}>{u.lastMove}</td>
+              <td className="gecko-page-subtitle">{u.location}</td>
+              <td className="gecko-page-subtitle">{u.lastMove}</td>
               <td>
                 <button style={{ background: 'none', border: 'none', color: 'var(--gecko-primary-600)', cursor: 'pointer', fontSize: 12, fontWeight: 600 }}>
                   View →
@@ -393,7 +393,7 @@ function TabTariff({ iso, type }: { iso: string; type: string }) {
   return (
     <div className="gecko-stack" style={{ gap: 20 }}>
       <div className="gecko-row gecko-row-between">
-        <div style={{ fontSize: 13, color: 'var(--gecko-text-secondary)' }}>
+        <div className="gecko-page-subtitle">
           Tariff schedules with a rate line referencing type <span style={{ fontFamily: 'var(--gecko-font-mono)', fontWeight: 700, color: 'var(--gecko-text-primary)' }}>{iso}</span>
         </div>
         <button className="gecko-btn gecko-btn-outline gecko-btn-sm">
@@ -424,7 +424,7 @@ function TabTariff({ iso, type }: { iso: string; type: string }) {
                 </span>
               </td>
               <td style={{ fontFamily: 'var(--gecko-font-mono)', fontWeight: 700, color: 'var(--gecko-text-primary)' }}>{b.rate}</td>
-              <td style={{ color: 'var(--gecko-text-secondary)', fontSize: 12 }}>{b.notes}</td>
+              <td className="gecko-page-subtitle">{b.notes}</td>
               <td>
                 <button style={{ background: 'none', border: 'none', color: 'var(--gecko-primary-600)', cursor: 'pointer', fontSize: 12, fontWeight: 600 }}>
                   View →
@@ -460,7 +460,7 @@ function TabHistory({ iso }: { iso: string }) {
           <div className="gecko-flex-1">
             <div className="gecko-row gecko-mb-1" style={{ gap: 12 }}>
               <span style={{ fontSize: 13, fontWeight: 700, color: 'var(--gecko-text-primary)' }}>{log.action}</span>
-              <span style={{ fontSize: 11, fontWeight: 600, color: 'var(--gecko-text-secondary)' }}>{log.user}</span>
+              <span className="gecko-cell-meta" style={{ fontWeight: 600 }}>{log.user}</span>
             </div>
             <div style={{ fontSize: 12, color: 'var(--gecko-text-secondary)', marginBottom: 4 }}>{log.detail}</div>
             <div style={{ fontSize: 11, color: 'var(--gecko-text-disabled)', fontFamily: 'var(--gecko-font-mono)' }}>{log.date}</div>
@@ -488,7 +488,7 @@ export default function ContainerTypeDetailPage() {
           <Icon name="alertCircle" size={26} style={{ color: 'var(--gecko-danger-500)' }} />
         </div>
         <h2 style={{ fontSize: 20, fontWeight: 700, margin: 0, color: 'var(--gecko-text-primary)' }}>ISO type not found</h2>
-        <div style={{ fontSize: 13, color: 'var(--gecko-text-secondary)' }}>
+        <div className="gecko-page-subtitle">
           No container type with ISO code <span style={{ fontFamily: 'var(--gecko-font-mono)', fontWeight: 700 }}>{iso}</span> exists in this catalog.
         </div>
         <Link href="/masters/container-types" className="gecko-btn gecko-btn-outline gecko-btn-sm">

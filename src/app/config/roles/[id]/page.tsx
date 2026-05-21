@@ -472,20 +472,18 @@ function PermissionMatrix({
           <thead>
             <tr style={{ borderBottom: '2px solid var(--gecko-border)' }}>
               {/* Module header */}
-              <th style={{
+              <th className="gecko-eyebrow" style={{
                 padding: '12px 14px', textAlign: 'left',
-                fontSize: 11, fontWeight: 700, letterSpacing: '0.07em', textTransform: 'uppercase',
-                color: 'var(--gecko-text-secondary)', background: 'var(--gecko-bg-subtle)',
+                background: 'var(--gecko-bg-subtle)',
                 position: 'sticky', left: 0, zIndex: 3,
                 minWidth: 220, borderRight: '1px solid var(--gecko-border)',
               }}>
                 Module
               </th>
               {/* Quick-set header */}
-              <th style={{
+              <th className="gecko-eyebrow" style={{
                 padding: '12px 10px', textAlign: 'center',
-                fontSize: 11, fontWeight: 700, letterSpacing: '0.07em', textTransform: 'uppercase',
-                color: 'var(--gecko-text-secondary)', background: 'var(--gecko-bg-subtle)',
+                background: 'var(--gecko-bg-subtle)',
                 minWidth: 104, borderRight: '1px solid var(--gecko-border)',
               }}>
                 Quick Set
@@ -773,10 +771,9 @@ function AssignedUsersTab({ roleId, roleColor }: { roleId: string; roleColor: st
         <thead>
           <tr style={{ borderBottom: '1px solid var(--gecko-border)', background: 'var(--gecko-bg-subtle)' }}>
             {['User', 'Email', 'Last Login', 'Status'].map((h, i) => (
-              <th key={i} style={{
+              <th key={i} className="gecko-eyebrow" style={{
                 padding: '10px 14px', textAlign: 'left',
-                fontSize: 11, fontWeight: 700, letterSpacing: '0.07em', textTransform: 'uppercase',
-                color: 'var(--gecko-text-secondary)', whiteSpace: 'nowrap',
+                whiteSpace: 'nowrap',
               }}>
                 {h}
               </th>
@@ -1010,8 +1007,7 @@ export default function RoleDetailPage() {
 
                 {/* Unsaved badge */}
                 {unsavedChanges && (
-                  <span className="gecko-row" style={{
-                    fontSize: 10, fontWeight: 700, letterSpacing: '0.05em', textTransform: 'uppercase',
+                  <span className="gecko-row gecko-eyebrow" style={{
                     padding: '2px 8px', borderRadius: 4,
                     background: 'var(--gecko-warning-50)', color: 'var(--gecko-warning-700)',
                     border: '1px solid var(--gecko-warning-200)',
@@ -1038,7 +1034,7 @@ export default function RoleDetailPage() {
 
           {/* Save button */}
           <div className="gecko-row" style={{ gap: 10 }}>
-            <span style={{ fontSize: 12, color: 'var(--gecko-text-secondary)' }}>
+            <span className="gecko-page-subtitle">
               {totalGranted} permission{totalGranted !== 1 ? 's' : ''} granted
             </span>
             <button
@@ -1147,7 +1143,7 @@ export default function RoleDetailPage() {
 
               {/* Global quick-set */}
               <div className="gecko-row gecko-flex-shrink-0" style={{ paddingTop: 22 }}>
-                <span style={{ fontSize: 11, fontWeight: 600, color: 'var(--gecko-text-secondary)', whiteSpace: 'nowrap' }}>
+                <span className="gecko-cell-meta" style={{ fontWeight: 600, whiteSpace: 'nowrap' }}>
                   Quick set:
                 </span>
                 <button

@@ -167,7 +167,7 @@ export default function DwellTimePage() {
               );
             })}
           </svg>
-          <div className="gecko-row gecko-row-wrap" style={{ gap: 16, marginTop: 8, fontSize: 11, color: 'var(--gecko-text-secondary)' }}>
+          <div className="gecko-row gecko-row-wrap gecko-cell-meta" style={{ gap: 16, marginTop: 8 }}>
             <span className="gecko-inline-row" style={{ gap: 5 }}><span style={{ width: 10, height: 10, background: 'var(--gecko-success-600)', borderRadius: 2, display: 'inline-block' }} />0–5 days</span>
             <span className="gecko-inline-row" style={{ gap: 5 }}><span style={{ width: 10, height: 10, background: '#f59e0b', borderRadius: 2, display: 'inline-block' }} />5–10 days</span>
             <span className="gecko-inline-row" style={{ gap: 5 }}><span style={{ width: 10, height: 10, background: '#f97316', borderRadius: 2, display: 'inline-block' }} />10–14 days</span>
@@ -193,7 +193,7 @@ export default function DwellTimePage() {
                 </div>
               );
             })}
-            <div className="gecko-row" style={{ fontSize: 10, color: 'var(--gecko-text-secondary)', marginTop: 2, gap: 4 }}>
+            <div className="gecko-row gecko-cell-sub" style={{ gap: 4 }}>
               <span style={{ display: 'inline-block', width: 10, height: 2, background: 'var(--gecko-error-600)', borderRadius: 1 }} />
               Target line: 5 days
             </div>
@@ -206,7 +206,7 @@ export default function DwellTimePage() {
               <thead>
                 <tr style={{ background: 'var(--gecko-bg-subtle)' }}>
                   {['Container', 'Customer', 'Size', 'Gate-In', 'Dwell (days)', 'Line', 'Holds', 'Status'].map(h => (
-                    <th key={h} style={{ padding: '8px 12px', textAlign: 'left', fontWeight: 600, color: 'var(--gecko-text-secondary)', fontSize: 11, textTransform: 'uppercase', letterSpacing: '0.04em', whiteSpace: 'nowrap', borderBottom: '1px solid var(--gecko-border)' }}>{h}</th>
+                    <th key={h} className="gecko-eyebrow" style={{ padding: '8px 12px', textAlign: 'left', whiteSpace: 'nowrap', borderBottom: '1px solid var(--gecko-border)' }}>{h}</th>
                   ))}
                 </tr>
               </thead>
@@ -218,9 +218,9 @@ export default function DwellTimePage() {
                       <td style={{ padding: '9px 12px', fontFamily: 'var(--gecko-font-mono)', fontWeight: 600 }}>{row.ctr}</td>
                       <td style={{ padding: '9px 12px', whiteSpace: 'nowrap' }}>{row.customer}</td>
                       <td style={{ padding: '9px 12px' }}>
-                        <span style={{ fontSize: 11, fontWeight: 600, padding: '2px 7px', borderRadius: 4, background: 'var(--gecko-bg-subtle)', border: '1px solid var(--gecko-border)', color: 'var(--gecko-text-secondary)' }}>{row.size}</span>
+                        <span className="gecko-cell-meta" style={{ fontWeight: 600, padding: '2px 7px', borderRadius: 4, background: 'var(--gecko-bg-subtle)', border: '1px solid var(--gecko-border)' }}>{row.size}</span>
                       </td>
-                      <td style={{ padding: '9px 12px', fontFamily: 'var(--gecko-font-mono)', fontSize: 11, color: 'var(--gecko-text-secondary)' }}>{row.gateIn}</td>
+                      <td className="gecko-cell-meta" style={{ padding: '9px 12px', fontFamily: 'var(--gecko-font-mono)' }}>{row.gateIn}</td>
                       <td style={{ padding: '9px 12px', textAlign: 'center' }}>
                         <span style={{ fontFamily: 'var(--gecko-font-mono)', fontWeight: 800, color: row.dwell >= 14 ? 'var(--gecko-error-600)' : row.dwell >= 7 ? 'var(--gecko-warning-600)' : 'var(--gecko-text-primary)' }}>{row.dwell}</span>
                       </td>
@@ -293,7 +293,7 @@ export default function DwellTimePage() {
                   <div className="gecko-flex-1">
                     <div className="gecko-row gecko-row-between gecko-row-baseline" style={{ marginBottom: 4 }}>
                       <span style={{ fontSize: 12, fontWeight: 700, fontFamily: 'var(--gecko-font-mono)', color }}>{s.avg}d avg</span>
-                      <span style={{ fontSize: 11, color: 'var(--gecko-text-secondary)' }}>{s.units} units</span>
+                      <span className="gecko-cell-meta">{s.units} units</span>
                     </div>
                     <div style={{ height: 8, borderRadius: 4, background: 'var(--gecko-bg-subtle)', overflow: 'hidden' }}>
                       <div style={{ height: '100%', width: `${barPct}%`, background: color, borderRadius: 4 }} />

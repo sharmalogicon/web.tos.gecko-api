@@ -106,7 +106,7 @@ export default function SpecialCargoDashboard() {
             {REEFERS.map((r) => (
               <div key={r.id} style={{ ...reeferCardStyle(r.status), border: '1px solid var(--gecko-border)', borderRadius: 8, padding: '10px 10px 10px 12px' }}>
                 <div style={{ fontSize: 10, fontWeight: 700, fontFamily: 'var(--gecko-font-mono)', color: 'var(--gecko-text-primary)', marginBottom: 3, lineHeight: 1.3 }}>{r.id}</div>
-                <div style={{ fontSize: 10, color: 'var(--gecko-text-secondary)', marginBottom: 5 }}>{r.customer}</div>
+                <div className="gecko-cell-meta" style={{ marginBottom: 5 }}>{r.customer}</div>
                 <div style={{ fontSize: 10, fontFamily: 'var(--gecko-font-mono)', color: 'var(--gecko-text-primary)', marginBottom: 4 }}>
                   <span style={{ color: 'var(--gecko-text-secondary)' }}>Set: </span>{r.setTemp}
                   {r.actTemp !== '—' && <><span style={{ color: 'var(--gecko-text-disabled)', margin: '0 3px' }}>/</span><span style={{ color: r.status === 'ALARM' ? 'var(--gecko-error-600)' : 'var(--gecko-text-primary)' }}>{r.actTemp}</span></>}
@@ -129,7 +129,7 @@ export default function SpecialCargoDashboard() {
                   <div className="gecko-row gecko-row-between" style={{ marginBottom: 4 }}>
                     <div className="gecko-row">
                       <span style={{ fontSize: 10, fontWeight: 800, padding: '2px 6px', borderRadius: 4, background: d.color, color: '#fff', minWidth: 28, textAlign: 'center' }}>{d.cls}</span>
-                      <span style={{ fontSize: 11, color: 'var(--gecko-text-secondary)' }}>{d.name}</span>
+                      <span className="gecko-cell-meta">{d.name}</span>
                     </div>
                     <span style={{ fontSize: 12, fontWeight: 700, fontFamily: 'var(--gecko-font-mono)', color: 'var(--gecko-text-primary)' }}>{d.count}</span>
                   </div>
@@ -148,7 +148,7 @@ export default function SpecialCargoDashboard() {
               <thead>
                 <tr style={{ borderBottom: '1px solid var(--gecko-border)' }}>
                   {['Container', 'Customer', 'Slot', 'Set Temp', 'Actual', 'Deviation', 'Duration', 'Action'].map((h) => (
-                    <th key={h} style={{ padding: '4px 8px', textAlign: 'left', fontSize: 10, fontWeight: 700, color: 'var(--gecko-text-secondary)', textTransform: 'uppercase', letterSpacing: '0.04em', whiteSpace: 'nowrap' }}>{h}</th>
+                    <th key={h} className="gecko-eyebrow" style={{ padding: '4px 8px', textAlign: 'left', whiteSpace: 'nowrap' }}>{h}</th>
                   ))}
                 </tr>
               </thead>
@@ -188,7 +188,7 @@ export default function SpecialCargoDashboard() {
               <thead>
                 <tr style={{ borderBottom: '1px solid var(--gecko-border)' }}>
                   {['Container', 'Type', 'Customer', 'Dimensions', 'Location', 'Notes'].map((h) => (
-                    <th key={h} style={{ padding: '4px 8px', textAlign: 'left', fontSize: 10, fontWeight: 700, color: 'var(--gecko-text-secondary)', textTransform: 'uppercase', letterSpacing: '0.04em', whiteSpace: 'nowrap' }}>{h}</th>
+                    <th key={h} className="gecko-eyebrow" style={{ padding: '4px 8px', textAlign: 'left', whiteSpace: 'nowrap' }}>{h}</th>
                   ))}
                 </tr>
               </thead>

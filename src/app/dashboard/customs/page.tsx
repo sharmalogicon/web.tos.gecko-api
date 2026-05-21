@@ -127,14 +127,14 @@ export default function CustomsDashboardPage() {
             {HOLD_TYPES.map((ht) => (
               <div key={ht.label} style={{ borderLeft: `4px solid ${ht.color}`, paddingLeft: 12 }}>
                 <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 6 }}>
-                  <span style={{ fontSize: 12, fontWeight: 600, color: 'var(--gecko-text-primary)' }}>{ht.label}</span>
+                  <span className="gecko-cell-primary">{ht.label}</span>
                   <span style={{ fontSize: 11, fontWeight: 700, padding: '1px 8px', borderRadius: 20, background: ht.bg, color: ht.color }}>{ht.count} ctrs</span>
                 </div>
-                <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                <div className="gecko-row">
                   <div style={{ flex: 1, height: 6, borderRadius: 3, background: 'var(--gecko-bg-subtle)', overflow: 'hidden' }}>
                     <div style={{ height: '100%', width: `${ht.pct}%`, background: ht.color, borderRadius: 3 }} />
                   </div>
-                  <span style={{ fontSize: 11, fontFamily: 'var(--gecko-font-mono)', color: 'var(--gecko-text-secondary)', minWidth: 38 }}>{ht.pct}%</span>
+                  <span className="gecko-cell-meta" style={{ fontFamily: 'var(--gecko-font-mono)', minWidth: 38 }}>{ht.pct}%</span>
                 </div>
               </div>
             ))}
@@ -159,7 +159,7 @@ export default function CustomsDashboardPage() {
               );
             })}
           </svg>
-          <div style={{ display: 'flex', gap: 14, marginTop: 8, fontSize: 11, color: 'var(--gecko-text-secondary)', flexWrap: 'wrap' }}>
+          <div className="gecko-cell-meta" style={{ display: 'flex', gap: 14, marginTop: 8, flexWrap: 'wrap' }}>
             <span style={{ display: 'flex', alignItems: 'center', gap: 5 }}><span style={{ width: 10, height: 10, background: 'var(--gecko-success-600)', borderRadius: 2, display: 'inline-block' }} />0–3 days</span>
             <span style={{ display: 'flex', alignItems: 'center', gap: 5 }}><span style={{ width: 10, height: 10, background: '#f59e0b', borderRadius: 2, display: 'inline-block' }} />3–7 days</span>
             <span style={{ display: 'flex', alignItems: 'center', gap: 5 }}><span style={{ width: 10, height: 10, background: '#f97316', borderRadius: 2, display: 'inline-block' }} />7–10 days</span>
@@ -190,7 +190,7 @@ export default function CustomsDashboardPage() {
               <thead>
                 <tr style={{ background: 'var(--gecko-bg-subtle)' }}>
                   {['Container','Customer','Size','Gate-In','Hold Type','Examiner','Priority','Action'].map(h => (
-                    <th key={h} style={{ padding: '8px 10px', textAlign: 'left', fontWeight: 600, color: 'var(--gecko-text-secondary)', fontSize: 11, textTransform: 'uppercase', letterSpacing: '0.04em', whiteSpace: 'nowrap', borderBottom: '1px solid var(--gecko-border)' }}>{h}</th>
+                    <th key={h} className="gecko-eyebrow" style={{ padding: '8px 10px', textAlign: 'left', whiteSpace: 'nowrap', borderBottom: '1px solid var(--gecko-border)' }}>{h}</th>
                   ))}
                 </tr>
               </thead>
@@ -202,11 +202,11 @@ export default function CustomsDashboardPage() {
                       <td style={{ padding: '9px 10px', fontFamily: 'var(--gecko-font-mono)', fontWeight: 600, whiteSpace: 'nowrap' }}>{row.ctr}</td>
                       <td style={{ padding: '9px 10px', whiteSpace: 'nowrap' }}>{row.customer}</td>
                       <td style={{ padding: '9px 10px' }}>
-                        <span style={{ fontSize: 11, fontWeight: 600, padding: '2px 6px', borderRadius: 4, background: 'var(--gecko-bg-subtle)', border: '1px solid var(--gecko-border)', color: 'var(--gecko-text-secondary)' }}>{row.size}</span>
+                        <span className="gecko-cell-meta" style={{ fontWeight: 600, padding: '2px 6px', borderRadius: 4, background: 'var(--gecko-bg-subtle)', border: '1px solid var(--gecko-border)' }}>{row.size}</span>
                       </td>
-                      <td style={{ padding: '9px 10px', fontFamily: 'var(--gecko-font-mono)', fontSize: 11, color: 'var(--gecko-text-secondary)', whiteSpace: 'nowrap' }}>{row.gateIn}</td>
+                      <td className="gecko-cell-meta" style={{ padding: '9px 10px', fontFamily: 'var(--gecko-font-mono)', whiteSpace: 'nowrap' }}>{row.gateIn}</td>
                       <td style={{ padding: '9px 10px', whiteSpace: 'nowrap' }}>{row.holdType}</td>
-                      <td style={{ padding: '9px 10px', fontSize: 11, color: 'var(--gecko-text-secondary)', whiteSpace: 'nowrap' }}>{row.examiner}</td>
+                      <td className="gecko-cell-meta" style={{ padding: '9px 10px', whiteSpace: 'nowrap' }}>{row.examiner}</td>
                       <td style={{ padding: '9px 10px' }}>
                         <span style={{ fontSize: 10, fontWeight: 700, padding: '2px 7px', borderRadius: 4, ...ps }}>{row.priority}</span>
                       </td>
@@ -229,13 +229,13 @@ export default function CustomsDashboardPage() {
               const ec = eventColor(ev.type);
               return (
                 <div key={i} style={{ display: 'flex', gap: 12, alignItems: 'flex-start', padding: '9px 0', borderBottom: i < ACTIVITY_LOG.length - 1 ? '1px solid var(--gecko-border)' : 'none' }}>
-                  <div style={{ fontSize: 11, fontFamily: 'var(--gecko-font-mono)', color: 'var(--gecko-text-secondary)', minWidth: 38, paddingTop: 1 }}>{ev.time}</div>
-                  <div style={{ flex: 1, minWidth: 0 }}>
+                  <div className="gecko-cell-meta" style={{ fontFamily: 'var(--gecko-font-mono)', minWidth: 38, paddingTop: 1 }}>{ev.time}</div>
+                  <div className="gecko-flex-1">
                     <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 2, flexWrap: 'wrap' }}>
                       <span style={{ fontSize: 12, fontFamily: 'var(--gecko-font-mono)', fontWeight: 600, color: 'var(--gecko-text-primary)' }}>{ev.ctr}</span>
                       <span style={{ fontSize: 10, fontWeight: 700, padding: '1px 7px', borderRadius: 4, background: ec.bg, color: ec.color, whiteSpace: 'nowrap' }}>{ev.type}</span>
                     </div>
-                    <div style={{ fontSize: 11, color: 'var(--gecko-text-secondary)' }}>{ev.desc} · <span style={{ fontWeight: 500 }}>{ev.customer}</span></div>
+                    <div className="gecko-cell-meta">{ev.desc} · <span style={{ fontWeight: 500 }}>{ev.customer}</span></div>
                   </div>
                 </div>
               );

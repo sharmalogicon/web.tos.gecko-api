@@ -151,7 +151,7 @@ export default function ContainerTypesPage() {
 
                 {/* Footer Link */}
                 <div className="gecko-row gecko-row-between" style={{ padding: '12px 16px', borderTop: '1px solid var(--gecko-border)', background: 'var(--gecko-bg-subtle)' }}>
-                  <span style={{ fontSize: 11, color: 'var(--gecko-text-secondary)' }}>Rate row in tariff</span>
+                  <span className="gecko-cell-meta">Rate row in tariff</span>
                   <Link href={`/masters/container-types/${c.iso}`} className="gecko-link" style={{ fontSize: 12 }}>View →</Link>
                 </div>
               </div>

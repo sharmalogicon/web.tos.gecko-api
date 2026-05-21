@@ -85,7 +85,7 @@ function ProgressPip({ total, done, label }: { total: number; done: number; labe
       <div style={{ height: 4, borderRadius: 2, background: 'var(--gecko-border)', overflow: 'hidden' }}>
         <div style={{ width: `${pct}%`, height: '100%', background: pct === 100 ? 'var(--gecko-success-500)' : 'var(--gecko-primary-500)', borderRadius: 2, transition: 'width 300ms' }} />
       </div>
-      <div style={{ fontSize: 10, fontFamily: 'var(--gecko-font-mono)', textAlign: 'center', color: 'var(--gecko-text-secondary)', fontWeight: 600 }}>{done}/{total}</div>
+      <div className="gecko-cell-sub" style={{ textAlign: 'center', fontWeight: 600 }}>{done}/{total}</div>
     </div>
   );
 }
@@ -247,7 +247,7 @@ export default function BookingRegisterPage() {
           )}
         </div>
 
-        <div style={{ marginLeft: 'auto', fontSize: 11, color: 'var(--gecko-text-secondary)' }}>
+        <div className="gecko-cell-meta" style={{ marginLeft: 'auto' }}>
           Sort by:
         </div>
         {(['etd', 'cyCutoff', 'createdOn'] as const).map(k => (
@@ -270,7 +270,7 @@ export default function BookingRegisterPage() {
             <button className="gecko-btn gecko-btn-outline gecko-btn-sm" onClick={() => toast({ variant: 'info', title: 'Bulk Transfer', message: `${selected.size} booking(s) — workflow under construction.` })}><Icon name="transferH" size={12} />Bulk Transfer</button>
             <button className="gecko-btn gecko-btn-ghost gecko-btn-sm" style={{ color: 'var(--gecko-danger-600)' }} onClick={() => toast({ variant: 'warning', title: 'Cancel Selected', message: `${selected.size} booking(s) cancellation — confirmation flow under construction.` })}><Icon name="close" size={12} />Cancel Selected</button>
           </div>
-          <button onClick={() => setSelected(new Set())} style={{ marginLeft: 'auto', background: 'none', border: 'none', cursor: 'pointer', color: 'var(--gecko-text-secondary)', fontSize: 11, fontFamily: 'inherit' }}>Clear selection</button>
+          <button onClick={() => setSelected(new Set())} className="gecko-cell-meta" style={{ marginLeft: 'auto', background: 'none', border: 'none', cursor: 'pointer', fontFamily: 'inherit' }}>Clear selection</button>
         </div>
       )}
 
@@ -378,7 +378,7 @@ export default function BookingRegisterPage() {
                     <ProgressPip total={b.totalCtrs} done={b.fullIn} label="Full In" />
                   </td>
                   <td>
-                    <div style={{ fontSize: 11, color: 'var(--gecko-text-secondary)', fontFamily: 'var(--gecko-font-mono)' }}>{formatDate(b.createdOn)}</div>
+                    <div className="gecko-cell-meta" style={{ fontFamily: 'var(--gecko-font-mono)' }}>{formatDate(b.createdOn)}</div>
                   </td>
                   <td>
                     <div style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
@@ -398,7 +398,7 @@ export default function BookingRegisterPage() {
 
         {/* Footer */}
         <div style={{ padding: '10px 16px', borderTop: '1px solid var(--gecko-border)', display: 'flex', alignItems: 'center', justifyContent: 'space-between', background: 'var(--gecko-bg-subtle)' }}>
-          <div style={{ fontSize: 11, color: 'var(--gecko-text-secondary)' }}>
+          <div className="gecko-cell-meta">
             Showing <span style={{ fontWeight: 600, color: 'var(--gecko-text-primary)' }}>{filtered.length}</span> booking{filtered.length !== 1 ? 's' : ''}
             {selected.size > 0 && <span style={{ marginLeft: 8 }}>· <span style={{ fontWeight: 600, color: 'var(--gecko-primary-700)' }}>{selected.size} selected</span></span>}
           </div>

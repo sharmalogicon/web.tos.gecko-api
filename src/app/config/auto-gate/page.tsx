@@ -417,7 +417,7 @@ export default function AutoGatePage() {
                     <span style={{ fontFamily: 'var(--gecko-font-mono)', fontSize: 13, fontWeight: 700, color: active ? 'var(--gecko-primary-700)' : 'var(--gecko-text-primary)' }}>{l.code}</span>
                     <span style={{ fontSize: 9, fontWeight: 700, color: 'var(--gecko-text-disabled)', textTransform: 'uppercase' }}>{l.direction === 'IN' ? '↓ IN' : '↑ OUT'}</span>
                   </div>
-                  <div style={{ fontSize: 10, color: 'var(--gecko-text-secondary)' }}>
+                  <div className="gecko-cell-meta">
                     {VENDOR_PRESETS[l.preset].label.split(' ')[0]} · {l.eventCount24h.toLocaleString()} events / 24h
                   </div>
                 </div>
@@ -600,7 +600,7 @@ export default function AutoGatePage() {
             </div>
             <div className="gecko-section-header-subtitle">Most recent {events.length} OCR events across all lanes · click any row to inspect the raw payload</div>
           </div>
-          <span style={{ fontSize: 11, color: 'var(--gecko-text-secondary)' }}>
+          <span className="gecko-cell-meta">
             Auto-refresh every 7s {streamPaused && '(paused)'}
           </span>
         </div>
@@ -620,7 +620,7 @@ export default function AutoGatePage() {
             <tbody>
               {events.map(ev => (
                 <tr key={ev.id} className="gecko-row-clickable" onClick={() => setInspectorEvent(ev)}>
-                  <td className="gecko-text-mono" style={{ fontSize: 11, color: 'var(--gecko-text-secondary)' }}>
+                  <td className="gecko-text-mono gecko-cell-meta">
                     {new Date(ev.ts).toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit', second: '2-digit' })}
                   </td>
                   <td className="gecko-text-mono" style={{ fontWeight: 700 }}>{ev.laneCode}</td>
@@ -668,7 +668,7 @@ export default function AutoGatePage() {
           }}>
             <div className="gecko-row gecko-row-between" style={{ padding: '16px 20px', borderBottom: '1px solid var(--gecko-border)' }}>
               <div>
-                <div style={{ fontSize: 11, color: 'var(--gecko-text-secondary)', fontFamily: 'var(--gecko-font-mono)' }}>{inspectorEvent.id}</div>
+                <div className="gecko-cell-meta" style={{ fontFamily: 'var(--gecko-font-mono)' }}>{inspectorEvent.id}</div>
                 <div style={{ fontSize: 15, fontWeight: 700, marginTop: 2 }}>{inspectorEvent.eventType} · {inspectorEvent.laneCode}</div>
               </div>
               <button className="gecko-btn gecko-btn-ghost gecko-btn-sm gecko-btn-icon" onClick={() => setInspectorEvent(null)}>

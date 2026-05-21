@@ -111,7 +111,7 @@ export default function VesselsPage() {
                   </div>
                 </td>
                 <td style={{ fontWeight: 600 }}>{v.line}</td>
-                <td style={{ color: 'var(--gecko-text-secondary)', fontSize: 11, fontWeight: 600 }}>{v.flag} {v.flag}</td>
+                <td className="gecko-cell-meta" style={{ fontWeight: 600 }}>{v.flag} {v.flag}</td>
                 <td style={{ color: 'var(--gecko-text-secondary)' }}>{v.class}</td>
                 <td className="gecko-num-tabular" style={{ fontWeight: 600 }}>{v.loa}</td>
                 <td className="gecko-num-tabular" style={{ fontWeight: 600 }}>{v.teu}</td>

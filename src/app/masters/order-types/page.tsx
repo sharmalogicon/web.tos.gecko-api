@@ -305,7 +305,7 @@ function ChargesPanel({ movement, applicableCharges, applicableVAS, onToggleChar
               <Icon name="fileText" size={14} style={{ color: col.bg }} />
               Regular Charges
             </div>
-            <span style={{ fontSize: 11, color: 'var(--gecko-text-secondary)' }}>
+            <span className="gecko-cell-meta">
               {movement.charges.filter(c => applicableCharges.has(c.id)).length} / {movement.charges.length} active
             </span>
           </div>
@@ -338,7 +338,7 @@ function ChargesPanel({ movement, applicableCharges, applicableVAS, onToggleChar
                     <input type="checkbox" className="gecko-checkbox" checked={on} onChange={() => onToggleCharge(c.id)} onClick={e => e.stopPropagation()} style={{ margin: 0 }} />
                     <div>
                       <div style={{ fontFamily: 'var(--gecko-font-mono)', fontSize: 11, fontWeight: 700, color: on ? col.bg : 'var(--gecko-text-primary)' }}>{c.code}</div>
-                      <div style={{ fontSize: 10, color: 'var(--gecko-text-secondary)' }}>{c.description}</div>
+                      <div className="gecko-cell-meta">{c.description}</div>
                     </div>
                     <PTBadge term={c.paymentTerm} />
                     <ToBadge to={c.billedTo} />
@@ -359,7 +359,7 @@ function ChargesPanel({ movement, applicableCharges, applicableVAS, onToggleChar
               <Icon name="tag" size={14} style={{ color: 'var(--gecko-accent-600)' }} />
               VAS Charges
             </div>
-            <span style={{ fontSize: 11, color: 'var(--gecko-text-secondary)' }}>
+            <span className="gecko-cell-meta">
               {movement.vasCharges.filter(v => applicableVAS.has(v.id)).length} / {movement.vasCharges.length} active
             </span>
           </div>
@@ -394,7 +394,7 @@ function ChargesPanel({ movement, applicableCharges, applicableVAS, onToggleChar
                     <input type="checkbox" className="gecko-checkbox" checked={on} onChange={() => onToggleVAS(v.id)} onClick={e => e.stopPropagation()} style={{ margin: 0 }} />
                     <div>
                       <div style={{ fontFamily: 'var(--gecko-font-mono)', fontSize: 11, fontWeight: 700, color: on ? 'var(--gecko-accent-700)' : 'var(--gecko-text-primary)' }}>{v.code}</div>
-                      <div style={{ fontSize: 10, color: 'var(--gecko-text-secondary)' }}>{v.description}</div>
+                      <div className="gecko-cell-meta">{v.description}</div>
                     </div>
                     <PTBadge term={v.paymentTerm} />
                     <ToBadge to={v.paymentTo} />
@@ -505,7 +505,7 @@ export default function OrderTypeMasterPage() {
                       {b.label}
                     </span>
                   </div>
-                  <div style={{ fontSize: 10, color: 'var(--gecko-text-secondary)', marginTop: 2, lineHeight: 1.3 }}>{ot.description}</div>
+                  <div className="gecko-cell-meta" style={{ lineHeight: 1.3 }}>{ot.description}</div>
                   <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginTop: 5 }}>
                     <span style={{ fontSize: 9, color: 'var(--gecko-text-disabled)', fontWeight: 500 }}>{ot.bookingMode}</span>
                     <span style={{ fontSize: 9, color: 'var(--gecko-text-disabled)' }}>·</span>
@@ -545,7 +545,7 @@ export default function OrderTypeMasterPage() {
             </div>
             <div className="gecko-mb-4" style={{ fontSize: 14, color: 'var(--gecko-text-secondary)' }}>{selected.description}</div>
             <div className="gecko-row gecko-row-wrap" style={{ gap: 6 }}>
-              <span style={{ fontSize: 10, fontWeight: 700, color: 'var(--gecko-text-secondary)', marginRight: 2 }}>Rules:</span>
+              <span className="gecko-cell-meta" style={{ fontWeight: 700, marginRight: 2 }}>Rules:</span>
               {[
                 { label: 'Release Damaged', val: selected.rules.allowReleaseDamaged },
                 { label: 'Check Max Weight', val: selected.rules.checkMaxWeight },
@@ -569,7 +569,7 @@ export default function OrderTypeMasterPage() {
             <div className="gecko-row" style={{ padding: '14px 20px', borderBottom: '1px solid var(--gecko-border)', gap: 10 }}>
               <Icon name="activity" size={16} style={{ color: 'var(--gecko-primary-600)' }} />
               <span style={{ fontSize: 14, fontWeight: 700, color: 'var(--gecko-text-primary)' }}>Movement Workflow</span>
-              <span style={{ fontSize: 12, color: 'var(--gecko-text-secondary)' }}>
+              <span className="gecko-page-subtitle">
                 — {selected.movements.length} movement leg{selected.movements.length !== 1 ? 's' : ''}
               </span>
               {selectedSeq !== null && (

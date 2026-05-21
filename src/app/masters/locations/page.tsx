@@ -537,7 +537,7 @@ export default function LocationsPage() {
         {/* Right Detail Pane */}
         <div style={{ flex: 1, display: 'flex', flexDirection: 'column', gap: 20, overflowY: 'auto' }}>
 
-          <div className="gecko-row" style={{ fontSize: 12, color: 'var(--gecko-text-secondary)' }}>
+          <div className="gecko-row gecko-page-subtitle">
             LCB <Icon name="chevronRight" size={12} /> Yard A <Icon name="chevronRight" size={12} /> <span style={{ fontWeight: 600, color: 'var(--gecko-text-primary)' }}>Block A-01</span>
           </div>
 
@@ -549,7 +549,7 @@ export default function LocationsPage() {
               <div>
                 <div className="gecko-eyebrow">Block</div>
                 <h2 style={{ fontSize: 24, fontWeight: 800, margin: '2px 0' }}>Block A-01</h2>
-                <div style={{ fontSize: 13, color: 'var(--gecko-text-secondary)' }}>Code: A-01 · Path: LCB / A / A-01</div>
+                <div className="gecko-page-subtitle">Code: A-01 · Path: LCB / A / A-01</div>
               </div>
             </div>
             <div style={{ background: 'var(--gecko-info-50)', color: 'var(--gecko-info-700)', padding: '4px 12px', borderRadius: 4, fontSize: 12, fontWeight: 700, border: '1px solid var(--gecko-info-200)' }}>
@@ -588,7 +588,7 @@ export default function LocationsPage() {
                   <h3 style={{ fontSize: 16, fontWeight: 700, margin: 0, color: 'var(--gecko-text-primary)' }}>Spatial layout</h3>
                   <div style={{ fontSize: 13, color: 'var(--gecko-text-secondary)', marginTop: 4 }}>6 rows × 16 bays × 4 tiers = 384 TEU slot capacity</div>
                 </div>
-                <div style={{ display: 'flex', alignItems: 'center', gap: 16, fontSize: 11, fontWeight: 600, color: 'var(--gecko-text-secondary)' }}>
+                <div className="gecko-cell-meta" style={{ display: 'flex', alignItems: 'center', gap: 16, fontWeight: 600, marginTop: 0 }}>
                   <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}><div style={{ width: 12, height: 12, border: '1px solid var(--gecko-border)' }} /> Empty</div>
                   <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}><div style={{ width: 12, height: 12, background: 'var(--gecko-primary-200)' }} /> 1–2 high</div>
                   <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}><div style={{ width: 12, height: 12, background: 'var(--gecko-primary-600)' }} /> 3 high</div>
@@ -596,18 +596,18 @@ export default function LocationsPage() {
                 </div>
               </div>
 
-              <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+              <div className="gecko-stack gecko-stack-sm">
                 {/* X Axis labels */}
                 <div style={{ display: 'flex', paddingLeft: 24, gap: 4 }}>
                   {bays.map(b => (
-                    <div key={b} style={{ flex: 1, textAlign: 'center', fontSize: 10, fontWeight: 700, color: 'var(--gecko-text-disabled)', fontFamily: 'var(--gecko-font-mono)' }}>{b}</div>
+                    <div key={b} className="gecko-cell-sub" style={{ flex: 1, textAlign: 'center', fontWeight: 700, color: 'var(--gecko-text-disabled)', marginTop: 0 }}>{b}</div>
                   ))}
                 </div>
 
                 {/* Grid Rows */}
                 {rows.map(r => (
                   <div key={r} style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
-                    <div style={{ width: 20, textAlign: 'right', fontSize: 11, fontWeight: 700, color: 'var(--gecko-text-secondary)', paddingRight: 4 }}>{r}</div>
+                    <div className="gecko-cell-meta" style={{ width: 20, textAlign: 'right', fontWeight: 700, paddingRight: 4, marginTop: 0 }}>{r}</div>
                     {bays.map(b => {
                       const tier = getCellTier(r, b);
                       const color = getCellColor(tier);

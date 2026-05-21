@@ -156,7 +156,7 @@ function KpiCard({ label, value, sub, accent }: { label: string; value: string |
 function NumInput({ label, value, onChange, disabled }: { label: string; value: number; onChange: (v: number) => void; disabled?: boolean }) {
   return (
     <label className="gecko-stack" style={{ gap: 3, flex: 1 }}>
-      <span style={{ fontSize: 11, fontWeight: 600, color: 'var(--gecko-text-secondary)' }}>{label}</span>
+      <span className="gecko-cell-meta" style={{ fontWeight: 600 }}>{label}</span>
       <input
         type="number" min={0} max={999}
         value={value}
@@ -360,7 +360,7 @@ export default function GateSlotConfigPage() {
           {tplOpen && (
             <div className="gecko-floating-card" style={{ position: 'absolute', top: '100%', left: 0, zIndex: 50, marginTop: 4, minWidth: 340, overflow: 'hidden' }}>
               <div style={{ padding: '8px 14px 6px', borderBottom: '1px solid var(--gecko-border)' }}>
-                <div style={{ fontSize: 10, fontWeight: 700, letterSpacing: '0.08em', textTransform: 'uppercase', color: 'var(--gecko-text-secondary)' }}>
+                <div className="gecko-eyebrow">
                   Quick-Apply Templates
                 </div>
               </div>
@@ -369,7 +369,7 @@ export default function GateSlotConfigPage() {
                   <div style={{ padding: '8px 14px 4px', display: 'flex', alignItems: 'center', gap: 8 }}>
                     <span style={{ fontSize: 13, fontWeight: 600, color: 'var(--gecko-text-primary)' }}>{t.label}</span>
                     {t.status !== 'holiday' && t.status !== 'closed' && (
-                      <span style={{ fontSize: 10, color: 'var(--gecko-text-secondary)' }}>
+                      <span className="gecko-cell-meta">
                         IN {t.li}L+{t.ei}E · OUT {t.lo}L+{t.eo}E
                       </span>
                     )}
@@ -388,8 +388,8 @@ export default function GateSlotConfigPage() {
               ))}
               <button
                 onClick={() => setTplOpen(false)}
-                className="gecko-btn gecko-btn-ghost gecko-btn-sm"
-                style={{ width: '100%', padding: '8px 14px', fontSize: 11, color: 'var(--gecko-text-secondary)' }}>
+                className="gecko-btn gecko-btn-ghost gecko-btn-sm gecko-cell-meta"
+                style={{ width: '100%', padding: '8px 14px' }}>
                 Cancel
               </button>
             </div>
@@ -438,7 +438,7 @@ export default function GateSlotConfigPage() {
             <div style={{ fontSize: 13, fontWeight: 700, color: 'var(--gecko-text-primary)' }}>
               Weekly Slot Grid — {yard}
             </div>
-            <div style={{ display: 'flex', gap: 16, fontSize: 11, color: 'var(--gecko-text-secondary)', flexWrap: 'wrap' }}>
+            <div className="gecko-cell-meta" style={{ display: 'flex', gap: 16, flexWrap: 'wrap' }}>
               {[
                 { color: 'var(--gecko-success-500)', label: '< 70% available' },
                 { color: 'var(--gecko-warning-500)', label: '70–90% filling up' },
@@ -465,15 +465,14 @@ export default function GateSlotConfigPage() {
               </colgroup>
               <thead>
                 <tr>
-                  <th style={{ padding: '4px 8px', textAlign: 'left', fontSize: 10, fontWeight: 700,
-                    color: 'var(--gecko-text-secondary)', letterSpacing: '0.06em', textTransform: 'uppercase' }}>
+                  <th className="gecko-eyebrow" style={{ padding: '4px 8px', textAlign: 'left' }}>
                     Time Window
                   </th>
                   {dates.map((dt, i) => (
                     <th key={i} style={{ padding: '4px 4px', textAlign: 'center',
                       fontSize: 11, fontWeight: 700, color: i >= 5 ? 'var(--gecko-warning-600)' : 'var(--gecko-text-primary)' }}>
                       <div>{DAYS_SHORT[i]}</div>
-                      <div style={{ fontSize: 10, fontWeight: 500, color: 'var(--gecko-text-secondary)', marginTop: 1 }}>
+                      <div className="gecko-cell-sub" style={{ fontWeight: 500 }}>
                         {dt.getDate()} {MONTH_ABB[dt.getMonth()]}
                       </div>
                     </th>
@@ -488,7 +487,7 @@ export default function GateSlotConfigPage() {
                       <div style={{ fontSize: 11, fontWeight: 600, color: 'var(--gecko-text-primary)' }}>
                         {win.start}
                       </div>
-                      <div style={{ fontSize: 10, color: 'var(--gecko-text-secondary)' }}>– {win.end}</div>
+                      <div className="gecko-cell-meta">– {win.end}</div>
                     </td>
                     {/* Cells */}
                     {DAYS_SHORT.map((_, di) => {
@@ -521,7 +520,7 @@ export default function GateSlotConfigPage() {
                             }}
                           >
                             {/* Top row: status badge + pct */}
-                            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                            <div className="gecko-row gecko-row-between">
                               <StatusBadge status={slot.status} />
                               {!inactive && (
                                 <span style={{ fontSize: 9, fontWeight: 700,
@@ -538,7 +537,7 @@ export default function GateSlotConfigPage() {
                             ) : (
                               <>
                                 {/* IN / OUT capacity */}
-                                <div style={{ fontSize: 10, lineHeight: 1.6, marginTop: 2 }}>
+                                <div className="gecko-cell-meta" style={{ lineHeight: 1.6 }}>
                                   <div style={{ display: 'flex', justifyContent: 'space-between', gap: 4 }}>
                                     <span style={{ color: 'var(--gecko-primary-600)', fontWeight: 700, fontSize: 9, letterSpacing: '0.04em' }}>IN</span>
                                     <span style={{ color: 'var(--gecko-text-secondary)' }}>{slot.ladenIn}L·{slot.emptyIn}E</span>
@@ -567,8 +566,8 @@ export default function GateSlotConfigPage() {
           </div>
 
           {/* Grid footer */}
-          <div style={{ padding: '8px 16px', borderTop: '1px solid var(--gecko-border)',
-            display: 'flex', alignItems: 'center', gap: 8, fontSize: 11, color: 'var(--gecko-text-secondary)' }}>
+          <div className="gecko-cell-meta" style={{ padding: '8px 16px', borderTop: '1px solid var(--gecko-border)',
+            display: 'flex', alignItems: 'center', gap: 8 }}>
             <Icon name="info" size={13} />
             Click any cell to configure its capacity. Hold Shift and click multiple cells for bulk edit.
             Capacity changes take effect from the next appointment booking refresh.
@@ -619,10 +618,10 @@ export default function GateSlotConfigPage() {
                         onChange={() => handleDraftChange({ status: opt.value })}
                         style={{ marginTop: 2, accentColor: 'var(--gecko-primary-600)' }} />
                       <div>
-                        <div style={{ fontSize: 12, fontWeight: 600, color: 'var(--gecko-text-primary)' }}>
+                        <div className="gecko-cell-primary">
                           {opt.value.charAt(0).toUpperCase() + opt.value.slice(1)}
                         </div>
-                        <div style={{ fontSize: 10, color: 'var(--gecko-text-secondary)', marginTop: 1 }}>{opt.label}</div>
+                        <div className="gecko-cell-sub">{opt.label}</div>
                       </div>
                     </label>
                   ))}
@@ -639,7 +638,7 @@ export default function GateSlotConfigPage() {
                         fontSize: 9, fontWeight: 800, letterSpacing: '0.05em', flexShrink: 0 }}>IN</span>
                       <div>
                         <div style={{ fontSize: 12, fontWeight: 700, color: 'var(--gecko-text-primary)' }}>Gate-IN Capacity</div>
-                        <div style={{ fontSize: 10, color: 'var(--gecko-text-secondary)' }}>Drop-off containers arriving this window</div>
+                        <div className="gecko-cell-meta">Drop-off containers arriving this window</div>
                       </div>
                     </div>
                     <div style={{ display: 'flex', gap: 10 }}>
@@ -648,7 +647,7 @@ export default function GateSlotConfigPage() {
                       <NumInput label="Empty Return" value={draft.emptyIn}
                         onChange={v => handleDraftChange({ emptyIn: v })} />
                     </div>
-                    <div style={{ marginTop: 8, fontSize: 11, color: 'var(--gecko-text-secondary)', textAlign: 'right' }}>
+                    <div className="gecko-cell-meta" style={{ marginTop: 8, textAlign: 'right' }}>
                       Total IN capacity: <strong>{draft.ladenIn + draft.emptyIn}</strong> TEU
                     </div>
                   </div>
@@ -661,7 +660,7 @@ export default function GateSlotConfigPage() {
                         fontSize: 9, fontWeight: 800, letterSpacing: '0.05em', flexShrink: 0 }}>OUT</span>
                       <div>
                         <div style={{ fontSize: 12, fontWeight: 700, color: 'var(--gecko-text-primary)' }}>Gate-OUT Capacity</div>
-                        <div style={{ fontSize: 10, color: 'var(--gecko-text-secondary)' }}>Pickups releasing from yard this window</div>
+                        <div className="gecko-cell-meta">Pickups releasing from yard this window</div>
                       </div>
                     </div>
                     <div style={{ display: 'flex', gap: 10 }}>
@@ -670,7 +669,7 @@ export default function GateSlotConfigPage() {
                       <NumInput label="Empty Release" value={draft.emptyOut}
                         onChange={v => handleDraftChange({ emptyOut: v })} />
                     </div>
-                    <div style={{ marginTop: 8, fontSize: 11, color: 'var(--gecko-text-secondary)', textAlign: 'right' }}>
+                    <div className="gecko-cell-meta" style={{ marginTop: 8, textAlign: 'right' }}>
                       Total OUT capacity: <strong>{draft.ladenOut + draft.emptyOut}</strong> TEU
                     </div>
                   </div>

@@ -311,7 +311,7 @@ function ToggleRow({
         <div style={{ fontSize: 13, fontWeight: 700, color: value ? 'var(--gecko-success-700)' : 'var(--gecko-text-primary)' }}>
           {label}
         </div>
-        <div style={{ fontSize: 11, color: 'var(--gecko-text-secondary)', marginTop: 2 }}>{desc}</div>
+        <div className="gecko-cell-meta">{desc}</div>
       </div>
     </div>
   );
@@ -505,7 +505,7 @@ export default function NewContainerTypePage() {
                     <div style={{ fontSize: 13, fontWeight: 700, color: form.requiresReeferPlug ? 'var(--gecko-info-700)' : 'var(--gecko-text-primary)' }}>
                       Requires Reefer Plug
                     </div>
-                    <div style={{ fontSize: 11, color: 'var(--gecko-text-secondary)', marginTop: 2 }}>
+                    <div className="gecko-cell-meta">
                       Container must be assigned an active reefer plug point in the yard
                     </div>
                   </div>
@@ -527,7 +527,7 @@ export default function NewContainerTypePage() {
                   <div style={{ fontSize: 13, fontWeight: 700, color: form.oogSpecialHandling ? 'var(--gecko-warning-700)' : 'var(--gecko-text-primary)' }}>
                     OOG / Special Handling
                   </div>
-                  <div style={{ fontSize: 11, color: 'var(--gecko-text-secondary)', marginTop: 2 }}>
+                  <div className="gecko-cell-meta">
                     Out-of-gauge or non-standard cargo; requires stowage plan before vessel load
                   </div>
                 </div>
@@ -544,7 +544,7 @@ export default function NewContainerTypePage() {
                   <div style={{ fontSize: 13, fontWeight: 700, color: form.active ? 'var(--gecko-success-700)' : 'var(--gecko-text-secondary)' }}>
                     {form.active ? 'Active' : 'Inactive'}
                   </div>
-                  <div style={{ fontSize: 11, color: 'var(--gecko-text-secondary)', marginTop: 2 }}>
+                  <div className="gecko-cell-meta">
                     {form.active
                       ? 'This type is live and will appear in rate matrix, EIR, and yard operations'
                       : 'Disabled — type will not appear in operational selectors'}

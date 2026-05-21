@@ -262,7 +262,7 @@ function NewCustomerModal({ onClose }: NewCustomerModalProps) {
               <div className="gecko-mt-1" style={{ fontSize: 11, color: 'var(--gecko-danger-600)' }}>At least one role must be selected</div>
             )}
             {!rolesError && (
-              <div style={{ fontSize: 11, color: 'var(--gecko-text-secondary)' }}>Select at least one role. A single party record can hold multiple roles.</div>
+              <div className="gecko-cell-meta">Select at least one role. A single party record can hold multiple roles.</div>
             )}
           </div>
 

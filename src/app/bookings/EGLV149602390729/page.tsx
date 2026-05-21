@@ -701,15 +701,15 @@ function TabContainers({ onSelectContainer, onAddContainer, onDeleteContainer, o
                       <span style={{ fontSize: 12, fontWeight: 700, fontFamily: 'var(--gecko-font-mono)', color: 'var(--gecko-primary-700)', background: 'var(--gecko-primary-50)', padding: '2px 6px', borderRadius: 4 }}>{c.size}{c.type}</span>
                     </td>
                     <td><span style={{ fontSize: 10.5, fontWeight: 700, color: 'var(--gecko-text-secondary)' }}>{c.containerMode}</span></td>
-                    <td style={{ fontSize: 11, color: 'var(--gecko-text-secondary)' }}>{c.cargoCategory}</td>
+                    <td className="gecko-cell-meta">{c.cargoCategory}</td>
                     <td>
                       <span className="gecko-inline-row" style={{ gap: 5, fontSize: 11, fontWeight: 700, color: ss.color }}>
                         <span style={{ width: 7, height: 7, borderRadius: '50%', background: ss.dot, flexShrink: 0 }} />
                         {ss.label}
                       </span>
                     </td>
-                    <td style={{ fontFamily: 'var(--gecko-font-mono)', fontSize: 11, color: 'var(--gecko-text-secondary)' }}>{c.sealAgent || '—'}</td>
-                    <td style={{ fontSize: 11, color: 'var(--gecko-text-secondary)', fontFamily: 'var(--gecko-font-mono)', whiteSpace: 'nowrap' }}>{c.pickupDate}</td>
+                    <td className="gecko-cell-meta" style={{ fontFamily: 'var(--gecko-font-mono)' }}>{c.sealAgent || '—'}</td>
+                    <td className="gecko-cell-meta" style={{ fontFamily: 'var(--gecko-font-mono)', whiteSpace: 'nowrap' }}>{c.pickupDate}</td>
                     <td onClick={e => e.stopPropagation()}>
                       <div className="gecko-row gecko-row-right" style={{ gap: 2 }}>
                         <button onClick={() => onSelectContainer(c)} className="gecko-icon-btn-ghost" title="Edit"><Icon name="edit" size={13} /></button>
@@ -737,7 +737,7 @@ function TabContainers({ onSelectContainer, onAddContainer, onDeleteContainer, o
         </table>
       </div>
 
-      <div className="gecko-row" style={{ fontSize: 11, color: 'var(--gecko-text-secondary)' }}>
+      <div className="gecko-row gecko-cell-meta">
         <span>Showing {filtered.length} of {CONTAINERS.length} containers</span>
         <span style={{ color: 'var(--gecko-text-disabled)' }}>·</span>
         <span>Click the chevron to expand · click anywhere else on a row to edit</span>
@@ -942,10 +942,10 @@ export default function BookingDetailPage() {
           <select
             value={orderTypeCode}
             onChange={e => attemptOrderTypeChange(e.target.value)}
+            className="gecko-cell-meta"
             style={{
-              fontSize: 11, fontWeight: 700, padding: '3px 10px', borderRadius: 6,
+              fontWeight: 700, padding: '3px 10px', borderRadius: 6,
               background: 'var(--gecko-bg-subtle)',
-              color: 'var(--gecko-text-secondary)',
               border: '1px solid var(--gecko-border)',
               fontFamily: 'inherit',
               cursor: 'pointer',
@@ -1105,7 +1105,7 @@ export default function BookingDetailPage() {
               ))}
             </div>
             <div className="gecko-row gecko-row-between gecko-mt-2" style={{ padding: '8px 10px', background: 'var(--gecko-bg-surface)', borderRadius: 8, border: '1px solid var(--gecko-border)' }}>
-              <span style={{ fontSize: 11, color: 'var(--gecko-text-secondary)' }}>Container mix</span>
+              <span className="gecko-cell-meta">Container mix</span>
               <span style={{ fontSize: 11, fontWeight: 700, fontFamily: 'var(--gecko-font-mono)', color: 'var(--gecko-text-primary)' }}>40HC × {CONTAINERS.length}</span>
             </div>
           </div>
@@ -1182,7 +1182,7 @@ export default function BookingDetailPage() {
               <div key={m.label} className="gecko-row gecko-row-between gecko-mb-2">
                 <span style={{ fontSize: 10, color: 'var(--gecko-text-disabled)' }}>{m.label}</span>
                 <div style={{ textAlign: 'right' }}>
-                  <div style={{ fontSize: 11, fontWeight: 600, color: 'var(--gecko-text-secondary)' }}>{m.val}</div>
+                  <div className="gecko-cell-meta" style={{ fontWeight: 600 }}>{m.val}</div>
                   <div className="gecko-cell-sub" style={{ marginTop: 0 }}>{m.sub}</div>
                 </div>
               </div>
@@ -1577,7 +1577,7 @@ function VasDrawer({ mode, containerIds, availableVAS, orderTypeCode, initialSel
           <Icon name="tag" size={16} style={{ color: 'var(--gecko-primary-600)' }} />
           <div className="gecko-flex-1">
             <div style={{ fontSize: 14, fontWeight: 700 }}>{title}</div>
-            <div style={{ fontSize: 11, color: 'var(--gecko-text-secondary)', marginTop: 2 }}>
+            <div className="gecko-cell-meta">
               Available VAS sourced from order type <strong>{orderTypeCode}</strong>.
               {mode === 'multi' && ' Changes apply to all selected containers.'}
             </div>
@@ -1615,7 +1615,7 @@ function VasDrawer({ mode, containerIds, availableVAS, orderTypeCode, initialSel
                       <div style={{ fontSize: 11, color: 'var(--gecko-text-primary)', marginTop: 2 }}>{v.description}</div>
                     </div>
                     <span className={`gecko-pill gecko-pill-${v.paymentTerm === 'CASH' ? 'success' : 'info'}`} style={{ fontSize: 9 }}>{v.paymentTerm}</span>
-                    <span style={{ fontSize: 10, fontFamily: 'var(--gecko-font-mono)', fontWeight: 600, color: 'var(--gecko-text-secondary)' }}>{v.paymentTo}</span>
+                    <span className="gecko-cell-sub" style={{ fontWeight: 600, marginTop: 0 }}>{v.paymentTo}</span>
                   </label>
                 );
               })}
@@ -1752,7 +1752,7 @@ function TransferContainersModal({
           <Icon name="transferH" size={18} style={{ color: 'var(--gecko-primary-600)' }} />
           <div className="gecko-flex-1">
             <div style={{ fontSize: 15, fontWeight: 700 }}>Transfer containers</div>
-            <div style={{ fontSize: 12, color: 'var(--gecko-text-secondary)', marginTop: 2 }}>
+            <div className="gecko-cell-meta">
               Moving <strong>{containerCount} container{containerCount === 1 ? '' : 's'}</strong> from <span style={{ fontFamily: 'var(--gecko-font-mono)', fontWeight: 700, color: 'var(--gecko-text-primary)' }}>{sourceBookingNo}</span> ({sourceVessel} · {sourceVoyage}) → pick a destination booking below.
             </div>
           </div>
@@ -1811,7 +1811,7 @@ function TransferContainersModal({
         </div>
 
         <div className="gecko-row" style={{ padding: '14px 20px', borderTop: '1px solid var(--gecko-border)', background: 'var(--gecko-bg-subtle)', gap: 12 }}>
-          <div className="gecko-flex-1" style={{ fontSize: 12, color: 'var(--gecko-text-secondary)' }}>
+          <div className="gecko-flex-1 gecko-page-subtitle">
             {pickedBooking ? (
               <>
                 Destination: <strong className="gecko-mono" style={{ color: 'var(--gecko-text-primary)' }}>{pickedBooking.bookingNo}</strong>
@@ -2021,7 +2021,7 @@ function ChangeOrderTypeModal({
 
         {/* Footer */}
         <div className="gecko-row" style={{ padding: '14px 20px', borderTop: '1px solid var(--gecko-border)', background: 'var(--gecko-bg-subtle)', gap: 12 }}>
-          <div className="gecko-flex-1" style={{ fontSize: 12, color: 'var(--gecko-text-secondary)' }}>
+          <div className="gecko-flex-1 gecko-page-subtitle">
             {!isDifferent
               ? <span style={{ color: 'var(--gecko-text-disabled)' }}>Pick a different order type to continue.</span>
               : !blMatches
@@ -2077,7 +2077,7 @@ function DeleteContainerModal({ container, onCancel, onConfirm }: {
             <div style={{ fontFamily: 'var(--gecko-font-mono)', fontWeight: 800, fontSize: 14 }}>
               {container.containerNo || <span style={{ color: 'var(--gecko-text-disabled)', fontStyle: 'italic' }}>TBA (no container number yet)</span>}
             </div>
-            <div className="gecko-row gecko-row-wrap" style={{ fontSize: 11, color: 'var(--gecko-text-secondary)', marginTop: 4, gap: 14 }}>
+            <div className="gecko-row gecko-row-wrap gecko-cell-meta" style={{ marginTop: 4, gap: 14 }}>
               <span>Size/Type: <strong className="gecko-mono">{container.size}{container.type}</strong></span>
               <span>Mode: <strong>{container.containerMode}</strong></span>
               <span>Cargo: <strong>{container.cargoCategory}</strong></span>
@@ -2180,8 +2180,8 @@ function CandidateTable({ items, pickedId, onPick }: {
                     <div className="gecko-cell-sub">{c.voyage}</div>
                   </div>
                 </td>
-                <td style={{ textAlign: 'right', fontFamily: 'var(--gecko-font-mono)', fontWeight: 700 }}>{c.containerCount}</td>
-                <td style={{ fontFamily: 'var(--gecko-font-mono)', fontSize: 11, color: 'var(--gecko-text-secondary)', whiteSpace: 'nowrap' }}>{c.etd}</td>
+                <td className="gecko-money">{c.containerCount}</td>
+                <td className="gecko-cell-meta" style={{ fontFamily: 'var(--gecko-font-mono)', whiteSpace: 'nowrap' }}>{c.etd}</td>
               </tr>
             );
           })}

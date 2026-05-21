@@ -131,11 +131,11 @@ export default function TariffScheduleDetailPage({ params }: { params: Promise<{
         {/* Progress bar */}
         {schedule.status === 'Active' && (
           <div className="gecko-row" style={{ maxWidth: 'var(--gecko-container-max)', margin: '14px auto 0', gap: 12 }}>
-            <span style={{ fontSize: 11, color: 'var(--gecko-text-secondary)', fontWeight: 600, minWidth: 50 }}>Day {elapsedDays}</span>
+            <span className="gecko-cell-meta" style={{ fontWeight: 600, minWidth: 50 }}>Day {elapsedDays}</span>
             <div className="gecko-progress gecko-flex-1">
               <div className="gecko-progress-bar gecko-progress-success" style={{ width: `${pctElapsed}%` }} />
             </div>
-            <span style={{ fontSize: 11, color: 'var(--gecko-text-secondary)', fontWeight: 600, minWidth: 100, textAlign: 'right' }}>
+            <span className="gecko-cell-meta" style={{ fontWeight: 600, minWidth: 100, textAlign: 'right' }}>
               of {totalDays} ({pctElapsed.toFixed(0)}%)
             </span>
           </div>
@@ -353,9 +353,9 @@ function WorkflowChain({ steps }: { steps: WorkflowProgressStep[] }) {
                 </div>
                 <div style={{ fontSize: 12, fontWeight: 700, color: 'var(--gecko-text-primary)' }}>{s.stepName}</div>
               </div>
-              <div style={{ fontSize: 10, color: 'var(--gecko-text-secondary)' }}>{s.approverLabel}</div>
+              <div className="gecko-cell-meta">{s.approverLabel}</div>
               {s.by && s.at && (
-                <div style={{ fontSize: 10, color: 'var(--gecko-text-disabled)', fontFamily: 'var(--gecko-font-mono)' }}>
+                <div className="gecko-cell-sub">
                   {isAuto ? '⚡ ' : ''}{s.by} · {s.at}
                 </div>
               )}
@@ -415,7 +415,7 @@ function MovementChargesView({ prices }: { prices: PricedCharge[] }) {
                   <div className="gecko-row gecko-mb-2">
                     <div className="gecko-mini-icon gecko-mini-icon-sm" style={{ background: 'var(--gecko-primary-600)', color: '#fff', fontWeight: 800, fontSize: 11 }}>{seq}</div>
                     <span className="gecko-mono-strong" style={{ fontSize: 12, fontWeight: 700 }}>{mov?.code}</span>
-                    <span style={{ fontSize: 11, color: 'var(--gecko-text-secondary)' }}>{mov?.name}</span>
+                    <span className="gecko-cell-meta">{mov?.name}</span>
                   </div>
                   <div style={{ overflowX: 'auto' }}>
                     <table className="gecko-table gecko-table-compact" style={{ fontSize: 12 }}>
@@ -542,7 +542,7 @@ function DaySlabReadout({ slabs }: { slabs: { id: string; fromDay: number; toDay
               <div className="gecko-mono-strong" style={{ fontSize: 12, fontWeight: 700 }}>
                 Day {s.fromDay} – {isLast ? `${s.toDay}+ (and after)` : s.toDay}
               </div>
-              <div style={{ fontSize: 10, color: 'var(--gecko-text-secondary)', marginTop: 2 }}>
+              <div className="gecko-cell-meta">
                 {isLast ? 'Rate continues for all days beyond this band' : `${s.toDay - s.fromDay + 1} days in this band`}
               </div>
             </div>
@@ -551,7 +551,7 @@ function DaySlabReadout({ slabs }: { slabs: { id: string; fromDay: number; toDay
                 {s.ratePerDay === 0 ? 'FREE' : `฿${s.ratePerDay}`}
               </span>
               {s.ratePerDay > 0 && (
-                <span style={{ fontSize: 10, color: 'var(--gecko-text-secondary)', fontWeight: 700 }}>/ day / cont</span>
+                <span className="gecko-cell-meta" style={{ fontWeight: 700 }}>/ day / cont</span>
               )}
             </div>
           </div>
@@ -567,7 +567,7 @@ function StorageTile({ label, value, tone }: { label: string; value: number; ton
       <div className="gecko-stat-label gecko-mb-2">{label}</div>
       <div className="gecko-row gecko-row-baseline" style={{ gap: 4 }}>
         <span style={{ fontFamily: 'var(--gecko-font-mono)', fontSize: 22, fontWeight: 800, color: `var(--gecko-${tone}-700)` }}>{value}</span>
-        <span style={{ fontSize: 10, color: 'var(--gecko-text-secondary)', fontWeight: 700 }}>THB/day</span>
+        <span className="gecko-cell-meta" style={{ fontWeight: 700 }}>THB/day</span>
       </div>
     </div>
   );
@@ -581,7 +581,7 @@ function ReeferTable({ rates }: { rates: Record<string, number> }) {
           <div className="gecko-field-label gecko-mb-2">{sz}</div>
           <div className="gecko-row gecko-row-baseline" style={{ gap: 4 }}>
             <span style={{ fontFamily: 'var(--gecko-font-mono)', fontSize: 18, fontWeight: 800, color: 'var(--gecko-primary-700)' }}>฿{fmtTHB(amt)}</span>
-            <span style={{ fontSize: 10, color: 'var(--gecko-text-secondary)' }}>per event</span>
+            <span className="gecko-cell-meta">per event</span>
           </div>
         </div>
       ))}
@@ -606,10 +606,10 @@ function FreeTimeView({ schedule }: { schedule: Schedule }) {
           <table style={{ width: '100%', borderCollapse: 'collapse' }}>
             <thead>
               <tr>
-                <th style={{ padding: '10px 14px', textAlign: 'left', fontSize: 11, fontWeight: 700, color: 'var(--gecko-text-secondary)', textTransform: 'uppercase' }}>Direction</th>
-                <th style={{ padding: '10px 8px', textAlign: 'center', fontSize: 11, fontWeight: 700, color: 'var(--gecko-text-secondary)', textTransform: 'uppercase' }}>Normal</th>
-                <th style={{ padding: '10px 8px', textAlign: 'center', fontSize: 11, fontWeight: 700, color: 'var(--gecko-text-secondary)', textTransform: 'uppercase' }}>Reefer</th>
-                <th style={{ padding: '10px 8px', textAlign: 'center', fontSize: 11, fontWeight: 700, color: 'var(--gecko-text-secondary)', textTransform: 'uppercase' }}>DG</th>
+                <th className="gecko-eyebrow" style={{ padding: '10px 14px', textAlign: 'left' }}>Direction</th>
+                <th className="gecko-eyebrow" style={{ padding: '10px 8px', textAlign: 'center' }}>Normal</th>
+                <th className="gecko-eyebrow" style={{ padding: '10px 8px', textAlign: 'center' }}>Reefer</th>
+                <th className="gecko-eyebrow" style={{ padding: '10px 8px', textAlign: 'center' }}>DG</th>
               </tr>
             </thead>
             <tbody>
@@ -637,9 +637,9 @@ function FreeTimeView({ schedule }: { schedule: Schedule }) {
           <table style={{ width: '100%', borderCollapse: 'collapse' }}>
             <thead>
               <tr>
-                <th style={{ padding: '10px 14px', textAlign: 'left', fontSize: 11, fontWeight: 700, color: 'var(--gecko-text-secondary)', textTransform: 'uppercase' }}>Direction</th>
-                <th style={{ padding: '10px 8px', textAlign: 'center', fontSize: 11, fontWeight: 700, color: 'var(--gecko-text-secondary)', textTransform: 'uppercase' }}>Normal</th>
-                <th style={{ padding: '10px 8px', textAlign: 'center', fontSize: 11, fontWeight: 700, color: 'var(--gecko-text-secondary)', textTransform: 'uppercase' }}>Reefer</th>
+                <th className="gecko-eyebrow" style={{ padding: '10px 14px', textAlign: 'left' }}>Direction</th>
+                <th className="gecko-eyebrow" style={{ padding: '10px 8px', textAlign: 'center' }}>Normal</th>
+                <th className="gecko-eyebrow" style={{ padding: '10px 8px', textAlign: 'center' }}>Reefer</th>
               </tr>
             </thead>
             <tbody>
@@ -801,7 +801,7 @@ function TestAMoveView({ schedule }: { schedule: Schedule }) {
                     <span className="gecko-charge-card-code">{r.chargeCode}</span>
                     <div>
                       <div style={{ fontSize: 13, fontWeight: 600 }}>{r.chargeDesc}</div>
-                      <div style={{ fontSize: 11, color: 'var(--gecko-text-secondary)' }}>{r.source === 'VAS' ? 'VAS' : 'Movement charge'}</div>
+                      <div className="gecko-cell-meta">{r.source === 'VAS' ? 'VAS' : 'Movement charge'}</div>
                     </div>
                   </div>
                   <div className="gecko-resolution-row-trail">
@@ -826,7 +826,7 @@ function TestAMoveView({ schedule }: { schedule: Schedule }) {
                       <div className="gecko-stack" style={{ alignItems: 'flex-end', gap: 0 }}>
                         <div className="gecko-row gecko-row-baseline" style={{ gap: 4 }}>
                           <span style={{ fontFamily: 'var(--gecko-font-mono)', fontSize: 15, fontWeight: 800 }}>{fmtTHB(r.rate ?? 0)}</span>
-                          <span style={{ fontSize: 10, fontWeight: 700, color: 'var(--gecko-text-secondary)' }}>THB</span>
+                          <span className="gecko-cell-meta" style={{ fontWeight: 700 }}>THB</span>
                         </div>
                         {r.appliedConditions && r.appliedConditions.length > 0 && (
                           <div style={{ fontSize: 9, color: 'var(--gecko-warning-700)', marginTop: 2, fontStyle: 'italic' }}>
