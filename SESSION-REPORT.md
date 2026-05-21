@@ -1,7 +1,9 @@
 # Session Report — Style Catalog Rollout
 
 **Branch**: `main` · ahead of `origin/main` · working tree clean
-**Build status**: ✓ Compiled successfully (last run: 4.0s)
+**Build status**: ✓ Compiled successfully (last run: 6.3s)
+**Phases complete**: 1 (catalog §13 growth), 2 (sub-agent sweep with expanded catalog)
+**Phase pending**: 3 (manual deep-clean of top-3 files — booking detail, eir-in, statement)
 
 ---
 
@@ -10,14 +12,56 @@
 | Metric | Value |
 |---|---:|
 | Inline `style={{}}` blocks at session start | **7,097** |
-| Inline blocks now | **6,089** |
-| **Removed** | **1,008** |
-| **% migration** | **~14.2%** |
+| Inline blocks now | **5,954** |
+| **Removed** | **1,143** |
+| **% migration** | **~16.1%** |
 | New catalog classes shipped | **~95** |
 | ESLint rule active (warn-level) | ✅ |
 | Build status throughout | ✅ green |
 | Total commits | **13** |
 | Sub-agents dispatched | **18** (15 successful, 3 partial salvage) |
+
+---
+
+## Phase 1 + 2 results (post-original report)
+
+After the initial 5-wave migration plateaued at 14.2%, two additional phases ran:
+
+### Phase 1 — Catalog §13 growth (~10 new primitives)
+Commit `8040e33`. Added the highest-leverage gaps surfaced by all 5 agent waves:
+
+| §13 | Class | Use case |
+|---|---|---|
+| 13.1 | `.gecko-icon-btn-ghost` | Transparent table-row icon button (100+ usable sites) |
+| 13.2 | `.gecko-modal-shell` + `.gecko-modal-card` (+ sizes) | Fixed scrim + centered card chrome |
+| 13.3 | `.gecko-toggle` (+ `-sm`) | Animated switch primitive |
+| 13.4 | `.gecko-mini-icon-sm` (24) + `.gecko-mini-icon-xl` (44) | Size variants |
+| 13.5 | Grid gap modifiers | `.gecko-grid-N.gecko-stack-*` actually emitted |
+| 13.6 | `.gecko-stat-num-22` + `.gecko-stat-num-xl-mono` | Sidebar + dashboard hero stat variants |
+| 13.7 | `.gecko-card-accent-top` | CSS-var driven tone accent border |
+| 13.8 | `.gecko-tab-bar` + `.gecko-tab-item` | Underlined tab variant (heavier than §5.7) |
+| 13.9 | `.gecko-banner-*` (info/success/warning/error) | Tinted inline callout |
+| 13.10 | `.gecko-floating-card` | Popover/dropdown chrome |
+
+### Phase 2 — Sub-agent sweep with expanded catalog
+Commit `a5e0563`. 4 parallel sub-agents applied §13 across the heaviest files.
+
+**135 raw inline blocks removed** + 30+ helper-component swap propagations.
+
+| §13 pattern | Direct uses applied |
+|---|---:|
+| `.gecko-modal-shell` + `.gecko-modal-card` | **6** modals converted |
+| `.gecko-banner-*` | **19** inline callouts collapsed |
+| `.gecko-icon-btn-ghost` | **19** ghost icon buttons |
+| `.gecko-toggle` (+ helper propagation) | **5 direct + 30+ via helpers** |
+| `.gecko-mini-icon-sm` / `-xl` | **8** size variant uses |
+| `.gecko-stat-num-22` | **5** dense-sidebar stats |
+| `.gecko-tab-bar` + `.gecko-tab-item` | **5** underlined tab navs |
+| `.gecko-card-accent-top` | **4** KpiCard accent borders |
+| `.gecko-floating-card` | **7** popover/dropdown chromes |
+| Grid gap modifiers | **2** grids picked up custom gaps |
+
+Best per-file result: `billing/unbilled` at **22.6% conversion** in this single agent pass.
 
 ---
 
@@ -36,7 +80,10 @@
 | 9 | `72f6ba2` | refactor(pages): style-catalog migration wave 3 — 10 heavy pages |
 | 10 | `e4641f3` | refactor(pages): style-catalog migration wave 4 — 16 pages |
 | 11 | `b705076` | refactor(pages+components): style-catalog migration wave 5 — 26 files |
-| 12 | this | docs: final session report update |
+| 12 | `edac511` | docs: final session report — 14% inline-style migration done |
+| 13 | `8040e33` | feat(design-system): add §13 high-impact extensions — 10 primitives |
+| 14 | `a5e0563` | refactor(pages): apply §13 catalog extensions — Phase 2 sweep (16 files, 135 blocks) |
+| 15 | this | docs: Phase 2 results + §14 candidate patterns + STYLE-DEBT.md |
 
 ---
 
