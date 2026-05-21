@@ -114,7 +114,7 @@ export default function EirInV2Page() {
               <div style={{ width: 24, height: 24, borderRadius: 6, background: c.ready ? 'var(--gecko-success-600)' : 'var(--gecko-warning-600)', color: '#fff', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 12, fontWeight: 700, marginRight: 12 }}>{i + 1}</div>
               
               <div style={{ position: 'relative', marginRight: 24 }}>
-                <div style={{ fontSize: 10, fontWeight: 700, color: 'var(--gecko-text-secondary)', textTransform: 'uppercase', marginBottom: 2 }}>Unit OCR</div>
+                <div className="gecko-eyebrow" style={{ marginBottom: 2 }}>Unit OCR</div>
                 <input 
                   className="gecko-input" 
                   value={c.unit}
@@ -124,10 +124,10 @@ export default function EirInV2Page() {
               </div>
 
               <div style={{ display: 'flex', gap: 24, flex: 1 }}>
-                <div><div style={{ fontSize: 10, fontWeight: 700, color: 'var(--gecko-text-secondary)' }}>ISO / SIZE</div><div style={{ fontSize: 14, fontWeight: 600 }}>{c.iso}</div></div>
-                <div><div style={{ fontSize: 10, fontWeight: 700, color: 'var(--gecko-text-secondary)' }}>LINE</div><div style={{ fontSize: 14, fontWeight: 600 }}>{c.line}</div></div>
-                <div><div style={{ fontSize: 10, fontWeight: 700, color: 'var(--gecko-text-secondary)' }}>STATUS</div><div style={{ fontSize: 14, fontWeight: 600 }}>{c.laden === 'F' ? 'Laden' : 'Empty'}</div></div>
-                <div><div style={{ fontSize: 10, fontWeight: 700, color: 'var(--gecko-text-secondary)' }}>BOOKING</div><div style={{ fontSize: 14, fontWeight: 600, fontFamily: 'var(--gecko-font-mono)' }}>{c.bkg}</div></div>
+                <div><div className="gecko-cell-meta" style={{ fontWeight: 700 }}>ISO / SIZE</div><div style={{ fontSize: 14, fontWeight: 600 }}>{c.iso}</div></div>
+                <div><div className="gecko-cell-meta" style={{ fontWeight: 700 }}>LINE</div><div style={{ fontSize: 14, fontWeight: 600 }}>{c.line}</div></div>
+                <div><div className="gecko-cell-meta" style={{ fontWeight: 700 }}>STATUS</div><div style={{ fontSize: 14, fontWeight: 600 }}>{c.laden === 'F' ? 'Laden' : 'Empty'}</div></div>
+                <div><div className="gecko-cell-meta" style={{ fontWeight: 700 }}>BOOKING</div><div style={{ fontSize: 14, fontWeight: 600, fontFamily: 'var(--gecko-font-mono)' }}>{c.bkg}</div></div>
                 {c.dg && (
                   <div style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '4px 10px', background: 'var(--gecko-error-100)', color: 'var(--gecko-error-700)', borderRadius: 6, fontWeight: 700, fontSize: 12 }}>
                     <Icon name="flame" size={14} /> DG DECLARED
@@ -154,7 +154,7 @@ export default function EirInV2Page() {
               {/* Seals */}
               <div style={{ flex: 1 }}>
                 <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 8 }}>
-                  <div style={{ fontSize: 11, fontWeight: 700, color: 'var(--gecko-text-secondary)', textTransform: 'uppercase' }}>Shipper Seal</div>
+                  <div className="gecko-eyebrow">Shipper Seal</div>
                 </div>
                 <div style={{ position: 'relative' }}>
                   <input 
@@ -172,7 +172,7 @@ export default function EirInV2Page() {
               {/* VGM */}
               <div style={{ flex: 1 }}>
                 <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 8 }}>
-                  <div style={{ fontSize: 11, fontWeight: 700, color: 'var(--gecko-text-secondary)', textTransform: 'uppercase' }}>VGM (kg)</div>
+                  <div className="gecko-eyebrow">VGM (kg)</div>
                   <div style={{ fontSize: 10, color: 'var(--gecko-text-disabled)' }}>Scale: 38,450</div>
                 </div>
                 <div style={{ display: 'flex', gap: 8 }}>
@@ -191,7 +191,7 @@ export default function EirInV2Page() {
 
               {/* Quick Damage Toggles */}
               <div style={{ flex: 1.5, background: 'var(--gecko-bg-subtle)', padding: '12px 16px', borderRadius: 8, border: '1px solid var(--gecko-border)' }}>
-                <div style={{ fontSize: 11, fontWeight: 700, color: 'var(--gecko-text-secondary)', textTransform: 'uppercase', marginBottom: 10 }}>Quick Damage Inspection</div>
+                <div className="gecko-eyebrow" style={{ marginBottom: 10 }}>Quick Damage Inspection</div>
                 <div style={{ display: 'flex', gap: 16 }}>
                   <label style={{ display: 'flex', alignItems: 'center', gap: 8, cursor: 'pointer', fontSize: 13, fontWeight: 500 }}>
                     <input type="checkbox" checked={c.damageMinor} onChange={(e) => updateContainer(c.id, 'damageMinor', e.target.checked)} style={{ width: 18, height: 18 }} />
@@ -217,7 +217,7 @@ export default function EirInV2Page() {
       }}>
         <div style={{ display: 'flex', gap: 20 }}>
           <div>
-            <div style={{ fontSize: 11, color: 'var(--gecko-text-secondary)', fontWeight: 600, textTransform: 'uppercase' }}>Auto-Tariff</div>
+            <div className="gecko-eyebrow" style={{ fontWeight: 600 }}>Auto-Tariff</div>
             <div style={{ fontSize: 18, fontWeight: 800, fontFamily: 'var(--gecko-font-mono)' }}>฿2,650</div>
           </div>
           <div style={{ width: 1, height: 32, background: 'var(--gecko-border)' }} />

@@ -137,7 +137,7 @@ export default function StuffingPage() {
             ) : (
               <table className="gecko-table gecko-table-comfortable" style={{ fontSize: 13 }}>
                 <thead>
-                  <tr style={{ background: 'var(--gecko-gray-100)', color: 'var(--gecko-text-secondary)', fontSize: 11, textTransform: 'uppercase', letterSpacing: '0.05em', position: 'sticky', top: 0 }}>
+                  <tr className="gecko-eyebrow" style={{ background: 'var(--gecko-gray-100)', position: 'sticky', top: 0 }}>
                     <th style={{ textAlign: 'left', width: 40 }}><input type="checkbox" onChange={(e) => setSelectedStuffed(e.target.checked ? new Set(stuffed.map(i => i.id)) : new Set())} /></th>
                     <th>Cargo ID</th>
                     <th>Description</th>
@@ -152,7 +152,7 @@ export default function StuffingPage() {
                       <td className="gecko-text-mono" style={{ fontWeight: 600, color: 'var(--gecko-primary-700)' }}>{item.id}</td>
                       <td>
                         <div style={{ fontWeight: 600 }}>{item.desc}</div>
-                        <div style={{ fontSize: 11, color: 'var(--gecko-text-secondary)' }}>{item.type}</div>
+                        <div className="gecko-cell-meta">{item.type}</div>
                       </td>
                       <td className="gecko-text-mono" style={{ textAlign: 'right' }}>{item.qty}</td>
                       <td className="gecko-text-mono" style={{ textAlign: 'right' }}>{item.weight} kg</td>
@@ -218,7 +218,7 @@ export default function StuffingPage() {
           <div style={{ flex: 1, overflowY: 'auto' }}>
             <table className="gecko-table gecko-table-comfortable" style={{ fontSize: 13 }}>
               <thead>
-                <tr style={{ background: 'var(--gecko-gray-100)', color: 'var(--gecko-text-secondary)', fontSize: 11, textTransform: 'uppercase', letterSpacing: '0.05em', position: 'sticky', top: 0 }}>
+                <tr className="gecko-eyebrow" style={{ background: 'var(--gecko-gray-100)', position: 'sticky', top: 0 }}>
                   <th style={{ textAlign: 'left', width: 40 }}><input type="checkbox" onChange={(e) => setSelectedWh(e.target.checked ? new Set(warehouse.map(i => i.id)) : new Set())} /></th>
                   <th>Cargo ID</th>
                   <th>Description</th>
@@ -232,7 +232,7 @@ export default function StuffingPage() {
                     <td className="gecko-text-mono" style={{ fontWeight: 600, color: 'var(--gecko-text-primary)' }}>{item.id}</td>
                     <td>
                       <div style={{ fontWeight: 600 }}>{item.desc}</div>
-                      <div style={{ fontSize: 11, color: 'var(--gecko-text-secondary)' }}>{item.qty} {item.type} · {item.weight} kg</div>
+                      <div className="gecko-cell-meta">{item.qty} {item.type} · {item.weight} kg</div>
                     </td>
                     <td className="gecko-text-mono" style={{ color: 'var(--gecko-info-600)', fontWeight: 600 }}>{item.loc}</td>
                   </tr>

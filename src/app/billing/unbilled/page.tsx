@@ -409,7 +409,7 @@ function BookingRow({ b, selected, expanded, onToggleSelect, onToggleExpand }: {
             </div>
           )}
         </td>
-        <td className="gecko-mono" style={{ padding: '10px 12px', color: 'var(--gecko-text-secondary)', fontSize: 11 }}>
+        <td className="gecko-mono gecko-cell-meta" style={{ padding: '10px 12px' }}>
           {fmtDateShort(b.bookingDate)}
         </td>
         <td style={{ padding: '10px 12px' }}>
@@ -417,7 +417,7 @@ function BookingRow({ b, selected, expanded, onToggleSelect, onToggleExpand }: {
             {b.bookingType}
           </span>
         </td>
-        <td className="gecko-mono" style={{ padding: '10px 12px', fontSize: 11, color: 'var(--gecko-text-secondary)' }}>
+        <td className="gecko-mono gecko-cell-meta" style={{ padding: '10px 12px' }}>
           {b.orderType}
         </td>
         <td style={{ padding: '10px 12px' }}>
@@ -551,8 +551,7 @@ function SendToMenu({ disabled, onPick }: {
       <button
         disabled={disabled}
         onClick={() => setOpen(o => !o)}
-        className="gecko-btn gecko-btn-primary"
-        style={{ display: 'inline-flex', alignItems: 'center', gap: 6 }}
+        className="gecko-btn gecko-btn-primary gecko-inline-row"
       >
         <Icon name="send" size={14} />
         Send to Invoice

@@ -220,14 +220,14 @@ function CapacityBarLine({ label, teu, cap, color }: { label: string; teu: numbe
   const pct = Math.min(100, (teu / cap) * 100);
   return (
     <div style={{ display: 'grid', gridTemplateColumns: '120px 1fr 60px', gap: 8, alignItems: 'center' }}>
-      <span style={{ fontSize: 10, color: 'var(--gecko-text-secondary)', fontFamily: 'var(--gecko-font-mono)', fontWeight: 600 }}>{label}</span>
+      <span className="gecko-cell-sub">{label}</span>
       <div style={{ height: 8, background: 'var(--gecko-bg-subtle)', borderRadius: 4, position: 'relative', overflow: 'hidden', border: '1px solid var(--gecko-border)' }}>
         <div style={{ position: 'absolute', inset: '0 auto 0 0', width: `${pct}%`, background: color, borderRadius: '3px 0 0 3px', transition: 'width 0.2s' }} />
         {Array.from({ length: cap - 1 }).map((_, i) => (
           <div key={i} style={{ position: 'absolute', top: 0, bottom: 0, left: `${((i + 1) / cap) * 100}%`, width: 1, background: 'var(--gecko-border-strong)' }} />
         ))}
       </div>
-      <span style={{ fontSize: 11, fontFamily: 'var(--gecko-font-mono)', fontWeight: 700, textAlign: 'right' }}>{teu} <span style={{ color: 'var(--gecko-text-disabled)', fontWeight: 500 }}>TEU</span></span>
+      <span className="gecko-money" style={{ fontSize: 11 }}>{teu} <span style={{ color: 'var(--gecko-text-disabled)', fontWeight: 500 }}>TEU</span></span>
     </div>
   );
 }
@@ -236,14 +236,14 @@ function CapacityBar({ dropTeu, pickTeu, cap }: { dropTeu: number; pickTeu: numb
   const max = Math.max(dropTeu, pickTeu);
   return (
     <div style={{ padding: '10px 18px', borderBottom: '1px solid var(--gecko-border)', background: '#fff', display: 'grid', gridTemplateColumns: 'auto 1fr auto', gap: 14, alignItems: 'center' }}>
-      <span style={{ color: 'var(--gecko-text-secondary)', fontWeight: 600, letterSpacing: '0.04em', textTransform: 'uppercase', fontSize: 10 }}>Truck Capacity</span>
+      <span className="gecko-eyebrow">Truck Capacity</span>
       <div className="gecko-stack" style={{ gap: 5 }}>
         <CapacityBarLine label="DROP-OFFS (in)" teu={dropTeu} cap={cap} color="var(--gecko-info-500)" />
         <CapacityBarLine label="PICKUPS (out)"  teu={pickTeu} cap={cap} color="var(--gecko-primary-600)" />
       </div>
       <div style={{ textAlign: 'right' }}>
         <div style={{ fontSize: 18, fontWeight: 700, fontFamily: 'var(--gecko-font-mono)', lineHeight: 1 }}>
-          {max}<span style={{ fontSize: 11, color: 'var(--gecko-text-secondary)', fontWeight: 500 }}> / {cap} TEU</span>
+          {max}<span className="gecko-cell-meta" style={{ fontWeight: 500 }}> / {cap} TEU</span>
         </div>
         <div style={{ fontSize: 10, color: max >= cap ? 'var(--gecko-warning-700)' : 'var(--gecko-text-secondary)', marginTop: 2, fontWeight: max >= cap ? 700 : 500 }}>
           {max >= cap ? 'AT CAPACITY' : `${cap - max} TEU available`}
@@ -265,7 +265,7 @@ function DamagePanel({ move, onChange }: { move: DropMove; onChange: (p: Partial
     <SubBlock title="Damage details (IICL)" desc="Per-panel inspection. Each line emits a DAM segment on the CODECO message to the line.">
       <div className="gecko-stack gecko-stack-sm">
         {/* 6-col grid template is page-specific (1.4fr 1.6fr 2fr 1fr 2fr 28px) — kept inline */}
-        <div style={{ display: 'grid', gridTemplateColumns: '1.4fr 1.6fr 2fr 1fr 2fr 28px', gap: 8, padding: '4px 8px', fontSize: 10, fontWeight: 700, textTransform: 'uppercase', letterSpacing: 0.4, color: 'var(--gecko-text-secondary)' }}>
+        <div className="gecko-eyebrow" style={{ display: 'grid', gridTemplateColumns: '1.4fr 1.6fr 2fr 1fr 2fr 28px', gap: 8, padding: '4px 8px' }}>
           <span>Panel</span><span>IICL Code</span><span>Description</span><span>Severity</span><span>Liability (CODECO)</span><span />
         </div>
         {damages.length === 0 && (
@@ -380,7 +380,7 @@ function DropOffForm({ move, onChange }: { move: DropMove; onChange: (p: Partial
         <SubBlock title="VGM (SOLAS)" desc="Required for export laden. SOLAS VI Reg. 2.">
           <div className="gecko-grid-4">
             <Field label="VGM (kg)" required>
-              <input className="gecko-input gecko-input-sm" value={move.vgm ?? ''} onChange={e => onChange({ vgm: parseInt(e.target.value) || null })} style={{ fontFamily: 'var(--gecko-font-mono)', textAlign: 'right', fontWeight: 700 }} placeholder="Required" />
+              <input className="gecko-input gecko-input-sm gecko-money" value={move.vgm ?? ''} onChange={e => onChange({ vgm: parseInt(e.target.value) || null })} placeholder="Required" />
             </Field>
             <Field label="VGM Method" required>
               <select className="gecko-input gecko-input-sm" value={move.vgmMethod ?? 'M1'} onChange={e => onChange({ vgmMethod: e.target.value })}>
@@ -725,7 +725,7 @@ function TruckHeaderCard({ truck }: { truck: any }) {
             <span style={{ display: 'inline-flex', alignItems: 'center', gap: 5, padding: '3px 8px', fontSize: 10, fontWeight: 700, borderRadius: 4, background: 'var(--gecko-success-50)', color: 'var(--gecko-success-700)' }}>
               <Icon name="shieldCheck" size={11} />APPOINTMENT VERIFIED · {truck.apptSlot}
             </span>
-            <span style={{ fontSize: 10, color: 'var(--gecko-text-secondary)' }}>booked {truck.apptBookedAt} by {truck.apptBookedBy}</span>
+            <span className="gecko-cell-meta">booked {truck.apptBookedAt} by {truck.apptBookedBy}</span>
           </div>
         )}
       </div>
@@ -838,13 +838,13 @@ function VisitSummaryRail({ moves, dropTeu, pickTeu, teuCap, teuUsed, teuRemaini
         <div style={{ padding: 10, background: 'var(--gecko-info-50)', borderRadius: 6 }}>
           <div className="gecko-eyebrow" style={{ fontSize: 9, color: 'var(--gecko-info-700)', letterSpacing: '0.06em' }}>Drop-offs</div>
           <div className="gecko-stat-num-22 gecko-mono" style={{ fontWeight: 700, lineHeight: 1.1, color: 'var(--gecko-info-700)' }}>
-            {dropCount}<span style={{ fontSize: 11, color: 'var(--gecko-text-secondary)', fontWeight: 500, marginLeft: 4 }}>· {dropTeu} TEU</span>
+            {dropCount}<span className="gecko-cell-meta" style={{ fontWeight: 500, marginLeft: 4 }}>· {dropTeu} TEU</span>
           </div>
         </div>
         <div style={{ padding: 10, background: 'var(--gecko-primary-50)', borderRadius: 6 }}>
           <div className="gecko-eyebrow" style={{ fontSize: 9, color: 'var(--gecko-primary-700)', letterSpacing: '0.06em' }}>Pickups</div>
           <div className="gecko-stat-num-22 gecko-mono" style={{ fontWeight: 700, lineHeight: 1.1, color: 'var(--gecko-primary-700)' }}>
-            {pickCount}<span style={{ fontSize: 11, color: 'var(--gecko-text-secondary)', fontWeight: 500, marginLeft: 4 }}>· {pickTeu} TEU</span>
+            {pickCount}<span className="gecko-cell-meta" style={{ fontWeight: 500, marginLeft: 4 }}>· {pickTeu} TEU</span>
           </div>
         </div>
       </div>
@@ -861,7 +861,7 @@ function VisitSummaryRail({ moves, dropTeu, pickTeu, teuCap, teuUsed, teuRemaini
             <div key={i} style={{ position: 'absolute', top: 0, bottom: 0, left: `${((i + 1) / teuCap) * 100}%`, width: 1, background: 'var(--gecko-border-strong)' }} />
           ))}
         </div>
-        <div className="gecko-mt-1" style={{ fontSize: 10, color: 'var(--gecko-text-secondary)' }}>
+        <div className="gecko-mt-1 gecko-cell-meta">
           {teuRemaining > 0 ? `${teuRemaining} TEU available on this leg` : 'At capacity — no more moves can be added'}
         </div>
       </div>
@@ -874,7 +874,7 @@ function VisitSummaryRail({ moves, dropTeu, pickTeu, teuCap, teuUsed, teuRemaini
             <div key={c.code} style={{ padding: '5px 16px', display: 'grid', gridTemplateColumns: '1fr auto', gap: 6, alignItems: 'baseline' }}>
               <div>
                 <div style={{ fontSize: 11.5, color: 'var(--gecko-text-primary)', fontWeight: 500 }}>{c.desc}</div>
-                <div className="gecko-mono" style={{ fontSize: 10, color: 'var(--gecko-text-secondary)' }}>{c.code} · {c.qty} × ฿{c.rate}</div>
+                <div className="gecko-mono gecko-cell-meta">{c.code} · {c.qty} × ฿{c.rate}</div>
               </div>
               <div className="gecko-money gecko-money-sm">฿{c.amount.toLocaleString()}</div>
             </div>
@@ -922,7 +922,7 @@ function VisitSummaryRail({ moves, dropTeu, pickTeu, teuCap, teuUsed, teuRemaini
         >
           <Icon name="check" size={14} />Commit Visit · Open Gate
         </button>
-        <div className="gecko-mt-2" style={{ padding: 8, background: 'var(--gecko-bg-subtle)', borderRadius: 6, fontSize: 10, color: 'var(--gecko-text-secondary)', textAlign: 'center', lineHeight: 1.5 }}>
+        <div className="gecko-mt-2 gecko-cell-meta" style={{ padding: 8, background: 'var(--gecko-bg-subtle)', borderRadius: 6, textAlign: 'center', lineHeight: 1.5 }}>
           On commit, system prints <strong>1 consolidated Gate Pass</strong> listing all {moves.length} move{moves.length === 1 ? '' : 's'}<br />
           + audit log entry per override
         </div>

@@ -241,9 +241,9 @@ function ChargesPanel({ movement, applicableCharges, applicableVAS, onToggleChar
   );
 
   const ToBadge = ({ to }: { to: string }) => (
-    <span style={{
-      fontSize: 10, fontWeight: 600, padding: '2px 6px', borderRadius: 4,
-      background: 'var(--gecko-bg-subtle)', color: 'var(--gecko-text-secondary)',
+    <span className="gecko-cell-meta" style={{
+      fontWeight: 600, padding: '2px 6px', borderRadius: 4,
+      background: 'var(--gecko-bg-subtle)',
       border: '1px solid var(--gecko-border)',
     }}>{to}</span>
   );
@@ -575,8 +575,8 @@ export default function OrderTypeMasterPage() {
               {selectedSeq !== null && (
                 <button
                   onClick={() => setSelectedSeq(null)}
-                  className="gecko-row gecko-ml-auto"
-                  style={{ fontSize: 11, color: 'var(--gecko-text-secondary)', background: 'none', border: 'none', cursor: 'pointer', gap: 4, fontFamily: 'inherit' }}
+                  className="gecko-row gecko-ml-auto gecko-cell-meta"
+                  style={{ background: 'none', border: 'none', cursor: 'pointer', gap: 4, fontFamily: 'inherit' }}
                 >
                   <Icon name="xCircle" size={13} /> Clear selection
                 </button>

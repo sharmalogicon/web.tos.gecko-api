@@ -322,7 +322,7 @@ function Step1({ state, onChange }: { state: WizardState; onChange: (patch: Part
           <div className="gecko-row gecko-mb-2">
             <span style={{ fontFamily: 'var(--gecko-font-mono)', fontSize: 18, fontWeight: 800 }}>{state.code || <span style={{ color: 'var(--gecko-text-disabled)' }}>CODE</span>}</span>
             <span style={{ fontSize: 10, fontWeight: 700, padding: '3px 8px', borderRadius: 4, background: bt.bg, color: bt.text }}>{state.bookingType}</span>
-            <span style={{ fontSize: 10, fontWeight: 600, padding: '3px 8px', borderRadius: 4, background: 'var(--gecko-bg-subtle)', color: 'var(--gecko-text-secondary)', border: '1px solid var(--gecko-border)' }}>{state.bookingMode}</span>
+            <span className="gecko-cell-meta" style={{ fontWeight: 600, padding: '3px 8px', borderRadius: 4, background: 'var(--gecko-bg-subtle)', border: '1px solid var(--gecko-border)' }}>{state.bookingMode}</span>
           </div>
           <div className="gecko-page-subtitle gecko-mb-3">
             {state.description || <span style={{ color: 'var(--gecko-text-disabled)', fontStyle: 'italic' }}>Description will appear here</span>}
@@ -1092,7 +1092,7 @@ function Step4({ state }: { state: WizardState }) {
         <div className="gecko-row gecko-mb-3" style={{ gap: 12 }}>
           <h2 className="gecko-stat-num gecko-stat-num-22" style={{ margin: 0, fontFamily: 'var(--gecko-font-mono)' }}>{state.code || '—'}</h2>
           <span style={{ fontSize: 10, fontWeight: 700, padding: '3px 8px', borderRadius: 4, background: bt.bg, color: bt.text }}>{state.bookingType}</span>
-          <span style={{ fontSize: 10, fontWeight: 600, padding: '3px 8px', borderRadius: 4, background: 'var(--gecko-bg-subtle)', color: 'var(--gecko-text-secondary)', border: '1px solid var(--gecko-border)' }}>{state.bookingMode}</span>
+          <span className="gecko-cell-meta" style={{ fontWeight: 600, padding: '3px 8px', borderRadius: 4, background: 'var(--gecko-bg-subtle)', border: '1px solid var(--gecko-border)' }}>{state.bookingMode}</span>
           <div className="gecko-row gecko-ml-auto" style={{ gap: 6 }}>
             <div style={{ width: 8, height: 8, borderRadius: '50%', background: 'var(--gecko-success-500)', alignSelf: 'center' }} />
             <span style={{ fontSize: 12, fontWeight: 600, color: 'var(--gecko-success-700)' }}>{state.status}</span>

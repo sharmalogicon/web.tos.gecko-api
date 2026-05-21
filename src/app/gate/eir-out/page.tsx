@@ -197,7 +197,7 @@ export default function GateOutQueuePage() {
             {lanes.map(l => <option key={l} value={l}>{l}</option>)}
           </select>
 
-          <div className="gecko-ml-auto gecko-flex-shrink-0" style={{ fontSize: 11, color: 'var(--gecko-text-secondary)' }}>
+          <div className="gecko-ml-auto gecko-flex-shrink-0 gecko-cell-meta">
             {filtered.length} of {QUEUE.length} trucks
           </div>
         </div>
@@ -276,7 +276,7 @@ export default function GateOutQueuePage() {
                         {r.containers.map(c => (
                           <div key={c.edo} className="gecko-row" style={{ gap: 6 }}>
                             <span className="gecko-mono-strong">{c.ctr}</span>
-                            <span style={{ fontFamily: 'var(--gecko-font-mono)', fontSize: 10, padding: '1px 5px', background: 'var(--gecko-bg-subtle)', border: '1px solid var(--gecko-border)', borderRadius: 3, color: 'var(--gecko-text-secondary)' }}>{c.iso}</span>
+                            <span className="gecko-cell-sub" style={{ padding: '1px 5px', background: 'var(--gecko-bg-subtle)', border: '1px solid var(--gecko-border)', borderRadius: 3 }}>{c.iso}</span>
                             <span style={{ fontSize: 10, color: 'var(--gecko-text-disabled)' }}>{c.edo} · {c.line}</span>
                           </div>
                         ))}

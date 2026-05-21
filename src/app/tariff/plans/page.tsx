@@ -27,7 +27,7 @@ const PLAN_SORT_OPTIONS: SortOption[] = [
 ];
 
 function StatusBadge({ status }: { status: string }) {
-  if (status === 'Draft') return <span style={{ background: 'var(--gecko-gray-100)', color: 'var(--gecko-text-secondary)', padding: '2px 8px', borderRadius: 12, fontSize: 11, fontWeight: 700 }}>Draft</span>;
+  if (status === 'Draft') return <span className="gecko-cell-meta" style={{ background: 'var(--gecko-gray-100)', padding: '2px 8px', borderRadius: 12, fontWeight: 700 }}>Draft</span>;
   if (status === 'Active') return <span style={{ background: 'var(--gecko-success-100)', color: 'var(--gecko-success-700)', padding: '2px 8px', borderRadius: 12, fontSize: 11, fontWeight: 700 }}>Active</span>;
   if (status === 'Expired') return <span style={{ background: 'var(--gecko-error-100)', color: 'var(--gecko-error-700)', padding: '2px 8px', borderRadius: 12, fontSize: 11, fontWeight: 700 }}>Expired</span>;
   return null;

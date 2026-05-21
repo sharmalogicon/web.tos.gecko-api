@@ -182,7 +182,7 @@ export default function AutoScheduleReportsPage() {
                             size={12}
                             style={{ color: `var(--gecko-${tone}-600)` }}
                           />
-                          <span style={{ fontFamily: 'var(--gecko-font-mono)', fontSize: 11, color: 'var(--gecko-text-secondary)' }}>
+                          <span className="gecko-cell-meta" style={{ fontFamily: 'var(--gecko-font-mono)' }}>
                             {fmtRelativeDate(s.lastRun.at)}
                           </span>
                         </div>
@@ -190,7 +190,7 @@ export default function AutoScheduleReportsPage() {
                         <span style={{ fontSize: 11, color: 'var(--gecko-text-disabled)' }}>Never run</span>
                       )}
                     </td>
-                    <td style={{ fontFamily: 'var(--gecko-font-mono)', fontSize: 11, color: 'var(--gecko-text-secondary)' }}>
+                    <td className="gecko-cell-meta" style={{ fontFamily: 'var(--gecko-font-mono)' }}>
                       {s.enabled ? fmtRelativeDate(s.nextRun) : <span style={{ color: 'var(--gecko-text-disabled)' }}>— paused —</span>}
                     </td>
                     <td style={{ textAlign: 'right' }}>
@@ -313,7 +313,7 @@ function CreateScheduleModal({ onCancel, onCreate }: {
           <Icon name="clock" size={18} style={{ color: 'var(--gecko-primary-600)' }} />
           <div style={{ flex: 1 }}>
             <div style={{ fontSize: 15, fontWeight: 700 }}>Schedule a Report</div>
-            <div style={{ fontSize: 12, color: 'var(--gecko-text-secondary)', marginTop: 2 }}>
+            <div className="gecko-cell-meta">
               Pick a report and configure when + who receives it.
             </div>
           </div>

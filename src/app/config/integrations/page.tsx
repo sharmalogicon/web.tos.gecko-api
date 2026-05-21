@@ -573,7 +573,7 @@ function ChannelCard({ meta, state, expanded, onToggleExpand, onToggle, updateCh
 
         <div style={{ minWidth: 0 }}>
           <div style={{ fontSize: 13.5, fontWeight: 700, color: 'var(--gecko-text-primary)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{meta.label}</div>
-          <div className="gecko-cell-meta" style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{meta.subtitle}</div>
+          <div className="gecko-cell-meta gecko-truncate">{meta.subtitle}</div>
         </div>
 
         {/* Status pill */}

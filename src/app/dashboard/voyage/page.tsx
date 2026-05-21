@@ -232,7 +232,7 @@ export default function VoyageDashboardPage() {
                       </div>
                       <div style={{ textAlign: 'right', flexShrink: 0 }}>
                         <div style={{ fontSize: 10, padding: '2px 6px', borderRadius: 4, background: bg, color: col, fontWeight: 700, border: `1px solid ${col}40` }}>{c.type}</div>
-                        <div style={{ fontSize: 10, fontFamily: 'var(--gecko-font-mono)', color: 'var(--gecko-text-secondary)', marginTop: 2 }}>{c.datetime}</div>
+                        <div className="gecko-cell-sub">{c.datetime}</div>
                       </div>
                     </div>
                   </div>

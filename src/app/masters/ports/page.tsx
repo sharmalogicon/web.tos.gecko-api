@@ -599,9 +599,9 @@ export default function PortsListPage() {
                 <Icon name="box" size={11} style={{ marginRight: 4, verticalAlign: 'middle' }} />
                 {icdDepotCount} ICD / depot
               </span>
-              <span style={{
-                fontSize: 11, fontWeight: 600,
-                background: 'var(--gecko-bg-subtle, #f8fafc)', color: 'var(--gecko-text-secondary)',
+              <span className="gecko-cell-meta" style={{
+                fontWeight: 600,
+                background: 'var(--gecko-bg-subtle, #f8fafc)',
                 border: '1px solid var(--gecko-border)',
                 padding: '2px 8px', borderRadius: 20,
               }}>

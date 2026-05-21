@@ -220,7 +220,8 @@ export function DateField({
       <div className="gecko-row gecko-row-between" style={{ marginTop: 10, paddingTop: 8, borderTop: '1px solid var(--gecko-border)' }}>
         <button
           onClick={() => { onChange(''); setOpen(false); }}
-          style={{ background: 'none', border: 'none', color: 'var(--gecko-text-secondary)', fontSize: 11, cursor: 'pointer', padding: '2px 4px', fontFamily: 'inherit' }}
+          className="gecko-cell-meta"
+          style={{ background: 'none', border: 'none', cursor: 'pointer', padding: '2px 4px', fontFamily: 'inherit' }}
         >Clear</button>
         <button
           onClick={jumpToday}

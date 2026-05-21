@@ -254,7 +254,7 @@ export default function EdiInquiryPage() {
                       <span className="gecko-mono-strong">{e.reference}</span>
                     </div>
                   </td>
-                  <td className="gecko-text-mono" style={{ fontSize: 11, color: 'var(--gecko-text-secondary)' }}>{e.msgRef}</td>
+                  <td className="gecko-text-mono gecko-cell-meta">{e.msgRef}</td>
                   <td className="gecko-num-tabular" style={{ fontSize: 11.5 }}>{e.segments}</td>
                   <td>
                     <span className={`gecko-badge ${status.badge}`}>{e.status}</span>

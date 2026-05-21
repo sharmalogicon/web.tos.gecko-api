@@ -197,7 +197,7 @@ export default function BookingRegisterPage() {
               <Icon name={k.icon} size={17} />
             </div>
             <div>
-              <div style={{ fontSize: 22, fontWeight: 700, fontFamily: 'var(--gecko-font-mono)', letterSpacing: '-0.02em', lineHeight: 1, color: 'var(--gecko-text-primary)' }}>{k.value}</div>
+              <div className="gecko-page-title" style={{ fontFamily: 'var(--gecko-font-mono)', lineHeight: 1 }}>{k.value}</div>
               <div className="gecko-stat-block-sub" style={{ marginTop: 2 }}>{k.label}</div>
             </div>
           </div>

@@ -518,7 +518,7 @@ function MoveRow({ move, index, open, issues, onToggle, onRemove, onChange }: {
             <span style={{ fontFamily: 'var(--gecko-font-mono)', fontSize: 14, fontWeight: 700, color: 'var(--gecko-text-primary)' }}>
               {move.ctrAssigned || move.ctrPlanned || '— verify container —'}
             </span>
-            <span style={{ fontFamily: 'var(--gecko-font-mono)', fontSize: 11, fontWeight: 600, padding: '2px 6px', background: 'var(--gecko-bg-subtle)', border: '1px solid var(--gecko-border)', borderRadius: 3, color: 'var(--gecko-text-secondary)' }}>
+            <span className="gecko-cell-meta" style={{ fontFamily: 'var(--gecko-font-mono)', fontWeight: 600, padding: '2px 6px', background: 'var(--gecko-bg-subtle)', border: '1px solid var(--gecko-border)', borderRadius: 3 }}>
               {move.isoReq}
             </span>
             <span className="gecko-cell-sub" style={{ fontWeight: 600, marginTop: 0 }}>{move.teu} TEU</span>
@@ -789,7 +789,8 @@ function VisitSummaryRail({ moves, teuUsed, teuCap, teuRemaining, errCount, warn
             <button
               type="button"
               onClick={() => setShowIssues(s => !s)}
-              style={{ background: 'transparent', border: 'none', cursor: 'pointer', color: 'var(--gecko-text-secondary)', fontSize: 10, fontWeight: 600, padding: 0, display: 'inline-flex', alignItems: 'center', gap: 3, letterSpacing: '0.04em', textTransform: 'uppercase' }}
+              className="gecko-eyebrow"
+              style={{ background: 'transparent', border: 'none', cursor: 'pointer', padding: 0, display: 'inline-flex', alignItems: 'center', gap: 3 }}
               aria-expanded={showIssues}
             >
               {showIssues ? 'Hide details' : 'Show details'}
@@ -822,7 +823,7 @@ function VisitSummaryRail({ moves, teuUsed, teuCap, teuRemaining, errCount, warn
                     <span style={{ fontSize: 10, fontWeight: 700, color: 'var(--gecko-text-primary)', letterSpacing: '0.04em' }}>
                       Container #{idx + 1}
                     </span>
-                    <span style={{ fontSize: 10, fontFamily: 'var(--gecko-font-mono)', color: 'var(--gecko-text-secondary)', flex: 1, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                    <span className="gecko-cell-sub" style={{ flex: 1, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
                       {m.ctrAssigned || m.ctrPlanned || '— unverified —'}
                     </span>
                     <span style={{ fontSize: 9, color: 'var(--gecko-primary-700)', fontWeight: 600 }}>
@@ -865,7 +866,7 @@ function VisitSummaryRail({ moves, teuUsed, teuCap, teuRemaining, errCount, warn
         >
           <Icon name="check" size={14} />Commit · Open Gate
         </button>
-        <div style={{ marginTop: 8, padding: 8, background: 'var(--gecko-bg-subtle)', borderRadius: 6, fontSize: 10, color: 'var(--gecko-text-secondary)', textAlign: 'center', lineHeight: 1.5 }}>
+        <div className="gecko-cell-meta" style={{ marginTop: 8, padding: 8, background: 'var(--gecko-bg-subtle)', borderRadius: 6, textAlign: 'center', lineHeight: 1.5 }}>
           Prints <strong style={{ color: 'var(--gecko-text-primary)' }}>1 Gate Pass (EIR-Out)</strong> per visit<br />
           + auto-closes the truck visit record
         </div>

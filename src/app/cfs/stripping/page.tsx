@@ -108,7 +108,7 @@ export default function StrippingPage() {
             ) : (
               <table className="gecko-table gecko-table-comfortable" style={{ fontSize: 13 }}>
                 <thead>
-                  <tr style={{ background: 'var(--gecko-gray-100)', color: 'var(--gecko-text-secondary)', fontSize: 11, textTransform: 'uppercase', letterSpacing: '0.05em', position: 'sticky', top: 0 }}>
+                  <tr className="gecko-eyebrow" style={{ background: 'var(--gecko-gray-100)', position: 'sticky', top: 0 }}>
                     <th style={{ textAlign: 'left', width: 40 }}><input type="checkbox" onChange={(e) => setSelectedCont(e.target.checked ? new Set(container.map(i => i.id)) : new Set())} /></th>
                     <th>Manifest ID</th>
                     <th>Description</th>
@@ -123,7 +123,7 @@ export default function StrippingPage() {
                       <td className="gecko-text-mono" style={{ fontWeight: 600, color: 'var(--gecko-text-primary)' }}>{item.id}</td>
                       <td>
                         <div style={{ fontWeight: 600 }}>{item.desc}</div>
-                        <div style={{ fontSize: 11, color: 'var(--gecko-text-secondary)' }}>{item.type} · {item.weight} kg</div>
+                        <div className="gecko-cell-meta">{item.type} · {item.weight} kg</div>
                       </td>
                       <td className="gecko-text-mono" style={{ textAlign: 'right' }}>{item.qty}</td>
                       <td className="gecko-text-mono" style={{ fontSize: 12 }}>{item.marks}</td>
@@ -171,7 +171,7 @@ export default function StrippingPage() {
           <div style={{ padding: '20px 24px', borderBottom: '1px solid var(--gecko-border)', background: '#fff' }}>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 }}>
               <div>
-                <div style={{ fontSize: 11, fontWeight: 700, color: 'var(--gecko-text-secondary)', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Target Location</div>
+                <div className="gecko-eyebrow">Target Location</div>
                 <h2 style={{ fontSize: 20, fontWeight: 700, margin: 0, color: 'var(--gecko-text-primary)', marginTop: 4 }}>CFS Warehouse</h2>
               </div>
             </div>
@@ -197,7 +197,7 @@ export default function StrippingPage() {
             ) : (
               <table className="gecko-table gecko-table-comfortable" style={{ fontSize: 13 }}>
                 <thead>
-                  <tr style={{ background: 'var(--gecko-gray-100)', color: 'var(--gecko-text-secondary)', fontSize: 11, textTransform: 'uppercase', letterSpacing: '0.05em', position: 'sticky', top: 0 }}>
+                  <tr className="gecko-eyebrow" style={{ background: 'var(--gecko-gray-100)', position: 'sticky', top: 0 }}>
                     <th style={{ textAlign: 'left', width: 40 }}><input type="checkbox" onChange={(e) => setSelectedWh(e.target.checked ? new Set(warehouse.map(i => i.id)) : new Set())} /></th>
                     <th>Cargo ID</th>
                     <th>Description</th>
@@ -211,7 +211,7 @@ export default function StrippingPage() {
                       <td className="gecko-text-mono" style={{ fontWeight: 600, color: 'var(--gecko-primary-700)' }}>{item.id}</td>
                       <td>
                         <div style={{ fontWeight: 600 }}>{item.desc}</div>
-                        <div style={{ fontSize: 11, color: 'var(--gecko-text-secondary)' }}>{item.qty} {item.type}</div>
+                        <div className="gecko-cell-meta">{item.qty} {item.type}</div>
                       </td>
                       <td className="gecko-text-mono" style={{ color: 'var(--gecko-info-600)', fontWeight: 700 }}>{item.loc}</td>
                     </tr>

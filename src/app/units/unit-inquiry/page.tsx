@@ -263,7 +263,7 @@ export default function UnitInquiryPage() {
             <div className="gecko-row gecko-row-wrap" style={{ padding: '16px 20px', background: 'var(--gecko-primary-50)', borderBottom: '1px solid var(--gecko-border)', gap: 18 }}>
               <div>
                 <div className="gecko-eyebrow">Container</div>
-                <div style={{ fontSize: 22, fontWeight: 800, fontFamily: 'var(--gecko-font-mono)', color: 'var(--gecko-text-primary)', letterSpacing: '0.02em', marginTop: 2 }}>
+                <div className="gecko-stat-num gecko-stat-num-22" style={{ fontFamily: 'var(--gecko-font-mono)', letterSpacing: '0.02em', marginTop: 2 }}>
                   {unit.containerNo}
                 </div>
               </div>

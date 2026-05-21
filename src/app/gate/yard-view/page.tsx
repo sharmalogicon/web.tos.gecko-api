@@ -397,7 +397,7 @@ function KpiCard({ label, value, tone }: { label: string; value: number; tone: '
         {value}
       </div>
       <div>
-        <div style={{ fontSize: 12, fontWeight: 600, color: 'var(--gecko-text-primary)' }}>{label}</div>
+        <div className="gecko-cell-primary">{label}</div>
         <div className="gecko-kpi-tile-label" style={{ fontSize: 10 }}>stacks in this band</div>
       </div>
     </div>
@@ -557,10 +557,10 @@ function CellDetail({ block, bay, row, onClose }: {
 
       {/* Stack summary */}
       <div className="gecko-row gecko-row-between gecko-row-baseline" style={{ padding: 10, background: 'var(--gecko-bg-subtle)', borderRadius: 6 }}>
-        <span style={{ fontSize: 11, color: 'var(--gecko-text-secondary)' }}>Stack height</span>
+        <span className="gecko-cell-meta">Stack height</span>
         <span>
           <span style={{ fontSize: 20, fontWeight: 700, fontFamily: 'var(--gecko-font-mono)', color: 'var(--gecko-text-primary)' }}>{cell.filledTiers}</span>
-          <span style={{ fontSize: 13, color: 'var(--gecko-text-secondary)' }}> / {block.tiers}</span>
+          <span className="gecko-page-subtitle"> / {block.tiers}</span>
           <span style={{ fontSize: 11, color: occupancyColor(pct).stroke, fontWeight: 700, marginLeft: 10 }}>{Math.round(pct * 100)}% · {occupancyLabel(pct)}</span>
         </span>
       </div>
@@ -595,7 +595,7 @@ function CellDetail({ block, bay, row, onClose }: {
           <span style={{ color: 'var(--gecko-text-disabled)' }}>→</span>
           <span style={{ color: 'var(--gecko-text-primary)', fontWeight: 700 }}>{positionEnd}</span>
         </div>
-        <div style={{ fontSize: 10, color: 'var(--gecko-text-secondary)', marginTop: 4 }}>
+        <div className="gecko-cell-meta">
           Block <strong>{block.code}</strong> · Bay <strong>{bayLabel(bay)}</strong> · Row <strong>{rowLabel(row)}</strong> · tiers 01–{String(block.tiers).padStart(2, '0')}
         </div>
       </div>
@@ -634,7 +634,7 @@ function TierRow({ tierNum, isFilled, container, isoWidth, stackIso }: {
 
     return (
       <div style={{ display: 'flex', alignItems: 'center', gap: 8, width: '100%' }}>
-        <span style={{ fontSize: 9, color: 'var(--gecko-text-disabled)', fontWeight: 700, fontFamily: 'var(--gecko-font-mono)', minWidth: 32, textAlign: 'right' }}>
+        <span className="gecko-money" style={{ fontSize: 9, color: 'var(--gecko-text-disabled)', minWidth: 32 }}>
           T-{String(tierNum).padStart(2, '0')}
         </span>
         <div
@@ -662,7 +662,7 @@ function TierRow({ tierNum, isFilled, container, isoWidth, stackIso }: {
             <span style={{ fontFamily: 'var(--gecko-font-mono)', fontWeight: 700, fontSize: 9, opacity: 0.75 }}>{stackIso}</span>
           </div>
           <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 10, opacity: 0.85, gap: 6 }}>
-            <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{container.customer}</span>
+            <span className="gecko-truncate">{container.customer}</span>
             <span style={{ fontFamily: 'var(--gecko-font-mono)', flexShrink: 0 }}>
               {(container.weightKg / 1000).toFixed(1)}t
               {isDamaged && <span style={{ marginLeft: 6, color: '#dc2626', fontWeight: 700 }}> · DMG</span>}
@@ -676,7 +676,7 @@ function TierRow({ tierNum, isFilled, container, isoWidth, stackIso }: {
   // Empty tier — dotted outline
   return (
     <div style={{ display: 'flex', alignItems: 'center', gap: 8, width: '100%' }}>
-      <span style={{ fontSize: 9, color: 'var(--gecko-text-disabled)', fontWeight: 700, fontFamily: 'var(--gecko-font-mono)', minWidth: 32, textAlign: 'right' }}>
+      <span className="gecko-money" style={{ fontSize: 9, color: 'var(--gecko-text-disabled)', minWidth: 32 }}>
         T-{String(tierNum).padStart(2, '0')}
       </span>
       <div
