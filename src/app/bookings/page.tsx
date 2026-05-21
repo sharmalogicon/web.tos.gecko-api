@@ -335,42 +335,44 @@ export default function BookingRegisterPage() {
                     <input type="checkbox" checked={isSelected} onChange={() => toggleRow(b.id)}
                       style={{ width: 14, height: 14, cursor: 'pointer', accentColor: 'var(--gecko-primary-600)' }} />
                   </td>
-                  <td style={{ cursor: 'pointer' }}>
-                    <Link href={`/bookings/${b.bookingNo}`} style={{ textDecoration: 'none', display: 'block' }}>
-                      <div style={{ fontSize: 12, fontWeight: 700, fontFamily: 'var(--gecko-font-mono)', color: 'var(--gecko-primary-600)', letterSpacing: '0.01em' }}>
-                        {b.bookingNo}
-                      </div>
-                      <div style={{ fontSize: 10.5, color: 'var(--gecko-text-secondary)', fontFamily: 'var(--gecko-font-mono)', marginTop: 1 }}>{b.orderNo}</div>
+                  <td className="gecko-cursor-pointer">
+                    <Link href={`/bookings/${b.bookingNo}`} className="gecko-row-link">
+                      <div className="gecko-id-link">{b.bookingNo}</div>
+                      <div className="gecko-cell-sub">{b.orderNo}</div>
                     </Link>
                   </td>
                   <td>
-                    <div style={{ fontSize: 12, fontWeight: 600, color: 'var(--gecko-text-primary)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }} title={b.customer}>{b.customer}</div>
+                    <div className="gecko-cell-primary gecko-truncate" title={b.customer}>{b.customer}</div>
                   </td>
                   <td>
-                    <span style={{ fontSize: 9.5, fontWeight: 700, padding: '2px 6px', borderRadius: 4, letterSpacing: '0.04em',
-                      background: b.direction === 'EXPORT' ? 'var(--gecko-primary-50)' : 'var(--gecko-info-50)',
-                      color:      b.direction === 'EXPORT' ? 'var(--gecko-primary-700)' : 'var(--gecko-info-700)',
-                      border:     `1px solid ${b.direction === 'EXPORT' ? 'var(--gecko-primary-200)' : 'var(--gecko-info-200)'}`,
-                      display: 'inline-block',
-                    }}>{b.direction === 'EXPORT' ? '↑ EXP' : '↓ IMP'}</span>
-                    <div style={{ fontSize: 10, color: 'var(--gecko-text-secondary)', marginTop: 3, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{b.orderType}</div>
+                    <span
+                      className="gecko-direction-pill"
+                      style={{
+                        background: b.direction === 'EXPORT' ? 'var(--gecko-primary-50)' : 'var(--gecko-info-50)',
+                        color:      b.direction === 'EXPORT' ? 'var(--gecko-primary-700)' : 'var(--gecko-info-700)',
+                        border:     `1px solid ${b.direction === 'EXPORT' ? 'var(--gecko-primary-200)' : 'var(--gecko-info-200)'}`,
+                      }}
+                    >
+                      {b.direction === 'EXPORT' ? '↑ EXP' : '↓ IMP'}
+                    </span>
+                    <div className="gecko-cell-meta gecko-truncate">{b.orderType}</div>
                   </td>
                   <td>
-                    <span style={{ fontSize: 10.5, fontWeight: 600, padding: '2px 7px', borderRadius: 20, background: sm.bg, color: sm.color }}>{sm.label}</span>
+                    <span className="gecko-status-chip" style={{ background: sm.bg, color: sm.color }}>{sm.label}</span>
                   </td>
                   <td>
-                    <div style={{ fontSize: 11, fontWeight: 600, color: 'var(--gecko-text-primary)', fontFamily: 'var(--gecko-font-mono)' }}>{b.agent}</div>
+                    <div className="gecko-mono-strong">{b.agent}</div>
                   </td>
                   <td>
-                    <div style={{ fontSize: 11, fontWeight: 600, color: 'var(--gecko-text-primary)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }} title={b.vessel}>{b.vessel}</div>
-                    <div style={{ fontSize: 10, color: 'var(--gecko-text-secondary)', fontFamily: 'var(--gecko-font-mono)', marginTop: 1 }}>{b.voyageNo}</div>
+                    <div className="gecko-cell-primary gecko-truncate" title={b.vessel}>{b.vessel}</div>
+                    <div className="gecko-cell-sub">{b.voyageNo}</div>
                   </td>
                   <td>
-                    <div style={{ fontSize: 11, fontFamily: 'var(--gecko-font-mono)', fontWeight: 600, color: 'var(--gecko-text-primary)' }}>{formatDate(b.etd)}</div>
-                    <span style={{ fontSize: 10.5, fontWeight: 600, padding: '2px 7px', borderRadius: 5, background: cc.bg, color: cc.color, fontFamily: 'var(--gecko-font-mono)', display: 'inline-block', marginTop: 3 }}>
+                    <div className="gecko-mono-strong">{formatDate(b.etd)}</div>
+                    <span className="gecko-cutoff-pill" style={{ background: cc.bg, color: cc.color }}>
                       {daysLeft < 0 ? 'EXPIRED' : daysLeft === 0 ? 'TODAY' : `${daysLeft}d`}
                     </span>
-                    <div style={{ fontSize: 9.5, color: 'var(--gecko-text-disabled)', marginTop: 1, fontFamily: 'var(--gecko-font-mono)' }}>Cut: {formatDate(b.cyCutoff)}</div>
+                    <div className="gecko-cell-sub-xs">Cut: {formatDate(b.cyCutoff)}</div>
                   </td>
                   <td>
                     <ProgressPip total={b.totalCtrs} done={b.fullIn} label="Full In" />

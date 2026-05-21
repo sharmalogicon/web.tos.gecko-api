@@ -7354,6 +7354,58 @@ input[type="checkbox"].gecko-toggle.gecko-toggle-sm:checked::after { transform: 
   margin-top: 1px;
 }
 
+/* §13.11 — Row-level table-cell helpers used in list views.
+   Small chrome that doesn't carry tone (those stay inline as dynamic). */
+
+.gecko-cursor-pointer { cursor: pointer; }
+
+.gecko-row-link {
+  text-decoration: none;
+  display: block;
+}
+
+/* Even-smaller cell sub-line (9.5px) for tertiary metadata under primary +
+   sub. Used in cutoff date hints, audit timestamps under main values. */
+.gecko-cell-sub-xs {
+  font-family: var(--gecko-font-mono);
+  font-size: 9.5px;
+  color: var(--gecko-text-disabled);
+  margin-top: 1px;
+}
+
+/* Direction badge — EXP / IMP chip with arrow.
+   Caller injects tone via inline background/color/border (data-driven). */
+.gecko-direction-pill {
+  font-size: 9.5px;
+  font-weight: 700;
+  padding: 2px 6px;
+  border-radius: 4px;
+  letter-spacing: 0.04em;
+  display: inline-block;
+}
+
+/* Status chip — pill-shaped with dynamic background/color.
+   Caller injects tone inline. */
+.gecko-status-chip {
+  font-size: 10.5px;
+  font-weight: 600;
+  padding: 2px 7px;
+  border-radius: 20px;
+  display: inline-block;
+}
+
+/* Cutoff days pill — square-ish chip with mono numerals.
+   Caller injects tone inline based on urgency. */
+.gecko-cutoff-pill {
+  font-size: 10.5px;
+  font-weight: 600;
+  padding: 2px 7px;
+  border-radius: 5px;
+  font-family: var(--gecko-font-mono);
+  display: inline-block;
+  margin-top: 3px;
+}
+
 /* §13.10 — Floating card (popover / dropdown chrome)
    Surface + border + shadow used for typeahead suggestions, calendar,
    filter popover, dropdown menu containers. The catalog had
