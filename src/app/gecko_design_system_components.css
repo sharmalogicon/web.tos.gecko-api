@@ -7099,6 +7099,276 @@ input[type="checkbox"].gecko-toggle.gecko-toggle-sm:checked::after { transform: 
 
 
 /* ============================================================
+   SECTION 13 — HIGH-IMPACT EXTENSIONS (post-migration wave 5)
+   ------------------------------------------------------------
+   The 10 highest-leverage primitives identified during the
+   inline-style migration sweeps. Each unlocks 60+ inline blocks
+   across the codebase. Frozen contract — names locked.
+   ============================================================ */
+
+/* §13.1 — Icon-only ghost button (table row actions, list item triggers)
+   The most-repeated pattern in the codebase. Used for inline edit/delete
+   icons in every list page. */
+.gecko-icon-btn-ghost {
+  background: transparent;
+  border: none;
+  color: var(--gecko-text-disabled);
+  cursor: pointer;
+  padding: 3px 5px;
+  border-radius: 4px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-family: inherit;
+  transition:
+    background var(--gecko-transition-fast),
+    color var(--gecko-transition-fast);
+}
+.gecko-icon-btn-ghost:hover {
+  background: var(--gecko-bg-subtle);
+  color: var(--gecko-text-primary);
+}
+.gecko-icon-btn-ghost:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+
+/* §13.2 — Modal shell (fixed scrim + centered card)
+   Replaces the position-fixed/inset-0/translate-50% pattern reinvented
+   per-modal across the codebase. */
+.gecko-modal-shell {
+  position: fixed;
+  inset: 0;
+  background: rgba(15, 23, 42, 0.4);
+  backdrop-filter: blur(2px);
+  z-index: var(--gecko-z-modal, 60);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 16px;
+  animation: gecko-fade-in 180ms ease-out both;
+}
+
+.gecko-modal-card {
+  background: var(--gecko-bg-surface);
+  border-radius: 12px;
+  box-shadow: 0 24px 60px rgba(15, 23, 42, 0.24),
+              0 4px 12px rgba(15, 23, 42, 0.10);
+  width: min(540px, calc(100vw - 32px));
+  max-height: calc(100vh - 64px);
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  animation: gecko-modal-pop-in 200ms ease-out both;
+}
+.gecko-modal-card-sm { width: min(420px, calc(100vw - 32px)); }
+.gecko-modal-card-lg { width: min(680px, calc(100vw - 32px)); }
+.gecko-modal-card-xl { width: min(880px, calc(100vw - 32px)); }
+
+@keyframes gecko-modal-pop-in {
+  from { opacity: 0; transform: scale(0.96); }
+  to   { opacity: 1; transform: scale(1); }
+}
+
+/* §13.3 — Toggle switch primitive
+   Standard animated switch used in every settings modal.
+   Usage:
+     <label class="gecko-toggle">
+       <input type="checkbox" checked={value} onChange={…} />
+       <span class="gecko-toggle-track"><span class="gecko-toggle-thumb" /></span>
+     </label>
+*/
+.gecko-toggle {
+  position: relative;
+  display: inline-block;
+  width: 36px;
+  height: 20px;
+  flex-shrink: 0;
+  cursor: pointer;
+}
+.gecko-toggle input {
+  opacity: 0;
+  width: 0;
+  height: 0;
+  position: absolute;
+}
+.gecko-toggle-track {
+  position: absolute;
+  inset: 0;
+  background: var(--gecko-gray-300);
+  border-radius: 10px;
+  transition: background var(--gecko-transition-fast);
+}
+.gecko-toggle-thumb {
+  position: absolute;
+  top: 2px;
+  left: 2px;
+  width: 16px;
+  height: 16px;
+  background: #fff;
+  border-radius: 50%;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.2);
+  transition: left var(--gecko-transition-fast);
+}
+.gecko-toggle input:checked ~ .gecko-toggle-track {
+  background: var(--gecko-primary-600);
+}
+.gecko-toggle input:checked ~ .gecko-toggle-track .gecko-toggle-thumb {
+  left: 18px;
+}
+.gecko-toggle input:disabled ~ .gecko-toggle-track {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.gecko-toggle-sm {
+  width: 28px;
+  height: 16px;
+}
+.gecko-toggle-sm .gecko-toggle-thumb {
+  width: 12px;
+  height: 12px;
+}
+.gecko-toggle-sm input:checked ~ .gecko-toggle-track .gecko-toggle-thumb {
+  left: 14px;
+}
+
+/* §13.4 — Mini-icon size variants
+   Catalog already has 32px (default) and 38px (-lg).
+   Add 24px (-sm, for table/menu density) and 44px (-xl, for partner avatars). */
+.gecko-mini-icon-sm { width: 24px; height: 24px; border-radius: 6px; }
+.gecko-mini-icon-xl { width: 44px; height: 44px; border-radius: 10px; }
+
+/* §13.5 — Grid gap modifiers
+   The catalog promised these but only delivered them for .gecko-row.
+   Adding here so .gecko-grid-N can also use the standard gap scale. */
+.gecko-grid-2.gecko-stack-xs, .gecko-grid-3.gecko-stack-xs,
+.gecko-grid-4.gecko-stack-xs, .gecko-grid-5.gecko-stack-xs { gap: 4px; }
+
+.gecko-grid-2.gecko-stack-sm, .gecko-grid-3.gecko-stack-sm,
+.gecko-grid-4.gecko-stack-sm, .gecko-grid-5.gecko-stack-sm { gap: 8px; }
+
+.gecko-grid-2.gecko-stack-md, .gecko-grid-3.gecko-stack-md,
+.gecko-grid-4.gecko-stack-md, .gecko-grid-5.gecko-stack-md { gap: 12px; }
+
+.gecko-grid-2.gecko-stack-lg, .gecko-grid-3.gecko-stack-lg,
+.gecko-grid-4.gecko-stack-lg, .gecko-grid-5.gecko-stack-lg { gap: 16px; }
+
+.gecko-grid-2.gecko-stack-xl, .gecko-grid-3.gecko-stack-xl,
+.gecko-grid-4.gecko-stack-xl, .gecko-grid-5.gecko-stack-xl { gap: 24px; }
+
+/* §13.6 — Stat-num intermediate variants
+   Catalog has -sm (20) and -lg (32). Add -22 for dense sidebars and
+   -xl-mono for dashboard hero KpiCard pattern (28/800/mono). */
+.gecko-stat-num-22 { font-size: 22px; }
+
+.gecko-stat-num-xl-mono {
+  font-size: 28px;
+  font-weight: 800;
+  font-family: var(--gecko-font-mono);
+  font-variant-numeric: tabular-nums;
+}
+
+/* §13.7 — Card with tone-driven top accent border
+   Pattern: KpiCard / Widget cards with a 3px coloured top edge whose tone
+   comes from a per-instance prop. Caller sets --gecko-accent-color via
+   inline `style={{ '--gecko-accent-color': 'var(--gecko-success-500)' }}`
+   (a CSS custom property — sanctioned dynamic-value use).
+   Usage: <div class="gecko-card gecko-card-accent-top" style={{ '--gecko-accent-color': accentVar }}>…</div> */
+.gecko-card-accent-top {
+  border-top: 3px solid var(--gecko-accent-color, var(--gecko-primary-600));
+}
+
+/* §13.8 — Underlined tab bar
+   Distinct from §5.7 .gecko-tabs (light variant) — this is the heavier
+   active-bottom-border tab used in detail pages (vessels/[imo],
+   unit-inquiry, config/users). */
+.gecko-tab-bar {
+  display: flex;
+  align-items: center;
+  gap: 0;
+  border-bottom: 1px solid var(--gecko-border);
+  flex-wrap: wrap;
+}
+
+.gecko-tab-item {
+  padding: 10px 16px;
+  font-size: 13px;
+  font-weight: 500;
+  color: var(--gecko-text-secondary);
+  border: none;
+  background: transparent;
+  border-bottom: 2px solid transparent;
+  margin-bottom: -1px;
+  cursor: pointer;
+  font-family: inherit;
+  transition:
+    color var(--gecko-transition-fast),
+    border-color var(--gecko-transition-fast);
+}
+
+.gecko-tab-item:hover {
+  color: var(--gecko-text-primary);
+}
+
+.gecko-tab-item-active {
+  color: var(--gecko-primary-700);
+  font-weight: 600;
+  border-bottom-color: var(--gecko-primary-600);
+}
+
+/* §13.9 — Inline banner / callout (info / success / warning / error)
+   Tinted background + tinted text + icon-left row. Replaces the
+   pattern reinvented on every page that surfaces a hint/warning. */
+.gecko-banner {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  padding: 11px 14px;
+  border-radius: 8px;
+  font-size: 12.5px;
+  line-height: 1.5;
+}
+
+.gecko-banner-info {
+  background: var(--gecko-info-50);
+  color: var(--gecko-info-700);
+}
+.gecko-banner-success {
+  background: var(--gecko-success-50);
+  color: var(--gecko-success-700);
+}
+.gecko-banner-warning {
+  background: var(--gecko-warning-50);
+  color: var(--gecko-warning-700);
+}
+.gecko-banner-error,
+.gecko-banner-danger {
+  background: var(--gecko-error-50);
+  color: var(--gecko-error-700);
+}
+
+.gecko-banner > svg,
+.gecko-banner-icon {
+  flex-shrink: 0;
+  margin-top: 1px;
+}
+
+/* §13.10 — Floating card (popover / dropdown chrome)
+   Surface + border + shadow used for typeahead suggestions, calendar,
+   filter popover, dropdown menu containers. The catalog had
+   .gecko-card and .gecko-table-card for static surfaces; this is the
+   floating equivalent. */
+.gecko-floating-card {
+  background: var(--gecko-bg-surface);
+  border: 1px solid var(--gecko-border);
+  border-radius: 10px;
+  box-shadow: 0 10px 30px rgba(15, 23, 42, 0.10),
+              0 2px 6px rgba(15, 23, 42, 0.06);
+}
+
+
+/* ============================================================
    SECTION 12 — SHARED COMPOSITES (OpsPrimitives, FilterBar)
    ------------------------------------------------------------
    Classes for the shared UI kit in src/components/ui/OpsPrimitives.tsx.

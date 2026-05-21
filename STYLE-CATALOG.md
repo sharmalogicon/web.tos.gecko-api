@@ -60,6 +60,7 @@ old patterns are deprecated with a comment but not renamed.
   §9   Composed elements         (page header, KPI tile, cell-2-line, etc.)
   §10  Spacing utilities         (rarely needed — prefer Stack/Row)
   §11  Usage rules + ESLint
+  §13  High-impact extensions    (post-migration v1 — modal, toggle, icon-btn-ghost, etc.)
   §A   Drift report              (where current code has variants)
   §B   Cross-app contract        (rules for other Gecko apps consuming this)
 
@@ -754,6 +755,169 @@ JSX attribute whose object literal contains only **static-typed** values
 
 Dynamic values (variable references, conditionals, template strings,
 computed expressions) are NOT flagged.
+
+---
+
+# §13 — High-impact extensions (post-migration v1)
+
+Added after the first five migration sweeps surfaced consistent gaps.
+The 10 primitives below absorbed the highest-frequency patterns the
+agents kept leaving inline. Naming is locked — same contract as §7-§12.
+
+## §13.1 `.gecko-icon-btn-ghost`
+
+Transparent icon-only action button used in every list page's row actions
+(edit, delete, more-menu triggers).
+
+```css
+.gecko-icon-btn-ghost {
+  background: transparent;
+  border: none;
+  color: var(--gecko-text-disabled);
+  padding: 3px 5px;
+  border-radius: 4px;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+.gecko-icon-btn-ghost:hover {
+  background: var(--gecko-bg-subtle);
+  color: var(--gecko-text-primary);
+}
+```
+
+**Replaces**: `style={{ background: 'transparent', border: 'none', cursor: 'pointer', color: 'var(--gecko-text-disabled)', padding: '3px 5px' }}`. **100+ uses** sitewide.
+
+## §13.2 `.gecko-modal-shell` + `.gecko-modal-card` (+ `-sm/-lg/-xl`)
+
+Fixed scrim + centered card chrome. Replaces the per-modal-reinvented
+position/inset/translate/box-shadow boilerplate.
+
+```jsx
+<div className="gecko-modal-shell" onClick={handleScrimClick}>
+  <div className="gecko-modal-card gecko-modal-card-lg" onClick={(e) => e.stopPropagation()}>
+    {/* modal header, body, footer */}
+  </div>
+</div>
+```
+
+Default card width: `min(540px, calc(100vw - 32px))`.
+Sizes: `-sm` (420), default (540), `-lg` (680), `-xl` (880).
+
+**Replaces ~10 inline modal chrome implementations** across SendToInvoice, statement modals, masters modals, booking modals.
+
+## §13.3 `.gecko-toggle` (+ `-sm`)
+
+Standard animated switch. Used in every settings modal.
+
+```jsx
+<label className="gecko-toggle">
+  <input type="checkbox" checked={value} onChange={onChange} />
+  <span className="gecko-toggle-track">
+    <span className="gecko-toggle-thumb" />
+  </span>
+</label>
+```
+
+Default: 36 × 20. `-sm`: 28 × 16.
+
+**Replaces 15+ bespoke switch reimplementations** across system-params, masters/holds, masters/commodities, config/users, config/edi-partners.
+
+## §13.4 `.gecko-mini-icon-sm` (24px) + `.gecko-mini-icon-xl` (44px)
+
+Size variants of the existing `.gecko-mini-icon` (32) / `-lg` (38).
+`-sm` for menu/table density (28 was also requested but 24 is cleaner with the existing 32-38 ladder).
+`-xl` for partner-avatar / hero squares.
+
+## §13.5 Grid gap modifiers
+
+The catalog promised `.gecko-grid-N.gecko-stack-*` modifiers for grids
+but only defined them for `.gecko-row`. Now emitted explicitly for grids.
+
+```css
+.gecko-grid-N.gecko-stack-xs  { gap:  4px; }
+.gecko-grid-N.gecko-stack-sm  { gap:  8px; }
+.gecko-grid-N.gecko-stack-md  { gap: 12px; }  /* same as default */
+.gecko-grid-N.gecko-stack-lg  { gap: 16px; }
+.gecko-grid-N.gecko-stack-xl  { gap: 24px; }
+```
+
+Applies to all four grid sizes (`-2`, `-3`, `-4`, `-5`).
+
+**Closes the catalog gap** documented in agent reports.
+
+## §13.6 Stat-num intermediate variants
+
+Existing: `.gecko-stat-num` (26), `-sm` (20), `-lg` (32).
+New:
+- `.gecko-stat-num-22` — for dense sidebars (22 / 700 / default font)
+- `.gecko-stat-num-xl-mono` — for dashboard KpiCard hero pattern (28 / 800 / mono / tabular-nums)
+
+## §13.7 `.gecko-card-accent-top`
+
+Card with tone-driven top accent border. Uses a CSS custom property
+so the tone is data-driven without inline `border-top` chrome.
+
+```jsx
+<div
+  className="gecko-card gecko-card-accent-top"
+  style={{ '--gecko-accent-color': 'var(--gecko-success-500)' }}
+>
+  …
+</div>
+```
+
+The `'--gecko-accent-color'` inline is a CSS custom property, which the
+catalog rules explicitly sanction as a dynamic-value escape hatch.
+
+**Replaces ~12 KpiCard / Widget border-top inline patterns** across dashboards.
+
+## §13.8 `.gecko-tab-bar` + `.gecko-tab-item` (+ `-active`)
+
+Underlined tab variant — heavier than §5.7 `.gecko-tabs`. Active item
+gets a 2px primary-600 bottom border and primary-700 text.
+
+```jsx
+<div className="gecko-tab-bar">
+  <button className="gecko-tab-item gecko-tab-item-active">Overview</button>
+  <button className="gecko-tab-item">Containers</button>
+  <button className="gecko-tab-item">Charges</button>
+</div>
+```
+
+**Replaces ~6 bespoke underlined-tab implementations** in vessels/[imo], unit-inquiry, config/users, bookings detail, masters detail pages.
+
+## §13.9 `.gecko-banner` (+ `-info/-success/-warning/-error/-danger`)
+
+Tinted inline callout. Replaces the per-page reinvented "info bar"
+pattern (padding: 10-12, bg: tone-50, color: tone-700, border-radius: 6-8).
+
+```jsx
+<div className="gecko-banner gecko-banner-warning">
+  <Icon name="alertCircle" size={14} className="gecko-banner-icon" />
+  <span>Sub-account limit reached. Contact billing to upgrade.</span>
+</div>
+```
+
+**Replaces 20+ inline tinted callouts** sitewide.
+
+## §13.10 `.gecko-floating-card`
+
+Surface + border + shadow chrome for popovers, dropdowns, typeahead
+suggestions, calendar pickers. The floating-state cousin of `.gecko-card`.
+
+```css
+.gecko-floating-card {
+  background: var(--gecko-bg-surface);
+  border: 1px solid var(--gecko-border);
+  border-radius: 10px;
+  box-shadow: 0 10px 30px rgba(15, 23, 42, 0.10),
+              0 2px 6px rgba(15, 23, 42, 0.06);
+}
+```
+
+**Replaces ~8 inline popover/dropdown chrome implementations** in DateField, EntitySearch, SendToInvoice menu, FilterPopover.
 
 ---
 
