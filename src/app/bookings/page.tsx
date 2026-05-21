@@ -160,12 +160,12 @@ export default function BookingRegisterPage() {
   const draftCount   = BOOKINGS.filter(b => b.status === 'DRAFT').length;
 
   return (
-    <div className="gecko-stack" style={{ gap: 14 }}>
+    <div className="gecko-stack">
 
       {/* ── Toolbar ── */}
       <div className="gecko-page-header">
         <div className="gecko-page-header-left">
-          <div className="gecko-row" style={{ gap: 10 }}>
+          <div className="gecko-row">
             <h1 className="gecko-page-title">Booking Register</h1>
             <span style={{ fontSize: 10.5, fontWeight: 600, padding: '2px 8px', borderRadius: 20, background: 'var(--gecko-primary-50)', color: 'var(--gecko-primary-700)', border: '1px solid var(--gecko-primary-200)' }}>
               {filtered.length} of {BOOKINGS.length}
@@ -192,7 +192,7 @@ export default function BookingRegisterPage() {
           { label: 'Pending Gate-In',    value: pendingFullIn, icon: 'truck',         tone: 'warning' },
           { label: 'Draft Bookings',     value: draftCount,    icon: 'layers',        tone: 'neutral' },
         ].map(k => (
-          <div key={k.label} className="gecko-card gecko-card-tight gecko-row" style={{ gap: 12 }}>
+          <div key={k.label} className="gecko-card gecko-card-tight gecko-row gecko-stack-md">
             <div className={`gecko-mini-icon gecko-mini-icon-lg gecko-mini-icon-${k.tone}`}>
               <Icon name={k.icon} size={17} />
             </div>
@@ -205,7 +205,7 @@ export default function BookingRegisterPage() {
       </div>
 
       {/* ── Filters + Search ── */}
-      <div className="gecko-row gecko-row-wrap" style={{ gap: 10 }}>
+      <div className="gecko-row gecko-row-wrap">
         <BarcodeScanInput
           onScan={v => setSearch(v)}
           placeholder="Scan booking no…"

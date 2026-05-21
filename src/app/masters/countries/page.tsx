@@ -226,7 +226,7 @@ function CountryModal({ country, isNew, onClose }: CountryModalProps) {
                   maxLength={2}
                   style={{ textTransform: 'uppercase' }}
                 />
-                <div className="gecko-cell-sub" style={{ fontSize: 10, marginTop: 0, fontFamily: 'inherit' }}>ISO alpha-2, 2 chars</div>
+                <div className="gecko-helper-text">ISO alpha-2, 2 chars</div>
               </div>
               <div className="gecko-stack gecko-stack-xs" style={{ gap: 3 }}>
                 <label className="gecko-label gecko-label-required">Country Name</label>
@@ -236,7 +236,7 @@ function CountryModal({ country, isNew, onClose }: CountryModalProps) {
                   onChange={set('name')}
                   placeholder="e.g. Thailand"
                 />
-                <div className="gecko-cell-sub" style={{ fontSize: 10, marginTop: 0, fontFamily: 'inherit' }}>Official English name</div>
+                <div className="gecko-helper-text">Official English name</div>
               </div>
             </div>
           </div>
@@ -244,7 +244,7 @@ function CountryModal({ country, isNew, onClose }: CountryModalProps) {
           {/* Section 2 — ISO Codes */}
           <div>
             {sectionHead('ISO 3166-1 Codes')}
-            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 14 }}>
+            <div className="gecko-grid-2" style={{ gap: 14 }}>
               <div className="gecko-stack gecko-stack-xs" style={{ gap: 3 }}>
                 <label className="gecko-label gecko-row" style={{ gap: 6 }}>
                   ISO Alpha-3
@@ -258,7 +258,7 @@ function CountryModal({ country, isNew, onClose }: CountryModalProps) {
                   maxLength={3}
                   style={{ textTransform: 'uppercase' }}
                 />
-                <div className="gecko-cell-sub" style={{ fontSize: 10, marginTop: 0, fontFamily: 'inherit' }}>3-character alphabetic code</div>
+                <div className="gecko-helper-text">3-character alphabetic code</div>
               </div>
               <div className="gecko-stack gecko-stack-xs" style={{ gap: 3 }}>
                 <label className="gecko-label gecko-row" style={{ gap: 6 }}>
@@ -272,7 +272,7 @@ function CountryModal({ country, isNew, onClose }: CountryModalProps) {
                   placeholder="e.g. 764"
                   maxLength={3}
                 />
-                <div className="gecko-cell-sub" style={{ fontSize: 10, marginTop: 0, fontFamily: 'inherit' }}>3-digit numeric code</div>
+                <div className="gecko-helper-text">3-digit numeric code</div>
               </div>
             </div>
           </div>
@@ -280,7 +280,7 @@ function CountryModal({ country, isNew, onClose }: CountryModalProps) {
           {/* Section 3 — Classification */}
           <div>
             {sectionHead('Classification')}
-            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 14 }}>
+            <div className="gecko-grid-2" style={{ gap: 14 }}>
               <div className="gecko-stack gecko-stack-xs" style={{ gap: 3 }}>
                 <label className="gecko-label">Region</label>
                 <select className="gecko-input" value={form.region} onChange={set('region')}>
@@ -312,7 +312,7 @@ function CountryModal({ country, isNew, onClose }: CountryModalProps) {
           {/* Section 4 — Legacy Mapping & Status */}
           <div>
             {sectionHead('Mapping & Status')}
-            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 14 }}>
+            <div className="gecko-grid-2" style={{ gap: 14 }}>
               <div className="gecko-stack gecko-stack-xs" style={{ gap: 3 }}>
                 <label className="gecko-label">Mapping Code</label>
                 <input
@@ -321,7 +321,7 @@ function CountryModal({ country, isNew, onClose }: CountryModalProps) {
                   onChange={set('mappingCode')}
                   placeholder="e.g. TH or legacy EDI code"
                 />
-                <div className="gecko-cell-sub" style={{ fontSize: 10, marginTop: 0, fontFamily: 'inherit' }}>Legacy system / EDI mapping reference</div>
+                <div className="gecko-helper-text">Legacy system / EDI mapping reference</div>
               </div>
               <div className="gecko-stack gecko-stack-xs" style={{ gap: 3 }}>
                 <label className="gecko-label">Active</label>
@@ -467,7 +467,7 @@ export default function CountriesPage() {
       </div>
 
       {/* ── Stats badges ── */}
-      <div className="gecko-row gecko-stack-md">
+      <div className="gecko-row gecko-row-wrap gecko-stack-md">
         {[
           { label: 'Total countries', value: totalCount,   color: 'var(--gecko-text-primary)',   bg: 'var(--gecko-bg-subtle)',     border: 'var(--gecko-border)' },
           { label: 'Active',          value: activeCount,  color: 'var(--gecko-success-700)',    bg: 'var(--gecko-success-50)',    border: 'var(--gecko-success-200)' },

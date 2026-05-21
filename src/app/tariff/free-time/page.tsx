@@ -23,16 +23,16 @@ export default function FreeTimePage() {
   const { toast } = useToast();
 
   return (
-    <div style={{ maxWidth: 'var(--gecko-container-max)', margin: '0 auto', display: 'flex', flexDirection: 'column', gap: 24, paddingBottom: 40, height: 'calc(100vh - 100px)' }}>
+    <div className="gecko-stack gecko-stack-xl" style={{ maxWidth: 'var(--gecko-container-max)', margin: '0 auto', paddingBottom: 40, height: 'calc(100vh - 100px)' }}>
 
       {/* Header */}
-      <div className="gecko-page-actions" style={{ flexShrink: 0 }}>
+      <div className="gecko-page-actions gecko-flex-shrink-0">
         <div className="gecko-page-actions-left">
-          <div className="gecko-row gecko-row-baseline" style={{ gap: 12 }}>
+          <div className="gecko-row gecko-row-baseline gecko-stack-md">
             <h1 className="gecko-page-title">Free Time & D&D Rules</h1>
             <span style={{ fontSize: 12, fontWeight: 600, color: 'var(--gecko-primary-700)', background: 'var(--gecko-primary-100)', padding: '2px 8px', borderRadius: 12 }}>Storage Logic</span>
           </div>
-          <p className="gecko-page-subtitle" style={{ marginTop: 4 }}>Define the base free days before storage charges apply, and conditional extensions.</p>
+          <p className="gecko-page-subtitle gecko-mt-1">Define the base free days before storage charges apply, and conditional extensions.</p>
         </div>
         <div className="gecko-toolbar">
           <button className="gecko-btn gecko-btn-outline gecko-btn-sm" onClick={() => toast({ variant: 'info', title: 'Copy Rules', message: 'Rule-copy workflow coming soon.' })}><Icon name="copy" size={16} /> Copy Rules</button>
@@ -97,7 +97,7 @@ export default function FreeTimePage() {
               </div>
               <div style={{ textAlign: 'right' }}>
                 <div className="gecko-eyebrow">Base Free Days</div>
-                <div className="gecko-row" style={{ gap: 8, marginTop: 4 }}>
+                <div className="gecko-row gecko-mt-1">
                   <input className="gecko-input" type="number" value={activeGroup.baseDays} readOnly style={{ width: 80, fontSize: 24, fontWeight: 800, fontFamily: 'var(--gecko-font-mono)', height: 44, color: 'var(--gecko-primary-700)', borderColor: 'var(--gecko-primary-300)', textAlign: 'right' }} />
                   <span style={{ fontSize: 14, fontWeight: 700, color: 'var(--gecko-text-secondary)' }}>Days</span>
                 </div>

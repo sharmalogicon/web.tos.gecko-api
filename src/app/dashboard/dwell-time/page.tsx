@@ -167,22 +167,22 @@ export default function DwellTimePage() {
               );
             })}
           </svg>
-          <div style={{ display: 'flex', gap: 16, marginTop: 8, fontSize: 11, color: 'var(--gecko-text-secondary)', flexWrap: 'wrap' }}>
-            <span style={{ display: 'flex', alignItems: 'center', gap: 5 }}><span style={{ width: 10, height: 10, background: 'var(--gecko-success-600)', borderRadius: 2, display: 'inline-block' }} />0–5 days</span>
-            <span style={{ display: 'flex', alignItems: 'center', gap: 5 }}><span style={{ width: 10, height: 10, background: '#f59e0b', borderRadius: 2, display: 'inline-block' }} />5–10 days</span>
-            <span style={{ display: 'flex', alignItems: 'center', gap: 5 }}><span style={{ width: 10, height: 10, background: '#f97316', borderRadius: 2, display: 'inline-block' }} />10–14 days</span>
-            <span style={{ display: 'flex', alignItems: 'center', gap: 5 }}><span style={{ width: 10, height: 10, background: 'var(--gecko-error-600)', borderRadius: 2, display: 'inline-block' }} />14+ days</span>
+          <div className="gecko-row gecko-row-wrap" style={{ gap: 16, marginTop: 8, fontSize: 11, color: 'var(--gecko-text-secondary)' }}>
+            <span className="gecko-inline-row" style={{ gap: 5 }}><span style={{ width: 10, height: 10, background: 'var(--gecko-success-600)', borderRadius: 2, display: 'inline-block' }} />0–5 days</span>
+            <span className="gecko-inline-row" style={{ gap: 5 }}><span style={{ width: 10, height: 10, background: '#f59e0b', borderRadius: 2, display: 'inline-block' }} />5–10 days</span>
+            <span className="gecko-inline-row" style={{ gap: 5 }}><span style={{ width: 10, height: 10, background: '#f97316', borderRadius: 2, display: 'inline-block' }} />10–14 days</span>
+            <span className="gecko-inline-row" style={{ gap: 5 }}><span style={{ width: 10, height: 10, background: 'var(--gecko-error-600)', borderRadius: 2, display: 'inline-block' }} />14+ days</span>
           </div>
         </Widget>
 
         <Widget title="Dwell by Customer — Avg Days">
-          <div style={{ display: 'flex', flexDirection: 'column', gap: 13 }}>
+          <div className="gecko-stack" style={{ gap: 13 }}>
             {CUSTOMERS_DWELL.map((c) => {
               const pct = (c.days / MAX_DAYS) * 100;
               const color = dwellBarColor(c);
               return (
                 <div key={c.name}>
-                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', marginBottom: 5 }}>
+                  <div className="gecko-row gecko-row-between gecko-row-baseline" style={{ marginBottom: 5 }}>
                     <span style={{ fontSize: 12, fontWeight: 500, color: 'var(--gecko-text-primary)' }}>{c.name}</span>
                     <span style={{ fontSize: 12, fontWeight: 700, fontFamily: 'var(--gecko-font-mono)', color }}>{c.days}d</span>
                   </div>
@@ -193,7 +193,7 @@ export default function DwellTimePage() {
                 </div>
               );
             })}
-            <div style={{ fontSize: 10, color: 'var(--gecko-text-secondary)', marginTop: 2, display: 'flex', alignItems: 'center', gap: 4 }}>
+            <div className="gecko-row" style={{ fontSize: 10, color: 'var(--gecko-text-secondary)', marginTop: 2, gap: 4 }}>
               <span style={{ display: 'inline-block', width: 10, height: 2, background: 'var(--gecko-error-600)', borderRadius: 1 }} />
               Target line: 5 days
             </div>
@@ -226,7 +226,7 @@ export default function DwellTimePage() {
                       </td>
                       <td style={{ padding: '9px 12px', fontSize: 12, fontWeight: 600 }}>{row.line}</td>
                       <td style={{ padding: '9px 12px' }}>
-                        <div style={{ display: 'flex', gap: 4, flexWrap: 'wrap' }}>
+                        <div className="gecko-row gecko-row-wrap" style={{ gap: 4 }}>
                           {row.holds.length === 0
                             ? <span style={{ fontSize: 10, color: 'var(--gecko-text-disabled)' }}>—</span>
                             : row.holds.map(h => {
@@ -283,15 +283,15 @@ export default function DwellTimePage() {
         </Widget>
 
         <Widget title="Dwell by Container Size">
-          <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
+          <div className="gecko-stack gecko-stack-lg">
             {SIZE_STATS.map((s) => {
               const color = s.avg > 5 ? 'var(--gecko-error-600)' : s.avg >= 4.5 ? '#f59e0b' : 'var(--gecko-success-600)';
               const barPct = (s.avg / 7) * 100;
               return (
-                <div key={s.label} style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+                <div key={s.label} className="gecko-row" style={{ gap: 12 }}>
                   <span style={{ fontSize: 11, fontWeight: 700, padding: '3px 8px', borderRadius: 5, background: 'var(--gecko-bg-subtle)', border: '1px solid var(--gecko-border)', color: 'var(--gecko-text-primary)', fontFamily: 'var(--gecko-font-mono)', whiteSpace: 'nowrap', minWidth: 50, textAlign: 'center' }}>{s.label}</span>
-                  <div style={{ flex: 1 }}>
-                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', marginBottom: 4 }}>
+                  <div className="gecko-flex-1">
+                    <div className="gecko-row gecko-row-between gecko-row-baseline" style={{ marginBottom: 4 }}>
                       <span style={{ fontSize: 12, fontWeight: 700, fontFamily: 'var(--gecko-font-mono)', color }}>{s.avg}d avg</span>
                       <span style={{ fontSize: 11, color: 'var(--gecko-text-secondary)' }}>{s.units} units</span>
                     </div>

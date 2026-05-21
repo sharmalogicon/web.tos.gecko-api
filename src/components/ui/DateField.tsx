@@ -177,7 +177,7 @@ export function DateField({
       }}
     >
       {/* Month / Year navigation */}
-      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 12 }}>
+      <div className="gecko-row gecko-row-between gecko-mb-3">
         <button onClick={prevMonth} style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--gecko-text-secondary)', padding: '4px 8px', borderRadius: 6, fontSize: 16, lineHeight: 1, fontFamily: 'inherit' }}>‹</button>
         <span style={{ fontSize: 13, fontWeight: 700, color: 'var(--gecko-text-primary)' }}>{MONTH_NAMES[viewMonth]} {viewYear}</span>
         <button onClick={nextMonth} style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--gecko-text-secondary)', padding: '4px 8px', borderRadius: 6, fontSize: 16, lineHeight: 1, fontFamily: 'inherit' }}>›</button>
@@ -217,7 +217,7 @@ export function DateField({
       </div>
 
       {/* Footer: Clear / Today */}
-      <div style={{ marginTop: 10, paddingTop: 8, borderTop: '1px solid var(--gecko-border)', display: 'flex', justifyContent: 'space-between' }}>
+      <div className="gecko-row gecko-row-between" style={{ marginTop: 10, paddingTop: 8, borderTop: '1px solid var(--gecko-border)' }}>
         <button
           onClick={() => { onChange(''); setOpen(false); }}
           style={{ background: 'none', border: 'none', color: 'var(--gecko-text-secondary)', fontSize: 11, cursor: 'pointer', padding: '2px 4px', fontFamily: 'inherit' }}
@@ -234,7 +234,7 @@ export function DateField({
     <div ref={wrapRef} style={{ position: 'relative', ...style }}>
 
       {/* ── Trigger row (date picker + optional time input) ── */}
-      <div style={{ display: 'flex', gap: 6, alignItems: 'center' }}>
+      <div className="gecko-row" style={{ gap: 6 }}>
 
         {/* Date trigger */}
         <div

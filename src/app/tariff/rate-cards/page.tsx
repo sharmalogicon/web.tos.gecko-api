@@ -26,16 +26,16 @@ export default function RateCardsPage() {
   const { toast } = useToast();
 
   return (
-    <div style={{ maxWidth: 'var(--gecko-container-max)', margin: '0 auto', display: 'flex', flexDirection: 'column', gap: 24, paddingBottom: 40, height: 'calc(100vh - 100px)' }}>
+    <div className="gecko-stack gecko-stack-xl" style={{ maxWidth: 'var(--gecko-container-max)', margin: '0 auto', paddingBottom: 40, height: 'calc(100vh - 100px)' }}>
 
       {/* Header */}
-      <div className="gecko-page-actions" style={{ flexShrink: 0 }}>
+      <div className="gecko-page-actions gecko-flex-shrink-0">
         <div className="gecko-page-actions-left">
-          <div className="gecko-row gecko-row-baseline" style={{ gap: 12 }}>
+          <div className="gecko-row gecko-row-baseline gecko-stack-md">
             <h1 className="gecko-page-title">Rate Cards Builder</h1>
             <span style={{ fontSize: 12, fontWeight: 600, color: 'var(--gecko-primary-700)', background: 'var(--gecko-primary-100)', padding: '2px 8px', borderRadius: 12 }}>Logic Editor</span>
           </div>
-          <p className="gecko-page-subtitle" style={{ marginTop: 4 }}>Define pricing matrices using base rates and conditional constraint multipliers.</p>
+          <p className="gecko-page-subtitle gecko-mt-1">Define pricing matrices using base rates and conditional constraint multipliers.</p>
         </div>
         <div className="gecko-toolbar">
           <button className="gecko-btn gecko-btn-outline gecko-btn-sm" onClick={() => toast({ variant: 'success', title: 'Plan duplicated', message: `Copy of "${selectedPlan}" created as a draft.` })}><Icon name="copy" size={16} /> Duplicate Plan</button>
@@ -108,7 +108,7 @@ export default function RateCardsPage() {
               </div>
               <div style={{ textAlign: 'right' }}>
                 <div className="gecko-eyebrow">Base Rate (THB)</div>
-                <div className="gecko-row" style={{ gap: 8, marginTop: 4 }}>
+                <div className="gecko-row gecko-mt-1">
                   <span style={{ fontSize: 18, fontWeight: 700, color: 'var(--gecko-text-disabled)' }}>฿</span>
                   <input className="gecko-input" type="number" value={activeItem.base} readOnly style={{ width: 120, fontSize: 24, fontWeight: 800, fontFamily: 'var(--gecko-font-mono)', height: 44, color: 'var(--gecko-success-700)', borderColor: 'var(--gecko-success-300)', textAlign: 'right' }} />
                 </div>

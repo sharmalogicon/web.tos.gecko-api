@@ -372,23 +372,18 @@ export function EntitySearch({
                   aria-selected={i === activeIdx}
                   onPointerDown={e => { e.preventDefault(); handleSelect(opt); }}
                   onMouseEnter={() => setActiveIdx(i)}
+                  className="gecko-row gecko-row-baseline"
                   style={{
-                    display: 'flex', alignItems: 'baseline', gap: 12,
+                    gap: 12,
                     padding: '9px 14px', cursor: 'pointer',
                     background: i === activeIdx ? 'var(--gecko-primary-50)' : 'transparent',
                     transition: 'background 60ms',
                   }}
                 >
-                  <span style={{
-                    fontFamily: 'var(--gecko-font-mono)', fontWeight: 700, fontSize: 12,
-                    color: 'var(--gecko-primary-600)', flexShrink: 0, minWidth: 80,
-                  }}>
+                  <span className="gecko-id-link gecko-flex-shrink-0" style={{ minWidth: 80 }}>
                     {opt.code}
                   </span>
-                  <span style={{
-                    fontSize: 12.5, color: 'var(--gecko-text-primary)',
-                    overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
-                  }}>
+                  <span className="gecko-truncate" style={{ fontSize: 12.5, color: 'var(--gecko-text-primary)' }}>
                     {opt.name}
                   </span>
                 </li>

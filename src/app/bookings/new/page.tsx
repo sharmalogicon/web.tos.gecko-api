@@ -26,7 +26,7 @@ function FieldGroup({ label, required, children, hint }: { label: string; requir
     <div className="gecko-form-group">
       <label className={`gecko-label${required ? ' gecko-label-required' : ''}`}>{label}</label>
       {children}
-      {hint && <div style={{ fontSize: 10.5, color: 'var(--gecko-text-disabled)', marginTop: 3 }}>{hint}</div>}
+      {hint && <div className="gecko-helper-text" style={{ fontSize: 10.5 }}>{hint}</div>}
     </div>
   );
 }
@@ -61,13 +61,13 @@ export default function NewBookingPage() {
     <div style={{ maxWidth: 1040, margin: '0 auto', paddingBottom: 60 }}>
 
       {/* Page header */}
-      <div style={{ display: 'flex', alignItems: 'center', gap: 14, marginBottom: 28 }}>
+      <div className="gecko-row gecko-mb-5" style={{ gap: 14 }}>
         <Link href="/bookings" style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', width: 34, height: 34, borderRadius: 8, border: '1px solid var(--gecko-border)', background: 'var(--gecko-bg-surface)', color: 'var(--gecko-text-secondary)', textDecoration: 'none' }}>
           <Icon name="arrowLeft" size={16} />
         </Link>
         <div>
-          <h1 style={{ fontSize: 22, fontWeight: 700, margin: 0, color: 'var(--gecko-text-primary)' }}>New Booking</h1>
-          <div style={{ fontSize: 12, color: 'var(--gecko-text-secondary)', marginTop: 2 }}>Create the booking shell first — containers and voyage details can be added after.</div>
+          <h1 className="gecko-page-title">New Booking</h1>
+          <div className="gecko-page-subtitle gecko-mt-1" style={{ fontSize: 12 }}>Create the booking shell first — containers and voyage details can be added after.</div>
         </div>
       </div>
 

@@ -190,10 +190,10 @@ export default function KpiDashboardPage() {
               );
             })}
           </svg>
-          <div style={{ display: 'flex', gap: 16, marginTop: 6, fontSize: 11, color: 'var(--gecko-text-secondary)' }}>
-            <span style={{ display: 'flex', alignItems: 'center', gap: 5 }}><span style={{ width: 10, height: 10, background: 'var(--gecko-success-600)', borderRadius: 2, display: 'inline-block' }} />Above target</span>
-            <span style={{ display: 'flex', alignItems: 'center', gap: 5 }}><span style={{ width: 10, height: 10, background: 'var(--gecko-error-600)', borderRadius: 2, display: 'inline-block' }} />Below target</span>
-            <span style={{ display: 'flex', alignItems: 'center', gap: 5 }}><span style={{ width: 14, height: 2, background: 'var(--gecko-error-600)', display: 'inline-block', borderTop: '2px dashed var(--gecko-error-600)' }} />Target line</span>
+          <div className="gecko-row" style={{ gap: 16, marginTop: 6, fontSize: 11, color: 'var(--gecko-text-secondary)' }}>
+            <span className="gecko-inline-row" style={{ gap: 5 }}><span style={{ width: 10, height: 10, background: 'var(--gecko-success-600)', borderRadius: 2, display: 'inline-block' }} />Above target</span>
+            <span className="gecko-inline-row" style={{ gap: 5 }}><span style={{ width: 10, height: 10, background: 'var(--gecko-error-600)', borderRadius: 2, display: 'inline-block' }} />Below target</span>
+            <span className="gecko-inline-row" style={{ gap: 5 }}><span style={{ width: 14, height: 2, background: 'var(--gecko-error-600)', display: 'inline-block', borderTop: '2px dashed var(--gecko-error-600)' }} />Target line</span>
           </div>
         </Widget>
 
@@ -247,7 +247,7 @@ export default function KpiDashboardPage() {
                       </td>
                       <td style={{ padding: '8px 10px', fontFamily: 'var(--gecko-font-mono)' }}>{eq.hours > 0 ? eq.hours : '—'}</td>
                       <td style={{ padding: '8px 10px' }}>
-                        <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                        <div className="gecko-row" style={{ gap: 8 }}>
                           <div style={{ flex: 1, height: 6, borderRadius: 3, background: 'var(--gecko-bg-subtle)', overflow: 'hidden', minWidth: 60 }}>
                             <div style={{ height: '100%', width: `${eq.util}%`, background: utilColor, borderRadius: 3 }} />
                           </div>
@@ -264,12 +264,12 @@ export default function KpiDashboardPage() {
         </Widget>
 
         <Widget title="Throughput by Operation Type (MTD)">
-          <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
+          <div className="gecko-stack gecko-stack-lg">
             {THROUGHPUT_OPS.map((op) => (
               <div key={op.label}>
-                <div style={{ display: 'flex', alignItems: 'baseline', justifyContent: 'space-between', marginBottom: 6 }}>
+                <div className="gecko-row gecko-row-baseline gecko-row-between" style={{ marginBottom: 6 }}>
                   <span style={{ fontSize: 12, fontWeight: 500, color: 'var(--gecko-text-primary)' }}>{op.label}</span>
-                  <div style={{ display: 'flex', alignItems: 'baseline', gap: 8 }}>
+                  <div className="gecko-row gecko-row-baseline">
                     <span style={{ fontSize: 13, fontWeight: 700, fontFamily: 'var(--gecko-font-mono)', color: 'var(--gecko-text-primary)' }}>{op.teu.toLocaleString()}</span>
                     <span style={{ fontSize: 11, color: 'var(--gecko-text-secondary)' }}>TEU</span>
                     <span style={{ fontSize: 11, fontFamily: 'var(--gecko-font-mono)', color: op.color, fontWeight: 600 }}>{op.pct}%</span>
@@ -280,7 +280,7 @@ export default function KpiDashboardPage() {
                 </div>
               </div>
             ))}
-            <div style={{ paddingTop: 10, borderTop: '1px solid var(--gecko-border)', display: 'flex', justifyContent: 'space-between', fontSize: 12 }}>
+            <div className="gecko-row gecko-row-between" style={{ paddingTop: 10, borderTop: '1px solid var(--gecko-border)', fontSize: 12 }}>
               <span style={{ color: 'var(--gecko-text-secondary)' }}>Total MTD</span>
               <span style={{ fontWeight: 800, fontFamily: 'var(--gecko-font-mono)', color: 'var(--gecko-text-primary)' }}>4,284 TEU</span>
             </div>
@@ -288,7 +288,7 @@ export default function KpiDashboardPage() {
         </Widget>
 
         <Widget title="Yard Block Occupancy" col={2}>
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 12, marginBottom: 16 }}>
+          <div className="gecko-grid-4" style={{ marginBottom: 16 }}>
             {YARD_BLOCKS.map((blk) => {
               const bc = blockColor(blk.pct);
               return (
@@ -311,11 +311,11 @@ export default function KpiDashboardPage() {
               );
             })}
           </div>
-          <div style={{ display: 'flex', gap: 16, flexWrap: 'wrap', fontSize: 11, color: 'var(--gecko-text-secondary)' }}>
-            <span style={{ display: 'flex', alignItems: 'center', gap: 5 }}><span style={{ width: 12, height: 12, background: 'var(--gecko-success-600)', borderRadius: 3, display: 'inline-block' }} />&lt;70% Available</span>
-            <span style={{ display: 'flex', alignItems: 'center', gap: 5 }}><span style={{ width: 12, height: 12, background: '#f59e0b', borderRadius: 3, display: 'inline-block' }} />70–85% Busy</span>
-            <span style={{ display: 'flex', alignItems: 'center', gap: 5 }}><span style={{ width: 12, height: 12, background: '#f97316', borderRadius: 3, display: 'inline-block' }} />85–95% Near Full</span>
-            <span style={{ display: 'flex', alignItems: 'center', gap: 5 }}><span style={{ width: 12, height: 12, background: 'var(--gecko-error-600)', borderRadius: 3, display: 'inline-block' }} />&gt;95% Critical</span>
+          <div className="gecko-row gecko-row-wrap" style={{ gap: 16, fontSize: 11, color: 'var(--gecko-text-secondary)' }}>
+            <span className="gecko-inline-row" style={{ gap: 5 }}><span style={{ width: 12, height: 12, background: 'var(--gecko-success-600)', borderRadius: 3, display: 'inline-block' }} />&lt;70% Available</span>
+            <span className="gecko-inline-row" style={{ gap: 5 }}><span style={{ width: 12, height: 12, background: '#f59e0b', borderRadius: 3, display: 'inline-block' }} />70–85% Busy</span>
+            <span className="gecko-inline-row" style={{ gap: 5 }}><span style={{ width: 12, height: 12, background: '#f97316', borderRadius: 3, display: 'inline-block' }} />85–95% Near Full</span>
+            <span className="gecko-inline-row" style={{ gap: 5 }}><span style={{ width: 12, height: 12, background: 'var(--gecko-error-600)', borderRadius: 3, display: 'inline-block' }} />&gt;95% Critical</span>
           </div>
         </Widget>
       </div>

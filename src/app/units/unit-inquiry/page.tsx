@@ -187,24 +187,24 @@ export default function UnitInquiryPage() {
   const notFound = query.trim() !== '' && unit === null;
 
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', gap: 18 }}>
+    <div className="gecko-stack" style={{ gap: 18 }}>
 
       {/* ── Header ── */}
-      <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: 12 }}>
-        <div>
-          <h1 style={{ fontSize: 20, fontWeight: 700, color: 'var(--gecko-text-primary)', margin: 0 }}>Unit Inquiry</h1>
-          <div style={{ fontSize: 12, color: 'var(--gecko-text-secondary)', marginTop: 3 }}>
+      <div className="gecko-page-header">
+        <div className="gecko-page-header-left">
+          <h1 className="gecko-page-title">Unit Inquiry</h1>
+          <div className="gecko-page-subtitle">
             Look up any container by number — full lifecycle, movements, holds, charges, EDI events.
           </div>
         </div>
       </div>
 
       {/* ── Search Card ── */}
-      <div className="gecko-card" style={{ padding: 20, display: 'flex', flexDirection: 'column', gap: 14 }}>
-        <div style={{ fontSize: 11, fontWeight: 800, textTransform: 'uppercase', letterSpacing: '0.08em', color: 'var(--gecko-text-disabled)' }}>
+      <div className="gecko-card gecko-card-padded gecko-stack" style={{ gap: 14 }}>
+        <div className="gecko-eyebrow">
           Container or Booking lookup
         </div>
-        <div style={{ display: 'flex', gap: 10, alignItems: 'center', flexWrap: 'wrap' }}>
+        <div className="gecko-row gecko-row-wrap" style={{ gap: 10 }}>
           <BarcodeScanInput
             onScan={v => setQuery(v.toUpperCase())}
             placeholder="Scan or type container no (e.g. EGHU9213381)…"
@@ -219,7 +219,7 @@ export default function UnitInquiryPage() {
           )}
         </div>
         {!query && recent.length > 0 && (
-          <div style={{ display: 'flex', alignItems: 'center', gap: 10, flexWrap: 'wrap' }}>
+          <div className="gecko-row gecko-row-wrap" style={{ gap: 10 }}>
             <span style={{ fontSize: 11, color: 'var(--gecko-text-disabled)', fontWeight: 600 }}>Recent:</span>
             {recent.map(c => (
               <button
@@ -260,34 +260,34 @@ export default function UnitInquiryPage() {
         <>
           {/* Identity Banner */}
           <div className="gecko-card" style={{ padding: 0, overflow: 'hidden' }}>
-            <div style={{ padding: '16px 20px', background: 'var(--gecko-primary-50)', borderBottom: '1px solid var(--gecko-border)', display: 'flex', alignItems: 'center', gap: 18, flexWrap: 'wrap' }}>
+            <div className="gecko-row gecko-row-wrap" style={{ padding: '16px 20px', background: 'var(--gecko-primary-50)', borderBottom: '1px solid var(--gecko-border)', gap: 18 }}>
               <div>
-                <div style={{ fontSize: 10, fontWeight: 700, color: 'var(--gecko-text-disabled)', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Container</div>
+                <div className="gecko-eyebrow">Container</div>
                 <div style={{ fontSize: 22, fontWeight: 800, fontFamily: 'var(--gecko-font-mono)', color: 'var(--gecko-text-primary)', letterSpacing: '0.02em', marginTop: 2 }}>
                   {unit.containerNo}
                 </div>
               </div>
               <div style={{ height: 32, width: 1, background: 'var(--gecko-border)' }} />
               <div>
-                <div style={{ fontSize: 10, fontWeight: 700, color: 'var(--gecko-text-disabled)', textTransform: 'uppercase' }}>Type</div>
+                <div className="gecko-eyebrow">Type</div>
                 <div style={{ fontSize: 14, fontWeight: 700, fontFamily: 'var(--gecko-font-mono)', marginTop: 2 }}>
                   {unit.size}{unit.type} · ISO {unit.isoCode}
                 </div>
               </div>
               <div style={{ height: 32, width: 1, background: 'var(--gecko-border)' }} />
               <div>
-                <div style={{ fontSize: 10, fontWeight: 700, color: 'var(--gecko-text-disabled)', textTransform: 'uppercase' }}>Line</div>
+                <div className="gecko-eyebrow">Line</div>
                 <div style={{ fontSize: 14, fontWeight: 700, marginTop: 2 }}>{unit.line}</div>
               </div>
               <div style={{ height: 32, width: 1, background: 'var(--gecko-border)' }} />
               <div>
-                <div style={{ fontSize: 10, fontWeight: 700, color: 'var(--gecko-text-disabled)', textTransform: 'uppercase' }}>Status</div>
+                <div className="gecko-eyebrow">Status</div>
                 <span style={{ display: 'inline-block', marginTop: 2, fontSize: 12, fontWeight: 700, padding: '3px 10px', borderRadius: 20, background: STATUS_META[unit.status].bg, color: STATUS_META[unit.status].color }}>
                   {STATUS_META[unit.status].label}
                 </span>
               </div>
-              <div style={{ flex: 1 }} />
-              <div style={{ display: 'flex', gap: 8 }}>
+              <div className="gecko-flex-1" />
+              <div className="gecko-row">
                 <Link href={`/bookings/${unit.bookingNo}`} className="gecko-btn gecko-btn-outline gecko-btn-sm" style={{ textDecoration: 'none' }}>
                   <Icon name="clipboardList" size={13} /> Open Booking
                 </Link>
@@ -298,7 +298,7 @@ export default function UnitInquiryPage() {
             </div>
 
             {/* Stat strip */}
-            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', borderBottom: '1px solid var(--gecko-border)' }}>
+            <div className="gecko-grid-4" style={{ gap: 0, borderBottom: '1px solid var(--gecko-border)' }}>
               {[
                 { label: 'Booking',      val: unit.bookingNo,     mono: true, color: 'var(--gecko-primary-700)' },
                 { label: 'Customer',     val: unit.customer,      mono: false },
@@ -306,8 +306,8 @@ export default function UnitInquiryPage() {
                 { label: 'Location',     val: unit.currentLocation, mono: false },
               ].map(s => (
                 <div key={s.label} style={{ padding: '12px 18px', borderRight: '1px solid var(--gecko-border)' }}>
-                  <div style={{ fontSize: 10, fontWeight: 700, color: 'var(--gecko-text-disabled)', textTransform: 'uppercase', letterSpacing: '0.04em' }}>{s.label}</div>
-                  <div style={{ fontSize: 13, fontWeight: 600, color: s.color ?? 'var(--gecko-text-primary)', fontFamily: s.mono ? 'var(--gecko-font-mono)' : 'inherit', marginTop: 3, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                  <div className="gecko-eyebrow">{s.label}</div>
+                  <div className="gecko-truncate" style={{ fontSize: 13, fontWeight: 600, color: s.color ?? 'var(--gecko-text-primary)', fontFamily: s.mono ? 'var(--gecko-font-mono)' : 'inherit', marginTop: 3 }}>
                     {s.val}
                   </div>
                 </div>
@@ -315,7 +315,7 @@ export default function UnitInquiryPage() {
             </div>
 
             {/* Tabs */}
-            <div style={{ display: 'flex', gap: 0, padding: '0 20px', borderBottom: '1px solid var(--gecko-border)' }}>
+            <div className="gecko-row" style={{ gap: 0, padding: '0 20px', borderBottom: '1px solid var(--gecko-border)' }}>
               {([
                 ['identity',  'Identity',  'box'],
                 ['movements', `Movements (${unit.movements.length})`, 'transferH'],
@@ -388,7 +388,7 @@ function IdentityTab({ unit }: { unit: Unit }) {
         <Kv label="Seal — Customer" value={unit.sealCustomer || '—'} mono />
       </KvBlock>
       <div>
-        <div style={{ fontSize: 10, fontWeight: 800, textTransform: 'uppercase', letterSpacing: '0.05em', color: 'var(--gecko-text-disabled)', marginBottom: 10 }}>Barcode</div>
+        <div className="gecko-eyebrow gecko-mb-3">Barcode</div>
         <BarcodeDisplay value={unit.containerNo} variant="qr" qrSize={120} showValue={false} />
       </div>
     </div>
@@ -398,8 +398,8 @@ function IdentityTab({ unit }: { unit: Unit }) {
 function KvBlock({ title, children }: { title: string; children: React.ReactNode }) {
   return (
     <div>
-      <div style={{ fontSize: 10, fontWeight: 800, textTransform: 'uppercase', letterSpacing: '0.05em', color: 'var(--gecko-text-disabled)', marginBottom: 10 }}>{title}</div>
-      <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>{children}</div>
+      <div className="gecko-eyebrow gecko-mb-3">{title}</div>
+      <div className="gecko-stack gecko-stack-sm">{children}</div>
     </div>
   );
 }
@@ -420,18 +420,18 @@ function MovementsTab({ unit }: { unit: Unit }) {
     return <EmptyState icon="clock" title="No movements yet" description="This unit has no recorded gate-in / load / discharge events." />;
   }
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
+    <div className="gecko-stack">
       {unit.movements.map((m, i) => (
-        <div key={i} style={{ display: 'flex', gap: 16, padding: '14px 16px', background: 'var(--gecko-bg-subtle)', border: '1px solid var(--gecko-border)', borderRadius: 8 }}>
+        <div key={i} className="gecko-row gecko-row-start" style={{ gap: 16, padding: '14px 16px', background: 'var(--gecko-bg-subtle)', border: '1px solid var(--gecko-border)', borderRadius: 8 }}>
           <div style={{ width: 32, height: 32, borderRadius: '50%', background: 'var(--gecko-primary-100)', color: 'var(--gecko-primary-700)', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0, fontSize: 11, fontWeight: 800 }}>
             {i + 1}
           </div>
-          <div style={{ flex: 1 }}>
-            <div style={{ display: 'flex', alignItems: 'baseline', gap: 10, flexWrap: 'wrap' }}>
+          <div className="gecko-flex-1">
+            <div className="gecko-row gecko-row-baseline gecko-row-wrap" style={{ gap: 10 }}>
               <div style={{ fontSize: 13, fontWeight: 700, color: 'var(--gecko-text-primary)' }}>{m.code}</div>
               <div style={{ fontSize: 11.5, color: 'var(--gecko-text-secondary)', fontFamily: 'var(--gecko-font-mono)' }}>{fmtDateTime(m.date)}</div>
             </div>
-            <div style={{ display: 'flex', gap: 18, marginTop: 6, fontSize: 11.5, color: 'var(--gecko-text-secondary)', flexWrap: 'wrap' }}>
+            <div className="gecko-row gecko-row-wrap" style={{ gap: 18, marginTop: 6, fontSize: 11.5, color: 'var(--gecko-text-secondary)' }}>
               <div><span style={{ color: 'var(--gecko-text-disabled)' }}>Yard:</span> <strong style={{ color: 'var(--gecko-text-primary)' }}>{m.yard || '—'}</strong></div>
               <div><span style={{ color: 'var(--gecko-text-disabled)' }}>Truck:</span> <span style={{ fontFamily: 'var(--gecko-font-mono)' }}>{m.truck || '—'}</span></div>
               <div><span style={{ color: 'var(--gecko-text-disabled)' }}>Tx No:</span> <span style={{ fontFamily: 'var(--gecko-font-mono)' }}>{m.txNo || '—'}</span></div>
@@ -505,9 +505,9 @@ function ChargesTab({ unit }: { unit: Unit }) {
             <tr key={i}>
               <td className="gecko-text-mono" style={{ fontWeight: 600 }}>{c.code}</td>
               <td>{c.description}</td>
-              <td style={{ textAlign: 'right', fontFamily: 'var(--gecko-font-mono)' }}>{c.qty}</td>
-              <td style={{ textAlign: 'right', fontFamily: 'var(--gecko-font-mono)' }}>{c.rate.toLocaleString()}</td>
-              <td style={{ textAlign: 'right', fontFamily: 'var(--gecko-font-mono)', fontWeight: 700 }}>{c.amount.toLocaleString()}</td>
+              <td className="gecko-num-tabular">{c.qty}</td>
+              <td className="gecko-num-tabular">{c.rate.toLocaleString()}</td>
+              <td className="gecko-money gecko-money-sm">{c.amount.toLocaleString()}</td>
               <td>
                 <span className={`gecko-badge ${c.status === 'Invoiced' ? 'gecko-badge-success' : c.status === 'Pending' ? 'gecko-badge-warning' : 'gecko-badge-gray'}`}>
                   {c.status}
@@ -519,7 +519,7 @@ function ChargesTab({ unit }: { unit: Unit }) {
         <tfoot>
           <tr>
             <td colSpan={4} style={{ textAlign: 'right', fontWeight: 700, padding: '10px 12px' }}>Total</td>
-            <td style={{ textAlign: 'right', fontFamily: 'var(--gecko-font-mono)', fontWeight: 800, fontSize: 14, color: 'var(--gecko-primary-700)' }}>{total.toLocaleString()}</td>
+            <td className="gecko-money gecko-money-lg" style={{ color: 'var(--gecko-primary-700)' }}>{total.toLocaleString()}</td>
             <td></td>
           </tr>
         </tfoot>

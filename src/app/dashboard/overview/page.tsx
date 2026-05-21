@@ -134,7 +134,7 @@ export default function DashboardOverviewPage() {
                 );
               })}
             </div>
-            <div style={{ position: 'absolute', left: 36, right: 0, bottom: 0, display: 'flex', gap: 6 }}>
+            <div className="gecko-row" style={{ position: 'absolute', left: 36, right: 0, bottom: 0, gap: 6 }}>
               {movementData.map(d => (
                 <div key={d.m} style={{ flex: 1, textAlign: 'center', fontSize: 10, color: 'var(--gecko-text-secondary)', fontWeight: 500 }}>{d.m}</div>
               ))}
@@ -162,7 +162,7 @@ export default function DashboardOverviewPage() {
               { label: 'Laden Out', val: 142, pct: 78, color: 'var(--gecko-accent-500)' },
             ].map(row => (
               <div key={row.label} style={{ marginBottom: 14 }}>
-                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', marginBottom: 5 }}>
+                <div className="gecko-row gecko-row-between gecko-row-baseline" style={{ marginBottom: 5 }}>
                   <span style={{ fontSize: 12, fontWeight: 500, color: 'var(--gecko-text-secondary)' }}>{row.label}</span>
                   <span style={{ fontSize: 15, fontWeight: 700, color: 'var(--gecko-text-primary)' }}>{row.val}</span>
                 </div>
@@ -172,7 +172,7 @@ export default function DashboardOverviewPage() {
               </div>
             ));
           })()}
-          <div style={{ paddingTop: 10, marginTop: 4, borderTop: '1px solid var(--gecko-border)', display: 'flex', justifyContent: 'space-between', fontSize: 11 }}>
+          <div className="gecko-row gecko-row-between" style={{ paddingTop: 10, marginTop: 4, borderTop: '1px solid var(--gecko-border)', fontSize: 11 }}>
             <span style={{ color: 'var(--gecko-text-secondary)' }}>Total TEU</span>
             <span style={{ fontWeight: 700, color: 'var(--gecko-text-primary)', fontSize: 13 }}>520 / 600</span>
           </div>
@@ -180,7 +180,7 @@ export default function DashboardOverviewPage() {
       </div>
 
       {/* Third row: Liner breakdown + Closing voyages */}
-      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 14 }}>
+      <div className="gecko-grid-2" style={{ gap: 14 }}>
         {/* Line-operator breakdown */}
         <div className="gecko-card gecko-card-padded">
           <div className="gecko-row gecko-row-between" style={{ marginBottom: 14 }}>
@@ -226,28 +226,28 @@ export default function DashboardOverviewPage() {
             { voyage: 'CMA-771S', vessel: 'CMA Rossini', eta: '45h 10m', fullPct: 32, emptyPct: 22, risk: 'low' },
           ].map(v => (
             <div key={v.voyage} style={{ padding: '12px 0', borderBottom: '1px solid var(--gecko-border)' }}>
-              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 6 }}>
-                <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+              <div className="gecko-row gecko-row-between" style={{ marginBottom: 6 }}>
+                <div className="gecko-row">
                   <Icon name="ship" size={14} style={{ color: 'var(--gecko-text-secondary)' }} />
                   <div>
                     <div style={{ fontSize: 12, fontWeight: 700, fontFamily: 'var(--gecko-font-mono)' }}>{v.voyage}</div>
                     <div style={{ fontSize: 10, color: 'var(--gecko-text-secondary)' }}>{v.vessel}</div>
                   </div>
                 </div>
-                <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+                <div className="gecko-row" style={{ gap: 6 }}>
                   <Icon name="clock" size={12} style={{ color: v.risk === 'high' ? 'var(--gecko-error-600)' : v.risk === 'med' ? 'var(--gecko-warning-600)' : 'var(--gecko-success-600)' }} />
                   <span style={{ fontSize: 11, fontWeight: 600, color: v.risk === 'high' ? 'var(--gecko-error-600)' : v.risk === 'med' ? 'var(--gecko-warning-600)' : 'var(--gecko-success-600)' }}>{v.eta}</span>
                 </div>
               </div>
-              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10, marginTop: 6 }}>
+              <div className="gecko-grid-2" style={{ gap: 10, marginTop: 6 }}>
                 <div>
-                  <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 10, marginBottom: 2 }}><span style={{ color: 'var(--gecko-text-secondary)' }}>FULL</span><span style={{ fontWeight: 700 }}>{v.fullPct}%</span></div>
+                  <div className="gecko-row gecko-row-between" style={{ fontSize: 10, marginBottom: 2 }}><span style={{ color: 'var(--gecko-text-secondary)' }}>FULL</span><span style={{ fontWeight: 700 }}>{v.fullPct}%</span></div>
                   <div className="gecko-progress gecko-progress-sm">
                     <div className="gecko-progress-bar gecko-progress-primary" style={{ width: `${v.fullPct}%` }} />
                   </div>
                 </div>
                 <div>
-                  <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 10, marginBottom: 2 }}><span style={{ color: 'var(--gecko-text-secondary)' }}>EMPTY</span><span style={{ fontWeight: 700 }}>{v.emptyPct}%</span></div>
+                  <div className="gecko-row gecko-row-between" style={{ fontSize: 10, marginBottom: 2 }}><span style={{ color: 'var(--gecko-text-secondary)' }}>EMPTY</span><span style={{ fontWeight: 700 }}>{v.emptyPct}%</span></div>
                   <div className="gecko-progress gecko-progress-sm">
                     <div className="gecko-progress-bar gecko-progress-accent" style={{ width: `${v.emptyPct}%` }} />
                   </div>

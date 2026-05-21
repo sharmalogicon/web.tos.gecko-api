@@ -400,9 +400,9 @@ export default function YardGlancePage() {
       <div style={{ display: 'grid', gridTemplateColumns: '2fr 1fr', gap: 16, alignItems: 'flex-start' }}>
 
         {/* Mini yard map */}
-        <div style={{ background: 'var(--gecko-bg-surface)', border: '1px solid var(--gecko-border)', borderRadius: 12, overflow: 'hidden' }}>
-          <div style={{ padding: '14px 18px', borderBottom: '1px solid var(--gecko-border)', display: 'flex', alignItems: 'center', gap: 12, flexWrap: 'wrap' }}>
-            <div style={{ flex: 1, minWidth: 0 }}>
+        <div className="gecko-table-card">
+          <div className="gecko-row gecko-row-wrap" style={{ padding: '14px 18px', borderBottom: '1px solid var(--gecko-border)', gap: 12 }}>
+            <div className="gecko-flex-1">
               <div className="gecko-section-header-title">Yard map · {LENS_LEGENDS[lens].label}</div>
               <div className="gecko-section-header-subtitle">Hover a block for details · click <strong>Full yard view</strong> for cell-level inspection</div>
             </div>
@@ -485,9 +485,9 @@ export default function YardGlancePage() {
             </svg>
 
             {/* Legend */}
-            <div style={{ marginTop: 12, display: 'flex', flexWrap: 'wrap', gap: 12, alignItems: 'center', justifyContent: 'center' }}>
+            <div className="gecko-row gecko-row-wrap" style={{ marginTop: 12, gap: 12, justifyContent: 'center' }}>
               {LENS_LEGENDS[lens].bands.map(band => (
-                <span key={band.label} style={{ display: 'inline-flex', alignItems: 'center', gap: 6, fontSize: 11, color: 'var(--gecko-text-secondary)' }}>
+                <span key={band.label} className="gecko-inline-row" style={{ fontSize: 11, color: 'var(--gecko-text-secondary)' }}>
                   <span style={{ width: 14, height: 14, borderRadius: 3, background: band.fill, border: `1.5px solid ${band.stroke}` }} />
                   {band.label}
                 </span>
@@ -501,7 +501,7 @@ export default function YardGlancePage() {
             const m = b ? metrics.get(b.id) : undefined;
             if (!b || !m) return null;
             return (
-              <div style={{ padding: '10px 18px', borderTop: '1px solid var(--gecko-border)', background: 'var(--gecko-bg-subtle)', display: 'flex', alignItems: 'center', gap: 16, flexWrap: 'wrap', fontSize: 12 }}>
+              <div className="gecko-row gecko-row-wrap" style={{ padding: '10px 18px', borderTop: '1px solid var(--gecko-border)', background: 'var(--gecko-bg-subtle)', gap: 16, fontSize: 12 }}>
                 <span style={{ fontFamily: 'var(--gecko-font-mono)', fontWeight: 800, color: BLOCK_TYPES[b.type].stroke }}>{b.code}</span>
                 <span className="gecko-pill" style={{ background: BLOCK_TYPES[b.type].fill, color: BLOCK_TYPES[b.type].stroke, border: `1px solid ${BLOCK_TYPES[b.type].stroke}40`, fontSize: 10 }}>
                   {BLOCK_TYPES[b.type].label}
@@ -520,10 +520,10 @@ export default function YardGlancePage() {
         </div>
 
         {/* Hotspots */}
-        <div style={{ background: 'var(--gecko-bg-surface)', border: '1px solid var(--gecko-border)', borderRadius: 12, overflow: 'hidden' }}>
-          <div style={{ padding: '14px 18px', borderBottom: '1px solid var(--gecko-border)', display: 'flex', alignItems: 'center', gap: 8 }}>
+        <div className="gecko-table-card">
+          <div className="gecko-row" style={{ padding: '14px 18px', borderBottom: '1px solid var(--gecko-border)' }}>
             <Icon name="alertTriangle" size={14} style={{ color: 'var(--gecko-warning-600)' }} />
-            <div className="gecko-section-header-title" style={{ flex: 1 }}>Hotspots</div>
+            <div className="gecko-section-header-title gecko-flex-1">Hotspots</div>
             <span style={{ fontSize: 10, color: 'var(--gecko-text-secondary)', fontWeight: 600 }}>top 5</span>
           </div>
           <div style={{ padding: '4px 0' }}>
@@ -541,14 +541,14 @@ export default function YardGlancePage() {
                     cursor: 'pointer', transition: 'background 120ms',
                   }}
                 >
-                  <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 4 }}>
+                  <div className="gecko-row" style={{ marginBottom: 4 }}>
                     <div style={{ width: 24, height: 24, borderRadius: 6, background: t.fill, color: t.stroke, display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 800, fontSize: 10, border: `1px solid ${t.stroke}40` }}>
                       {idx + 1}
                     </div>
                     <span style={{ fontFamily: 'var(--gecko-font-mono)', fontSize: 13, fontWeight: 800, color: t.stroke }}>{b.code}</span>
                     <span style={{ fontSize: 10, color: 'var(--gecko-text-secondary)', fontWeight: 600, textTransform: 'uppercase' }}>{t.label}</span>
                   </div>
-                  <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8, fontSize: 11, color: 'var(--gecko-text-secondary)' }}>
+                  <div className="gecko-row gecko-row-wrap" style={{ fontSize: 11, color: 'var(--gecko-text-secondary)' }}>
                     <span><strong style={{ color: 'var(--gecko-text-primary)' }}>{(m.occupancyPct * 100).toFixed(0)}%</strong> util</span>
                     <span>·</span>
                     <span><strong style={{ color: 'var(--gecko-text-primary)' }}>{m.avgDwellDays}d</strong> dwell</span>
@@ -563,9 +563,9 @@ export default function YardGlancePage() {
       </div>
 
       {/* Block-by-block table */}
-      <div style={{ background: 'var(--gecko-bg-surface)', border: '1px solid var(--gecko-border)', borderRadius: 12, overflow: 'hidden' }}>
-        <div style={{ padding: '14px 18px', borderBottom: '1px solid var(--gecko-border)', display: 'flex', alignItems: 'center' }}>
-          <div style={{ flex: 1 }}>
+      <div className="gecko-table-card">
+        <div className="gecko-row" style={{ padding: '14px 18px', borderBottom: '1px solid var(--gecko-border)' }}>
+          <div className="gecko-flex-1">
             <div className="gecko-section-header-title">Block-by-block breakdown</div>
             <div className="gecko-section-header-subtitle">{blocks.length} blocks · sorted by criticality (utilization × dwell × holds)</div>
           </div>
@@ -608,7 +608,7 @@ export default function YardGlancePage() {
                       <td style={{ textAlign: 'right', fontFamily: 'var(--gecko-font-mono)' }}>{m.capacityTeu}</td>
                       <td style={{ textAlign: 'right', fontFamily: 'var(--gecko-font-mono)', fontWeight: 700 }}>{m.occupiedTeu}</td>
                       <td>
-                        <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+                        <div className="gecko-row" style={{ gap: 6 }}>
                           <div className="gecko-progress gecko-progress-sm" style={{ flex: 1, minWidth: 80, background: 'var(--gecko-gray-100)' }}>
                             <div
                               className="gecko-progress-bar"
@@ -670,8 +670,8 @@ function KpiTile({ icon, tone, label, value, sub }: {
 
 function Metric({ label, value, tone = 'neutral' }: { label: string; value: React.ReactNode; tone?: 'neutral' | 'warning' }) {
   return (
-    <span style={{ display: 'inline-flex', alignItems: 'center', gap: 4 }}>
-      <span style={{ fontSize: 10, color: 'var(--gecko-text-secondary)', textTransform: 'uppercase', letterSpacing: '0.04em', fontWeight: 700 }}>{label}</span>
+    <span className="gecko-inline-row" style={{ gap: 4 }}>
+      <span className="gecko-eyebrow">{label}</span>
       <span style={{
         fontFamily: 'var(--gecko-font-mono)', fontWeight: 700, color:
           tone === 'warning' ? 'var(--gecko-warning-700)' : 'var(--gecko-text-primary)',

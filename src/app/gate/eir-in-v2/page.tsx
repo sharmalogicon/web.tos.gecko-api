@@ -48,7 +48,7 @@ export default function EirInV2Page() {
   const allReady = containers.every(c => c.ready);
 
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', gap: 14, height: 'calc(100vh - 120px)' }}>
+    <div className="gecko-stack" style={{ height: 'calc(100vh - 120px)' }}>
       
       {/* 1. Ultra-dense Top Ribbon (HUD) */}
       <div style={{ 

@@ -307,7 +307,7 @@ function CommodityModal({ commodity, onClose }: CommodityModalProps) {
           {/* Section 1 — Classification */}
           <div>
             {sectionHead('Classification')}
-            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 14 }}>
+            <div className="gecko-grid-2" style={{ gap: 14 }}>
               <FG label="HS Code" required half hint="2 = chapter · 4 = heading · 6 = sub-heading · 8 = tariff line">
                 <input
                   className="gecko-input gecko-text-mono"
@@ -353,7 +353,7 @@ function CommodityModal({ commodity, onClose }: CommodityModalProps) {
           {/* Section 3 — Cargo Flags */}
           <div>
             {sectionHead('Cargo Flags')}
-            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 14 }}>
+            <div className="gecko-grid-2" style={{ gap: 14 }}>
               <FG label="DG (Hazardous Goods) Class" half hint="IMO IMDG class. Select NONE if not dangerous goods.">
                 <select className="gecko-input" value={form.dgClass} onChange={e => set({ dgClass: e.target.value as DgClass })}>
                   <option value="NONE">NONE — Not dangerous goods</option>
@@ -396,7 +396,7 @@ function CommodityModal({ commodity, onClose }: CommodityModalProps) {
           {/* Section 5 — Notes & Status */}
           <div>
             {sectionHead('Notes & Status')}
-            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 14 }}>
+            <div className="gecko-grid-2" style={{ gap: 14 }}>
               <FG label="Notes">
                 <textarea
                   className="gecko-input"
@@ -665,7 +665,7 @@ export default function CommoditiesPage() {
                     </td>
                     {/* Controls */}
                     <td>
-                      <div style={{ display: 'flex', gap: 4 }}>
+                      <div className="gecko-row" style={{ gap: 4 }}>
                         {c.importCtrl && <ControlBadge type="IMP" />}
                         {c.exportCtrl && <ControlBadge type="EXP" />}
                         {!c.importCtrl && !c.exportCtrl && <span style={{ color: 'var(--gecko-text-disabled)', fontSize: 12 }}>—</span>}

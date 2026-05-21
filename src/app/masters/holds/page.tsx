@@ -450,7 +450,7 @@ function HoldModal({ hold, isNew, onClose }: HoldModalProps) {
           {/* Section 2: Classification */}
           <div>
             {sectionHead('Classification')}
-            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16 }}>
+            <div className="gecko-grid-2" style={{ gap: 16 }}>
               <Field label="Hold Type" required>
                 <select className="gecko-input" value={form.holdType} onChange={e => set({ holdType: e.target.value as HoldType })}>
                   <option value="CUSTOMS">Customs</option>
@@ -479,7 +479,7 @@ function HoldModal({ hold, isNew, onClose }: HoldModalProps) {
           {/* Section 3: Blocking & Release */}
           <div>
             {sectionHead('Blocking & Release')}
-            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16 }}>
+            <div className="gecko-grid-2" style={{ gap: 16 }}>
               <Field label="Blocking Scope" required hint="Which operations this hold prevents">
                 <select className="gecko-input" value={form.blockingScope} onChange={e => set({ blockingScope: e.target.value as BlockingScope })}>
                   <option value="ALL_MOVES">All Moves — no movement at all</option>
@@ -513,7 +513,7 @@ function HoldModal({ hold, isNew, onClose }: HoldModalProps) {
           {/* Section 4: Notifications */}
           <div>
             {sectionHead('Notifications & Automation')}
-            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16, marginBottom: 16 }}>
+            <div className="gecko-grid-2 gecko-mb-4" style={{ gap: 16 }}>
               {/* Auto Apply toggle */}
               <div className="gecko-row gecko-row-start gecko-stack-md" style={{ padding: '12px 14px', border: '1px solid var(--gecko-border)', borderRadius: 8, background: form.autoApply ? 'var(--gecko-primary-50)' : 'var(--gecko-bg-surface)' }}>
                 <button
@@ -813,7 +813,7 @@ export default function HoldsPage() {
           { label: 'Line Operator',  value: lineCount,      color: 'var(--gecko-primary-600)'    },
           { label: 'Port Authority', value: portCount,      color: '#1a3466'                     },
         ].map(s => (
-          <div key={s.label} className="gecko-card" style={{ padding: '10px 18px', borderRadius: 10, textAlign: 'center', minWidth: 90 }}>
+          <div key={s.label} className="gecko-card gecko-card-tight" style={{ textAlign: 'center', minWidth: 90 }}>
             <div className="gecko-stat-num" style={{ color: s.color }}>{s.value}</div>
             <div className="gecko-stat-label gecko-mt-1">{s.label}</div>
           </div>
@@ -890,7 +890,7 @@ export default function HoldsPage() {
                 {/* Auto Apply icon */}
                 <td style={{ textAlign: 'center' }}>
                   {h.autoApply ? (
-                    <span title="Auto-applied by system" style={{ color: 'var(--gecko-primary-600)', display: 'inline-flex', alignItems: 'center' }}>
+                    <span title="Auto-applied by system" className="gecko-inline-row" style={{ color: 'var(--gecko-primary-600)' }}>
                       <Icon name="zap" size={14} />
                     </span>
                   ) : (
@@ -901,7 +901,7 @@ export default function HoldsPage() {
                 {/* Notify icon */}
                 <td style={{ textAlign: 'center' }}>
                   {h.notifyParty ? (
-                    <span title={`Notify: ${h.notifyTemplate || 'default template'}`} style={{ color: 'var(--gecko-success-600)', display: 'inline-flex', alignItems: 'center' }}>
+                    <span title={`Notify: ${h.notifyTemplate || 'default template'}`} className="gecko-inline-row" style={{ color: 'var(--gecko-success-600)' }}>
                       <Icon name="bell" size={14} />
                     </span>
                   ) : (

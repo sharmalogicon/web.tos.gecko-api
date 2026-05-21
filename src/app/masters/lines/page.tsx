@@ -100,7 +100,7 @@ function NewLineModal({ onClose }: NewLineModalProps) {
     <div className="gecko-form-group" style={{ gridColumn: span ? `span ${span}` : undefined }}>
       <label className={`gecko-label${required ? ' gecko-label-required' : ''}`}>{label}</label>
       {children}
-      {hint && <div className="gecko-cell-meta" style={{ marginTop: 3 }}>{hint}</div>}
+      {hint && <div className="gecko-cell-meta">{hint}</div>}
     </div>
   );
 

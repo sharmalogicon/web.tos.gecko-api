@@ -102,7 +102,7 @@ export default function SpecialCargoDashboard() {
 
       <div className="gecko-grid-3" style={{ gap: 16 }}>
         <Widget title="Reefer Container Status Grid" col={2}>
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 10 }}>
+          <div className="gecko-grid-4" style={{ gap: 10 }}>
             {REEFERS.map((r) => (
               <div key={r.id} style={{ ...reeferCardStyle(r.status), border: '1px solid var(--gecko-border)', borderRadius: 8, padding: '10px 10px 10px 12px' }}>
                 <div style={{ fontSize: 10, fontWeight: 700, fontFamily: 'var(--gecko-font-mono)', color: 'var(--gecko-text-primary)', marginBottom: 3, lineHeight: 1.3 }}>{r.id}</div>
@@ -111,7 +111,7 @@ export default function SpecialCargoDashboard() {
                   <span style={{ color: 'var(--gecko-text-secondary)' }}>Set: </span>{r.setTemp}
                   {r.actTemp !== '—' && <><span style={{ color: 'var(--gecko-text-disabled)', margin: '0 3px' }}>/</span><span style={{ color: r.status === 'ALARM' ? 'var(--gecko-error-600)' : 'var(--gecko-text-primary)' }}>{r.actTemp}</span></>}
                 </div>
-                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                <div className="gecko-row gecko-row-between">
                   <span style={{ fontSize: 9, fontWeight: 700, padding: '1px 5px', borderRadius: 3, background: r.status === 'ALARM' ? 'var(--gecko-error-600)' : r.status === 'UNPLUGGED' ? 'var(--gecko-warning-600)' : 'var(--gecko-success-600)', color: '#fff' }}>{r.status}</span>
                   <span style={{ fontSize: 9, fontFamily: 'var(--gecko-font-mono)', color: 'var(--gecko-text-secondary)' }}>{r.slot}</span>
                 </div>
@@ -121,13 +121,13 @@ export default function SpecialCargoDashboard() {
         </Widget>
 
         <Widget title="DG — Dangerous Goods by IMO Class">
-          <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
+          <div className="gecko-stack">
             {DG_CLASSES.map((d) => {
               const pct = Math.round((d.count / dgMax) * 100);
               return (
                 <div key={d.cls}>
-                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 4 }}>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                  <div className="gecko-row gecko-row-between" style={{ marginBottom: 4 }}>
+                    <div className="gecko-row">
                       <span style={{ fontSize: 10, fontWeight: 800, padding: '2px 6px', borderRadius: 4, background: d.color, color: '#fff', minWidth: 28, textAlign: 'center' }}>{d.cls}</span>
                       <span style={{ fontSize: 11, color: 'var(--gecko-text-secondary)' }}>{d.name}</span>
                     </div>

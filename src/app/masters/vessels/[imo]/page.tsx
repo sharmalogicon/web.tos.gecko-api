@@ -279,19 +279,19 @@ export default function VesselDetailPage() {
       </div>
 
       {/* KPI strip */}
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 1, background: 'var(--gecko-border)', border: '1px solid var(--gecko-border)', borderRadius: 12, overflow: 'hidden' }}>
+      <div className="gecko-grid-4" style={{ gap: 1, background: 'var(--gecko-border)', border: '1px solid var(--gecko-border)', borderRadius: 12, overflow: 'hidden' }}>
         {[
           { label: 'Flag',              value: vessel.flagFull,     sub: `ISO: ${vessel.flag}`,          icon: 'flag',     color: 'var(--gecko-primary-600)',  bg: 'var(--gecko-primary-50)' },
           { label: 'TEU Capacity',      value: vessel.teuNominal,   sub: `Max structural: ${vessel.teuMax}`, icon: 'layers',   color: 'var(--gecko-info-600)',     bg: 'var(--gecko-info-50)' },
           { label: 'Year Built',        value: vessel.built,        sub: vessel.shipbuilder,             icon: 'tool',     color: 'var(--gecko-accent-600)',   bg: 'var(--gecko-accent-50)' },
           { label: 'Next Voyage ETA',   value: vessel.nextVoyageEta, sub: voyages[0]?.voyage !== '—' ? `Voyage ${voyages[0]?.voyage ?? '—'}` : '—', icon: 'calendar', color: 'var(--gecko-warning-600)', bg: 'var(--gecko-warning-50)' },
         ].map(k => (
-          <div key={k.label} style={{ background: 'var(--gecko-bg-surface)', padding: '20px 24px', display: 'flex', flexDirection: 'column', gap: 8 }}>
-            <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+          <div key={k.label} className="gecko-stack gecko-stack-sm" style={{ background: 'var(--gecko-bg-surface)', padding: '20px 24px' }}>
+            <div className="gecko-row">
               <div style={{ width: 28, height: 28, borderRadius: 6, background: k.bg, display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
                 <Icon name={k.icon} size={14} style={{ color: k.color }} />
               </div>
-              <div style={{ fontSize: 10, fontWeight: 700, color: 'var(--gecko-text-secondary)', textTransform: 'uppercase', letterSpacing: '0.06em' }}>{k.label}</div>
+              <div className="gecko-eyebrow">{k.label}</div>
             </div>
             <div style={{ fontSize: 22, fontWeight: 800, color: 'var(--gecko-text-primary)', lineHeight: 1.1 }}>{k.value}</div>
             <div style={{ fontSize: 11, color: 'var(--gecko-text-disabled)', lineHeight: 1.4 }}>{k.sub}</div>
@@ -300,7 +300,7 @@ export default function VesselDetailPage() {
       </div>
 
       {/* Tabs */}
-      <div style={{ display: 'flex', gap: 2, borderBottom: '1px solid var(--gecko-border)' }}>
+      <div className="gecko-row" style={{ gap: 2, borderBottom: '1px solid var(--gecko-border)' }}>
         {TABS.map(tab => (
           <button
             key={tab.id}
@@ -324,12 +324,12 @@ export default function VesselDetailPage() {
 
       {/* Tab: Identity */}
       {activeTab === 'identity' && (
-        <div style={{ display: 'flex', flexDirection: 'column', gap: 28 }}>
+        <div className="gecko-stack" style={{ gap: 28 }}>
 
           {/* Identity section */}
-          <div style={{ background: 'var(--gecko-bg-surface)', border: '1px solid var(--gecko-border)', borderRadius: 12, padding: '24px 28px', boxShadow: 'var(--gecko-shadow-sm)' }}>
+          <div className="gecko-card gecko-card-padded">
             <SectionHead title="Identity" sub="IMO-registered identifiers." />
-            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 18 }}>
+            <div className="gecko-grid-2" style={{ gap: 18 }}>
               <div className="gecko-form-group">
                 <label className="gecko-label gecko-label-required">IMO Number</label>
                 <input {...inputProps(vessel.imo, 'imo', true)} />
@@ -350,9 +350,9 @@ export default function VesselDetailPage() {
           </div>
 
           {/* Classification section */}
-          <div style={{ background: 'var(--gecko-bg-surface)', border: '1px solid var(--gecko-border)', borderRadius: 12, padding: '24px 28px', boxShadow: 'var(--gecko-shadow-sm)' }}>
+          <div className="gecko-card gecko-card-padded">
             <SectionHead title="Classification" sub="Operator, class, flag, and build details." />
-            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 18 }}>
+            <div className="gecko-grid-2" style={{ gap: 18 }}>
               <div className="gecko-form-group">
                 <label className="gecko-label">Shipping Line</label>
                 {editMode ? (
@@ -407,9 +407,9 @@ export default function VesselDetailPage() {
           </div>
 
           {/* Dimensions section */}
-          <div style={{ background: 'var(--gecko-bg-surface)', border: '1px solid var(--gecko-border)', borderRadius: 12, padding: '24px 28px', boxShadow: 'var(--gecko-shadow-sm)' }}>
+          <div className="gecko-card gecko-card-padded">
             <SectionHead title="Dimensions" sub="Physical measurements and capacity." />
-            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 18 }}>
+            <div className="gecko-grid-3" style={{ gap: 18 }}>
               <div className="gecko-form-group">
                 <label className="gecko-label">LOA (m)</label>
                 <input {...inputProps(vessel.loa, 'loa', true)} placeholder="metres" />
@@ -438,9 +438,9 @@ export default function VesselDetailPage() {
           </div>
 
           {/* Settings section */}
-          <div style={{ background: 'var(--gecko-bg-surface)', border: '1px solid var(--gecko-border)', borderRadius: 12, padding: '24px 28px', boxShadow: 'var(--gecko-shadow-sm)' }}>
+          <div className="gecko-card gecko-card-padded">
             <SectionHead title="Settings" />
-            <div style={{ display: 'flex', flexDirection: 'column', gap: 18 }}>
+            <div className="gecko-stack" style={{ gap: 18 }}>
               <div className="gecko-form-group">
                 <label className="gecko-label">Status</label>
                 {editMode ? (
@@ -478,18 +478,18 @@ export default function VesselDetailPage() {
 
       {/* Tab: Voyages */}
       {activeTab === 'voyages' && (
-        <div style={{ display: 'flex', flexDirection: 'column', gap: 20 }}>
-          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+        <div className="gecko-stack" style={{ gap: 20 }}>
+          <div className="gecko-row gecko-row-between">
             <div>
-              <h3 style={{ fontSize: 16, fontWeight: 700, margin: 0 }}>Voyage History</h3>
-              <div style={{ fontSize: 13, color: 'var(--gecko-text-secondary)', marginTop: 4 }}>{voyages.length} voyages recorded for {vessel.name}</div>
+              <h3 className="gecko-card-title" style={{ fontSize: 16, margin: 0 }}>Voyage History</h3>
+              <div className="gecko-page-subtitle gecko-mt-1">{voyages.length} voyages recorded for {vessel.name}</div>
             </div>
             <button className="gecko-btn gecko-btn-outline gecko-btn-sm">
               <Icon name="plus" size={15} /> New Voyage
             </button>
           </div>
 
-          <div style={{ background: 'var(--gecko-bg-surface)', border: '1px solid var(--gecko-border)', borderRadius: 12, overflow: 'hidden', boxShadow: 'var(--gecko-shadow-sm)' }}>
+          <div className="gecko-table-card">
             <table className="gecko-table gecko-table-comfortable" style={{ fontSize: 13 }}>
               <thead>
                 <tr>
@@ -522,11 +522,11 @@ export default function VesselDetailPage() {
 
       {/* Tab: Documents */}
       {activeTab === 'documents' && (
-        <div style={{ background: 'var(--gecko-bg-surface)', border: '1px solid var(--gecko-border)', borderRadius: 12, padding: '32px 28px', boxShadow: 'var(--gecko-shadow-sm)', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 12, color: 'var(--gecko-text-disabled)' }}>
+        <div className="gecko-card gecko-card-padded gecko-stack" style={{ alignItems: 'center', gap: 12, color: 'var(--gecko-text-disabled)' }}>
           <Icon name="fileText" size={40} style={{ opacity: 0.3 }} />
           <div style={{ fontSize: 14, fontWeight: 600 }}>No documents attached</div>
           <div style={{ fontSize: 13 }}>Upload certificates, surveys, and compliance documents.</div>
-          <button className="gecko-btn gecko-btn-outline gecko-btn-sm" style={{ marginTop: 8 }}>
+          <button className="gecko-btn gecko-btn-outline gecko-btn-sm gecko-mt-2">
             <Icon name="upload" size={15} /> Upload Document
           </button>
         </div>
@@ -534,21 +534,21 @@ export default function VesselDetailPage() {
 
       {/* Tab: History */}
       {activeTab === 'history' && (
-        <div style={{ display: 'flex', flexDirection: 'column', gap: 20 }}>
-          <h3 style={{ fontSize: 16, fontWeight: 700, margin: 0 }}>Audit Log</h3>
+        <div className="gecko-stack" style={{ gap: 20 }}>
+          <h3 className="gecko-card-title" style={{ fontSize: 16, margin: 0 }}>Audit Log</h3>
 
-          <div style={{ background: 'var(--gecko-bg-surface)', border: '1px solid var(--gecko-border)', borderRadius: 12, padding: '8px 0', boxShadow: 'var(--gecko-shadow-sm)' }}>
+          <div className="gecko-card" style={{ padding: '8px 0' }}>
             {history.map((entry, i) => (
               <div
                 key={entry.date + i}
+                className="gecko-row gecko-row-start"
                 style={{
-                  display: 'flex', gap: 16, padding: '16px 24px',
+                  gap: 16, padding: '16px 24px',
                   borderBottom: i < history.length - 1 ? '1px solid var(--gecko-border)' : 'none',
-                  alignItems: 'flex-start',
                 }}
               >
                 {/* Timeline dot */}
-                <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 0, paddingTop: 4, flexShrink: 0 }}>
+                <div className="gecko-stack gecko-flex-shrink-0" style={{ alignItems: 'center', gap: 0, paddingTop: 4 }}>
                   <div style={{ width: 10, height: 10, borderRadius: '50%', background: i === 0 ? 'var(--gecko-primary-500)' : 'var(--gecko-border)', border: '2px solid var(--gecko-bg-surface)', outline: `2px solid ${i === 0 ? 'var(--gecko-primary-200)' : 'var(--gecko-border)'}` }} />
                 </div>
 
@@ -563,9 +563,9 @@ export default function VesselDetailPage() {
                 </div>
 
                 {/* Action */}
-                <div style={{ flex: 1 }}>
-                  <div style={{ fontSize: 13, fontWeight: 600, color: 'var(--gecko-text-primary)' }}>{entry.action}</div>
-                  <div style={{ fontSize: 12, color: 'var(--gecko-text-secondary)', marginTop: 3, lineHeight: 1.5 }}>{entry.detail}</div>
+                <div className="gecko-flex-1">
+                  <div className="gecko-cell-primary" style={{ fontSize: 13 }}>{entry.action}</div>
+                  <div className="gecko-cell-meta">{entry.detail}</div>
                 </div>
               </div>
             ))}

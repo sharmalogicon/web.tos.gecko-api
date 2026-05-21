@@ -66,15 +66,15 @@ export default function AutoScheduleReportsPage() {
   };
 
   return (
-    <div style={{ maxWidth: 'var(--gecko-container-max)', margin: '0 auto', display: 'flex', flexDirection: 'column', gap: 18, paddingBottom: 40 }}>
+    <div style={{ maxWidth: 'var(--gecko-container-max)', margin: '0 auto', paddingBottom: 40 }} className="gecko-stack gecko-stack-lg">
 
       <div className="gecko-page-actions">
         <div className="gecko-page-actions-left">
-          <div className="gecko-row gecko-row-baseline" style={{ gap: 12 }}>
+          <div className="gecko-row gecko-row-baseline gecko-stack-md">
             <h1 className="gecko-page-title">Auto-Schedule Reports</h1>
             <span className="gecko-count-badge">{schedules.length} schedules</span>
           </div>
-          <p className="gecko-page-subtitle" style={{ marginTop: 4 }}>
+          <p className="gecko-page-subtitle gecko-mt-1">
             Recurring reports that generate and email automatically on a daily, weekly, or monthly cadence.
           </p>
         </div>
@@ -149,7 +149,7 @@ export default function AutoScheduleReportsPage() {
                     <td>
                       <div className="gecko-cell-two-line">
                         <div className="gecko-cell-primary">{s.reportTitle}</div>
-                        <div className="gecko-eyebrow" style={{ marginTop: 2 }}>
+                        <div className="gecko-eyebrow gecko-mt-1">
                           {s.category === 'operational' ? 'Operational' : 'Accounts'}
                         </div>
                       </div>
@@ -406,7 +406,7 @@ function CreateScheduleModal({ onCancel, onCreate }: {
           </div>
         </div>
 
-        <div style={{ padding: '14px 20px', borderTop: '1px solid var(--gecko-border)', display: 'flex', justifyContent: 'flex-end', gap: 8 }}>
+        <div className="gecko-action-toolbar" style={{ padding: '14px 20px', borderTop: '1px solid var(--gecko-border)' }}>
           <button className="gecko-btn gecko-btn-outline gecko-btn-sm" onClick={onCancel}>Cancel</button>
           <button
             className="gecko-btn gecko-btn-primary gecko-btn-sm"

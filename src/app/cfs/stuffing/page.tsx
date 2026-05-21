@@ -62,11 +62,11 @@ export default function StuffingPage() {
       {/* Header */}
       <div className="gecko-page-actions" style={{ flexShrink: 0 }}>
         <div className="gecko-page-actions-left">
-          <div style={{ display: 'flex', alignItems: 'baseline', gap: 12 }}>
-            <h1 style={{ fontSize: 24, fontWeight: 700, margin: 0, color: 'var(--gecko-text-primary)' }}>CFS Stuffing</h1>
+          <div className="gecko-row gecko-row-baseline" style={{ gap: 12 }}>
+            <h1 className="gecko-page-title">CFS Stuffing</h1>
             <span style={{ fontSize: 12, fontWeight: 600, color: 'var(--gecko-primary-700)', background: 'var(--gecko-primary-100)', padding: '2px 8px', borderRadius: 12 }}>Active Tally</span>
           </div>
-          <div style={{ fontSize: 13, color: 'var(--gecko-text-secondary)' }}>Load LCL cargo from the warehouse into outbound containers.</div>
+          <div className="gecko-page-subtitle">Load LCL cargo from the warehouse into outbound containers.</div>
         </div>
         <div className="gecko-toolbar">
           <button className="gecko-btn gecko-btn-outline gecko-btn-sm" onClick={() => window.print()}><Icon name="printer" size={16} /> Print Tally Sheet</button>
@@ -81,17 +81,17 @@ export default function StuffingPage() {
 
           {/* Container Header */}
           <div style={{ padding: '20px 24px', borderBottom: '1px solid var(--gecko-border)', background: '#fff' }}>
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 20 }}>
+            <div className="gecko-row gecko-row-between gecko-row-start" style={{ marginBottom: 20 }}>
               <div>
-                <div style={{ fontSize: 11, fontWeight: 700, color: 'var(--gecko-text-secondary)', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Outbound Container</div>
-                <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginTop: 4 }}>
+                <div className="gecko-eyebrow">Outbound Container</div>
+                <div className="gecko-row" style={{ gap: 12, marginTop: 4 }}>
                   <h2 style={{ fontSize: 24, fontWeight: 800, margin: 0, fontFamily: 'var(--gecko-font-mono)', color: 'var(--gecko-primary-700)' }}>MSKU 881290-0</h2>
                   <span style={{ background: 'var(--gecko-gray-100)', color: 'var(--gecko-text-secondary)', padding: '2px 8px', borderRadius: 6, fontSize: 12, fontWeight: 700 }}>40HC</span>
                   <span style={{ background: 'var(--gecko-gray-100)', color: 'var(--gecko-text-secondary)', padding: '2px 8px', borderRadius: 6, fontSize: 12, fontWeight: 700 }}>MSK</span>
                 </div>
               </div>
               <div style={{ textAlign: 'right' }}>
-                <div style={{ fontSize: 11, fontWeight: 700, color: 'var(--gecko-text-secondary)', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Booking</div>
+                <div className="gecko-eyebrow">Booking</div>
                 <div style={{ fontSize: 14, fontWeight: 700, fontFamily: 'var(--gecko-font-mono)', marginTop: 4 }}>BKG-2026-991</div>
               </div>
             </div>
@@ -105,9 +105,9 @@ export default function StuffingPage() {
             </div>
 
             {/* Capacity Meters */}
-            <div style={{ display: 'flex', gap: 32 }}>
-              <div style={{ flex: 1 }}>
-                <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 12, marginBottom: 6 }}>
+            <div className="gecko-row" style={{ gap: 32 }}>
+              <div className="gecko-flex-1">
+                <div className="gecko-row gecko-row-between" style={{ fontSize: 12, marginBottom: 6 }}>
                   <span style={{ fontWeight: 600, color: 'var(--gecko-text-secondary)' }}>Weight Capacity</span>
                   <span style={{ fontFamily: 'var(--gecko-font-mono)' }}>{currentWeight.toLocaleString()} / {MAX_WEIGHT.toLocaleString()} kg</span>
                 </div>
@@ -115,8 +115,8 @@ export default function StuffingPage() {
                   <div style={{ height: '100%', width: `${Math.min(weightPct, 100)}%`, background: weightPct > 90 ? 'var(--gecko-error-500)' : 'var(--gecko-primary-500)', transition: 'width 300ms ease' }} />
                 </div>
               </div>
-              <div style={{ flex: 1 }}>
-                <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 12, marginBottom: 6 }}>
+              <div className="gecko-flex-1">
+                <div className="gecko-row gecko-row-between" style={{ fontSize: 12, marginBottom: 6 }}>
                   <span style={{ fontWeight: 600, color: 'var(--gecko-text-secondary)' }}>Volume Capacity</span>
                   <span style={{ fontFamily: 'var(--gecko-font-mono)' }}>{currentVol.toFixed(1)} / {MAX_VOL} cbm</span>
                 </div>
@@ -130,7 +130,7 @@ export default function StuffingPage() {
           {/* Stuffed Cargo List */}
           <div style={{ flex: 1, overflowY: 'auto', background: 'var(--gecko-bg-subtle)' }}>
             {stuffed.length === 0 ? (
-              <div style={{ height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--gecko-text-disabled)', flexDirection: 'column', gap: 12 }}>
+              <div className="gecko-stack" style={{ height: '100%', alignItems: 'center', justifyContent: 'center', color: 'var(--gecko-text-disabled)' }}>
                 <Icon name="box" size={48} style={{ opacity: 0.5 }} />
                 <div style={{ fontSize: 14, fontWeight: 500 }}>Container is empty</div>
               </div>
@@ -198,12 +198,12 @@ export default function StuffingPage() {
 
           {/* WH Header */}
           <div style={{ padding: '20px 24px', borderBottom: '1px solid var(--gecko-border)', background: '#fff' }}>
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 }}>
+            <div className="gecko-row gecko-row-between" style={{ marginBottom: 16 }}>
               <div>
-                <div style={{ fontSize: 11, fontWeight: 700, color: 'var(--gecko-text-secondary)', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Source Location</div>
+                <div className="gecko-eyebrow">Source Location</div>
                 <h2 style={{ fontSize: 20, fontWeight: 700, margin: 0, color: 'var(--gecko-text-primary)', marginTop: 4 }}>CFS Warehouse</h2>
               </div>
-              <div style={{ display: 'flex', gap: 8 }}>
+              <div className="gecko-row">
                 <span style={{ background: 'var(--gecko-info-50)', color: 'var(--gecko-info-700)', padding: '4px 10px', borderRadius: 6, fontSize: 12, fontWeight: 700, border: '1px solid var(--gecko-info-200)' }}>BKG-2026-991 Filter Applied</span>
               </div>
             </div>

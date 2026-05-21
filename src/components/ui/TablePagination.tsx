@@ -97,12 +97,10 @@ export function TablePagination({
   };
 
   return (
-    <div style={{
-      display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+    <div className="gecko-row gecko-row-between gecko-row-wrap" style={{
       padding: '10px 16px',
       borderTop: '1px solid var(--gecko-border)',
       background: 'var(--gecko-bg-subtle)',
-      flexWrap: 'wrap', gap: 8,
     }}>
 
       {/* Left: showing X–Y of Z */}
@@ -114,7 +112,7 @@ export function TablePagination({
       </div>
 
       {/* Center: page buttons */}
-      <div style={{ display: 'flex', alignItems: 'center', gap: 3 }}>
+      <div className="gecko-row" style={{ gap: 3 }}>
         {/* First */}
         <button
           style={page === 0 ? btnDisabled : btnBase}
@@ -167,7 +165,7 @@ export function TablePagination({
       </div>
 
       {/* Right: rows per page */}
-      <div style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 12, color: 'var(--gecko-text-secondary)', whiteSpace: 'nowrap' }}>
+      <div className="gecko-row" style={{ gap: 6, fontSize: 12, color: 'var(--gecko-text-secondary)', whiteSpace: 'nowrap' }}>
         <span>Rows per page</span>
         <select
           value={pageSize}

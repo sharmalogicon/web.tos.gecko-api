@@ -10,16 +10,16 @@ export default function InvoiceDetailPage({ params }: { params: { id: string } }
   const { toast } = useToast();
 
   return (
-    <div style={{ maxWidth: 900, margin: '0 auto', display: 'flex', flexDirection: 'column', gap: 24, paddingBottom: 60 }}>
-      
+    <div className="gecko-stack gecko-stack-xl" style={{ maxWidth: 900, margin: '0 auto', paddingBottom: 60 }}>
+
       {/* Header breadcrumb & actions */}
-      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+      <div className="gecko-row gecko-row-between">
         <nav className="gecko-breadcrumb" aria-label="Breadcrumb">
           <Link href="/billing/invoices" className="gecko-breadcrumb-item">Billing &amp; Invoicing › Invoices</Link>
           <span className="gecko-breadcrumb-sep" />
           <span className="gecko-breadcrumb-current">{id}</span>
         </nav>
-        <div style={{ display: 'flex', gap: 12 }}>
+        <div className="gecko-row gecko-stack-md">
           <button className="gecko-btn gecko-btn-ghost" onClick={() => window.print()}><Icon name="printer" size={16} /> Print</button>
           <button className="gecko-btn gecko-btn-outline" onClick={() => toast({ variant: 'info', title: 'PDF queued', message: `Invoice ${id} will download shortly.` })}><Icon name="download" size={16} /> PDF</button>
           <button className="gecko-btn gecko-btn-primary" onClick={() => toast({ variant: 'success', title: 'Invoice sent', message: `${id} emailed to the bill-to address.` })}><Icon name="send" size={16} /> Send via Email</button>
@@ -30,9 +30,9 @@ export default function InvoiceDetailPage({ params }: { params: { id: string } }
       <div style={{ background: '#fff', borderRadius: 16, border: '1px solid var(--gecko-border)', boxShadow: '0 8px 30px rgba(0,0,0,0.04)', padding: 48, display: 'flex', flexDirection: 'column', gap: 40 }}>
         
         {/* Doc Header */}
-        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
+        <div className="gecko-row gecko-row-start gecko-row-between">
           <div>
-            <div style={{ width: 40, height: 40, background: 'var(--gecko-primary-600)', color: '#fff', borderRadius: 8, display: 'flex', alignItems: 'center', justifyContent: 'center', marginBottom: 16 }}>
+            <div className="gecko-mini-icon gecko-mini-icon-solid gecko-mini-icon-lg gecko-mb-4">
               <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
                 <path d="M3 12h4l3-9 4 18 3-9h4"/>
               </svg>

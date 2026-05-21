@@ -92,11 +92,11 @@ export function ReportParamsDrawer({ report, onClose, onGenerate }: {
         animation: 'gecko-slide-in-right 220ms ease',
       }}>
         {/* Header */}
-        <div style={{ padding: '16px 20px', borderBottom: '1px solid var(--gecko-border)', display: 'flex', alignItems: 'flex-start', gap: 12 }}>
+        <div className="gecko-row gecko-row-start" style={{ padding: '16px 20px', borderBottom: '1px solid var(--gecko-border)', gap: 12 }}>
           <Icon name={report.icon} size={18} style={{ color: 'var(--gecko-primary-600)', marginTop: 2 }} />
-          <div style={{ flex: 1, minWidth: 0 }}>
+          <div className="gecko-flex-1">
             <div style={{ fontSize: 16, fontWeight: 700, color: 'var(--gecko-text-primary)' }}>{report.title}</div>
-            <div style={{ fontSize: 11, color: 'var(--gecko-text-secondary)', marginTop: 3, textTransform: 'uppercase', letterSpacing: '0.05em', fontWeight: 600 }}>
+            <div className="gecko-eyebrow gecko-mt-1">
               {report.group}
             </div>
           </div>
@@ -106,7 +106,7 @@ export function ReportParamsDrawer({ report, onClose, onGenerate }: {
         </div>
 
         {/* Body */}
-        <div style={{ flex: 1, overflowY: 'auto', padding: 18, display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12, alignContent: 'start' }}>
+        <div className="gecko-grid-2" style={{ flex: 1, overflowY: 'auto', padding: 18, alignContent: 'start' }}>
 
           {need('branch') && (
             <SelectField label={PARAM_LABELS.branch}
@@ -216,7 +216,7 @@ export function ReportParamsDrawer({ report, onClose, onGenerate }: {
         </div>
 
         {/* Footer */}
-        <div style={{ padding: '14px 20px', borderTop: '1px solid var(--gecko-border)', background: 'var(--gecko-bg-subtle)', display: 'flex', alignItems: 'center', gap: 8 }}>
+        <div className="gecko-row" style={{ padding: '14px 20px', borderTop: '1px solid var(--gecko-border)', background: 'var(--gecko-bg-subtle)' }}>
           <button
             className="gecko-btn gecko-btn-ghost gecko-btn-sm"
             onClick={() => setVals({ ...BLANK, dateFrom: vals.dateFrom, dateTo: vals.dateTo })}
@@ -224,7 +224,7 @@ export function ReportParamsDrawer({ report, onClose, onGenerate }: {
           >
             Clear filters
           </button>
-          <div style={{ flex: 1 }} />
+          <div className="gecko-flex-1" />
           <button className="gecko-btn gecko-btn-outline gecko-btn-sm" onClick={onClose}>Cancel</button>
           <button className="gecko-btn gecko-btn-primary gecko-btn-sm" onClick={() => onGenerate(report, vals)}>
             <Icon name="fileText" size={13} /> Generate Report

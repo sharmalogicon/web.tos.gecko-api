@@ -49,8 +49,7 @@ export function SendToInvoiceMenu({ disabled, onPick, label = 'Send to Invoice',
       <button
         disabled={disabled}
         onClick={() => setOpen(o => !o)}
-        className={btnClass}
-        style={{ display: 'inline-flex', alignItems: 'center', gap: 6 }}
+        className={`${btnClass} gecko-inline-row`}
       >
         <Icon name="send" size={size === 'sm' ? 13 : 14} />
         {label}
@@ -91,11 +90,12 @@ function MenuItem({ icon, label, sub, onClick }: { icon: string; label: string; 
   return (
     <button
       onClick={onClick}
+      className="gecko-row"
       style={{
         width: '100%', padding: '8px 14px',
         background: 'transparent', border: 'none', cursor: 'pointer',
         textAlign: 'left', fontFamily: 'inherit',
-        display: 'flex', alignItems: 'center', gap: 10,
+        gap: 10,
       }}
       onMouseEnter={e => (e.currentTarget.style.background = 'var(--gecko-bg-subtle)')}
       onMouseLeave={e => (e.currentTarget.style.background = 'transparent')}
@@ -103,8 +103,8 @@ function MenuItem({ icon, label, sub, onClick }: { icon: string; label: string; 
       <div style={{ width: 28, height: 28, borderRadius: 7, background: 'var(--gecko-primary-50)', color: 'var(--gecko-primary-700)', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
         <Icon name={icon} size={13} />
       </div>
-      <div style={{ flex: 1 }}>
-        <div style={{ fontSize: 12, fontWeight: 600, color: 'var(--gecko-text-primary)' }}>{label}</div>
+      <div className="gecko-flex-1">
+        <div className="gecko-cell-primary">{label}</div>
         <div style={{ fontSize: 10, color: 'var(--gecko-text-secondary)', marginTop: 1 }}>{sub}</div>
       </div>
     </button>
@@ -127,7 +127,7 @@ export function NewInvoiceModal({ open, action, lineCount, lineLabel = 'lines', 
   const draftInvoiceNo = `INV-${new Date().getFullYear()}-${String(Math.floor(Math.random() * 9000 + 1000))}`;
   return (
     <ModalShell onClose={onCancel} title="Create new invoice" subtitle={`A draft ${action.term.toLowerCase()} invoice will be created with the selected items.`}>
-      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12, marginBottom: 14 }}>
+      <div className="gecko-grid-2" style={{ marginBottom: 14 }}>
         <ReadonlyField label="Draft invoice no." value={draftInvoiceNo} mono />
         <ReadonlyField label="Payment term" value={action.term} />
         <ReadonlyField label={`${lineLabel} included`} value={String(lineCount)} />
@@ -143,7 +143,7 @@ export function NewInvoiceModal({ open, action, lineCount, lineLabel = 'lines', 
           onChange={e => setNote(e.target.value)}
         />
       </div>
-      <div style={{ marginTop: 16, padding: 10, background: 'var(--gecko-info-50)', border: '1px solid var(--gecko-info-200)', borderRadius: 8, fontSize: 11, color: 'var(--gecko-info-700)', display: 'flex', gap: 8 }}>
+      <div className="gecko-row gecko-row-start" style={{ marginTop: 16, padding: 10, background: 'var(--gecko-info-50)', border: '1px solid var(--gecko-info-200)', borderRadius: 8, fontSize: 11, color: 'var(--gecko-info-700)' }}>
         <Icon name="info" size={14} style={{ flexShrink: 0, marginTop: 1 }} />
         <div>Only items with <strong>payment term = {action.term}</strong> from the current selection will be included. Other-term items remain unbilled.</div>
       </div>
@@ -195,7 +195,7 @@ export function ExistingInvoiceModal({ open, action, lineCount, lineLabel = 'lin
         </div>
       </div>
 
-      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
+      <div className="gecko-grid-2">
         <ReadonlyField label="Payment term" value={action.term} />
         <ReadonlyField label={`${lineLabel} to add`} value={String(lineCount)} />
         <ReadonlyField label="Filter" value={`${action.term}-only`} />
@@ -228,11 +228,11 @@ function ModalShell({ children, title, subtitle, onClose }: {
         boxShadow: '0 24px 60px rgba(15, 23, 42, 0.32)',
         overflow: 'hidden',
       }}>
-        <div style={{ padding: '16px 20px', borderBottom: '1px solid var(--gecko-border)', display: 'flex', alignItems: 'center', gap: 10 }}>
+        <div className="gecko-row" style={{ padding: '16px 20px', borderBottom: '1px solid var(--gecko-border)', gap: 10 }}>
           <Icon name="send" size={16} style={{ color: 'var(--gecko-primary-600)' }} />
-          <div style={{ flex: 1 }}>
-            <div style={{ fontSize: 15, fontWeight: 700, color: 'var(--gecko-text-primary)' }}>{title}</div>
-            <div style={{ fontSize: 12, color: 'var(--gecko-text-secondary)', marginTop: 2 }}>{subtitle}</div>
+          <div className="gecko-flex-1">
+            <div className="gecko-drawer-title">{title}</div>
+            <div className="gecko-drawer-subtitle">{subtitle}</div>
           </div>
           <button onClick={onClose} className="gecko-btn gecko-btn-ghost gecko-btn-sm gecko-btn-icon">
             <Icon name="x" size={14} />
@@ -246,7 +246,7 @@ function ModalShell({ children, title, subtitle, onClose }: {
 
 function ModalFooter({ children }: { children: React.ReactNode }) {
   return (
-    <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 8, marginTop: 18 }}>
+    <div className="gecko-action-toolbar" style={{ marginTop: 18 }}>
       {children}
     </div>
   );
@@ -255,7 +255,7 @@ function ModalFooter({ children }: { children: React.ReactNode }) {
 function ReadonlyField({ label, value, mono, bold }: { label: string; value: string; mono?: boolean; bold?: boolean }) {
   return (
     <div>
-      <div className="gecko-field-label" style={{ marginBottom: 4 }}>{label}</div>
+      <div className="gecko-field-label gecko-mb-1">{label}</div>
       <div style={{
         padding: '8px 12px', background: 'var(--gecko-bg-subtle)',
         border: '1px solid var(--gecko-border)', borderRadius: 6,

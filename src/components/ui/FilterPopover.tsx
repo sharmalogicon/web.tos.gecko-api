@@ -125,14 +125,12 @@ export function FilterPopover({
           <div className="gecko-filter-footer">
             <button
               className="gecko-btn gecko-btn-ghost gecko-btn-sm"
-              style={{ fontSize: 11, color: 'var(--gecko-text-secondary)' }}
               onClick={onClear}
             >
               Clear all
             </button>
             <button
               className="gecko-btn gecko-btn-primary gecko-btn-sm"
-              style={{ fontSize: 11 }}
               onClick={() => { onApply(values); setOpen(false); }}
             >
               Apply

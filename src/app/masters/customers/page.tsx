@@ -143,8 +143,8 @@ function NewCustomerModal({ onClose }: NewCustomerModalProps) {
         {label}
       </label>
       {children}
-      {hint && !error && <div className="gecko-cell-meta" style={{ marginTop: 3 }}>{hint}</div>}
-      {error && <div style={{ fontSize: 11, color: 'var(--gecko-danger-600)', marginTop: 3 }}>This field is required</div>}
+      {hint && !error && <div className="gecko-cell-meta">{hint}</div>}
+      {error && <div className="gecko-mt-1" style={{ fontSize: 11, color: 'var(--gecko-danger-600)' }}>This field is required</div>}
     </div>
   );
 
@@ -164,7 +164,7 @@ function NewCustomerModal({ onClose }: NewCustomerModalProps) {
                 New Customer
               </span>
             </div>
-            <div className="gecko-cell-meta" style={{ fontSize: 12, marginTop: 3 }}>
+            <div className="gecko-cell-meta" style={{ fontSize: 12 }}>
               Create a new party record. One record can hold multiple roles — bill-to, consignee, or shipper.
             </div>
           </div>
