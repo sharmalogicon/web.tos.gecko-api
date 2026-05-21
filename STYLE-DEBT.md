@@ -5,28 +5,28 @@ The catalog (`gecko_design_system_components.css` §7–§13) is the contract.
 The ESLint rule (`no-restricted-syntax`, warn-level) flags every new violation.
 This file is the **runway** — where to focus the next migration wave.
 
-**Updated**: end of Phase 2 (commit `a5e0563`)
-**Inline blocks remaining**: 5,954
+**Updated**: end of Phase 3 (commit `a7e4dfe`)
+**Inline blocks remaining**: 5,807
 **Files affected**: 99
 
 ---
 
 ## Top 10 files by remaining inline-block count
 
-| # | File | Blocks | Notes |
-|---|---|---:|---|
-| 1 | `bookings/EGLV149602390729/page.tsx` | 313 | Booking detail. Modals, drawers, expandable rows, status timeline. Many legitimately dynamic. |
-| 2 | `gate/eir-in/page.tsx` | 200 | Gate-in EIR form. Damage diagram positions, photo grids, dynamic. |
-| 3 | `billing/statement/page.tsx` | 190 | Billing workbench. 4 legacy modals use `.gecko-overlay` (older catalog) — by design. |
-| 4 | `config/integrations/page.tsx` | 181 | Brand-color channel previews intentionally inline (LINE green, WhatsApp wallpaper, Slack chrome). |
-| 5 | `tariff/plans/new/page.tsx` | 187 | Storage card dynamic gradient, sequence builder, sticky header. |
-| 6 | `gate/eir-out/[id]/page.tsx` | 168 | Release detail with form sections and dynamic damage indicators. |
-| 7 | `config/system-params/page.tsx` | 139 | Toggle helper now uses `.gecko-toggle` — propagates to 25+ usages. Remaining: dynamic dirty pills, active section nav. |
-| 8 | `tariff/plans/[id]/page.tsx` | 138 | View-only tariff detail. Mostly dynamic accent gradients. |
-| 9 | `masters/order-types/new/page.tsx` | 239 | Step-indicator + sequence + catalog + canvas. Lots of per-color dynamic chrome. |
-| 10 | `config/edi-partners/[id]/page.tsx` | 118 | Partner detail with tabs + connection settings. |
+| # | File | Blocks | Δ this session | Notes |
+|---|---|---:|---:|---|
+| 1 | `bookings/EGLV149602390729/page.tsx` | 283 | -30 | Booking detail. Most remaining are legitimate exemptions. |
+| 2 | `masters/order-types/new/page.tsx` | 239 | -2 | Step-indicator + sequence + catalog + canvas. Lots of per-color dynamic chrome. |
+| 3 | `tariff/plans/new/page.tsx` | 187 | -4 | Storage card dynamic gradient, sequence builder, sticky header. |
+| 4 | `config/integrations/page.tsx` | 181 | 0 | Brand-color channel previews intentionally inline. |
+| 5 | `gate/eir-out/[id]/page.tsx` | 168 | -2 | Release detail with form sections and dynamic damage indicators. |
+| 6 | `tariff/plans/[id]/page.tsx` | 138 | -2 | View-only tariff detail. Mostly dynamic accent gradients. |
+| 7 | `config/system-params/page.tsx` | 139 | -1 | Toggle helper now uses `.gecko-toggle` — propagates to 25+ usages. |
+| 8 | `gate/eir-in/page.tsx` | 137 | **-63** | Phase 3 deep-clean. 31% reduction. |
+| 9 | `billing/statement/page.tsx` | 131 | **-59** | Phase 3 deep-clean. 31% reduction. |
+| 10 | `config/edi-partners/[id]/page.tsx` | 118 | -3 | Partner detail with tabs + connection settings. |
 
-**Subtotal of top 10**: ~1,873 inline blocks (31% of the remaining 5,954).
+**Subtotal of top 10**: ~1,721 inline blocks (30% of the remaining 5,807).
 
 ---
 
