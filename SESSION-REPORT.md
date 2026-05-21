@@ -1,9 +1,10 @@
 # Session Report — Style Catalog Rollout
 
 **Branch**: `main` · ahead of `origin/main` · working tree clean
-**Build status**: ✓ Compiled successfully (last run: 3.6s)
-**Phases complete**: 1 (catalog §13 growth), 2 (sub-agent sweep), 3 (top-3 deep-clean)
+**Build status**: ✓ Compiled successfully (last run: 6.8s)
+**Phases complete**: 1 (catalog §13 growth), 2 (sub-agent sweep), 3 (top-3 deep-clean), **4 (deterministic codemod sweep)**
 **ESLint**: warn-level, flagging every new violation
+**Codemod**: live · `npm run audit:styles`
 
 ---
 
@@ -12,9 +13,11 @@
 | Metric | Value |
 |---|---:|
 | Inline `style={{}}` blocks at session start | **7,097** |
-| Inline blocks now | **5,807** |
-| **Removed** | **1,290** |
-| **% migration** | **~18.2%** |
+| Inline blocks now | **5,574** |
+| **Removed** | **1,523** |
+| **% migration** | **~21.5%** |
+| Catalog-matchable violations (detected by codemod) | 515 → **40** |
+| **Codemod sweep effectiveness** | **92% cleared mechanically** |
 | New catalog classes shipped | **~95** |
 | ESLint rule active (warn-level) | ✅ |
 | Build status throughout | ✅ green |
@@ -99,7 +102,89 @@ backgrounds, ContainerDrawer brand bar, VAS drawer slide-in).
 | 14 | `a5e0563` | refactor(pages): apply §13 catalog extensions — Phase 2 sweep (16 files, 135 blocks) |
 | 15 | `f076a62` | docs: Phase 1+2 results + STYLE-DEBT.md punch list |
 | 16 | `a7e4dfe` | refactor(pages): Phase 3 deep-clean of top-3 demo-critical files (152 blocks) |
-| 17 | this | docs: final report — 18.2% migration, all 3 phases complete |
+| 17 | `2cc5134` | docs: report — 18.2% migration, 3 phases complete |
+| 18 | `5e0f8b6` | fix(bookings): apply .gecko-id-link + .gecko-cell-sub to booking row |
+| 19 | `f3a7478` | **feat(tooling): style-catalog detection codemod + cross-app strategy** |
+| 20 | `3c4adfa` | chore(deps): add tsx as devDep |
+| 21 | `2fc22c7` | docs(style-catalog): tsx devDep step in cross-app guide |
+| 22 | `fd45d5b` | **refactor(pages): codemod sweep — 4 agents, 206 blocks removed** |
+| 23 | `3fd7411` | docs: refresh STYLE-AUDIT after first sweep (515 → 105) |
+| 24 | `1b2b099` | **refactor(pages): codemod cleanup sweep — 63 violations, 21.5% migration** |
+| 25 | `56d8ae4` | docs: refresh STYLE-AUDIT after final cleanup (515 → 40, 92% cleared) |
+| 26 | this | docs: final session report — codemod approach proven, 21.5% migration |
+
+---
+
+## Phase 4 — The codemod approach (the breakthrough)
+
+After Phases 1-3 plateaued at 18.2% with agent-driven sweeps, Sharma
+spotted the COSU bug — the booking-list row still had the exact inline
+pattern `.gecko-id-link` was created for. Six agent passes had missed it.
+
+This proved agents alone can't reliably catch deeply-nested patterns
+in table cells. The answer: a deterministic AST-based detector that
+finds every `style={{...}}` matching a known catalog signature.
+
+### The codemod (`scripts/style-catalog/detect.ts`)
+
+- TypeScript Compiler API — no new runtime deps
+- 37 catalog signatures defined in `scripts/style-catalog/signatures.ts`
+- Outputs `STYLE-AUDIT.md` with file:line:col + suggested class per match
+- Runs in <5 seconds across 111 source files
+- Portable — copy folder to any Gecko app + `tsx` devDep
+- Run: `npm run audit:styles`
+
+### First detection (commit `f3a7478`)
+
+Detected **515 catalog-matchable violations** across 76 files where
+agents had previously declared "done":
+
+| Top hit | Count |
+|---|---:|
+| `.gecko-cell-meta` | 263 |
+| `.gecko-eyebrow` | 85 |
+| `.gecko-page-subtitle` | 56 |
+| `.gecko-cell-sub` | 31 |
+| `.gecko-money` | 19 |
+
+### Sweep 1 (commit `fd45d5b`) — 4 agents in parallel
+
+Each agent received the audit as a deterministic checklist. No
+judgment, just apply suggested class at listed line:col.
+
+- Dashboard sweep:  **92/92 applied (100%)**
+- Config sweep:    **104/106 applied (98%)**
+- Tariff/masters: **167/190 applied (88%)**
+- Bookings/gate/etc: socket-dropped at 83 tool calls, partial work
+
+### Sweep 2 (commit `1b2b099`) — final cleanup agent
+
+Targeted the 105 remaining matches from sweep 1's misses. Applied
+63 cleanly. **42 legitimate edge-case skips** documented:
+
+- Abs-positioned suffix spans in inputs (11)
+- Icon containers where catalog class overrides borderRadius (5)
+- Mono-on-prose mismatches (3)
+- Contextual error/warning color spans (3)
+- Dark-themed kiosk surface where catalog inverts appearance (9)
+- Font-size jumps the catalog class would over-scale (4)
+- + 7 other edge cases
+
+### Final state
+
+| Metric | Value |
+|---|---:|
+| Catalog-matchable violations: start → end | 515 → **40** |
+| **Mechanical clearance rate** | **92.2%** |
+| Remaining catalog-matchable | 40 — all known false-positive categories |
+| Total inline-style count: session start → now | 7,097 → 5,574 |
+| **Cumulative migration** | **21.5%** |
+
+The remaining 40 are surfaced in the report as a **signature-refinement
+backlog** — future codemod updates should add `excludePropPresence` and
+`requireParentContext` filters to skip these patterns at detection time.
+
+---
 
 ---
 

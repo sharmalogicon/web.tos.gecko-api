@@ -5,9 +5,11 @@ The catalog (`gecko_design_system_components.css` §7–§13) is the contract.
 The ESLint rule (`no-restricted-syntax`, warn-level) flags every new violation.
 This file is the **runway** — where to focus the next migration wave.
 
-**Updated**: end of Phase 3 (commit `a7e4dfe`)
-**Inline blocks remaining**: 5,807
-**Files affected**: 99
+**Updated**: end of Phase 4 codemod sweep (commit `56d8ae4`)
+**Inline blocks remaining**: 5,574
+**Catalog-matchable (detected by `npm run audit:styles`)**: **40** (down from 515)
+**Files affected**: 99 total, **19 with matchable violations**
+**Codemod live**: `scripts/style-catalog/` · run `npm run audit:styles`
 
 ---
 
@@ -103,6 +105,42 @@ These are documented exemptions — they should stay inline forever:
 6. **Damage diagrams** (gate/eir-in) — dynamic coordinate-based marker placement
 7. **Sparkline / chart SVG** (dashboard/*) — dynamic data-driven positioning
 8. **Booking detail VAS drawer** — right-side slide-in (distinct from centered modal-shell)
+
+---
+
+## Codemod backlog — signature refinements
+
+The detector currently surfaces 40 remaining catalog-matchable violations
+that the cleanup agents legitimately skipped. These are FALSE POSITIVES in
+the signature map — the codemod should learn to skip them at detection time.
+
+Highest-value signature refinements to add to `scripts/style-catalog/signatures.ts`:
+
+1. **`.gecko-cell-meta`** (21 false positives remaining)
+   - Should NOT match if `position: 'absolute'` is also present (suffix-in-input)
+   - Should NOT match if parent element has `display: flex` + the inline has
+     `padding` (likely a pill/badge with its own chrome)
+   - Add: `excludePropPresence: ['position']`, `excludeIfPropsAlso: ['padding', 'background']`
+
+2. **`.gecko-stat-num`** (7 false positives)
+   - Should NOT match if `fontSize` < 22 (catalog stat-num is 26 — over-scales smaller text)
+   - Currently matches on close buttons + small icon labels
+   - Add: `requirePropMin: { fontSize: 22 }`
+
+3. **`.gecko-eyebrow`** (5 false positives)
+   - Should NOT match if `letterSpacing` is missing (eyebrows always have spacing)
+   - Should NOT match on `<a>` or `<button>` elements
+   - Add: `requirePropPresence: ['letterSpacing']`
+
+4. **`.gecko-cell-sub`** (4 false positives)
+   - Should NOT match on `<span>` inside prose paragraphs
+   - Should NOT match if the text content is multi-word prose
+   - This one is harder — needs lexical heuristics
+
+5. **Universal**: skip any inline that lives inside a `data-theme="dark"` ancestor
+   (the kiosk page) — would require parent-traversal during detection.
+
+Adding these refinements would drop the false-positive count from 40 → ~10.
 
 ---
 
