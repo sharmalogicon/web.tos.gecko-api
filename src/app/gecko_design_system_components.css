@@ -5357,6 +5357,7 @@ input[type="checkbox"].gecko-toggle.gecko-toggle-sm:checked::after { transform: 
   border: 1px solid var(--gecko-border);
   border-radius: 10px;
   overflow: hidden;
+  flex-shrink: 0; /* keep full content height — let drawer-body overflow-y handle scroll */
 }
 
 .gecko-pti-item {
@@ -5417,6 +5418,7 @@ input[type="checkbox"].gecko-toggle.gecko-toggle-sm:checked::after { transform: 
   flex-direction: column;
   gap: 12px;
   margin-top: 4px;
+  flex-shrink: 0;
 }
 
 /* ── 5.39.h PTI result picker (segmented control) ────────── */
