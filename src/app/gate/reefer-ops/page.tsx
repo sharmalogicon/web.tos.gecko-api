@@ -789,19 +789,19 @@ function PTIChecklistDrawer({
                 placeholder="Summary, observations, recommended next step…"
               />
             </label>
-            {(anyNotOK || task.status === 'FAILED') && (
-              <label className="gecko-form-row gecko-form-row-full">
-                <span>Failure reason</span>
-                <input
-                  type="text"
-                  className="gecko-input gecko-input-sm"
-                  value={failureReason}
-                  onChange={e => setFailureReason(e.target.value)}
-                  disabled={readonly}
-                  placeholder="Required if marking failed"
-                />
-              </label>
-            )}
+            <label className="gecko-form-row gecko-form-row-full">
+              <span>Failure reason</span>
+              <input
+                type="text"
+                className="gecko-input gecko-input-sm"
+                value={failureReason}
+                onChange={e => setFailureReason(e.target.value)}
+                disabled={readonly}
+                placeholder={anyNotOK
+                  ? 'Required — at least one step marked NOT_OK'
+                  : 'Optional unless marking failed'}
+              />
+            </label>
           </div>
         </div>
 

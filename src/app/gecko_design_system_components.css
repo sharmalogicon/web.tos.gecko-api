@@ -789,6 +789,7 @@
 
 .gecko-drawer-body {
   flex: 1;
+  min-height: 0; /* allows flex child to shrink below its content size so overflow-y kicks in */
   overflow-y: auto;
   padding: var(--gecko-space-6);
   display: flex;
