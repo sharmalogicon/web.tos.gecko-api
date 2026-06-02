@@ -2071,54 +2071,11 @@
 
 .gecko-checkbox:disabled { opacity: 0.45; cursor: not-allowed; }
 
-/* Legacy label-wrapped toggle: <label class="gecko-toggle"><input type="checkbox"/><span/></label>
-   Scoped to label.gecko-toggle so it does NOT bleed into the newer
-   button.gecko-toggle pattern (Section 5.23) where the inner span is the thumb. */
-label.gecko-toggle {
-  display: inline-flex;
-  align-items: center;
-  gap: 8px;
-  cursor: pointer;
-  user-select: none;
-}
-
-label.gecko-toggle input { position: absolute; opacity: 0; width: 0; height: 0; }
-
-label.gecko-toggle span {
-  position: relative;
-  display: inline-block;
-  width: 36px;
-  height: 20px;
-  background: var(--gecko-gray-300);
-  border-radius: var(--gecko-radius-full);
-  transition: background var(--gecko-transition-fast) var(--gecko-ease-in-out);
-  flex-shrink: 0;
-}
-
-label.gecko-toggle span::after {
-  content: '';
-  position: absolute;
-  top: 2px;
-  left: 2px;
-  width: 16px;
-  height: 16px;
-  background: #fff;
-  border-radius: 50%;
-  box-shadow: 0 1px 3px rgba(0,0,0,0.2);
-  transition: transform var(--gecko-transition-fast) var(--gecko-ease-in-out);
-}
-
-label.gecko-toggle input:checked + span { background: var(--gecko-primary-600); }
-label.gecko-toggle input:checked + span::after { transform: translateX(16px); }
-label.gecko-toggle input:focus-visible + span { outline: 2px solid var(--gecko-primary-400); outline-offset: 2px; border-radius: var(--gecko-radius-full); }
-label.gecko-toggle input:disabled + span { opacity: 0.45; cursor: not-allowed; }
-
-label.gecko-toggle.gecko-toggle-sm span            { width: 28px; height: 16px; }
-label.gecko-toggle.gecko-toggle-sm span::after     { width: 12px; height: 12px; }
-label.gecko-toggle.gecko-toggle-sm input:checked + span::after { transform: translateX(12px); }
-
+/* Legacy single-span toggle pattern removed — canonical toggle is now
+   the track + thumb structure at the bottom of this file (§13/§14 block).
+   Dark-mode for both .gecko-checkbox and the new toggle track lives here. */
 [data-theme="dark"] .gecko-checkbox { background: var(--gecko-gray-800); border-color: var(--gecko-gray-600); }
-[data-theme="dark"] label.gecko-toggle span { background: var(--gecko-gray-600); }
+[data-theme="dark"] label.gecko-toggle .gecko-toggle-track { background: var(--gecko-gray-600); }
 
 /* Direct input variant: <input type="checkbox" class="gecko-toggle"> */
 input[type="checkbox"].gecko-toggle {
@@ -3598,7 +3555,7 @@ input[type="checkbox"].gecko-toggle.gecko-toggle-sm:checked::after { transform: 
    Add .gecko-toggle-on when checked.
    ============================================================ */
 
-.gecko-toggle {
+button.gecko-toggle {
   width: 38px;
   height: 22px;
   padding: 2px;
@@ -3606,24 +3563,25 @@ input[type="checkbox"].gecko-toggle.gecko-toggle-sm:checked::after { transform: 
   border: none;
   cursor: pointer;
   background: var(--gecko-gray-300, #d1d5db);
-  display: flex;
+  display: inline-flex;
   align-items: center;
   justify-content: flex-start;
   flex-shrink: 0;
   transition: background var(--gecko-transition-fast);
 }
 
-.gecko-toggle-on {
+button.gecko-toggle.gecko-toggle-on {
   background: var(--gecko-primary-600);
   justify-content: flex-end;
 }
 
-.gecko-toggle:disabled {
+button.gecko-toggle:disabled {
   opacity: 0.45;
   cursor: not-allowed;
 }
 
-.gecko-toggle-thumb {
+button.gecko-toggle .gecko-toggle-thumb {
+  position: static;
   width: 18px;
   height: 18px;
   border-radius: 50%;
@@ -7181,7 +7139,7 @@ input[type="checkbox"].gecko-toggle.gecko-toggle-sm:checked::after { transform: 
        <span class="gecko-toggle-track"><span class="gecko-toggle-thumb" /></span>
      </label>
 */
-.gecko-toggle {
+label.gecko-toggle {
   position: relative;
   display: inline-block;
   width: 36px;
@@ -7189,20 +7147,20 @@ input[type="checkbox"].gecko-toggle.gecko-toggle-sm:checked::after { transform: 
   flex-shrink: 0;
   cursor: pointer;
 }
-.gecko-toggle input {
+label.gecko-toggle input {
   opacity: 0;
   width: 0;
   height: 0;
   position: absolute;
 }
-.gecko-toggle-track {
+label.gecko-toggle .gecko-toggle-track {
   position: absolute;
   inset: 0;
   background: var(--gecko-gray-300);
   border-radius: 10px;
   transition: background var(--gecko-transition-fast);
 }
-.gecko-toggle-thumb {
+label.gecko-toggle .gecko-toggle-track .gecko-toggle-thumb {
   position: absolute;
   top: 2px;
   left: 2px;
@@ -7213,26 +7171,26 @@ input[type="checkbox"].gecko-toggle.gecko-toggle-sm:checked::after { transform: 
   box-shadow: 0 1px 3px rgba(0, 0, 0, 0.2);
   transition: left var(--gecko-transition-fast);
 }
-.gecko-toggle input:checked ~ .gecko-toggle-track {
+label.gecko-toggle input:checked ~ .gecko-toggle-track {
   background: var(--gecko-primary-600);
 }
-.gecko-toggle input:checked ~ .gecko-toggle-track .gecko-toggle-thumb {
+label.gecko-toggle input:checked ~ .gecko-toggle-track .gecko-toggle-thumb {
   left: 18px;
 }
-.gecko-toggle input:disabled ~ .gecko-toggle-track {
+label.gecko-toggle input:disabled ~ .gecko-toggle-track {
   opacity: 0.5;
   cursor: not-allowed;
 }
 
-.gecko-toggle-sm {
+label.gecko-toggle.gecko-toggle-sm {
   width: 28px;
   height: 16px;
 }
-.gecko-toggle-sm .gecko-toggle-thumb {
+label.gecko-toggle.gecko-toggle-sm .gecko-toggle-track .gecko-toggle-thumb {
   width: 12px;
   height: 12px;
 }
-.gecko-toggle-sm input:checked ~ .gecko-toggle-track .gecko-toggle-thumb {
+label.gecko-toggle.gecko-toggle-sm input:checked ~ .gecko-toggle-track .gecko-toggle-thumb {
   left: 14px;
 }
 
