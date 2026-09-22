@@ -1,173 +1,123 @@
 "use client";
-import React, { useState, useRef, useEffect } from 'react';
+import React, { useState, useRef, useMemo } from 'react';
 import Link from 'next/link';
 import { Icon } from '@/components/ui/Icon';
 import { ExportButton } from '@/components/ui/ExportButton';
+import { useApiList } from '@/lib/api/use-api';
 
-// ── Voyage data ──────────────────────────────────────────────────────────────
-const LINE_COLORS: Record<string, { dot: string; bg: string; text: string }> = {
-  MSK:  { dot: '#0066CC', bg: '#EBF4FF', text: '#004A99' },
-  OOCL: { dot: '#E65C00', bg: '#FFF3EB', text: '#C44A00' },
-  EGL:  { dot: '#00873D', bg: '#EDFAF3', text: '#006830' },
-  CMA:  { dot: '#D0021B', bg: '#FFEBEE', text: '#A80015' },
-  HLC:  { dot: '#F47920', bg: '#FFF4E6', text: '#C05E00' },
-  ONE:  { dot: '#E4002B', bg: '#FFEBEE', text: '#B30022' },
-  HMM:  { dot: '#005BAC', bg: '#EBF2FF', text: '#004488' },
+/**
+ * LIVE against gecko_tos (vessel.vessel_call + lines + cut-offs), batch A.
+ *
+ * One chip = one PHYSICAL call, placed on its ETD. Several lines share a call,
+ * each with its own voyage (slot charters) — the mock drew one voyage per line,
+ * which is exactly Vector's mistake (12,291 real calls stored as 15,515 rows).
+ * Chips are coloured by the DERIVED status (vw_vessel_call_status), because a
+ * status somebody has to remember to set is the IsClosed flag Vector never set.
+ *
+ * What the mock had and the API does not, so it is gone rather than faked:
+ *  - inbound / outbound: a call at Laem Chabang both discharges and loads; the
+ *    direction belongs to the BOOKING (batch B), not to the ship.
+ *  - POL / POD: the call is at one port; the booking carries its destination.
+ *  - TEU filled: that is the sum of bookings on the call — batch B.
+ *  - berth / wharf: the terminal is stored (LCB-A0, LCB-C1C2 …); a berth
+ *    number is not.
+ */
+
+interface CallSummary {
+  vesselCallId: string;
+  callRef: string;
+  vesselCode: string;
+  vesselName: string | null;
+  portCode: string;
+  terminalCode: string | null;
+  operatorVoyageIn: string | null;
+  operatorVoyageOut: string | null;
+  eta: string;
+  etb: string | null;
+  etd: string;
+  ata: string | null;
+  atb: string | null;
+  atd: string | null;
+  lastYardCutoffAt: string | null;
+  status: string;
+  lines: string[];
+}
+
+// ── Status vocabulary (vessel.vw_vessel_call_status) ─────────────────────────
+
+const STATUS: Record<string, { label: string; dot: string; bg: string; text: string; hint: string }> = {
+  OPEN:                 { label: 'Open',                  dot: '#16A34A', bg: '#F0FDF4', text: '#166534', hint: 'Receiving export boxes' },
+  CLOSED_FOR_RECEIVING: { label: 'Closed for receiving',  dot: '#D97706', bg: '#FFFBEB', text: '#92400E', hint: 'Past every yard cut-off' },
+  ARRIVED:              { label: 'Arrived',               dot: '#2563EB', bg: '#EFF6FF', text: '#1E40AF', hint: 'At anchor / in port, not berthed' },
+  WORKING:              { label: 'Working',               dot: '#7C3AED', bg: '#F5F3FF', text: '#5B21B6', hint: 'Berthed, loading and discharging' },
+  DEPARTED:             { label: 'Departed',              dot: '#6B7280', bg: '#F3F4F6', text: '#374151', hint: 'ATD recorded' },
+  DEPARTED_UNCONFIRMED: { label: 'Departed (unconfirmed)', dot: '#9CA3AF', bg: '#F9FAFB', text: '#4B5563', hint: 'ETD passed over 24 h ago and nobody recorded the ATD' },
+  CANCELLED:            { label: 'Cancelled',             dot: '#DC2626', bg: '#FEF2F2', text: '#991B1B', hint: 'Will not call' },
 };
+const statusOf = (s: string) => STATUS[s] ?? { label: s, dot: '#6B7280', bg: '#F3F4F6', text: '#374151', hint: '' };
 
-const VOYAGES = [
-  { id: 'MSK-142E',  vessel: 'Maersk Kalmar',        line: 'MSK',  pol: 'THSGN', pod: 'CNSHA', etd: '2026-04-03', eta: '2026-04-09', status: 'Departed',  teu: 1800, filled: 1420, berth: 'B-2', wharf: 'Wharf 1', direction: 'Outbound' },
-  { id: 'OOL-089W',  vessel: 'OOCL Hamburg',         line: 'OOCL', pol: 'THLCB', pod: 'USLAX', etd: '2026-04-05', eta: '2026-04-22', status: 'En Route',  teu: 2100, filled: 1890, berth: 'C-1', wharf: 'Wharf 2', direction: 'Outbound' },
-  { id: 'EGL-336N',  vessel: 'Ever Given',            line: 'EGL',  pol: 'CNSHA', pod: 'THLCB', etd: '2026-04-08', eta: '2026-04-28', status: 'En Route',  teu: 1650, filled: 980,  berth: 'A-3', wharf: 'Wharf 3', direction: 'Inbound'  },
-  { id: 'MSK-201W',  vessel: 'Maersk Honam',         line: 'MSK',  pol: 'THLCB', pod: 'NLRTM', etd: '2026-04-12', eta: '2026-05-02', status: 'En Route',  teu: 2400, filled: 2100, berth: 'B-1', wharf: 'Wharf 1', direction: 'Outbound' },
-  { id: 'CMA-771S',  vessel: 'CMA CGM Rossini',      line: 'CMA',  pol: 'SGSIN', pod: 'THLCB', etd: '2026-04-14', eta: '2026-04-18', status: 'En Route',  teu: 900,  filled: 640,  berth: 'D-2', wharf: 'Wharf 4', direction: 'Inbound'  },
-  { id: 'HLC-044E',  vessel: 'Hapag Chennai',        line: 'HLC',  pol: 'THLCB', pod: 'INMAA', etd: '2026-04-14', eta: '2026-04-20', status: 'En Route',  teu: 750,  filled: 510,  berth: 'D-1', wharf: 'Wharf 2', direction: 'Outbound' },
-  { id: 'OOL-112E',  vessel: 'OOCL Seoul',           line: 'OOCL', pol: 'THLCB', pod: 'JPNGO', etd: '2026-04-17', eta: '2026-04-21', status: 'Open',      teu: 1400, filled: 320,  berth: null,  wharf: 'Wharf 3', direction: 'Outbound' },
-  { id: 'EGL-401W',  vessel: 'Ever Glory',           line: 'EGL',  pol: 'USLGB', pod: 'THLCB', etd: '2026-04-19', eta: '2026-05-06', status: 'Open',      teu: 1900, filled: 880,  berth: null,  wharf: 'Wharf 1', direction: 'Inbound'  },
-  { id: 'MSK-198E',  vessel: 'Maersk Sentosa',       line: 'MSK',  pol: 'THLCB', pod: 'CNSHA', etd: '2026-04-22', eta: '2026-04-28', status: 'Open',      teu: 1600, filled: 440,  berth: null,  wharf: 'Wharf 2', direction: 'Outbound' },
-  { id: 'ONE-055E',  vessel: 'ONE Stork',            line: 'ONE',  pol: 'THLCB', pod: 'JPYOK', etd: '2026-04-22', eta: '2026-04-26', status: 'Open',      teu: 820,  filled: 190,  berth: null,  wharf: 'Wharf 4', direction: 'Outbound' },
-  { id: 'CMA-802N',  vessel: 'CMA CGM Brazil',       line: 'CMA',  pol: 'THLCB', pod: 'BRSSZ', etd: '2026-04-25', eta: '2026-05-14', status: 'Open',      teu: 1100, filled: 210,  berth: null,  wharf: 'Wharf 3', direction: 'Outbound' },
-  { id: 'HLC-091W',  vessel: 'Hapag Manila',         line: 'HLC',  pol: 'PHMNL', pod: 'THLCB', etd: '2026-04-25', eta: '2026-04-28', status: 'Open',      teu: 600,  filled: 80,   berth: null,  wharf: 'Wharf 1', direction: 'Inbound'  },
-  { id: 'MSK-220W',  vessel: 'Maersk Denver',        line: 'MSK',  pol: 'THLCB', pod: 'NLRTM', etd: '2026-04-28', eta: '2026-05-18', status: 'Scheduled', teu: 2200, filled: 0,    berth: null,  wharf: null,      direction: 'Outbound' },
-  { id: 'OOL-135E',  vessel: 'OOCL Busan',           line: 'OOCL', pol: 'KRBSN', pod: 'THLCB', etd: '2026-04-29', eta: '2026-05-03', status: 'Scheduled', teu: 1300, filled: 0,    berth: null,  wharf: null,      direction: 'Inbound'  },
-  { id: 'HMM-088N',  vessel: 'HMM Le Havre',         line: 'HMM',  pol: 'THLCB', pod: 'FRLEH', etd: '2026-04-30', eta: '2026-05-20', status: 'Scheduled', teu: 1750, filled: 0,    berth: null,  wharf: null,      direction: 'Outbound' },
-  { id: 'EGL-450S',  vessel: 'Ever Ace',             line: 'EGL',  pol: 'THLCB', pod: 'AUSYD', etd: '2026-05-02', eta: '2026-05-12', status: 'Scheduled', teu: 980,  filled: 0,    berth: null,  wharf: null,      direction: 'Outbound' },
-  { id: 'CMA-840E',  vessel: 'CMA CGM Tenere',       line: 'CMA',  pol: 'CNNGB', pod: 'THLCB', etd: '2026-05-06', eta: '2026-05-10', status: 'Scheduled', teu: 850,  filled: 0,    berth: null,  wharf: null,      direction: 'Inbound'  },
-  { id: 'MSK-241E',  vessel: 'Maersk Esbjerg',       line: 'MSK',  pol: 'THLCB', pod: 'CNSHA', etd: '2026-05-09', eta: '2026-05-15', status: 'Scheduled', teu: 1700, filled: 0,    berth: null,  wharf: null,      direction: 'Outbound' },
-  { id: 'ONE-072W',  vessel: 'ONE Competence',       line: 'ONE',  pol: 'USLAX', pod: 'THLCB', etd: '2026-05-12', eta: '2026-05-28', status: 'Scheduled', teu: 1450, filled: 0,    berth: null,  wharf: null,      direction: 'Inbound'  },
-  { id: 'OOL-158W',  vessel: 'OOCL Rotterdam',       line: 'OOCL', pol: 'THLCB', pod: 'NLRTM', etd: '2026-05-15', eta: '2026-06-04', status: 'Scheduled', teu: 2000, filled: 0,    berth: null,  wharf: null,      direction: 'Outbound' },
-];
+// ── Dates: the calendar is in the viewer's local time ────────────────────────
 
-// ── Helpers ───────────────────────────────────────────────────────────────────
-function getDaysInMonth(year: number, month: number) {
-  return new Date(year, month + 1, 0).getDate();
-}
-function getFirstDayOfMonth(year: number, month: number) {
-  return new Date(year, month, 1).getDay(); // 0=Sun
-}
-function toKey(date: Date) {
-  return date.toISOString().slice(0, 10);
-}
-const MONTH_NAMES = ['January','February','March','April','May','June','July','August','September','October','November','December'];
-const DAY_LABELS  = ['Sun','Mon','Tue','Wed','Thu','Fri','Sat'];
+const MONTH_NAMES = ['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December'];
+const DAY_LABELS = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
 
-type Voyage = typeof VOYAGES[number];
-
-function statusColor(status: string) {
-  if (status === 'Open')      return 'var(--gecko-success-600)';
-  if (status === 'En Route')  return 'var(--gecko-info-600)';
-  if (status === 'Departed')  return 'var(--gecko-text-disabled)';
-  return 'var(--gecko-text-secondary)';
-}
-function statusBg(status: string) {
-  if (status === 'Open')      return 'var(--gecko-success-50)';
-  if (status === 'En Route')  return 'var(--gecko-info-50)';
-  if (status === 'Departed')  return 'var(--gecko-gray-100)';
-  return 'var(--gecko-bg-subtle)';
-}
+const localDayKey = (d: Date) => `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+const fmtDateTime = (iso: string | null) => iso
+  ? new Date(iso).toLocaleString(undefined, { day: '2-digit', month: 'short', hour: '2-digit', minute: '2-digit', hour12: false })
+  : '—';
+const hoursUntil = (iso: string | null) => iso ? (new Date(iso).getTime() - Date.now()) / 3_600_000 : null;
 
 // ── Popover ───────────────────────────────────────────────────────────────────
-function VoyagePopover({ voyage, anchorRect, containerRect, onClose }: {
-  voyage: Voyage;
-  anchorRect: DOMRect;
-  containerRect: DOMRect;
-  onClose: () => void;
-}) {
-  const lc = LINE_COLORS[voyage.line] ?? { dot: '#6b7280', bg: '#f3f4f6', text: '#374151' };
-  const fillPct = voyage.teu > 0 ? Math.round((voyage.filled / voyage.teu) * 100) : 0;
 
-  // Position: prefer below the dot, flip up if near bottom
-  const dotMidX = anchorRect.left - containerRect.left + anchorRect.width / 2;
-  const dotBottomY = anchorRect.bottom - containerRect.top + 8;
-  const dotTopY = anchorRect.top - containerRect.top - 8;
-  const CARD_W = 280;
-  const CARD_H = 270;
-
-  const flipUp = dotBottomY + CARD_H > containerRect.height - 20;
-  const left = Math.min(Math.max(dotMidX - CARD_W / 2, 8), containerRect.width - CARD_W - 8);
-  const top = flipUp ? dotTopY - CARD_H : dotBottomY;
+function CallPopover({ call, anchorRect, containerRect }: { call: CallSummary; anchorRect: DOMRect; containerRect: DOMRect }) {
+  const s = statusOf(call.status);
+  const CARD_W = 290;
+  const CARD_H = 240 + call.lines.length * 18;
+  const midX = anchorRect.left - containerRect.left + anchorRect.width / 2;
+  const below = anchorRect.bottom - containerRect.top + 8;
+  const above = anchorRect.top - containerRect.top - 8;
+  const flipUp = below + CARD_H > containerRect.height - 20;
+  const left = Math.min(Math.max(midX - CARD_W / 2, 8), containerRect.width - CARD_W - 8);
+  const closesIn = call.status === 'OPEN' ? hoursUntil(call.lastYardCutoffAt) : null;
 
   return (
-    <div
-      style={{
-        position: 'absolute', zIndex: 100,
-        left, top,
-        width: CARD_W,
-        background: '#fff',
-        border: '1px solid var(--gecko-border)',
-        borderRadius: 12,
-        boxShadow: '0 8px 30px rgba(0,0,0,0.12)',
-        overflow: 'hidden',
-        pointerEvents: 'none',
-      }}
-    >
-      {/* Header strip */}
-      <div style={{ background: lc.bg, borderBottom: `1px solid ${lc.dot}22`, padding: '12px 14px', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-        <div>
-          <div style={{ fontFamily: 'var(--gecko-font-mono)', fontSize: 14, fontWeight: 700, color: lc.text }}>{voyage.id}</div>
-          <div style={{ fontSize: 11, color: lc.text, opacity: 0.8, marginTop: 1 }}>{voyage.vessel}</div>
+    <div style={{
+      position: 'absolute', zIndex: 100, left, top: flipUp ? above - CARD_H : below, width: CARD_W,
+      background: 'var(--gecko-bg-surface)', border: '1px solid var(--gecko-border)', borderRadius: 12,
+      boxShadow: '0 8px 30px rgba(0,0,0,0.12)', overflow: 'hidden', pointerEvents: 'none',
+    }}>
+      <div style={{ background: s.bg, padding: '12px 14px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 8 }}>
+        <div style={{ minWidth: 0 }}>
+          <div style={{ fontFamily: 'var(--gecko-font-mono)', fontSize: 13, fontWeight: 700, color: s.text }}>{call.callRef}</div>
+          <div style={{ fontSize: 11, color: s.text, opacity: 0.85, marginTop: 1 }}>{call.vesselName ?? call.vesselCode}</div>
         </div>
-        <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: 4 }}>
-          <span style={{ fontSize: 10, fontWeight: 700, padding: '3px 8px', borderRadius: 20, background: statusBg(voyage.status), color: statusColor(voyage.status), border: `1px solid ${statusColor(voyage.status)}33` }}>
-            {voyage.status.toUpperCase()}
-          </span>
-          <span style={{
-            fontSize: 10, fontWeight: 700, padding: '2px 7px', borderRadius: 20,
-            background: voyage.direction === 'Inbound' ? 'var(--gecko-success-100)' : 'var(--gecko-primary-100)',
-            color: voyage.direction === 'Inbound' ? 'var(--gecko-success-700)' : 'var(--gecko-primary-700)',
-          }}>
-            {voyage.direction === 'Inbound' ? '↓ Inbound' : '↑ Outbound'}
-          </span>
-        </div>
+        <span style={{ fontSize: 10, fontWeight: 700, padding: '3px 8px', borderRadius: 20, background: 'var(--gecko-bg-surface)', color: s.text, border: `1px solid ${s.dot}55`, whiteSpace: 'nowrap' }}>
+          {s.label.toUpperCase()}
+        </span>
       </div>
-
-      {/* Body */}
       <div style={{ padding: '12px 14px', display: 'flex', flexDirection: 'column', gap: 10 }}>
-        {/* Route */}
-        <div style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 12 }}>
-          <span style={{ fontFamily: 'var(--gecko-font-mono)', fontWeight: 700, color: 'var(--gecko-text-primary)' }}>{voyage.pol}</span>
-          <Icon name="arrowRight" size={12} style={{ color: 'var(--gecko-text-disabled)' }} />
-          <span style={{ fontFamily: 'var(--gecko-font-mono)', fontWeight: 700, color: 'var(--gecko-text-primary)' }}>{voyage.pod}</span>
-        </div>
-
-        {/* ETD / ETA */}
         <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8 }}>
-          <div>
-            <div className="gecko-eyebrow" style={{ marginBottom: 2 }}>ETD</div>
-            <div style={{ fontSize: 12, fontWeight: 600, fontFamily: 'var(--gecko-font-mono)', color: 'var(--gecko-text-primary)' }}>{voyage.etd}</div>
-          </div>
-          <div>
-            <div className="gecko-eyebrow" style={{ marginBottom: 2 }}>ETA</div>
-            <div style={{ fontSize: 12, fontWeight: 600, fontFamily: 'var(--gecko-font-mono)', color: 'var(--gecko-text-primary)' }}>{voyage.eta}</div>
-          </div>
+          <div><div className="gecko-eyebrow">ETA</div><div style={{ fontSize: 12, fontWeight: 600, fontFamily: 'var(--gecko-font-mono)' }}>{fmtDateTime(call.eta)}</div></div>
+          <div><div className="gecko-eyebrow">ETD</div><div style={{ fontSize: 12, fontWeight: 600, fontFamily: 'var(--gecko-font-mono)' }}>{fmtDateTime(call.etd)}</div></div>
         </div>
-
-        {/* TEU fill */}
         <div>
-          <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 11, marginBottom: 4 }}>
-            <span style={{ color: 'var(--gecko-text-secondary)', fontWeight: 500 }}>TEU Utilisation</span>
-            <span style={{ fontWeight: 700, color: fillPct > 85 ? 'var(--gecko-error-600)' : fillPct > 60 ? 'var(--gecko-warning-600)' : 'var(--gecko-success-600)' }}>{fillPct}%</span>
-          </div>
-          <div className="gecko-progress gecko-progress-sm">
-            <div className="gecko-progress-bar" style={{
-              width: `${fillPct}%`,
-              background: fillPct > 85 ? 'var(--gecko-error-500)' : fillPct > 60 ? 'var(--gecko-warning-500)' : 'var(--gecko-success-500)',
-            }} />
-          </div>
-          <div className="gecko-cell-meta" style={{ color: 'var(--gecko-text-disabled)', marginTop: 3 }}>{voyage.filled.toLocaleString()} / {voyage.teu.toLocaleString()} TEU</div>
+          <div className="gecko-eyebrow" style={{ marginBottom: 4 }}>Lines on this call</div>
+          {call.lines.length === 0
+            ? <div className="gecko-cell-meta">none — nobody can book against it</div>
+            : call.lines.map(l => (
+              <div key={l} style={{ fontFamily: 'var(--gecko-font-mono)', fontSize: 11.5, fontWeight: 600, color: 'var(--gecko-text-primary)' }}>{l}</div>
+            ))}
         </div>
-
-        {/* Berth + Wharf */}
-        <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
-          {voyage.berth && (
-            <div style={{ fontSize: 11, color: 'var(--gecko-primary-700)', background: 'var(--gecko-primary-50)', padding: '4px 8px', borderRadius: 6, fontWeight: 600, fontFamily: 'var(--gecko-font-mono)', display: 'inline-flex', alignItems: 'center', gap: 4 }}>
-              <Icon name="anchor" size={11} /> Berth {voyage.berth}
-            </div>
+        <div className="gecko-row gecko-row-wrap" style={{ gap: 6 }}>
+          {call.terminalCode && (
+            <span style={{ fontSize: 11, color: 'var(--gecko-primary-700)', background: 'var(--gecko-primary-50)', padding: '3px 8px', borderRadius: 6, fontWeight: 600, fontFamily: 'var(--gecko-font-mono)', display: 'inline-flex', alignItems: 'center', gap: 4 }}>
+              <Icon name="anchor" size={11} /> {call.terminalCode}
+            </span>
           )}
-          {voyage.wharf && (
-            <div style={{ fontSize: 11, color: 'var(--gecko-accent-700)', background: 'var(--gecko-accent-50)', padding: '4px 8px', borderRadius: 6, fontWeight: 600, display: 'inline-flex', alignItems: 'center', gap: 4 }}>
-              <Icon name="layers" size={11} /> {voyage.wharf}
-            </div>
+          {call.lastYardCutoffAt && (
+            <span style={{ fontSize: 11, color: closesIn !== null && closesIn < 48 ? 'var(--gecko-warning-700)' : 'var(--gecko-text-secondary)', background: 'var(--gecko-bg-subtle)', padding: '3px 8px', borderRadius: 6, fontWeight: 600, display: 'inline-flex', alignItems: 'center', gap: 4 }}>
+              <Icon name="clock" size={11} /> Yard closes {fmtDateTime(call.lastYardCutoffAt)}
+            </span>
           )}
         </div>
       </div>
@@ -175,321 +125,248 @@ function VoyagePopover({ voyage, anchorRect, containerRect, onClose }: {
   );
 }
 
-// ── Voyage Dot ────────────────────────────────────────────────────────────────
-function VoyageDot({ voyage, onHover, onLeave }: {
-  voyage: Voyage;
-  onHover: (v: Voyage, rect: DOMRect) => void;
-  onLeave: () => void;
-}) {
-  const ref = useRef<HTMLDivElement>(null);
-  const lc = LINE_COLORS[voyage.line] ?? { dot: '#6b7280', bg: '#f3f4f6', text: '#374151' };
+// ── Calendar pieces ───────────────────────────────────────────────────────────
 
+function CallChip({ call, onHover, onLeave }: { call: CallSummary; onHover: (c: CallSummary, r: DOMRect) => void; onLeave: () => void }) {
+  const ref = useRef<HTMLAnchorElement>(null);
+  const s = statusOf(call.status);
   return (
     <Link
-      href={`/masters/vessels/schedule/${voyage.id}`}
-      ref={ref as React.Ref<HTMLAnchorElement>}
-      onMouseEnter={() => ref.current && onHover(voyage, (ref.current as unknown as HTMLElement).getBoundingClientRect())}
+      ref={ref}
+      href={`/masters/vessels/schedule/${call.vesselCallId}`}
+      onMouseEnter={() => ref.current && onHover(call, ref.current.getBoundingClientRect())}
       onMouseLeave={onLeave}
-      title={`${voyage.id} — click to open`}
+      onFocus={() => ref.current && onHover(call, ref.current.getBoundingClientRect())}
+      onBlur={onLeave}
+      aria-label={`${call.callRef}, ${s.label}`}
       style={{
-        width: 22, height: 22, borderRadius: 6,
-        background: lc.bg,
-        border: `1.5px solid ${lc.dot}55`,
-        display: 'flex', alignItems: 'center', justifyContent: 'center',
-        cursor: 'pointer',
-        transition: 'transform 100ms, box-shadow 100ms',
-        flexShrink: 0,
-        textDecoration: 'none',
+        display: 'flex', alignItems: 'center', gap: 4, padding: '2px 6px', borderRadius: 5, minWidth: 0,
+        background: s.bg, border: `1px solid ${s.dot}55`, textDecoration: 'none',
+        textDecorationLine: call.status === 'CANCELLED' ? 'line-through' : 'none',
       }}
-      onMouseOver={e => { (e.currentTarget as HTMLElement).style.transform = 'scale(1.2)'; (e.currentTarget as HTMLElement).style.boxShadow = `0 2px 8px ${lc.dot}44`; }}
-      onMouseOut={e => { (e.currentTarget as HTMLElement).style.transform = 'scale(1)'; (e.currentTarget as HTMLElement).style.boxShadow = 'none'; }}
     >
-      <span style={{ fontSize: 8, fontWeight: 700, color: lc.text, letterSpacing: '-0.02em' }}>
-        {voyage.line.slice(0, 3)}
+      <span style={{ width: 6, height: 6, borderRadius: '50%', background: s.dot, flexShrink: 0 }} />
+      <span style={{ fontSize: 10, fontWeight: 700, color: s.text, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+        {call.vesselCode}
       </span>
     </Link>
   );
 }
 
-// ── Calendar Day Cell ─────────────────────────────────────────────────────────
-function DayCell({ day, month, year, voyages, today, onHover, onLeave }: {
-  day: number; month: number; year: number;
-  voyages: Voyage[];
-  today: string;
-  onHover: (v: Voyage, rect: DOMRect) => void;
-  onLeave: () => void;
+function DayCell({ day, isToday, calls, onHover, onLeave }: {
+  day: number; isToday: boolean; calls: CallSummary[];
+  onHover: (c: CallSummary, r: DOMRect) => void; onLeave: () => void;
 }) {
-  const key = `${year}-${String(month + 1).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
-  const isToday = key === today;
-  const MAX_VISIBLE = 4;
-  const visible = voyages.slice(0, MAX_VISIBLE);
-  const overflow = voyages.length - MAX_VISIBLE;
-
+  const MAX = 3;
   return (
     <div style={{
-      minHeight: 90,
-      padding: '8px 8px 6px',
-      border: '1px solid var(--gecko-border)',
-      borderRadius: 8,
-      background: isToday ? 'var(--gecko-primary-50)' : 'var(--gecko-bg-surface)',
-      display: 'flex', flexDirection: 'column', gap: 4,
-      position: 'relative',
+      minHeight: 92, padding: '8px 6px 6px', border: '1px solid var(--gecko-border)', borderRadius: 8,
+      background: isToday ? 'var(--gecko-primary-50)' : 'var(--gecko-bg-surface)', display: 'flex', flexDirection: 'column', gap: 4, minWidth: 0,
     }}>
-      {/* Day number */}
       <div style={{
-        fontSize: 12, fontWeight: isToday ? 700 : 500,
-        color: isToday ? 'var(--gecko-primary-700)' : 'var(--gecko-text-secondary)',
-        lineHeight: 1,
-        ...(isToday ? {
-          width: 22, height: 22, background: 'var(--gecko-primary-600)', color: '#fff',
-          borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center',
-        } : {}),
-      }}>
-        {day}
-      </div>
-
-      {/* Voyage dots */}
-      <div style={{ display: 'flex', flexWrap: 'wrap', gap: 3 }}>
-        {visible.map(v => (
-          <VoyageDot key={v.id} voyage={v} onHover={onHover} onLeave={onLeave} />
-        ))}
-        {overflow > 0 && (
-          <div style={{
-            width: 22, height: 22, borderRadius: 6, background: 'var(--gecko-gray-100)',
-            display: 'flex', alignItems: 'center', justifyContent: 'center',
-            fontSize: 9, fontWeight: 700, color: 'var(--gecko-text-secondary)',
-          }}>
-            +{overflow}
-          </div>
-        )}
-      </div>
+        fontSize: 12, fontWeight: isToday ? 700 : 500, lineHeight: 1,
+        color: isToday ? '#fff' : 'var(--gecko-text-secondary)',
+        ...(isToday ? { width: 22, height: 22, background: 'var(--gecko-primary-600)', borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center' } : {}),
+      }}>{day}</div>
+      {calls.slice(0, MAX).map(c => <CallChip key={c.vesselCallId} call={c} onHover={onHover} onLeave={onLeave} />)}
+      {calls.length > MAX && <div className="gecko-cell-meta" style={{ fontSize: 10, fontWeight: 700 }}>+{calls.length - MAX} more</div>}
     </div>
   );
 }
 
-// ── Legend ────────────────────────────────────────────────────────────────────
-function Legend() {
-  return (
-    <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8, alignItems: 'center' }}>
-      {Object.entries(LINE_COLORS).map(([line, c]) => (
-        <div key={line} style={{ display: 'flex', alignItems: 'center', gap: 5, fontSize: 11, fontWeight: 600, color: c.text }}>
-          <div style={{ width: 10, height: 10, borderRadius: 3, background: c.dot }} />
-          {line}
-        </div>
-      ))}
-    </div>
-  );
-}
-
-// ── Main Page ─────────────────────────────────────────────────────────────────
-type DirectionFilter = 'all' | 'inbound' | 'outbound';
-
-// The date a voyage shows up on the calendar:
-//   Outbound — ETD (when the vessel departs LCB; relevant to export cutoffs)
-//   Inbound  — ETA (when the vessel arrives at LCB; relevant to discharge ops)
-function voyageCalendarDate(v: Voyage): string {
-  return v.direction === 'Inbound' ? v.eta.slice(0, 10) : v.etd.slice(0, 10);
-}
+// ── Page ──────────────────────────────────────────────────────────────────────
 
 export default function VesselSchedulePage() {
-  const [month, setMonth] = useState(3); // April = 3 (0-indexed)
-  const [year, setYear]   = useState(2026);
-  const [direction, setDirection] = useState<DirectionFilter>('all');
-  const [hovered, setHovered] = useState<{ voyage: Voyage; rect: DOMRect } | null>(null);
+  const now = new Date();
+  const [month, setMonth] = useState(now.getMonth());
+  const [year, setYear] = useState(now.getFullYear());
+  const [status, setStatus] = useState('');
+  const [hovered, setHovered] = useState<{ call: CallSummary; rect: DOMRect } | null>(null);
   const containerRef = useRef<HTMLDivElement>(null);
-  const leaveTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const leaveTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
 
-  const today = toKey(new Date('2026-04-25'));
+  // One month of calls by ETD, local month boundaries sent as instants.
+  const path = useMemo(() => {
+    const params = new URLSearchParams({
+      from: new Date(year, month, 1).toISOString(),
+      to: new Date(year, month + 1, 1).toISOString(),
+      pageSize: '200',
+    });
+    if (status) params.set('status', status);
+    return `/api/tos/vessel-calls?${params.toString()}`;
+  }, [year, month, status]);
+  const { data, error, loading, reload } = useApiList<CallSummary>(path);
+  const calls = useMemo(() => data ?? [], [data]);
 
-  // Apply direction filter
-  const filteredVoyages = VOYAGES.filter(v =>
-    direction === 'all' ||
-    (direction === 'inbound'  && v.direction === 'Inbound') ||
-    (direction === 'outbound' && v.direction === 'Outbound')
-  );
+  const byDay = useMemo(() => {
+    const map = new Map<string, CallSummary[]>();
+    for (const c of calls) {
+      const key = localDayKey(new Date(c.etd));
+      map.set(key, [...(map.get(key) ?? []), c]);
+    }
+    return map;
+  }, [calls]);
 
-  // Counts per direction (used in the toggle labels so users see how many voyages each filter contains)
-  const counts = {
-    all:      VOYAGES.length,
-    inbound:  VOYAGES.filter(v => v.direction === 'Inbound').length,
-    outbound: VOYAGES.filter(v => v.direction === 'Outbound').length,
-  };
+  const kpis = useMemo(() => {
+    const live = calls.filter(c => c.status !== 'CANCELLED');
+    return {
+      total: live.length,
+      open: calls.filter(c => c.status === 'OPEN').length,
+      closingSoon: calls.filter(c => c.status === 'OPEN' && (hoursUntil(c.lastYardCutoffAt) ?? Infinity) < 48).length,
+      stale: calls.filter(c => c.status === 'DEPARTED_UNCONFIRMED').length,
+      lines: new Set(live.flatMap(c => c.lines.map(l => l.split(' ')[0]))).size,
+    };
+  }, [calls]);
 
-  // Map calendar date → voyages (ETA for inbound, ETD for outbound)
-  const voyagesByDay = filteredVoyages.reduce<Record<string, Voyage[]>>((acc, v) => {
-    const d = voyageCalendarDate(v);
-    if (!acc[d]) acc[d] = [];
-    acc[d].push(v);
-    return acc;
-  }, {});
+  const daysInMonth = new Date(year, month + 1, 0).getDate();
+  const blanks = new Date(year, month, 1).getDay();
+  const totalCells = Math.ceil((blanks + daysInMonth) / 7) * 7;
+  const todayKey = localDayKey(now);
 
-  const daysInMonth  = getDaysInMonth(year, month);
-  const firstDayDow  = getFirstDayOfMonth(year, month); // 0=Sun
-  const blanks       = firstDayDow;
-  const totalCells   = Math.ceil((blanks + daysInMonth) / 7) * 7;
-
-  const handleHover = (voyage: Voyage, dotRect: DOMRect) => {
-    if (leaveTimerRef.current) clearTimeout(leaveTimerRef.current);
-    setHovered({ voyage, rect: dotRect });
-  };
-  const handleLeave = () => {
-    leaveTimerRef.current = setTimeout(() => setHovered(null), 80);
-  };
-
+  const onHover = (call: CallSummary, rect: DOMRect) => { if (leaveTimer.current) clearTimeout(leaveTimer.current); setHovered({ call, rect }); };
+  const onLeave = () => { leaveTimer.current = setTimeout(() => setHovered(null), 80); };
   const prevMonth = () => { if (month === 0) { setMonth(11); setYear(y => y - 1); } else setMonth(m => m - 1); };
   const nextMonth = () => { if (month === 11) { setMonth(0); setYear(y => y + 1); } else setMonth(m => m + 1); };
-
   const containerRect = containerRef.current?.getBoundingClientRect() ?? null;
 
   return (
     <div className="gecko-stack" style={{ maxWidth: 'var(--gecko-container-max)', margin: '0 auto', gap: 20, paddingBottom: 40 }}>
 
-      {/* Page header */}
+      {/* Header */}
       <div className="gecko-page-actions">
         <div className="gecko-page-actions-left">
-          <div className="gecko-row gecko-row-baseline">
+          <div className="gecko-row gecko-row-baseline gecko-stack-md">
             <h1 className="gecko-page-title">Vessel Call Schedule</h1>
-            <span style={{ fontSize: 12, fontWeight: 600, color: 'var(--gecko-primary-700)', background: 'var(--gecko-primary-100)', padding: '2px 8px', borderRadius: 12 }}>Calendar View</span>
+            <span className="gecko-count-badge">{loading && !data ? '…' : `${calls.length} calls in ${MONTH_NAMES[month]}`}</span>
           </div>
-          <div className="gecko-page-subtitle">Operational voyage calendar for Laem Chabang ICD — ETA for inbound, ETD for outbound · hover a dot to see voyage details</div>
+          <div className="gecko-page-subtitle gecko-mt-1">
+            One entry per ship call, on its ETD. Each line on the call keeps its own voyage — that is what bookings and EDI match on.
+          </div>
         </div>
         <div className="gecko-toolbar">
-          <Link href="/masters/vessels" className="gecko-btn gecko-btn-ghost gecko-btn-sm">
-            <Icon name="list" size={16} /> List View
-          </Link>
           <ExportButton resource="Vessel schedule" variant="outline" iconSize={16} />
+          <button className="gecko-btn gecko-btn-outline gecko-btn-sm" onClick={reload}>
+            <Icon name="refreshCcw" size={16} /> Refresh
+          </button>
           <Link href="/masters/vessels/schedule/new" className="gecko-btn gecko-btn-primary gecko-btn-sm">
-            <Icon name="plus" size={16} /> New Voyage
+            <Icon name="plus" size={16} /> New Call
           </Link>
         </div>
       </div>
 
-      {/* Calendar card */}
-      <div style={{ background: 'var(--gecko-bg-surface)', border: '1px solid var(--gecko-border)', borderRadius: 14, boxShadow: 'var(--gecko-shadow-sm)', overflow: 'hidden' }}>
-
-        {/* Calendar toolbar */}
-        <div style={{ padding: '16px 20px', borderBottom: '1px solid var(--gecko-border)', display: 'flex', alignItems: 'center', justifyContent: 'space-between', background: '#fff' }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
-            <button className="gecko-btn gecko-btn-ghost gecko-btn-icon gecko-btn-sm" onClick={prevMonth}>
-              <Icon name="chevronLeft" size={16} />
-            </button>
-            <span style={{ fontSize: 18, fontWeight: 700, color: 'var(--gecko-text-primary)', minWidth: 160, textAlign: 'center' }}>
-              {MONTH_NAMES[month]} {year}
-            </span>
-            <button className="gecko-btn gecko-btn-ghost gecko-btn-icon gecko-btn-sm" onClick={nextMonth}>
-              <Icon name="chevronRight" size={16} />
-            </button>
-            <button className="gecko-btn gecko-btn-ghost gecko-btn-sm" onClick={() => { setMonth(3); setYear(2026); }} style={{ fontSize: 12 }}>
-              Today
-            </button>
-
-            {/* Direction filter — All / Inbound / Outbound */}
-            <div style={{ display: 'flex', background: 'var(--gecko-bg-subtle)', borderRadius: 8, padding: 2, border: '1px solid var(--gecko-border)', marginLeft: 8 }}>
-              {([
-                { v: 'all' as const,      l: 'All',          hint: `All voyages (${counts.all})`,                      color: 'var(--gecko-text-primary)'   },
-                { v: 'inbound' as const,  l: '↓ Inbound',    hint: `Import · arrivals at LCB (${counts.inbound})`,    color: 'var(--gecko-success-700)'    },
-                { v: 'outbound' as const, l: '↑ Outbound',   hint: `Export · departures from LCB (${counts.outbound})`, color: 'var(--gecko-primary-700)'    },
-              ]).map(opt => (
-                <button
-                  key={opt.v}
-                  onClick={() => setDirection(opt.v)}
-                  title={opt.hint}
-                  style={{
-                    padding: '4px 12px', borderRadius: 6, fontSize: 11.5, fontWeight: 600,
-                    cursor: 'pointer', border: 'none', fontFamily: 'inherit',
-                    background: direction === opt.v ? 'var(--gecko-bg-surface)' : 'transparent',
-                    color:      direction === opt.v ? opt.color : 'var(--gecko-text-secondary)',
-                    boxShadow:  direction === opt.v ? '0 1px 3px rgba(0,0,0,0.08)' : 'none',
-                  }}
-                >
-                  {opt.l}
-                </button>
-              ))}
-            </div>
-          </div>
-          <Legend />
+      {error && (
+        <div role="alert" className="gecko-alert gecko-alert-warning gecko-row" style={{ gap: 10 }}>
+          <Icon name="alertCircle" size={16} />
+          <span>{error.message}</span>
+          {error.status === 401 && <Link href="/login" className="gecko-link">Sign in</Link>}
         </div>
+      )}
 
-        {/* Day-of-week header */}
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(7, 1fr)', gap: 4, padding: '12px 16px 4px', background: 'var(--gecko-bg-subtle)' }}>
-          {DAY_LABELS.map(d => (
-            <div key={d} className="gecko-eyebrow" style={{ textAlign: 'center', padding: '4px 0' }}>
-              {d}
-            </div>
-          ))}
-        </div>
-
-        {/* Calendar grid */}
-        <div
-          ref={containerRef}
-          style={{ display: 'grid', gridTemplateColumns: 'repeat(7, 1fr)', gap: 4, padding: '4px 16px 16px', background: 'var(--gecko-bg-subtle)', position: 'relative' }}
-        >
-          {Array.from({ length: totalCells }).map((_, idx) => {
-            const dayNum = idx - blanks + 1;
-            const isValid = dayNum >= 1 && dayNum <= daysInMonth;
-
-            if (!isValid) {
-              return <div key={idx} style={{ minHeight: 90, borderRadius: 8, background: 'transparent' }} />;
-            }
-
-            const key = `${year}-${String(month + 1).padStart(2, '0')}-${String(dayNum).padStart(2, '0')}`;
-            const dayVoyages = voyagesByDay[key] ?? [];
-
-            return (
-              <DayCell
-                key={idx}
-                day={dayNum}
-                month={month}
-                year={year}
-                voyages={dayVoyages}
-                today={today}
-                onHover={handleHover}
-                onLeave={handleLeave}
-              />
-            );
-          })}
-
-          {/* Popover */}
-          {hovered && containerRect && (
-            <VoyagePopover
-              voyage={hovered.voyage}
-              anchorRect={hovered.rect}
-              containerRect={containerRect}
-              onClose={() => setHovered(null)}
-            />
-          )}
-        </div>
-      </div>
-
-      {/* Month summary strip — scoped to filtered direction + visible month, using each voyage's
-          calendar date (ETA for inbound, ETD for outbound) */}
-      {(() => {
-        const monthKey = `${year}-${String(month + 1).padStart(2, '0')}`;
-        const voyagesThisMonth = filteredVoyages.filter(v => voyageCalendarDate(v).startsWith(monthKey));
-        const monthLabel       = direction === 'inbound' ? 'Inbound voyages this month'
-                              : direction === 'outbound' ? 'Outbound voyages this month'
-                              : 'Voyages this month';
-        return (
-      <div className="gecko-grid-4">
+      {/* KPIs for the visible month */}
+      <div className="gecko-kpi-strip gecko-kpi-strip-5">
         {[
-          { label: monthLabel,           value: voyagesThisMonth.length,                                                                                  icon: 'ship',   color: 'var(--gecko-primary-600)', bg: 'var(--gecko-primary-50)' },
-          { label: 'Open for booking',   value: voyagesThisMonth.filter(v => v.status === 'Open').length,                                                 icon: 'check',  color: 'var(--gecko-success-600)', bg: 'var(--gecko-success-50)' },
-          { label: 'Total TEU capacity', value: voyagesThisMonth.reduce((s, v) => s + v.teu, 0).toLocaleString(),                                          icon: 'layers', color: 'var(--gecko-info-600)',    bg: 'var(--gecko-info-50)'    },
-          { label: 'Shipping lines',     value: [...new Set(voyagesThisMonth.map(v => v.line))].length,                                                   icon: 'flag',   color: 'var(--gecko-accent-600)',  bg: 'var(--gecko-accent-50)'  },
-        ].map(stat => (
-          <div key={stat.label} className="gecko-card gecko-row" style={{ gap: 14 }}>
-            <div style={{ width: 40, height: 40, borderRadius: 10, background: stat.bg, display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
-              <Icon name={stat.icon} size={18} style={{ color: stat.color }} />
-            </div>
-            <div>
-              <div className="gecko-stat-num gecko-stat-num-22">{stat.value}</div>
-              <div className="gecko-cell-meta" style={{ marginTop: 3 }}>{stat.label}</div>
-            </div>
+          { label: 'Calls', value: kpis.total, sub: 'excluding cancelled', color: 'var(--gecko-text-primary)' },
+          { label: 'Open for receiving', value: kpis.open, sub: 'yard still accepting', color: 'var(--gecko-success-700)' },
+          { label: 'Yard closes < 48 h', value: kpis.closingSoon, sub: 'chase late exports now', color: 'var(--gecko-warning-700)' },
+          { label: 'ATD not recorded', value: kpis.stale, sub: 'ETD passed > 24 h ago', color: 'var(--gecko-text-secondary)' },
+          { label: 'Lines calling', value: kpis.lines, sub: 'distinct carriers', color: 'var(--gecko-primary-700)' },
+        ].map(k => (
+          <div key={k.label} className="gecko-kpi-cell">
+            <div className="gecko-stat-label">{k.label}</div>
+            <div className="gecko-stat-num" style={{ color: k.color }}>{loading && !data ? '…' : k.value}</div>
+            <div className="gecko-card-subtitle">{k.sub}</div>
           </div>
         ))}
       </div>
-        );
-      })()}
+
+      {/* Calendar */}
+      <div style={{ background: 'var(--gecko-bg-surface)', border: '1px solid var(--gecko-border)', borderRadius: 14, boxShadow: 'var(--gecko-shadow-sm)', overflow: 'hidden' }}>
+        <div className="gecko-row gecko-row-between gecko-row-wrap" style={{ padding: '14px 20px', borderBottom: '1px solid var(--gecko-border)', gap: 12 }}>
+          <div className="gecko-row" style={{ gap: 10 }}>
+            <button className="gecko-btn gecko-btn-ghost gecko-btn-icon gecko-btn-sm" onClick={prevMonth} aria-label="Previous month"><Icon name="chevronLeft" size={16} /></button>
+            <span style={{ fontSize: 18, fontWeight: 700, color: 'var(--gecko-text-primary)', minWidth: 160, textAlign: 'center' }}>{MONTH_NAMES[month]} {year}</span>
+            <button className="gecko-btn gecko-btn-ghost gecko-btn-icon gecko-btn-sm" onClick={nextMonth} aria-label="Next month"><Icon name="chevronRight" size={16} /></button>
+            <button className="gecko-btn gecko-btn-ghost gecko-btn-sm" onClick={() => { setMonth(now.getMonth()); setYear(now.getFullYear()); }}>Today</button>
+            <select className="gecko-input gecko-input-sm" aria-label="Status" value={status} onChange={e => setStatus(e.target.value)} style={{ width: 200 }}>
+              <option value="">All statuses</option>
+              {Object.entries(STATUS).map(([k, v]) => <option key={k} value={k}>{v.label}</option>)}
+            </select>
+          </div>
+          <div className="gecko-row gecko-row-wrap" style={{ gap: 10 }}>
+            {Object.entries(STATUS).map(([k, v]) => (
+              <span key={k} title={v.hint} className="gecko-row" style={{ gap: 5, fontSize: 11, fontWeight: 600, color: v.text }}>
+                <span style={{ width: 9, height: 9, borderRadius: '50%', background: v.dot }} />{v.label}
+              </span>
+            ))}
+          </div>
+        </div>
+
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(7, minmax(0, 1fr))', gap: 4, padding: '12px 16px 4px', background: 'var(--gecko-bg-subtle)' }}>
+          {DAY_LABELS.map(d => <div key={d} className="gecko-eyebrow" style={{ textAlign: 'center', padding: '4px 0' }}>{d}</div>)}
+        </div>
+        <div ref={containerRef} style={{ display: 'grid', gridTemplateColumns: 'repeat(7, minmax(0, 1fr))', gap: 4, padding: '4px 16px 16px', background: 'var(--gecko-bg-subtle)', position: 'relative' }}>
+          {Array.from({ length: totalCells }).map((_, idx) => {
+            const day = idx - blanks + 1;
+            if (day < 1 || day > daysInMonth) return <div key={idx} style={{ minHeight: 92 }} />;
+            const key = localDayKey(new Date(year, month, day));
+            return <DayCell key={idx} day={day} isToday={key === todayKey} calls={byDay.get(key) ?? []} onHover={onHover} onLeave={onLeave} />;
+          })}
+          {hovered && containerRect && <CallPopover call={hovered.call} anchorRect={hovered.rect} containerRect={containerRect} />}
+        </div>
+      </div>
+
+      {/* The month as a list — what the planner actually works down */}
+      <div className="gecko-table-card">
+        <table className="gecko-table gecko-table-comfortable" style={{ fontSize: 12.5 }}>
+          <thead>
+            <tr>
+              <th style={{ width: 120 }}>ETD</th>
+              <th style={{ width: 190 }}>Call</th>
+              <th>Vessel</th>
+              <th style={{ width: 100 }}>Terminal</th>
+              <th>Lines &amp; voyages</th>
+              <th style={{ width: 130 }}>Yard closes</th>
+              <th style={{ width: 170 }}>Status</th>
+            </tr>
+          </thead>
+          <tbody>
+            {loading && !data ? (
+              <tr><td colSpan={7} style={{ textAlign: 'center', padding: 28, color: 'var(--gecko-text-secondary)' }}>Loading calls…</td></tr>
+            ) : calls.length === 0 ? (
+              <tr><td colSpan={7} style={{ textAlign: 'center', padding: 28, color: 'var(--gecko-text-secondary)' }}>
+                No calls in {MONTH_NAMES[month]} {year}{status ? ` with status ${statusOf(status).label}` : ''}.
+              </td></tr>
+            ) : calls.map(c => {
+              const s = statusOf(c.status);
+              const closesIn = c.status === 'OPEN' ? hoursUntil(c.lastYardCutoffAt) : null;
+              return (
+                <tr key={c.vesselCallId} style={{ opacity: c.status === 'CANCELLED' ? 0.6 : 1 }}>
+                  <td style={{ fontFamily: 'var(--gecko-font-mono)', whiteSpace: 'nowrap' }}>{fmtDateTime(c.etd)}</td>
+                  <td><Link href={`/masters/vessels/schedule/${c.vesselCallId}`} className="gecko-id-link">{c.callRef}</Link></td>
+                  <td>
+                    <div style={{ fontWeight: 600, color: 'var(--gecko-text-primary)' }}>{c.vesselName ?? c.vesselCode}</div>
+                    {c.operatorVoyageOut && <div className="gecko-cell-meta">operator voyage {c.operatorVoyageOut}</div>}
+                  </td>
+                  <td className="gecko-text-mono">{c.terminalCode ?? '—'}</td>
+                  <td>
+                    <div className="gecko-row gecko-row-wrap" style={{ gap: 4 }}>
+                      {c.lines.map(l => <span key={l} className="gecko-badge gecko-badge-xs gecko-badge-gray gecko-text-mono">{l}</span>)}
+                    </div>
+                  </td>
+                  <td style={{ whiteSpace: 'nowrap', color: closesIn !== null && closesIn < 48 ? 'var(--gecko-warning-700)' : undefined, fontWeight: closesIn !== null && closesIn < 48 ? 600 : undefined }}>
+                    {fmtDateTime(c.lastYardCutoffAt)}
+                  </td>
+                  <td>
+                    <span title={s.hint} style={{ display: 'inline-flex', alignItems: 'center', gap: 6, padding: '2px 8px', borderRadius: 10, fontSize: 11, fontWeight: 700, background: s.bg, color: s.text }}>
+                      <span style={{ width: 6, height: 6, borderRadius: '50%', background: s.dot }} />{s.label}
+                    </span>
+                  </td>
+                </tr>
+              );
+            })}
+          </tbody>
+        </table>
+      </div>
     </div>
   );
 }

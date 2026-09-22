@@ -1,142 +1,391 @@
 "use client";
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useEffect } from 'react';
 import Link from 'next/link';
 import { useParams } from 'next/navigation';
 import { Icon } from '@/components/ui/Icon';
-import { ExportButton } from '@/components/ui/ExportButton';
+import { useToast } from '@/components/ui/Toast';
+import { useApi } from '@/lib/api/use-api';
+import { apiSend } from '@/lib/api/client';
+import { ApiError } from '@/lib/api/problem';
 
-// ── Voyage master data (mirrors schedule/page.tsx) ────────────────────────────
-const LINE_COLORS: Record<string, { dot: string; bg: string; text: string }> = {
-  MSK:  { dot: '#0066CC', bg: '#EBF4FF', text: '#004A99' },
-  OOCL: { dot: '#E65C00', bg: '#FFF3EB', text: '#C44A00' },
-  EGL:  { dot: '#00873D', bg: '#EDFAF3', text: '#006830' },
-  CMA:  { dot: '#D0021B', bg: '#FFEBEE', text: '#A80015' },
-  HLC:  { dot: '#F47920', bg: '#FFF4E6', text: '#C05E00' },
-  ONE:  { dot: '#E4002B', bg: '#FFEBEE', text: '#B30022' },
-  HMM:  { dot: '#005BAC', bg: '#EBF2FF', text: '#004488' },
-};
+/**
+ * LIVE against gecko_tos (vessel.vessel_call + vessel_call_line +
+ * vessel_call_cutoff) through /api/tos/vessel-calls/{id}. `id` is the call's GUID.
+ *
+ * ONE ROW PER PHYSICAL CALL (PLAN D-1). The lines loading on it carry their own
+ * voyages; cut-offs are child rows, some per line, yard ones per depot branch.
+ * Status is DERIVED (vw_vessel_call_status) — never typed in. Bookings will
+ * point at this call and copy nothing (D-2).
+ *
+ * What the mock had and the API does not, so it is gone rather than faked:
+ *  - the bookings tab and its KPIs (TEU booked, reefer / hazmat counts) —
+ *    bookings are batch B; the tab comes back when they exist.
+ *  - POL → POD and "inbound / outbound": a call is ONE port; direction belongs
+ *    to the booking, not the ship.
+ *  - TEU capacity / fill %, berth and wharf — no source for any of them yet
+ *    (the terminal is known; the berth is the terminal's business).
+ *  - the invented history timeline — temporal history exists in the database
+ *    but has no endpoint yet.
+ *  - Print Manifest — there is no manifest without bookings.
+ */
 
-const VOYAGES = [
-  { id: 'MSK-142E',  vessel: 'Maersk Kalmar',   line: 'MSK',  pol: 'THSGN', pod: 'CNSHA', etd: '2026-04-03', eta: '2026-04-09', status: 'Departed',  teu: 1800, filled: 1420, berth: 'B-2', wharf: 'Wharf 1', direction: 'Outbound', tradeService: 'AEX', agent: 'SEALC-TH', bookingType: 'EXPORT' },
-  { id: 'OOL-089W',  vessel: 'OOCL Hamburg',    line: 'OOCL', pol: 'THLCB', pod: 'USLAX', etd: '2026-04-05', eta: '2026-04-22', status: 'En Route',  teu: 2100, filled: 1890, berth: 'C-1', wharf: 'Wharf 2', direction: 'Outbound', tradeService: 'TP1', agent: 'UNIOC-TH', bookingType: 'EXPORT' },
-  { id: 'EGL-336N',  vessel: 'Ever Given',       line: 'EGL',  pol: 'CNSHA', pod: 'THLCB', etd: '2026-04-08', eta: '2026-04-28', status: 'En Route',  teu: 1650, filled: 980,  berth: 'A-3', wharf: 'Wharf 3', direction: 'Inbound',  tradeService: 'AEI', agent: 'EGLTH-01', bookingType: 'IMPORT' },
-  { id: 'MSK-201W',  vessel: 'Maersk Honam',    line: 'MSK',  pol: 'THLCB', pod: 'NLRTM', etd: '2026-04-12', eta: '2026-05-02', status: 'En Route',  teu: 2400, filled: 2100, berth: 'B-1', wharf: 'Wharf 1', direction: 'Outbound', tradeService: 'FAL', agent: 'SEALC-TH', bookingType: 'EXPORT' },
-  { id: 'CMA-771S',  vessel: 'CMA CGM Rossini', line: 'CMA',  pol: 'SGSIN', pod: 'THLCB', etd: '2026-04-14', eta: '2026-04-18', status: 'En Route',  teu: 900,  filled: 640,  berth: 'D-2', wharf: 'Wharf 4', direction: 'Inbound',  tradeService: 'SEA', agent: 'CMATH-02', bookingType: 'IMPORT' },
-  { id: 'OOL-112E',  vessel: 'OOCL Seoul',      line: 'OOCL', pol: 'THLCB', pod: 'JPNGO', etd: '2026-04-17', eta: '2026-04-21', status: 'Open',      teu: 1400, filled: 320,  berth: null,  wharf: 'Wharf 3', direction: 'Outbound', tradeService: 'JAX', agent: 'UNIOC-TH', bookingType: 'EXPORT' },
-  { id: 'MSK-198E',  vessel: 'Maersk Sentosa',  line: 'MSK',  pol: 'THLCB', pod: 'CNSHA', etd: '2026-04-22', eta: '2026-04-28', status: 'Open',      teu: 1600, filled: 440,  berth: null,  wharf: 'Wharf 2', direction: 'Outbound', tradeService: 'AEX', agent: 'SEALC-TH', bookingType: 'EXPORT' },
-  { id: 'ONE-055E',  vessel: 'ONE Stork',       line: 'ONE',  pol: 'THLCB', pod: 'JPYOK', etd: '2026-04-22', eta: '2026-04-26', status: 'Open',      teu: 820,  filled: 190,  berth: null,  wharf: 'Wharf 4', direction: 'Outbound', tradeService: 'JSX', agent: 'ONETH-01', bookingType: 'EXPORT' },
-  { id: 'HMM-088N',  vessel: 'HMM Le Havre',   line: 'HMM',  pol: 'THLCB', pod: 'FRLEH', etd: '2026-04-30', eta: '2026-05-20', status: 'Scheduled', teu: 1750, filled: 0,    berth: null,  wharf: null,       direction: 'Outbound', tradeService: 'EUX', agent: 'HMMTH-01', bookingType: 'EXPORT' },
-];
-
-// ── Mock bookings per voyage ───────────────────────────────────────────────────
-type BookingStatus = 'Confirmed' | 'Pending' | 'Cancelled' | 'On Hold';
-interface Booking {
-  ref:       string;
-  customer:  string;
-  blType:    'FCL' | 'LCL';
-  ctrType:   string;
-  qty:       number;
-  cargo:     string;
-  weightKg:  number;
-  reefer:    boolean;
-  hazmat:    boolean;
-  status:    BookingStatus;
+interface VesselCall {
+  vesselCallId: string;
+  callRef: string;
+  vesselCode: string;
+  vesselName: string | null;
+  portCode: string;
+  terminalCode: string | null;
+  operatorVoyageIn: string | null;
+  operatorVoyageOut: string | null;
+  eta: string;
+  etb: string | null;
+  etd: string;
+  ata: string | null;
+  atb: string | null;
+  atd: string | null;
+  status: string;
+  isCancelled: boolean;
+  cancelledAt: string | null;
+  cancelReason: string | null;
+  source: string;
+  remarks: string | null;
+  rowVersion: string;
 }
 
-const BOOKINGS: Record<string, Booking[]> = {
-  'MSK-142E': [
-    { ref: 'BK-2026-0441', customer: 'Thai Union Group PCL',         blType: 'FCL', ctrType: '40HC', qty: 24, cargo: 'Canned Tuna',           weightKg: 480000, reefer: false, hazmat: false, status: 'Confirmed' },
-    { ref: 'BK-2026-0442', customer: 'Siam Cement Group',            blType: 'FCL', ctrType: '20GP', qty: 18, cargo: 'Cement Bags',           weightKg: 360000, reefer: false, hazmat: false, status: 'Confirmed' },
-    { ref: 'BK-2026-0443', customer: 'PTT Global Chemical',          blType: 'FCL', ctrType: '20TK', qty: 6,  cargo: 'Chemical Resin (IMDG)', weightKg: 132000, reefer: false, hazmat: true,  status: 'Confirmed' },
-    { ref: 'BK-2026-0444', customer: 'CP Foods Co., Ltd.',           blType: 'FCL', ctrType: '40RF', qty: 12, cargo: 'Frozen Poultry',        weightKg: 228000, reefer: true,  hazmat: false, status: 'Confirmed' },
-    { ref: 'BK-2026-0445', customer: 'Indorama Ventures PCL',        blType: 'FCL', ctrType: '40HC', qty: 8,  cargo: 'PET Chips',             weightKg: 192000, reefer: false, hazmat: false, status: 'Pending'   },
-    { ref: 'BK-2026-0446', customer: 'Bangchak Corporation PCL',     blType: 'LCL', ctrType: '20GP', qty: 2,  cargo: 'Lubricating Oil',       weightKg: 18000,  reefer: false, hazmat: true,  status: 'On Hold'   },
-    { ref: 'BK-2026-0447', customer: 'Charoen Pokphand Foods PCL',   blType: 'FCL', ctrType: '40RF', qty: 14, cargo: 'Frozen Shrimp',         weightKg: 266000, reefer: true,  hazmat: false, status: 'Confirmed' },
-    { ref: 'BK-2026-0448', customer: 'Betagro Public Co.',           blType: 'FCL', ctrType: '40RF', qty: 6,  cargo: 'Chilled Pork',          weightKg: 108000, reefer: true,  hazmat: false, status: 'Confirmed' },
-  ],
-  'OOL-089W': [
-    { ref: 'BK-2026-0501', customer: 'Saha Pathanapibul PCL',        blType: 'FCL', ctrType: '40HC', qty: 30, cargo: 'Consumer Goods',        weightKg: 540000, reefer: false, hazmat: false, status: 'Confirmed' },
-    { ref: 'BK-2026-0502', customer: 'Thai Union Group PCL',         blType: 'FCL', ctrType: '40RF', qty: 20, cargo: 'Frozen Seafood',        weightKg: 380000, reefer: true,  hazmat: false, status: 'Confirmed' },
-    { ref: 'BK-2026-0503', customer: 'PTT Global Chemical',          blType: 'FCL', ctrType: '20TK', qty: 8,  cargo: 'Caustic Soda (IMDG)',   weightKg: 176000, reefer: false, hazmat: true,  status: 'Pending'   },
-    { ref: 'BK-2026-0504', customer: 'Indorama Ventures PCL',        blType: 'FCL', ctrType: '40HC', qty: 42, cargo: 'Polyester Fibre',       weightKg: 756000, reefer: false, hazmat: false, status: 'Confirmed' },
-  ],
-  'OOL-112E': [
-    { ref: 'BK-2026-0601', customer: 'CP Foods Co., Ltd.',           blType: 'FCL', ctrType: '40RF', qty: 8,  cargo: 'Frozen Ready Meals',    weightKg: 128000, reefer: true,  hazmat: false, status: 'Confirmed' },
-    { ref: 'BK-2026-0602', customer: 'Siam Cement Group',            blType: 'FCL', ctrType: '20GP', qty: 10, cargo: 'Gypsum Board',          weightKg: 200000, reefer: false, hazmat: false, status: 'Pending'   },
-    { ref: 'BK-2026-0603', customer: 'Thai Union Group PCL',         blType: 'LCL', ctrType: '20GP', qty: 3,  cargo: 'Canned Fish Misc.',     weightKg: 27000,  reefer: false, hazmat: false, status: 'Confirmed' },
-  ],
-  'MSK-198E': [
-    { ref: 'BK-2026-0701', customer: 'Charoen Pokphand Foods PCL',   blType: 'FCL', ctrType: '40RF', qty: 16, cargo: 'Frozen Chicken',        weightKg: 304000, reefer: true,  hazmat: false, status: 'Confirmed' },
-    { ref: 'BK-2026-0702', customer: 'PTT Global Chemical',          blType: 'FCL', ctrType: '40HC', qty: 12, cargo: 'HDPE Pellets',          weightKg: 288000, reefer: false, hazmat: false, status: 'Pending'   },
-  ],
+interface Line {
+  vesselCallLineId: string;
+  lineCode: string;
+  agentCode: string | null;
+  voyageIn: string | null;
+  voyageOut: string | null;
+  serviceCode: string | null;
+}
+
+interface Cutoff {
+  vesselCallCutoffId: string;
+  kind: string;
+  lineCode: string | null;
+  branchId: string | null;
+  at: string;
+  source: string;
+  derivedLeadHours: number | null;
+  remarks: string | null;
+}
+
+interface Detail { call: VesselCall; lines: Line[]; cutoffs: Cutoff[] }
+interface Effective { kind: string; at: string; source: string; appliesTo: string }
+
+const KINDS = ['PORT_DRY', 'PORT_REEFER', 'PORT_DG', 'YARD_DRY', 'YARD_REEFER', 'YARD_DG', 'VGM', 'SI'];
+
+const STATUS: Record<string, { bg: string; color: string; label: string }> = {
+  OPEN:                 { bg: 'var(--gecko-success-50)', color: 'var(--gecko-success-700)', label: 'Open' },
+  CLOSED_FOR_RECEIVING: { bg: 'var(--gecko-warning-50)', color: 'var(--gecko-warning-700)', label: 'Closed for receiving' },
+  ARRIVED:              { bg: 'var(--gecko-info-50)',    color: 'var(--gecko-info-700)',    label: 'Arrived' },
+  WORKING:              { bg: 'var(--gecko-primary-50)', color: 'var(--gecko-primary-700)', label: 'Working' },
+  DEPARTED_UNCONFIRMED: { bg: 'var(--gecko-warning-50)', color: 'var(--gecko-warning-700)', label: 'Departed? (no ATD)' },
+  DEPARTED:             { bg: 'var(--gecko-gray-100)',   color: 'var(--gecko-gray-600)',    label: 'Departed' },
+  CANCELLED:            { bg: 'var(--gecko-error-50)',   color: 'var(--gecko-error-700)',   label: 'Cancelled' },
 };
 
-// ── Status helpers ────────────────────────────────────────────────────────────
-function VoyageStatusBadge({ status }: { status: string }) {
-  const map: Record<string, { bg: string; color: string }> = {
-    'Open':      { bg: 'var(--gecko-success-50)',  color: 'var(--gecko-success-700)' },
-    'Accepting': { bg: 'var(--gecko-primary-50)',  color: 'var(--gecko-primary-700)' },
-    'En Route':  { bg: 'var(--gecko-info-50)',     color: 'var(--gecko-info-700)'    },
-    'Departed':  { bg: 'var(--gecko-gray-100)',    color: 'var(--gecko-gray-600)'    },
-    'Scheduled': { bg: 'var(--gecko-warning-50)',  color: 'var(--gecko-warning-700)' },
-    'Cancelled': { bg: 'var(--gecko-error-50)',    color: 'var(--gecko-error-700)'   },
-  };
-  const s = map[status] ?? map['Scheduled'];
+// ── time helpers ────────────────────────────────────────────────────────────
+const TZ = Intl.DateTimeFormat().resolvedOptions().timeZone;
+const fmt = (iso: string | null) => iso
+  ? new Date(iso).toLocaleString(undefined, { day: '2-digit', month: 'short', hour: '2-digit', minute: '2-digit', hour12: false })
+  : '—';
+/** ISO → value for <input type="datetime-local"> in the browser's zone. */
+const toLocalInput = (iso: string | null) => {
+  if (!iso) return '';
+  const d = new Date(iso);
+  const pad = (n: number) => String(n).padStart(2, '0');
+  return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}`;
+};
+/** datetime-local value (browser zone) → full ISO instant. */
+const fromLocalInput = (value: string) => (value ? new Date(value).toISOString() : null);
+
+function StatusBadge({ status }: { status: string }) {
+  const s = STATUS[status] ?? { bg: 'var(--gecko-bg-subtle)', color: 'var(--gecko-text-secondary)', label: status };
   return (
     <span style={{ background: s.bg, color: s.color, padding: '3px 10px', borderRadius: 20, fontSize: 11, fontWeight: 700, border: `1px solid ${s.color}33` }}>
-      {status}
+      {s.label}
     </span>
   );
 }
 
-function BookingStatusBadge({ status }: { status: BookingStatus }) {
-  const map: Record<BookingStatus, { bg: string; color: string }> = {
-    'Confirmed': { bg: 'var(--gecko-success-50)',  color: 'var(--gecko-success-700)' },
-    'Pending':   { bg: 'var(--gecko-warning-50)',  color: 'var(--gecko-warning-700)' },
-    'On Hold':   { bg: 'var(--gecko-info-50)',     color: 'var(--gecko-info-700)'    },
-    'Cancelled': { bg: 'var(--gecko-error-50)',    color: 'var(--gecko-error-700)'   },
-  };
-  const s = map[status];
+function ErrorBox({ error }: { error: ApiError | null }) {
+  if (!error) return null;
+  const fields = Object.entries(error.fieldErrors);
   return (
-    <span style={{ background: s.bg, color: s.color, padding: '2px 8px', borderRadius: 10, fontSize: 11, fontWeight: 600, border: `1px solid ${s.color}33` }}>
-      {status}
-    </span>
+    <div role="alert" className="gecko-alert gecko-alert-error" style={{ display: 'block' }}>
+      <div className="gecko-row" style={{ gap: 8 }}><Icon name="alertCircle" size={16} /><span>{error.message}</span></div>
+      {fields.length > 1 && (
+        <ul style={{ margin: '6px 0 0 24px', padding: 0, fontSize: 12 }}>
+          {fields.map(([k, v]) => <li key={k}><code>{k}</code>: {v.join(' ')}</li>)}
+        </ul>
+      )}
+    </div>
   );
 }
 
-// ── KPI box ───────────────────────────────────────────────────────────────────
-function KpiBox({ label, value, sub, color, bg, icon }: {
-  label: string; value: string | number; sub?: string;
-  color: string; bg: string; icon: string;
-}) {
+function TimeCell({ label, value, strong }: { label: string; value: string | null; strong?: boolean }) {
   return (
-    <div style={{ background: 'var(--gecko-bg-surface)', padding: '18px 20px', display: 'flex', alignItems: 'center', gap: 14 }}>
-      <div style={{ width: 40, height: 40, borderRadius: 10, background: bg, display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
-        <Icon name={icon} size={18} style={{ color }} />
-      </div>
-      <div>
-        <div className="gecko-stat-num gecko-stat-num-22">{value}</div>
-        {sub && <div style={{ fontSize: 11, color, fontWeight: 600, marginTop: 1 }}>{sub}</div>}
-        <div className="gecko-cell-meta">{label}</div>
+    <div>
+      <div className="gecko-eyebrow" style={{ marginBottom: 2 }}>{label}</div>
+      <div style={{ fontSize: 13, fontWeight: strong ? 700 : 600, fontFamily: 'var(--gecko-font-mono)', color: value ? 'var(--gecko-text-primary)' : 'var(--gecko-text-disabled)' }}>
+        {fmt(value)}
       </div>
     </div>
   );
 }
 
-// ── Main page ─────────────────────────────────────────────────────────────────
-export default function VoyageDetailPage() {
-  const { id } = useParams<{ id: string }>();
-  const [activeTab, setActiveTab] = useState<'overview' | 'bookings' | 'history'>('bookings');
-  const [bkFilter, setBkFilter] = useState('');
-  const [bkStatus, setBkStatus] = useState('');
+const card: React.CSSProperties = { background: 'var(--gecko-bg-surface)', border: '1px solid var(--gecko-border)', borderRadius: 12, overflow: 'hidden', boxShadow: 'var(--gecko-shadow-sm)' };
+const cardHead: React.CSSProperties = { padding: '12px 20px', borderBottom: '1px solid var(--gecko-border)', background: 'var(--gecko-bg-subtle)', display: 'flex', alignItems: 'center', gap: 10 };
 
-  const voyage = VOYAGES.find(v => v.id === id);
-  if (!voyage) {
+// ── actuals ─────────────────────────────────────────────────────────────────
+function ActualsForm({ call, onDone }: { call: VesselCall; onDone: () => void }) {
+  const [ata, setAta] = useState(toLocalInput(call.ata));
+  const [atb, setAtb] = useState(toLocalInput(call.atb));
+  const [atd, setAtd] = useState(toLocalInput(call.atd));
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState<ApiError | null>(null);
+  const { toast } = useToast();
+
+  const save = async () => {
+    setBusy(true); setError(null);
+    try {
+      await apiSend('POST', `/api/tos/vessel-calls/${call.vesselCallId}/actuals`, {
+        rowVersion: call.rowVersion, ata: fromLocalInput(ata), atb: fromLocalInput(atb), atd: fromLocalInput(atd),
+      });
+      toast({ variant: 'success', title: 'Actuals recorded', message: call.callRef });
+      onDone();
+    } catch (e) {
+      setError(e instanceof ApiError ? e : new ApiError(0, 'Could not reach the Gecko API.'));
+    } finally { setBusy(false); }
+  };
+
+  return (
+    <div className="gecko-stack" style={{ gap: 12, padding: '16px 20px' }}>
+      <ErrorBox error={error} />
+      <div className="gecko-grid-3" style={{ gap: 12 }}>
+        {([['Arrived (ATA)', ata, setAta, 'ata'], ['Berthed (ATB)', atb, setAtb, 'atb'], ['Departed (ATD)', atd, setAtd, 'atd']] as const).map(([label, value, set, key]) => (
+          <div key={key} className="gecko-form-group">
+            <label className="gecko-label">{label}</label>
+            <input type="datetime-local" className="gecko-input" value={value} onChange={e => set(e.target.value)} />
+            {error?.forField(key) && <div style={{ fontSize: 11, color: 'var(--gecko-error-600)', marginTop: 3 }}>{error.forField(key)}</div>}
+          </div>
+        ))}
+      </div>
+      <div className="gecko-row" style={{ gap: 8 }}>
+        <span className="gecko-cell-meta">Times are in {TZ}. Clear a field to remove an actual entered by mistake.</span>
+        <button className="gecko-btn gecko-btn-primary gecko-btn-sm" style={{ marginLeft: 'auto' }} onClick={save} disabled={busy}>
+          <Icon name="save" size={14} /> {busy ? 'Saving…' : 'Save actuals'}
+        </button>
+      </div>
+    </div>
+  );
+}
+
+// ── cancel ──────────────────────────────────────────────────────────────────
+function CancelForm({ call, onDone }: { call: VesselCall; onDone: () => void }) {
+  const [reason, setReason] = useState('');
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState<ApiError | null>(null);
+  const { toast } = useToast();
+  const ok = reason.trim().length >= 5;
+
+  const cancel = async () => {
+    if (!ok) return;
+    setBusy(true); setError(null);
+    try {
+      await apiSend('POST', `/api/tos/vessel-calls/${call.vesselCallId}/cancel`, { reason: reason.trim(), rowVersion: call.rowVersion });
+      toast({ variant: 'success', title: 'Call cancelled', message: call.callRef });
+      onDone();
+    } catch (e) {
+      setError(e instanceof ApiError ? e : new ApiError(0, 'Could not reach the Gecko API.'));
+    } finally { setBusy(false); }
+  };
+
+  return (
+    <div className="gecko-stack" style={{ gap: 10, padding: '16px 20px' }}>
+      <ErrorBox error={error} />
+      <div className="gecko-form-group">
+        <label className="gecko-label gecko-label-required">Reason</label>
+        <textarea className="gecko-input" rows={2} maxLength={500} value={reason} onChange={e => setReason(e.target.value)}
+          placeholder="e.g. Blank sailing announced by the line" style={{ resize: 'vertical' }} />
+        <div className="gecko-cell-meta" style={{ marginTop: 3 }}>
+          Bookings on this call are not moved — they will show up as needing a new call.
+        </div>
+      </div>
+      <div className="gecko-row">
+        <button className="gecko-btn gecko-btn-outline gecko-btn-sm" style={{ marginLeft: 'auto', color: 'var(--gecko-error-600)' }}
+          onClick={cancel} disabled={!ok || busy}>
+          <Icon name="x" size={14} /> {busy ? 'Cancelling…' : 'Cancel this call'}
+        </button>
+      </div>
+    </div>
+  );
+}
+
+// ── cut-off editor ──────────────────────────────────────────────────────────
+interface EditRow { key: string; kind: string; lineCode: string; branchId: string | null; at: string; remarks: string }
+
+function CutoffEditor({ call, lines, cutoffs, onDone, onClose }: {
+  call: VesselCall; lines: Line[]; cutoffs: Cutoff[]; onDone: () => void; onClose: () => void;
+}) {
+  // DERIVED rows are not sent: the server re-derives them from the port cut-offs.
+  const [rows, setRows] = useState<EditRow[]>(() => cutoffs.filter(c => c.source !== 'DERIVED').map(c => ({
+    key: c.vesselCallCutoffId, kind: c.kind, lineCode: c.lineCode ?? '', branchId: c.branchId,
+    at: toLocalInput(c.at), remarks: c.remarks ?? '',
+  })));
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState<ApiError | null>(null);
+  const { toast } = useToast();
+
+  const set = (key: string, patch: Partial<EditRow>) => setRows(rs => rs.map(r => (r.key === key ? { ...r, ...patch } : r)));
+  const add = () => setRows(rs => [...rs, { key: `new-${Date.now()}`, kind: 'PORT_DRY', lineCode: '', branchId: null, at: '', remarks: '' }]);
+
+  const save = async () => {
+    setBusy(true); setError(null);
+    try {
+      await apiSend('PUT', `/api/tos/vessel-calls/${call.vesselCallId}/cutoffs`, {
+        cutoffs: rows.map(r => ({
+          kind: r.kind, lineCode: r.lineCode || null, branchId: r.branchId,
+          at: fromLocalInput(r.at), remarks: r.remarks.trim() || null,
+        })),
+      });
+      toast({ variant: 'success', title: 'Cut-offs saved', message: call.callRef });
+      onDone();
+    } catch (e) {
+      setError(e instanceof ApiError ? e : new ApiError(0, 'Could not reach the Gecko API.'));
+    } finally { setBusy(false); }
+  };
+
+  const rowError = (i: number) => error
+    ? Object.entries(error.fieldErrors).filter(([k]) => k.toLowerCase().startsWith(`cutoffs[${i}]`)).flatMap(([, v]) => v).join(' ')
+    : '';
+
+  return (
+    <div className="gecko-stack" style={{ gap: 12, padding: '16px 20px' }}>
+      <ErrorBox error={error} />
+      <table className="gecko-table gecko-table-compact" style={{ fontSize: 12 }}>
+        <thead>
+          <tr>
+            <th style={{ width: 150 }}>Kind</th>
+            <th style={{ width: 130 }}>Line</th>
+            <th style={{ width: 110 }}>Branch</th>
+            <th style={{ width: 200 }}>At ({TZ})</th>
+            <th>Remarks</th>
+            <th style={{ width: 40 }}></th>
+          </tr>
+        </thead>
+        <tbody>
+          {rows.map((r, i) => (
+            <React.Fragment key={r.key}>
+              <tr>
+                <td>
+                  <select className="gecko-input gecko-input-sm" value={r.kind} onChange={e => set(r.key, { kind: e.target.value })}>
+                    {KINDS.map(k => <option key={k} value={k}>{k}</option>)}
+                  </select>
+                </td>
+                <td>
+                  <select className="gecko-input gecko-input-sm" value={r.lineCode} onChange={e => set(r.key, { lineCode: e.target.value })}>
+                    <option value="">every line</option>
+                    {lines.map(l => <option key={l.lineCode} value={l.lineCode}>{l.lineCode}</option>)}
+                  </select>
+                </td>
+                <td className="gecko-cell-meta" title={r.branchId ?? undefined}>{r.branchId ? 'one branch' : 'every branch'}</td>
+                <td><input type="datetime-local" className="gecko-input gecko-input-sm" value={r.at} onChange={e => set(r.key, { at: e.target.value })} /></td>
+                <td><input className="gecko-input gecko-input-sm" maxLength={300} value={r.remarks} onChange={e => set(r.key, { remarks: e.target.value })} /></td>
+                <td>
+                  <button type="button" aria-label="Remove cut-off" onClick={() => setRows(rs => rs.filter(x => x.key !== r.key))}
+                    style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--gecko-text-disabled)' }}>
+                    <Icon name="trash" size={14} />
+                  </button>
+                </td>
+              </tr>
+              {rowError(i) && (
+                <tr><td colSpan={6} style={{ color: 'var(--gecko-error-600)', fontSize: 11, paddingTop: 0 }}>{rowError(i)}</td></tr>
+              )}
+            </React.Fragment>
+          ))}
+        </tbody>
+      </table>
+      <div className="gecko-row" style={{ gap: 8 }}>
+        <button className="gecko-btn gecko-btn-ghost gecko-btn-sm" onClick={add}><Icon name="plus" size={14} /> Add cut-off</button>
+        <span className="gecko-cell-meta">A port cut-off with no whole-call yard cut-off gets one derived automatically.</span>
+        <div className="gecko-row" style={{ gap: 8, marginLeft: 'auto' }}>
+          <button className="gecko-btn gecko-btn-outline gecko-btn-sm" onClick={onClose} disabled={busy}>Close</button>
+          <button className="gecko-btn gecko-btn-primary gecko-btn-sm" onClick={save} disabled={busy}>
+            <Icon name="save" size={14} /> {busy ? 'Saving…' : 'Save cut-offs'}
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// ── effective cut-offs ──────────────────────────────────────────────────────
+function EffectivePanel({ callId, lines }: { callId: string; lines: Line[] }) {
+  const [lineCode, setLineCode] = useState('');
+  const path = `/api/tos/vessel-calls/${callId}/effective-cutoffs${lineCode ? `?lineCode=${encodeURIComponent(lineCode)}` : ''}`;
+  const { data, error, loading } = useApi<Effective[]>(path);
+
+  return (
+    <div style={card}>
+      <div style={cardHead}>
+        <Icon name="clock" size={15} style={{ color: 'var(--gecko-primary-600)' }} />
+        <span style={{ fontSize: 13, fontWeight: 700 }}>What applies</span>
+        <select className="gecko-input gecko-input-sm" style={{ marginLeft: 'auto', width: 130 }} aria-label="Line"
+          value={lineCode} onChange={e => setLineCode(e.target.value)}>
+          <option value="">whole call</option>
+          {lines.map(l => <option key={l.lineCode} value={l.lineCode}>{l.lineCode}</option>)}
+        </select>
+      </div>
+      {error ? <div style={{ padding: 16 }}><ErrorBox error={error} /></div> : (
+        <table className="gecko-table gecko-table-compact" style={{ fontSize: 12 }}>
+          <tbody>
+            {loading && !data ? (
+              <tr><td className="gecko-cell-meta" style={{ padding: 16 }}>Loading…</td></tr>
+            ) : (data ?? []).map(e => (
+              <tr key={e.kind}>
+                <td style={{ fontFamily: 'var(--gecko-font-mono)', fontWeight: 700 }}>{e.kind}</td>
+                <td style={{ fontFamily: 'var(--gecko-font-mono)' }}>{fmt(e.at)}</td>
+                <td className="gecko-cell-meta">{e.appliesTo}{e.source === 'DERIVED' ? ' · derived' : ''}</td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      )}
+      <div className="gecko-cell-meta" style={{ padding: '8px 20px', borderTop: '1px solid var(--gecko-border)' }}>
+        The most specific row wins: line + branch › line › branch › whole call. The gate reads the same rule.
+      </div>
+    </div>
+  );
+}
+
+// ── page ────────────────────────────────────────────────────────────────────
+type Panel = 'none' | 'actuals' | 'cancel' | 'cutoffs';
+
+export default function VesselCallDetailPage() {
+  const { id } = useParams<{ id: string }>();
+  const { data, error, loading, reload } = useApi<Detail>(`/api/tos/vessel-calls/${id}`);
+  const [panel, setPanel] = useState<Panel>('none');
+
+  const cutoffs = useMemo(() => [...(data?.cutoffs ?? [])].sort((a, b) => a.at.localeCompare(b.at) || a.kind.localeCompare(b.kind)), [data]);
+  useEffect(() => { if (data?.call.isCancelled) setPanel('none'); }, [data?.call.isCancelled]);
+
+  const done = () => { setPanel('none'); reload(); };
+
+  if (loading && !data) {
+    return <div className="gecko-cell-meta" style={{ padding: 60, textAlign: 'center' }}>Loading vessel call…</div>;
+  }
+  if (!data) {
     return (
       <div style={{ maxWidth: 600, margin: '80px auto', textAlign: 'center', display: 'flex', flexDirection: 'column', gap: 16, alignItems: 'center' }}>
         <Icon name="alertCircle" size={40} style={{ color: 'var(--gecko-text-disabled)' }} />
-        <h2 style={{ fontSize: 18, fontWeight: 700, margin: 0 }}>Voyage not found</h2>
-        <p style={{ color: 'var(--gecko-text-secondary)', margin: 0 }}>No voyage with ID <code>{id}</code> exists in this schedule.</p>
+        <h2 style={{ fontSize: 18, fontWeight: 700, margin: 0 }}>{error?.status === 404 ? 'Vessel call not found' : 'Could not load the call'}</h2>
+        <p style={{ color: 'var(--gecko-text-secondary)', margin: 0 }}>{error?.message}</p>
+        {error?.status === 401 && <Link href="/login" className="gecko-link">Sign in</Link>}
         <Link href="/masters/vessels/schedule" className="gecko-btn gecko-btn-primary gecko-btn-sm">
           <Icon name="chevronLeft" size={14} /> Back to Schedule
         </Link>
@@ -144,368 +393,169 @@ export default function VoyageDetailPage() {
     );
   }
 
-  const allBookings: Booking[] = BOOKINGS[voyage.id] ?? [];
-  const filtered = useMemo(() => {
-    return allBookings.filter(b => {
-      if (bkFilter) {
-        const q = bkFilter.toLowerCase();
-        if (!b.ref.toLowerCase().includes(q) && !b.customer.toLowerCase().includes(q) && !b.cargo.toLowerCase().includes(q)) return false;
-      }
-      if (bkStatus && b.status !== bkStatus) return false;
-      return true;
-    });
-  }, [allBookings, bkFilter, bkStatus]);
-
-  // Aggregates
-  const totalBookings  = allBookings.length;
-  const confirmed      = allBookings.filter(b => b.status === 'Confirmed').length;
-  const pending        = allBookings.filter(b => b.status === 'Pending').length;
-  const teuBooked      = allBookings.reduce((s, b) => s + b.qty, 0);
-  const reeferCount    = allBookings.filter(b => b.reefer).reduce((s, b) => s + b.qty, 0);
-  const hazmatCount    = allBookings.filter(b => b.hazmat).reduce((s, b) => s + b.qty, 0);
-  const fillPct        = voyage.teu > 0 ? Math.round((voyage.filled / voyage.teu) * 100) : 0;
-
-  const lc = LINE_COLORS[voyage.line] ?? { dot: '#6b7280', bg: '#f3f4f6', text: '#374151' };
-
-  const TABS = [
-    { key: 'overview',  label: 'Overview'                              },
-    { key: 'bookings',  label: `Bookings`,   badge: totalBookings      },
-    { key: 'history',   label: 'History'                               },
-  ] as const;
+  const { call, lines } = data;
+  const frozen = call.isCancelled;
+  const toggle = (p: Panel) => setPanel(cur => (cur === p ? 'none' : p));
 
   return (
     <div className="gecko-stack" style={{ maxWidth: 'var(--gecko-container-max)', margin: '0 auto', gap: 22, paddingBottom: 40 }}>
 
-      {/* Breadcrumb */}
       <nav className="gecko-breadcrumb">
         <Link href="/masters" className="gecko-breadcrumb-item">Masters</Link>
         <span className="gecko-breadcrumb-sep" />
         <Link href="/masters/vessels/schedule" className="gecko-breadcrumb-item">Vessel Call Schedule</Link>
         <span className="gecko-breadcrumb-sep" />
-        <span className="gecko-breadcrumb-current">{voyage.id}</span>
+        <span className="gecko-breadcrumb-current">{call.callRef}</span>
       </nav>
 
-      {/* Page Header */}
+      {/* Header */}
       <div className="gecko-row gecko-row-between gecko-row-start" style={{ paddingBottom: 20, borderBottom: '1px solid var(--gecko-border)' }}>
         <div className="gecko-row" style={{ gap: 16 }}>
-          <div style={{ width: 48, height: 48, borderRadius: 12, background: lc.bg, border: `2px solid ${lc.dot}44`, display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
-            <span style={{ fontSize: 11, fontWeight: 800, color: lc.text }}>{voyage.line}</span>
+          <div style={{ width: 48, height: 48, borderRadius: 12, background: 'var(--gecko-primary-50)', border: '2px solid var(--gecko-primary-200)', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+            <Icon name="ship" size={22} style={{ color: 'var(--gecko-primary-600)' }} />
           </div>
           <div>
             <div className="gecko-row" style={{ gap: 12 }}>
-              <h1 className="gecko-page-title" style={{ fontFamily: 'var(--gecko-font-mono)' }}>{voyage.id}</h1>
-              <VoyageStatusBadge status={voyage.status} />
-              <span style={{
-                fontSize: 10, fontWeight: 700, padding: '2px 8px', borderRadius: 20,
-                background: voyage.direction === 'Inbound' ? 'var(--gecko-success-100)' : 'var(--gecko-primary-100)',
-                color: voyage.direction === 'Inbound' ? 'var(--gecko-success-700)' : 'var(--gecko-primary-700)',
-              }}>
-                {voyage.direction === 'Inbound' ? '↓ Inbound' : '↑ Outbound'}
-              </span>
+              <h1 className="gecko-page-title" style={{ fontFamily: 'var(--gecko-font-mono)' }}>{call.callRef}</h1>
+              <StatusBadge status={call.status} />
             </div>
             <div style={{ fontSize: 13, color: 'var(--gecko-text-secondary)', marginTop: 4 }}>
-              {voyage.vessel} &nbsp;·&nbsp; {voyage.line} &nbsp;·&nbsp;
-              <span style={{ fontFamily: 'var(--gecko-font-mono)' }}>{voyage.pol}</span>
-              {' → '}
-              <span style={{ fontFamily: 'var(--gecko-font-mono)' }}>{voyage.pod}</span>
-              &nbsp;·&nbsp; ETD {voyage.etd}
+              {call.vesselName ?? call.vesselCode} <span className="gecko-cell-meta">({call.vesselCode})</span>
+              &nbsp;·&nbsp;<span style={{ fontFamily: 'var(--gecko-font-mono)' }}>{call.portCode}</span>
+              {call.terminalCode && <>&nbsp;·&nbsp;terminal <span style={{ fontFamily: 'var(--gecko-font-mono)' }}>{call.terminalCode}</span></>}
+              {(call.operatorVoyageIn || call.operatorVoyageOut) && (
+                <>&nbsp;·&nbsp;operator voyage {call.operatorVoyageIn ?? '—'} / {call.operatorVoyageOut ?? '—'}</>
+              )}
             </div>
           </div>
         </div>
         <div className="gecko-row" style={{ gap: 8 }}>
-          <ExportButton resource="Voyage" iconSize={15} />
-          <button className="gecko-btn gecko-btn-outline gecko-btn-sm" onClick={() => window.print()}><Icon name="printer" size={15} /> Print Manifest</button>
-          <Link href={`/masters/vessels/schedule/new`} className="gecko-btn gecko-btn-primary gecko-btn-sm">
-            <Icon name="edit" size={15} /> Edit Voyage
-          </Link>
+          <button className="gecko-btn gecko-btn-outline gecko-btn-sm" onClick={reload}><Icon name="refreshCcw" size={15} /> Refresh</button>
+          <button className="gecko-btn gecko-btn-outline gecko-btn-sm" disabled={frozen} onClick={() => toggle('actuals')}>
+            <Icon name="anchor" size={15} /> Record actuals
+          </button>
+          {!call.ata && (
+            <button className="gecko-btn gecko-btn-outline gecko-btn-sm" disabled={frozen} onClick={() => toggle('cancel')} style={{ color: frozen ? undefined : 'var(--gecko-error-600)' }}>
+              <Icon name="x" size={15} /> Cancel call
+            </button>
+          )}
         </div>
       </div>
 
-      {/* KPI Strip */}
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(6, 1fr)', gap: 1, background: 'var(--gecko-border)', border: '1px solid var(--gecko-border)', borderRadius: 14, overflow: 'hidden', boxShadow: 'var(--gecko-shadow-sm)' }}>
-        <KpiBox label="Total Bookings"  value={totalBookings}  icon="clipboardList"  color="var(--gecko-primary-600)"  bg="var(--gecko-primary-50)"  />
-        <KpiBox label="Confirmed"       value={confirmed}      icon="checkCircle"    color="var(--gecko-success-600)"  bg="var(--gecko-success-50)"  sub={`${pending} pending`} />
-        <KpiBox label="TEU Booked"      value={teuBooked}      icon="layers"         color="var(--gecko-info-600)"     bg="var(--gecko-info-50)"     sub={`of ${voyage.teu} capacity`} />
-        <KpiBox label="TEU Fill"        value={`${fillPct}%`}  icon="barChart"       color={fillPct > 85 ? 'var(--gecko-error-600)' : fillPct > 60 ? 'var(--gecko-warning-600)' : 'var(--gecko-success-600)'}  bg={fillPct > 85 ? 'var(--gecko-error-50)' : fillPct > 60 ? 'var(--gecko-warning-50)' : 'var(--gecko-success-50)'}  />
-        <KpiBox label="Reefer Ctrs"     value={reeferCount}    icon="thermometer"    color="var(--gecko-info-600)"     bg="var(--gecko-info-50)"     />
-        <KpiBox label="Hazmat Ctrs"     value={hazmatCount}    icon="alertTriangle"  color="var(--gecko-error-600)"    bg="var(--gecko-error-50)"    />
+      {frozen && (
+        <div role="status" className="gecko-alert gecko-alert-error gecko-row" style={{ gap: 10 }}>
+          <Icon name="alertCircle" size={16} />
+          <span>
+            Cancelled {fmt(call.cancelledAt)} — {call.cancelReason}. A cancelled call is read-only.
+          </span>
+        </div>
+      )}
+
+      {panel === 'actuals' && !frozen && (
+        <div style={card}>
+          <div style={cardHead}><Icon name="anchor" size={15} /><span style={{ fontSize: 13, fontWeight: 700 }}>Record actuals</span></div>
+          <ActualsForm call={call} onDone={done} />
+        </div>
+      )}
+      {panel === 'cancel' && !frozen && !call.ata && (
+        <div style={{ ...card, borderColor: 'var(--gecko-error-200)' }}>
+          <div style={cardHead}><Icon name="x" size={15} style={{ color: 'var(--gecko-error-600)' }} /><span style={{ fontSize: 13, fontWeight: 700 }}>Cancel {call.callRef}</span></div>
+          <CancelForm call={call} onDone={done} />
+        </div>
+      )}
+
+      {/* Timing */}
+      <div style={card}>
+        <div style={cardHead}>
+          <Icon name="calendar" size={15} style={{ color: 'var(--gecko-primary-600)' }} />
+          <span style={{ fontSize: 13, fontWeight: 700 }}>Port call timing</span>
+          <span className="gecko-cell-meta" style={{ marginLeft: 'auto' }}>times in {TZ}</span>
+        </div>
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(6, 1fr)', gap: 16, padding: '16px 20px' }}>
+          <TimeCell label="ETA" value={call.eta} />
+          <TimeCell label="ETB" value={call.etb} />
+          <TimeCell label="ETD" value={call.etd} strong />
+          <TimeCell label="ATA" value={call.ata} />
+          <TimeCell label="ATB" value={call.atb} />
+          <TimeCell label="ATD" value={call.atd} strong />
+        </div>
+        {call.remarks && <div className="gecko-cell-meta" style={{ padding: '0 20px 14px' }}>{call.remarks}</div>}
       </div>
 
-      {/* Tabs */}
-      <div className="gecko-tabs">
-        {TABS.map(t => (
-          <button
-            key={t.key}
-            className={`gecko-tab${activeTab === t.key ? ' gecko-tab-active' : ''}`}
-            onClick={() => setActiveTab(t.key)}
-          >
-            {t.label}
-            {'badge' in t && t.badge > 0 && (
-              <span style={{
-                marginLeft: 4, minWidth: 18, height: 18, borderRadius: 9, padding: '0 5px',
-                background: activeTab === t.key ? 'var(--gecko-primary-600)' : 'var(--gecko-gray-200)',
-                color: activeTab === t.key ? '#fff' : 'var(--gecko-text-secondary)',
-                fontSize: 11, fontWeight: 700, display: 'inline-flex', alignItems: 'center', justifyContent: 'center',
-              }}>
-                {t.badge}
-              </span>
-            )}
-          </button>
-        ))}
-      </div>
+      <div style={{ display: 'grid', gridTemplateColumns: '1fr 360px', gap: 20, alignItems: 'start' }}>
+        <div className="gecko-stack" style={{ gap: 20 }}>
 
-      {/* ── TAB: BOOKINGS ───────────────────────────────────────────────────── */}
-      {activeTab === 'bookings' && (
-        <div className="gecko-stack" style={{ gap: 16 }}>
-
-          {/* Summary strip */}
-          <div className="gecko-row gecko-row-wrap" style={{ gap: 10 }}>
-            {[
-              { label: 'All',        value: '',           count: allBookings.length,                                      color: 'var(--gecko-text-secondary)', activeBg: 'var(--gecko-gray-100)' },
-              { label: 'Confirmed',  value: 'Confirmed',  count: allBookings.filter(b => b.status === 'Confirmed').length, color: 'var(--gecko-success-700)', activeBg: 'var(--gecko-success-50)' },
-              { label: 'Pending',    value: 'Pending',    count: allBookings.filter(b => b.status === 'Pending').length,   color: 'var(--gecko-warning-700)', activeBg: 'var(--gecko-warning-50)' },
-              { label: 'On Hold',    value: 'On Hold',    count: allBookings.filter(b => b.status === 'On Hold').length,   color: 'var(--gecko-info-700)',    activeBg: 'var(--gecko-info-50)'    },
-              { label: 'Cancelled',  value: 'Cancelled',  count: allBookings.filter(b => b.status === 'Cancelled').length, color: 'var(--gecko-error-700)',   activeBg: 'var(--gecko-error-50)'   },
-            ].map(f => {
-              const active = bkStatus === f.value;
-              return (
-                <button key={f.value} type="button" onClick={() => setBkStatus(f.value)} style={{
-                  display: 'flex', alignItems: 'center', gap: 6,
-                  padding: '6px 14px', borderRadius: 8, fontSize: 12, fontWeight: active ? 700 : 500,
-                  cursor: 'pointer', border: `1px solid ${active ? f.color : 'var(--gecko-border)'}`,
-                  background: active ? f.activeBg : 'var(--gecko-bg-surface)',
-                  color: active ? f.color : 'var(--gecko-text-secondary)',
-                  transition: 'all 100ms',
-                }}>
-                  {f.label}
-                  <span style={{
-                    background: active ? f.color : 'var(--gecko-gray-200)',
-                    color: active ? '#fff' : 'var(--gecko-gray-600)',
-                    borderRadius: 10, padding: '1px 7px', fontSize: 11, fontWeight: 700,
-                  }}>{f.count}</span>
-                </button>
-              );
-            })}
-
-            {/* Search */}
-            <div style={{ marginLeft: 'auto', position: 'relative' }}>
-              <Icon name="search" size={14} style={{ position: 'absolute', left: 10, top: '50%', transform: 'translateY(-50%)', color: 'var(--gecko-text-disabled)', pointerEvents: 'none' }} />
-              <input
-                className="gecko-input gecko-input-sm"
-                placeholder="Search booking, customer, cargo…"
-                value={bkFilter}
-                onChange={e => setBkFilter(e.target.value)}
-                style={{ paddingLeft: 32, width: 260 }}
-              />
+          {/* Lines */}
+          <div style={card}>
+            <div style={cardHead}>
+              <Icon name="layers" size={15} style={{ color: 'var(--gecko-primary-600)' }} />
+              <span style={{ fontSize: 13, fontWeight: 700 }}>Lines on this call</span>
+              <span className="gecko-cell-meta">— each with its own voyage; bookings and EDI match on line + voyage</span>
             </div>
+            <table className="gecko-table gecko-table-compact" style={{ fontSize: 12.5 }}>
+              <thead>
+                <tr><th>Line</th><th>Voyage in</th><th>Voyage out</th><th>Agent</th><th>Service</th></tr>
+              </thead>
+              <tbody>
+                {lines.length === 0 ? (
+                  <tr><td colSpan={5} className="gecko-cell-meta" style={{ textAlign: 'center', padding: 20 }}>No lines — nobody can book against this call.</td></tr>
+                ) : lines.map(l => (
+                  <tr key={l.vesselCallLineId}>
+                    <td style={{ fontFamily: 'var(--gecko-font-mono)', fontWeight: 700 }}>{l.lineCode}</td>
+                    <td style={{ fontFamily: 'var(--gecko-font-mono)' }}>{l.voyageIn ?? '—'}</td>
+                    <td style={{ fontFamily: 'var(--gecko-font-mono)' }}>{l.voyageOut ?? '—'}</td>
+                    <td>{l.agentCode ?? <span className="gecko-cell-meta">—</span>}</td>
+                    <td>{l.serviceCode ?? <span className="gecko-cell-meta">—</span>}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
           </div>
 
-          {/* Bookings table */}
-          <div style={{ background: 'var(--gecko-bg-surface)', border: '1px solid var(--gecko-border)', borderRadius: 12, overflow: 'hidden', boxShadow: 'var(--gecko-shadow-sm)' }}>
-            {filtered.length === 0 ? (
-              <div style={{ padding: 48, textAlign: 'center', color: 'var(--gecko-text-secondary)' }}>
-                <Icon name="inbox" size={32} style={{ opacity: 0.3, marginBottom: 12 }} />
-                <div style={{ fontSize: 14, fontWeight: 600 }}>No bookings found</div>
-                <div style={{ fontSize: 12, marginTop: 4 }}>
-                  {allBookings.length === 0
-                    ? 'No bookings are linked to this voyage yet.'
-                    : 'Try adjusting the filter or search.'}
-                </div>
-              </div>
+          {/* Cut-offs */}
+          <div style={card}>
+            <div style={cardHead}>
+              <Icon name="clock" size={15} style={{ color: 'var(--gecko-primary-600)' }} />
+              <span style={{ fontSize: 13, fontWeight: 700 }}>Cut-offs</span>
+              <span className="gecko-cell-meta">— yard before port before ETD, refused otherwise</span>
+              <button className="gecko-btn gecko-btn-outline gecko-btn-sm" style={{ marginLeft: 'auto' }} disabled={frozen} onClick={() => toggle('cutoffs')}>
+                <Icon name="edit" size={14} /> {panel === 'cutoffs' ? 'Editing…' : 'Edit cut-offs'}
+              </button>
+            </div>
+            {panel === 'cutoffs' && !frozen ? (
+              <CutoffEditor call={call} lines={lines} cutoffs={cutoffs} onDone={done} onClose={() => setPanel('none')} />
             ) : (
-              <table className="gecko-table gecko-table-comfortable" style={{ fontSize: 13 }}>
+              <table className="gecko-table gecko-table-compact" style={{ fontSize: 12.5 }}>
                 <thead>
-                  <tr>
-                    <th>Booking Ref</th>
-                    <th>Customer</th>
-                    <th>B/L</th>
-                    <th>Container</th>
-                    <th style={{ textAlign: 'right' }}>Qty</th>
-                    <th>Cargo Description</th>
-                    <th style={{ textAlign: 'right' }}>Weight</th>
-                    <th>Flags</th>
-                    <th>Status</th>
-                    <th></th>
-                  </tr>
+                  <tr><th style={{ width: 130 }}>Kind</th><th>Applies to</th><th style={{ width: 150 }}>At</th><th style={{ width: 190 }}>Source</th><th>Remarks</th></tr>
                 </thead>
                 <tbody>
-                  {filtered.map(b => (
-                    <tr key={b.ref}>
+                  {cutoffs.length === 0 ? (
+                    <tr><td colSpan={5} className="gecko-cell-meta" style={{ textAlign: 'center', padding: 20 }}>No cut-offs yet.</td></tr>
+                  ) : cutoffs.map(c => (
+                    <tr key={c.vesselCallCutoffId}>
+                      <td style={{ fontFamily: 'var(--gecko-font-mono)', fontWeight: 700 }}>{c.kind}</td>
                       <td>
-                        <Link
-                          href={`/bookings?ref=${b.ref}`}
-                          style={{ fontFamily: 'var(--gecko-font-mono)', fontWeight: 700, color: 'var(--gecko-primary-600)', fontSize: 12 }}
-                        >
-                          {b.ref}
-                        </Link>
+                        {c.lineCode ? <>line <strong>{c.lineCode}</strong></> : c.branchId ? null : 'whole call'}
+                        {c.branchId && <span title={c.branchId}>{c.lineCode ? ' · ' : ''}one branch</span>}
                       </td>
+                      <td style={{ fontFamily: 'var(--gecko-font-mono)' }}>{fmt(c.at)}</td>
                       <td>
-                        <div style={{ fontWeight: 600, color: 'var(--gecko-text-primary)' }}>{b.customer}</div>
+                        {c.source === 'DERIVED'
+                          ? <span className="gecko-badge gecko-badge-xs gecko-badge-info" title="Computed from the port cut-off">DERIVED · −{c.derivedLeadHours} h from port</span>
+                          : <span className="gecko-badge gecko-badge-xs gecko-badge-gray">{c.source}</span>}
                       </td>
-                      <td>
-                        <span style={{
-                          fontSize: 10, fontWeight: 700, padding: '2px 7px', borderRadius: 4,
-                          background: b.blType === 'FCL' ? 'var(--gecko-primary-50)' : 'var(--gecko-accent-50)',
-                          color:      b.blType === 'FCL' ? 'var(--gecko-primary-700)' : 'var(--gecko-accent-700)',
-                        }}>{b.blType}</span>
-                      </td>
-                      <td>
-                        <span style={{ fontFamily: 'var(--gecko-font-mono)', fontWeight: 700, fontSize: 12 }}>{b.ctrType}</span>
-                      </td>
-                      <td style={{ textAlign: 'right' }}>
-                        <span style={{ fontFamily: 'var(--gecko-font-mono)', fontWeight: 700 }}>{b.qty}</span>
-                        <span className="gecko-cell-meta" style={{ marginLeft: 3 }}>ctrs</span>
-                      </td>
-                      <td style={{ color: 'var(--gecko-text-secondary)', maxWidth: 200 }}>
-                        <div className="gecko-truncate">{b.cargo}</div>
-                      </td>
-                      <td style={{ textAlign: 'right' }}>
-                        <span style={{ fontFamily: 'var(--gecko-font-mono)', fontSize: 12, fontWeight: 600 }}>
-                          {(b.weightKg / 1000).toFixed(1)}t
-                        </span>
-                      </td>
-                      <td>
-                        <div style={{ display: 'flex', gap: 4 }}>
-                          {b.reefer && (
-                            <span style={{ fontSize: 10, fontWeight: 700, padding: '2px 6px', borderRadius: 4, background: 'var(--gecko-info-50)', color: 'var(--gecko-info-700)', border: '1px solid var(--gecko-info-200)' }}>
-                              ❄ RF
-                            </span>
-                          )}
-                          {b.hazmat && (
-                            <span style={{ fontSize: 10, fontWeight: 700, padding: '2px 6px', borderRadius: 4, background: 'var(--gecko-error-50)', color: 'var(--gecko-error-700)', border: '1px solid var(--gecko-error-200)' }}>
-                              ⚠ DG
-                            </span>
-                          )}
-                        </div>
-                      </td>
-                      <td><BookingStatusBadge status={b.status} /></td>
-                      <td style={{ textAlign: 'right' }}>
-                        <Link
-                          href={`/bookings?ref=${b.ref}`}
-                          className="gecko-btn gecko-btn-ghost gecko-btn-sm"
-                          style={{ padding: '0 10px', fontSize: 12 }}
-                          title="Open booking"
-                        >
-                          Open <Icon name="arrowRight" size={13} />
-                        </Link>
-                      </td>
+                      <td className="gecko-cell-meta">{c.remarks ?? ''}</td>
                     </tr>
                   ))}
                 </tbody>
               </table>
             )}
-
-            {/* Table footer summary */}
-            {filtered.length > 0 && (
-              <div style={{ padding: '12px 20px', borderTop: '1px solid var(--gecko-border)', background: 'var(--gecko-bg-subtle)', display: 'flex', alignItems: 'center', gap: 24, fontSize: 12, color: 'var(--gecko-text-secondary)' }}>
-                <span>{filtered.length} booking{filtered.length !== 1 ? 's' : ''} shown</span>
-                <span style={{ fontWeight: 600, color: 'var(--gecko-text-primary)' }}>
-                  {filtered.reduce((s, b) => s + b.qty, 0)} containers
-                </span>
-                <span style={{ fontWeight: 600, color: 'var(--gecko-text-primary)' }}>
-                  {(filtered.reduce((s, b) => s + b.weightKg, 0) / 1000).toFixed(1)} t total
-                </span>
-                <span style={{ marginLeft: 'auto' }}>
-                  <Link href="/bookings/new" className="gecko-btn gecko-btn-primary gecko-btn-sm">
-                    <Icon name="plus" size={14} /> Add Booking
-                  </Link>
-                </span>
-              </div>
-            )}
           </div>
         </div>
-      )}
 
-      {/* ── TAB: OVERVIEW ───────────────────────────────────────────────────── */}
-      {activeTab === 'overview' && (
-        <div className="gecko-grid-2" style={{ gap: 20 }}>
-
-          {/* Identity card */}
-          <div className="gecko-table-card">
-            <div className="gecko-eyebrow" style={{ padding: '12px 20px', borderBottom: '1px solid var(--gecko-border)', background: 'var(--gecko-bg-subtle)' }}>
-              Voyage Identity
-            </div>
-            <div className="gecko-stack" style={{ padding: '16px 20px', gap: 12 }}>
-              {[
-                { label: 'Voyage ID',      value: voyage.id,          mono: true  },
-                { label: 'Vessel',         value: voyage.vessel,      mono: false },
-                { label: 'Shipping Line',  value: voyage.line,        mono: false },
-                { label: 'Booking Type',   value: voyage.bookingType, mono: false },
-                { label: 'Trade Service',  value: voyage.tradeService || '—', mono: true },
-                { label: 'Agent',          value: voyage.agent,       mono: true  },
-                { label: 'Wharf',          value: voyage.wharf ?? '—',mono: false },
-                { label: 'Berth',          value: voyage.berth ?? 'TBA', mono: true },
-              ].map(row => (
-                <div key={row.label} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', gap: 8 }}>
-                  <span style={{ fontSize: 12, color: 'var(--gecko-text-secondary)', flexShrink: 0 }}>{row.label}</span>
-                  <span style={{ fontSize: 13, fontWeight: 600, color: 'var(--gecko-text-primary)', fontFamily: row.mono ? 'var(--gecko-font-mono)' : undefined, textAlign: 'right' }}>{row.value}</span>
-                </div>
-              ))}
-            </div>
-          </div>
-
-          {/* Timing card */}
-          <div className="gecko-table-card">
-            <div className="gecko-eyebrow" style={{ padding: '12px 20px', borderBottom: '1px solid var(--gecko-border)', background: 'var(--gecko-bg-subtle)' }}>
-              Port Call Timing
-            </div>
-            <div className="gecko-stack" style={{ padding: '16px 20px', gap: 14 }}>
-              {[
-                { label: 'ETD (Departure)',      value: voyage.etd,   color: 'var(--gecko-primary-600)' },
-                { label: 'ETA at Destination',   value: voyage.eta,   color: 'var(--gecko-info-600)'    },
-              ].map(row => (
-                <div key={row.label}>
-                  <div className="gecko-cell-meta" style={{ fontWeight: 600, marginTop: 0, marginBottom: 4 }}>{row.label}</div>
-                  <div style={{ fontSize: 15, fontWeight: 700, fontFamily: 'var(--gecko-font-mono)', color: row.color }}>{row.value}</div>
-                </div>
-              ))}
-
-              <div style={{ marginTop: 8, paddingTop: 14, borderTop: '1px solid var(--gecko-border)' }}>
-                <div className="gecko-eyebrow" style={{ marginBottom: 8 }}>TEU Utilisation</div>
-                <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 12, marginBottom: 6 }}>
-                  <span style={{ color: 'var(--gecko-text-secondary)' }}>{voyage.filled.toLocaleString()} booked</span>
-                  <span style={{ fontWeight: 700, color: fillPct > 85 ? 'var(--gecko-error-600)' : fillPct > 60 ? 'var(--gecko-warning-600)' : 'var(--gecko-success-600)' }}>{fillPct}%</span>
-                </div>
-                <div style={{ height: 8, background: 'var(--gecko-gray-100)', borderRadius: 4, overflow: 'hidden' }}>
-                  <div style={{ height: '100%', width: `${fillPct}%`, borderRadius: 4, background: fillPct > 85 ? 'var(--gecko-error-500)' : fillPct > 60 ? 'var(--gecko-warning-500)' : 'var(--gecko-success-500)', transition: 'width 400ms' }} />
-                </div>
-                <div className="gecko-helper-text">{voyage.teu.toLocaleString()} TEU total capacity</div>
-              </div>
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* ── TAB: HISTORY ────────────────────────────────────────────────────── */}
-      {activeTab === 'history' && (
-        <div className="gecko-card gecko-card-padded">
-          <div className="gecko-stack" style={{ gap: 0 }}>
-            {[
-              { date: '2026-03-12 09:14', user: 'Somchai K.',  action: 'Voyage Created',         detail: `Voyage ${voyage.id} scheduled. Status set to Open.` },
-              { date: '2026-03-18 14:32', user: 'Nattaya P.',  action: 'ETD Updated',            detail: 'ETD revised from 2026-04-01 → ' + voyage.etd },
-              { date: '2026-03-25 11:05', user: 'System EDI',  action: 'BAPLIE Received',        detail: `Bay plan received from ${voyage.line}. 340 slots pre-allocated.` },
-              { date: '2026-04-01 08:00', user: 'Somchai K.',  action: 'Cut-offs Published',     detail: 'VGM, CY, and Port Closing cut-offs set and notified to agents.' },
-              { date: '2026-04-02 16:45', user: 'System Auto', action: 'Status → ' + voyage.status, detail: 'Automatic status update triggered by ETD crossing.' },
-            ].map((e, i) => (
-              <div key={i} className="gecko-row gecko-row-start" style={{ gap: 16, padding: '14px 0', borderBottom: i < 4 ? '1px solid var(--gecko-border)' : 'none' }}>
-                <div className="gecko-stack" style={{ alignItems: 'center', flexShrink: 0 }}>
-                  <div style={{ width: 10, height: 10, borderRadius: '50%', background: i === 4 ? 'var(--gecko-primary-600)' : 'var(--gecko-gray-300)', marginTop: 3 }} />
-                  {i < 4 && <div style={{ width: 1, flex: 1, background: 'var(--gecko-border)', marginTop: 6 }} />}
-                </div>
-                <div className="gecko-flex-1">
-                  <div className="gecko-row gecko-row-baseline" style={{ gap: 10, marginBottom: 2 }}>
-                    <span style={{ fontSize: 13, fontWeight: 700, color: 'var(--gecko-text-primary)' }}>{e.action}</span>
-                    <span className="gecko-cell-meta">{e.user}</span>
-                    <span style={{ fontSize: 11, color: 'var(--gecko-text-disabled)', marginLeft: 'auto', fontFamily: 'var(--gecko-font-mono)' }}>{e.date}</span>
-                  </div>
-                  <div className="gecko-page-subtitle">{e.detail}</div>
-                </div>
-              </div>
-            ))}
-          </div>
-        </div>
-      )}
-
+        <EffectivePanel callId={call.vesselCallId} lines={lines} />
+      </div>
     </div>
   );
 }
