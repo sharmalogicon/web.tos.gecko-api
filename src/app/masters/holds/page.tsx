@@ -55,7 +55,7 @@ type HoldForm = Omit<Hold, 'holdId' | 'rowVersion'> & { rowVersion: string | nul
 // ─── Vocabularies (mirror the API's AllowedValues) ───────────────────────────
 
 const HOLD_TYPES: Record<string, { bg: string; color: string; label: string }> = {
-  CUSTOMS:    { bg: 'var(--gecko-danger-100)',  color: 'var(--gecko-danger-700)',  label: 'Customs'    },
+  CUSTOMS:    { bg: 'var(--gecko-error-100)',  color: 'var(--gecko-error-700)',  label: 'Customs'    },
   LEGAL:      { bg: '#f3e8ff',                  color: '#6b21a8',                  label: 'Legal'      },
   TECHNICAL:  { bg: 'var(--gecko-warning-100)', color: 'var(--gecko-warning-700)', label: 'Technical'  },
   OPERATIONS: { bg: 'var(--gecko-info-100)',    color: 'var(--gecko-info-700)',    label: 'Operations' },
@@ -64,7 +64,7 @@ const HOLD_TYPES: Record<string, { bg: string; color: string; label: string }> =
 };
 
 const SCOPES: Record<string, { bg: string; color: string; label: string; hint: string }> = {
-  ALL:      { bg: 'var(--gecko-danger-100)',  color: 'var(--gecko-danger-700)',  label: 'All moves', hint: 'No movement of any kind' },
+  ALL:      { bg: 'var(--gecko-error-100)',  color: 'var(--gecko-error-700)',  label: 'All moves', hint: 'No movement of any kind' },
   RELEASE:  { bg: 'var(--gecko-warning-100)', color: 'var(--gecko-warning-700)', label: 'Release',   hint: 'Cannot be released to a customer or line' },
   GATE_OUT: { bg: '#fef9c3',                  color: '#854d0e',                  label: 'Gate-out',  hint: 'Cannot leave through the gate' },
   LOAD:     { bg: 'var(--gecko-info-100)',    color: 'var(--gecko-info-700)',    label: 'Load',      hint: 'Cannot be loaded to a vessel' },
@@ -81,7 +81,7 @@ const AUTHORITIES: Record<string, string> = {
 };
 
 const priorityStyle = (p: number) =>
-  p <= 1 ? { bg: 'var(--gecko-danger-100)',  color: 'var(--gecko-danger-700)',  label: 'Critical' }
+  p <= 1 ? { bg: 'var(--gecko-error-100)',  color: 'var(--gecko-error-700)',  label: 'Critical' }
   : p <= 2 ? { bg: 'var(--gecko-warning-100)', color: 'var(--gecko-warning-700)', label: 'High' }
   : p <= 4 ? { bg: 'var(--gecko-info-100)',    color: 'var(--gecko-info-700)',    label: 'Normal' }
   : { bg: 'var(--gecko-gray-100)', color: 'var(--gecko-gray-500)', label: 'Low' };
@@ -146,7 +146,7 @@ function Field({ label, required, hint, error, children, span }: {
       <label className={`gecko-label${required ? ' gecko-label-required' : ''}`}>{label}</label>
       {children}
       {error
-        ? <div style={{ marginTop: 3, fontSize: 11, color: 'var(--gecko-danger-600)' }}>{error}</div>
+        ? <div style={{ marginTop: 3, fontSize: 11, color: 'var(--gecko-error-600)' }}>{error}</div>
         : hint && <div className="gecko-cell-meta" style={{ marginTop: 3 }}>{hint}</div>}
     </div>
   );
@@ -245,10 +245,10 @@ function HoldModal({ hold, events, onClose, onSaved }: {
       <div className="gecko-modal gecko-modal-lg gecko-stack" style={{ gap: 0 }} role="dialog" aria-modal="true" aria-label={isNew ? 'New hold' : `Edit hold ${hold.holdCode}`}>
 
         {/* Header */}
-        <div className="gecko-row gecko-row-start gecko-row-between gecko-flex-shrink-0" style={{ padding: '18px 24px', borderBottom: '1px solid var(--gecko-border)', background: 'var(--gecko-danger-50)', borderRadius: '12px 12px 0 0', gap: 16 }}>
+        <div className="gecko-row gecko-row-start gecko-row-between gecko-flex-shrink-0" style={{ padding: '18px 24px', borderBottom: '1px solid var(--gecko-border)', background: 'var(--gecko-error-50)', borderRadius: '12px 12px 0 0', gap: 16 }}>
           <div>
             <div className="gecko-row">
-              <Icon name="lock" size={16} style={{ color: 'var(--gecko-danger-600)' }} />
+              <Icon name="lock" size={16} style={{ color: 'var(--gecko-error-600)' }} />
               <span style={{ fontSize: 16, fontWeight: 800, color: 'var(--gecko-text-primary)' }}>
                 {isNew ? 'New Hold' : `Edit Hold — ${hold.holdCode}`}
               </span>
@@ -358,7 +358,7 @@ function HoldModal({ hold, events, onClose, onSaved }: {
         {/* Footer */}
         <div className="gecko-row gecko-flex-shrink-0" style={{ padding: '14px 24px', borderTop: '1px solid var(--gecko-border)', background: 'var(--gecko-bg-surface)', borderRadius: '0 0 12px 12px', gap: 10 }}>
           {!isNew && (
-            <button className="gecko-btn gecko-btn-ghost gecko-btn-sm" onClick={remove} disabled={saving} style={{ color: 'var(--gecko-danger-600)' }}>
+            <button className="gecko-btn gecko-btn-ghost gecko-btn-sm" onClick={remove} disabled={saving} style={{ color: 'var(--gecko-error-600)' }}>
               <Icon name="trash" size={14} /> Delete
             </button>
           )}
@@ -424,8 +424,8 @@ export default function HoldsPage() {
 
   const stats = [
     { label: 'Hold types', value: holds.length, color: 'var(--gecko-text-primary)' },
-    { label: 'Critical', value: holds.filter(h => h.priority <= 1).length, color: 'var(--gecko-danger-700)' },
-    { label: 'Block all moves', value: holds.filter(h => h.blockingScope === 'ALL').length, color: 'var(--gecko-danger-600)' },
+    { label: 'Critical', value: holds.filter(h => h.priority <= 1).length, color: 'var(--gecko-error-700)' },
+    { label: 'Block all moves', value: holds.filter(h => h.blockingScope === 'ALL').length, color: 'var(--gecko-error-600)' },
     { label: 'Auto-applied', value: holds.filter(h => h.autoApplyOnEvent).length, color: 'var(--gecko-primary-600)' },
     { label: 'Notify', value: holds.filter(h => h.notifyOnApply).length, color: 'var(--gecko-success-700)' },
   ];
