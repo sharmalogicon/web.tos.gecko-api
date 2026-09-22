@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
 import "./gecko_design_system.css";
 import { AppShell } from "../components/layout/AppShell";
+import { SessionProvider } from "../lib/auth/session";
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
@@ -49,7 +50,9 @@ export default function RootLayout({
       data-theme="light"
     >
       <body className="min-h-full flex flex-col" suppressHydrationWarning>
-        <AppShell>{children}</AppShell>
+        <SessionProvider>
+          <AppShell>{children}</AppShell>
+        </SessionProvider>
       </body>
     </html>
   );

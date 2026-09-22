@@ -1,5 +1,6 @@
 "use client";
 import React, { useState } from 'react';
+import Link from 'next/link';
 import { Icon } from '@/components/ui/Icon';
 import { useToast } from '@/components/ui/Toast';
 
@@ -27,6 +28,19 @@ export default function RateCardsPage() {
 
   return (
     <div className="gecko-stack gecko-stack-xl" style={{ maxWidth: 'var(--gecko-container-max)', margin: '0 auto', paddingBottom: 40, height: 'calc(100vh - 100px)' }}>
+
+      {/* This editor still runs on sample data: its rule model (extensions,
+          reductions, multipliers) predates the Revenue API, whose shape is
+          rate rows with axes, tiers and conditions. Bind it by rewriting it
+          against PUT /api/revenue/tariffs/{id}/rates — until then, the LIVE
+          numbers are on a schedule's own page. */}
+      <div role="note" className="gecko-alert gecko-alert-info gecko-row gecko-flex-shrink-0" style={{ gap: 10 }}>
+        <Icon name="info" size={16} />
+        <span>
+          <strong>Sample data.</strong> This editor is not connected to Revenue yet — open a
+          schedule under <Link href="/tariff/plans" className="gecko-link">Tariff Schedules</Link> to see and price live rates.
+        </span>
+      </div>
 
       {/* Header */}
       <div className="gecko-page-actions gecko-flex-shrink-0">

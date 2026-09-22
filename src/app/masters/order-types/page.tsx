@@ -1,41 +1,85 @@
 "use client";
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useEffect } from 'react';
 import Link from 'next/link';
 import { Icon } from '@/components/ui/Icon';
-import { usePagination, TablePagination } from '@/components/ui/TablePagination';
 import { ExportButton } from '@/components/ui/ExportButton';
-import { useToast } from '@/components/ui/Toast';
+import { EmptyState } from '@/components/ui/EmptyState';
+import { useApi, useApiList } from '@/lib/api/use-api';
 
-// ── Keyframe animations injected into document ─────────────────────────────
-const ANIM_CSS = `
-@keyframes geckoFlowRight {
-  0%   { left: -30%; opacity: 0; }
-  10%  { opacity: 1; }
-  90%  { opacity: 1; }
-  100% { left: 115%; opacity: 0; }
-}
-@keyframes geckoSlideUp {
-  from { opacity: 0; transform: translateY(14px); }
-  to   { opacity: 1; transform: translateY(0); }
-}
-`;
+/**
+ * LIVE against gecko_master (commercial.order_type + order_type_movement +
+ * order_type_charge). The seed carries SCT's REAL Vector order types
+ * ('EXP CY/CY', 'IMP LOLO CR', 'EXP CY-IN (NON-NOMINATING)'…) next to a few
+ * invented fixtures — codes are human phrases, so they are URL-encoded and the
+ * API turns %2F back into '/'.
+ *
+ * What the API has and the mock did not:
+ *  - THE FIVE GATE RULES ARE PER STEP. The mock carried one `rules` block per
+ *    order type; Vector's data proves that wrong — 'EXP CY/CY' checks gross
+ *    weight on the empty-out and the laden-in but not on the laden-out, and
+ *    'IMP CY/CY' allows a damaged release on every step. Hence the matrix.
+ *  - pick-up / drop-off mode and billable / required per step.
+ *  - charges belong to the ORDER TYPE, optionally pinned to one step, with a
+ *    payer (bill-to role), default-vs-optional, cargo / VAS / raise-at-gate-in.
+ *
+ * What the mock had and the API does not, so it is gone rather than faked:
+ * per-step EDI message lists (COPARN/CODECO…) — EDI is one flag, `skipEdi`;
+ * which messages go out is the EDI profile's business, not the order type's —
+ * and the click-to-toggle charge checkboxes, which changed nothing anywhere.
+ * Editing comes with the /new form rework (the API replaces steps and charges
+ * as whole sets: PUT …/movements, PUT …/charges).
+ */
 
-// ── Types — sourced from the shared catalog ───────────────────────────────────
-import {
-  ORDER_TYPES_CATALOG,
-  type OrderType,
-  type OrderTypeMovement as Movement,
-  type OrderTypePaymentTerm as PaymentTerm,
-} from '@/lib/order-types-catalog';
+interface OrderType {
+  orderTypeId: string;
+  orderTypeCode: string;
+  descriptionEn: string;
+  descriptionLocal: string | null;
+  directionCode: string;
+  serviceCode: string | null;
+  cargoClassCode: string;
+  bookingTypeCode: string | null;
+  isActive: boolean;
+  rowVersion: string;
+}
+
+interface Step {
+  orderTypeMovementId: string;
+  movementCode: string;
+  movementDescription: string;
+  sequenceNo: number;
+  isRequired: boolean;
+  isBillable: boolean;
+  checkSealNo: boolean;
+  checkGrossWeight: boolean;
+  requireVesselVoyage: boolean;
+  allowDamagedRelease: boolean;
+  skipEdi: boolean;
+  pudoMode: string | null;
+}
+
+interface Charge {
+  orderTypeChargeId: string;
+  chargeCode: string;
+  chargeDescription: string;
+  movementCode: string | null;
+  paymentTo: string;
+  paymentTermCode: string | null;
+  isDefault: boolean;
+  isOptional: boolean;
+  isCargoCharge: boolean;
+  isValueAddedService: boolean;
+  raiseAtGateIn: boolean;
+  defaultQty: number | null;
+}
+
+interface OrderTypeDetail {
+  orderType: OrderType;
+  movements: Step[];
+  charges: Charge[];
+}
 
 // ── Design tokens ─────────────────────────────────────────────────────────────
-const EDI_COLORS: Record<string, { bg: string; text: string }> = {
-  COPARN: { bg: '#EDE9FE', text: '#6D28D9' },
-  CODECO: { bg: '#DBEAFE', text: '#1D4ED8' },
-  COARRI: { bg: '#D1FAE5', text: '#065F46' },
-  BAPLIE: { bg: '#FEF3C7', text: '#92400E' },
-  IFTMCS: { bg: '#F3F4F6', text: '#374151' },
-};
 const SEQ_COLORS = [
   { bg: '#2563EB', light: '#EFF6FF', border: '#BFDBFE' },
   { bg: '#16A34A', light: '#F0FDF4', border: '#BBF7D0' },
@@ -43,85 +87,43 @@ const SEQ_COLORS = [
   { bg: '#7C3AED', light: '#F5F3FF', border: '#DDD6FE' },
   { bg: '#DC2626', light: '#FEF2F2', border: '#FECACA' },
 ];
-const BTYPE: Record<string, { bg: string; text: string; label: string }> = {
-  EXPORT:        { bg: '#D1FAE5', text: '#065F46', label: 'EXP' },
-  IMPORT:        { bg: '#DBEAFE', text: '#1D4ED8', label: 'IMP' },
-  TRANSSHIPMENT: { bg: '#FEF3C7', text: '#92400E', label: 'T/S' },
+
+const DIRECTION: Record<string, { bg: string; text: string; label: string }> = {
+  EXPORT:         { bg: '#D1FAE5', text: '#065F46', label: 'EXP' },
+  IMPORT:         { bg: '#DBEAFE', text: '#1D4ED8', label: 'IMP' },
+  INTRA_TERMINAL: { bg: '#F3F4F6', text: '#374151', label: 'INT' },
+  DOMESTIC:       { bg: '#FEF3C7', text: '#92400E', label: 'DOM' },
+  TRANSSHIPMENT:  { bg: '#EDE9FE', text: '#6D28D9', label: 'T/S' },
 };
+const directionOf = (code: string) =>
+  DIRECTION[code] ?? { bg: 'var(--gecko-bg-subtle)', text: 'var(--gecko-text-secondary)', label: code.slice(0, 3) };
+
+// Movement codes as seeded in master.movement (Vector's plus the generic set).
 const MOVE_ICON: Record<string, string> = {
-  // Gate
-  'EMTY DLVR':  'truck',
-  'FCL RCVE':   'download',
-  'FCL DLVR':   'upload',
-  'EMTY RCVE':  'arrowDown',
-  // Vessel
-  'VSSL DISCH': 'anchor',
-  'VSSL LOAD':  'anchor',
-  'SHFT':       'move',
-  // Rail / IWT
-  'RAIL RCVE':  'download',
-  'RAIL DLVR':  'upload',
-  // Transfer
-  'XFER IN':    'arrowDown',
-  'XFER OUT':   'upload',
-  // CFS
-  'CFS RCVE':   'box',
-  'CFS STUFF':  'layers',
-  'CFS STRIP':  'layers',
-  // Yard
-  'YD REHDL':   'move',
-  // Customs
-  'X-RAY':      'search',
-  'CUST EXAM':  'search',
-  'CUST SEAL':  'tag',
-  // Compliance
-  'VGM CHK':    'activity',
-  'DG INSPT':   'alertTriangle',
-  // Reefer
-  'PTI':        'check',
-  'REEF PLUG':  'activity',
-  'REEF UNPG':  'activity',
-  // Depot / M&R
-  'DEPOT REPR': 'edit',
-  'DEPOT WASH': 'layers',
-  'DEGASSING':  'send',
-  // Special
-  'OOG HNDL':   'layers',
+  MTY_OUT: 'upload', MTY_IN: 'download', FULL_IN: 'download', FULL_OUT: 'upload',
+  GIE: 'arrowDown', GIF: 'download', GOE: 'truck', GOF: 'upload',
+  STF: 'layers', SURV: 'search', MNRI: 'edit', TRO: 'transferH',
 };
 
-// ── Mock data ─────────────────────────────────────────────────────────────────
-// ── Mock data (sourced from shared catalog) ──────────────────────────────────
-const ORDER_TYPES = ORDER_TYPES_CATALOG;
+/** The five gate rules, in Vector's column order. */
+const RULES: { key: keyof Step; label: string; short: string; hint: string }[] = [
+  { key: 'checkSealNo',         label: 'Seal no.',        short: 'Seal',  hint: 'Gate clerk must capture / match the seal number' },
+  { key: 'checkGrossWeight',    label: 'Gross weight',    short: 'Wgt',   hint: 'Gross weight required and checked against max gross' },
+  { key: 'requireVesselVoyage', label: 'Vessel / voyage', short: 'V/V',   hint: 'The move must name a vessel call' },
+  { key: 'allowDamagedRelease', label: 'Damaged release', short: 'DM ok', hint: 'A box flagged damaged may still pass this step' },
+  { key: 'skipEdi',             label: 'Skip EDI',        short: 'No EDI', hint: 'No gate message is sent to the line for this step' },
+];
 
+const humanize = (code: string | null) => code ? code.replace(/_/g, ' ').toLowerCase().replace(/^\w/, c => c.toUpperCase()) : '—';
 
 // ── Flow Connector ────────────────────────────────────────────────────────────
-function FlowConnector({ idx }: { idx: number }) {
-  const c1 = SEQ_COLORS[idx % SEQ_COLORS.length];
-  const c2 = SEQ_COLORS[(idx + 1) % SEQ_COLORS.length];
+function FlowConnector() {
   return (
-    <div style={{ flex: '0 0 64px', position: 'relative', display: 'flex', alignItems: 'center', alignSelf: 'center', height: 40 }}>
-      {/* Track */}
+    <div style={{ flex: '0 0 48px', position: 'relative', display: 'flex', alignItems: 'center', alignSelf: 'center', height: 40 }}>
       <div style={{ position: 'absolute', left: 0, right: 0, height: 2, background: 'var(--gecko-border)', borderRadius: 1 }} />
-      {/* Particle A */}
       <div style={{
-        position: 'absolute', width: '38%', height: 3, borderRadius: 2,
-        background: `linear-gradient(90deg, transparent, ${c1.bg})`,
-        animation: 'geckoFlowRight 1.8s ease-in-out infinite',
-        animationDelay: '0s',
-      }} />
-      {/* Particle B */}
-      <div style={{
-        position: 'absolute', width: '28%', height: 3, borderRadius: 2,
-        background: `linear-gradient(90deg, transparent, ${c2.bg})`,
-        animation: 'geckoFlowRight 1.8s ease-in-out infinite',
-        animationDelay: '0.9s',
-      }} />
-      {/* Arrow head */}
-      <div style={{
-        position: 'absolute', right: -1,
-        width: 0, height: 0,
-        borderTop: '5px solid transparent',
-        borderBottom: '5px solid transparent',
+        position: 'absolute', right: -1, width: 0, height: 0,
+        borderTop: '5px solid transparent', borderBottom: '5px solid transparent',
         borderLeft: '8px solid var(--gecko-border)',
       }} />
     </div>
@@ -129,491 +131,425 @@ function FlowConnector({ idx }: { idx: number }) {
 }
 
 // ── Movement Node ─────────────────────────────────────────────────────────────
-function MovementNode({ movement, isSelected, onClick }: {
-  movement: Movement; isSelected: boolean; onClick: () => void;
+function MovementNode({ step, chargeCount, isSelected, onClick }: {
+  step: Step; chargeCount: number; isSelected: boolean; onClick: () => void;
 }) {
-  const col = SEQ_COLORS[(movement.seq - 1) % SEQ_COLORS.length];
-  const icon = MOVE_ICON[movement.code] ?? 'activity';
+  const col = SEQ_COLORS[(step.sequenceNo - 1) % SEQ_COLORS.length];
+  const on = RULES.filter(r => step[r.key]);
 
   return (
-    <div
+    <button
+      type="button"
       onClick={onClick}
+      aria-pressed={isSelected}
       style={{
-        width: 192, flexShrink: 0, cursor: 'pointer', overflow: 'hidden',
-        borderRadius: 14, border: `2px solid ${isSelected ? col.bg : 'var(--gecko-border)'}`,
+        width: 196, flexShrink: 0, cursor: 'pointer', overflow: 'hidden', textAlign: 'left', padding: 0,
+        fontFamily: 'inherit', borderRadius: 14, border: `2px solid ${isSelected ? col.bg : 'var(--gecko-border)'}`,
         background: isSelected ? col.light : 'var(--gecko-bg-surface)',
+        boxShadow: isSelected ? `0 0 0 4px ${col.bg}1A, 0 8px 24px ${col.bg}18` : '0 1px 3px rgba(0,0,0,0.07)',
         transition: 'all 160ms ease',
-        boxShadow: isSelected
-          ? `0 0 0 4px ${col.bg}1A, 0 8px 24px ${col.bg}18`
-          : '0 1px 3px rgba(0,0,0,0.07)',
-        userSelect: 'none',
-      }}
-      onMouseEnter={e => {
-        if (!isSelected) {
-          (e.currentTarget as HTMLElement).style.transform = 'translateY(-4px)';
-          (e.currentTarget as HTMLElement).style.boxShadow = '0 8px 24px rgba(0,0,0,0.10)';
-        }
-      }}
-      onMouseLeave={e => {
-        if (!isSelected) {
-          (e.currentTarget as HTMLElement).style.transform = '';
-          (e.currentTarget as HTMLElement).style.boxShadow = '0 1px 3px rgba(0,0,0,0.07)';
-        }
       }}
     >
-      {/* Color accent bar */}
       <div style={{ height: 4, background: col.bg }} />
 
-      {/* Seq + EDI flag */}
       <div className="gecko-row gecko-row-between" style={{ padding: '12px 14px 0' }}>
         <div style={{
-          width: 28, height: 28, borderRadius: 8, fontSize: 14, fontWeight: 800,
-          background: col.bg, color: '#fff',
+          width: 28, height: 28, borderRadius: 8, fontSize: 14, fontWeight: 800, background: col.bg, color: '#fff',
           display: 'flex', alignItems: 'center', justifyContent: 'center',
-        }}>
-          {movement.seq}
+        }}>{step.sequenceNo}</div>
+        <div className="gecko-row" style={{ gap: 4 }}>
+          {step.pudoMode && <span className="gecko-badge gecko-badge-xs gecko-badge-gray">{step.pudoMode}</span>}
+          {!step.isBillable && <span className="gecko-badge gecko-badge-xs gecko-badge-warning" title="This step raises no charge">no bill</span>}
+          {!step.isRequired && <span className="gecko-badge gecko-badge-xs gecko-badge-gray">optional</span>}
         </div>
-        {movement.ediEnabled && (
-          <span style={{ fontSize: 9, fontWeight: 700, letterSpacing: '0.04em', padding: '2px 6px', borderRadius: 4, background: '#DBEAFE', color: '#1D4ED8', border: '1px solid #BFDBFE' }}>
-            EDI
-          </span>
-        )}
       </div>
 
-      {/* Icon + code + name */}
       <div className="gecko-row" style={{ padding: '10px 14px', gap: 10 }}>
         <div style={{ width: 34, height: 34, borderRadius: 9, flexShrink: 0, border: `1.5px solid ${col.border}`, background: col.light, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-          <Icon name={icon} size={15} style={{ color: col.bg }} />
+          <Icon name={MOVE_ICON[step.movementCode] ?? 'activity'} size={15} style={{ color: col.bg }} />
         </div>
         <div style={{ minWidth: 0 }}>
-          <div style={{ fontFamily: 'var(--gecko-font-mono)', fontSize: 11, fontWeight: 800, color: 'var(--gecko-text-primary)', lineHeight: 1.2 }}>{movement.code}</div>
-          <div style={{ fontSize: 10, color: 'var(--gecko-text-secondary)', marginTop: 2, lineHeight: 1.3, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{movement.name}</div>
+          <div style={{ fontFamily: 'var(--gecko-font-mono)', fontSize: 11, fontWeight: 800, color: 'var(--gecko-text-primary)', lineHeight: 1.2 }}>{step.movementCode}</div>
+          <div style={{ fontSize: 10, color: 'var(--gecko-text-secondary)', marginTop: 2, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{step.movementDescription}</div>
         </div>
       </div>
 
-      {/* EDI pills */}
-      {movement.ediMessages.length > 0 && (
-        <div style={{ padding: '0 14px', display: 'flex', flexWrap: 'wrap', gap: 3, marginBottom: 6 }}>
-          {movement.ediMessages.slice(0, 3).map(msg => {
-            const ec = EDI_COLORS[msg] ?? { bg: '#F3F4F6', text: '#374151' };
-            return (
-              <span key={msg} style={{ fontSize: 8, fontWeight: 700, padding: '2px 5px', borderRadius: 3, background: ec.bg, color: ec.text, letterSpacing: '0.03em' }}>
-                {msg}
-              </span>
-            );
-          })}
-        </div>
-      )}
-
-      {/* Footer: charge counts */}
-      <div className="gecko-row" style={{ padding: '8px 14px 12px', borderTop: '1px solid var(--gecko-border)', gap: 12, marginTop: 2 }}>
-        <div className="gecko-row" style={{ gap: 4, fontSize: 10, fontWeight: 600, color: isSelected ? col.bg : 'var(--gecko-text-secondary)' }}>
-          <Icon name="fileText" size={10} />
-          {movement.charges.length} charges
-        </div>
-        {movement.vasCharges.length > 0 && (
-          <div className="gecko-row" style={{ gap: 4, fontSize: 10, fontWeight: 600, color: isSelected ? col.bg : 'var(--gecko-text-secondary)' }}>
-            <Icon name="tag" size={10} />
-            {movement.vasCharges.length} VAS
-          </div>
-        )}
+      <div style={{ padding: '0 14px 8px', display: 'flex', flexWrap: 'wrap', gap: 3, minHeight: 18 }}>
+        {on.length === 0
+          ? <span style={{ fontSize: 9, color: 'var(--gecko-text-disabled)' }}>no gate checks</span>
+          : on.map(r => (
+            <span key={r.key} title={r.hint} style={{ fontSize: 9, fontWeight: 700, padding: '2px 5px', borderRadius: 3, background: col.light, color: col.bg, border: `1px solid ${col.border}` }}>{r.short}</span>
+          ))}
       </div>
-    </div>
+
+      <div className="gecko-row" style={{ padding: '8px 14px 12px', borderTop: '1px solid var(--gecko-border)', gap: 4, fontSize: 10, fontWeight: 600, color: isSelected ? col.bg : 'var(--gecko-text-secondary)' }}>
+        <Icon name="fileText" size={10} />
+        {chargeCount} step charge{chargeCount !== 1 ? 's' : ''}
+      </div>
+    </button>
   );
 }
 
-// ── Charges Panel ─────────────────────────────────────────────────────────────
-function ChargesPanel({ movement, applicableCharges, applicableVAS, onToggleCharge, onToggleVAS }: {
-  movement: Movement;
-  applicableCharges: Set<string>;
-  applicableVAS: Set<string>;
-  onToggleCharge: (id: string) => void;
-  onToggleVAS: (id: string) => void;
+// ── Gate rules matrix ─────────────────────────────────────────────────────────
+function RulesMatrix({ steps, selectedSeq, onSelect }: {
+  steps: Step[]; selectedSeq: number | null; onSelect: (seq: number) => void;
 }) {
-  const col = SEQ_COLORS[(movement.seq - 1) % SEQ_COLORS.length];
-
-  const PTBadge = ({ term }: { term: PaymentTerm }) => (
-    <span style={{
-      fontSize: 10, fontWeight: 700, padding: '2px 6px', borderRadius: 4,
-      background: term === 'CASH' ? '#D1FAE5' : '#DBEAFE',
-      color: term === 'CASH' ? '#065F46' : '#1D4ED8',
-    }}>{term}</span>
+  return (
+    <table className="gecko-table gecko-table-compact" style={{ fontSize: 12 }}>
+      <thead>
+        <tr>
+          <th style={{ width: 44 }}>#</th>
+          <th>Step</th>
+          <th style={{ width: 90 }}>Mode</th>
+          {RULES.map(r => <th key={r.key} title={r.hint} style={{ width: 96, textAlign: 'center' }}>{r.label}</th>)}
+          <th style={{ width: 70, textAlign: 'center' }}>Billable</th>
+        </tr>
+      </thead>
+      <tbody>
+        {steps.map(s => {
+          const col = SEQ_COLORS[(s.sequenceNo - 1) % SEQ_COLORS.length];
+          return (
+            <tr key={s.orderTypeMovementId} onClick={() => onSelect(s.sequenceNo)}
+              style={{ cursor: 'pointer', background: selectedSeq === s.sequenceNo ? col.light : undefined }}>
+              <td><span style={{ fontWeight: 800, color: col.bg }}>{s.sequenceNo}</span></td>
+              <td>
+                <span style={{ fontFamily: 'var(--gecko-font-mono)', fontWeight: 700 }}>{s.movementCode}</span>
+                <span className="gecko-cell-meta" style={{ marginLeft: 8 }}>{s.movementDescription}</span>
+              </td>
+              <td className="gecko-page-subtitle">{humanize(s.pudoMode)}</td>
+              {RULES.map(r => (
+                <td key={r.key} style={{ textAlign: 'center' }}>
+                  {s[r.key]
+                    ? <Icon name="check" size={14} style={{ color: 'var(--gecko-success-600)' }} />
+                    : <span style={{ color: 'var(--gecko-text-disabled)' }}>—</span>}
+                </td>
+              ))}
+              <td style={{ textAlign: 'center' }}>
+                {s.isBillable
+                  ? <Icon name="check" size={14} style={{ color: 'var(--gecko-success-600)' }} />
+                  : <span style={{ color: 'var(--gecko-warning-700)', fontSize: 11, fontWeight: 600 }}>no</span>}
+              </td>
+            </tr>
+          );
+        })}
+      </tbody>
+    </table>
   );
+}
 
-  const ToBadge = ({ to }: { to: string }) => (
-    <span className="gecko-cell-meta" style={{
-      fontWeight: 600, padding: '2px 6px', borderRadius: 4,
-      background: 'var(--gecko-bg-subtle)',
-      border: '1px solid var(--gecko-border)',
-    }}>{to}</span>
-  );
+// ── Charges table ─────────────────────────────────────────────────────────────
+function ChargesTable({ charges, selectedStep }: { charges: Charge[]; selectedStep: string | null }) {
+  const shown = selectedStep ? charges.filter(c => c.movementCode === null || c.movementCode === selectedStep) : charges;
 
-  const ColHeader = ({ children }: { children: React.ReactNode }) => (
-    <div className="gecko-eyebrow">
-      {children}
-    </div>
-  );
+  if (charges.length === 0) {
+    return (
+      <EmptyState
+        icon="invoice"
+        title="No charges configured"
+        description="Nothing is raised automatically for this order type — every charge will come from the tariff at invoicing, or be added by hand."
+      />
+    );
+  }
 
   return (
-    <div style={{
-      animation: 'geckoSlideUp 220ms ease',
-      background: 'var(--gecko-bg-surface)',
-      border: '1px solid var(--gecko-border)',
-      borderRadius: 14, overflow: 'hidden',
-      boxShadow: '0 2px 16px rgba(0,0,0,0.05)',
-    }}>
-      {/* Panel header */}
-      <div style={{
-        padding: '14px 20px', background: col.light,
-        borderBottom: `2px solid ${col.bg}33`,
-        display: 'flex', alignItems: 'center', gap: 14,
-      }}>
-        <div style={{
-          width: 36, height: 36, borderRadius: 10,
-          background: col.bg, color: '#fff',
-          display: 'flex', alignItems: 'center', justifyContent: 'center',
-          fontSize: 16, fontWeight: 800, flexShrink: 0,
-        }}>
-          {movement.seq}
-        </div>
-        <div>
-          <div style={{ fontFamily: 'var(--gecko-font-mono)', fontSize: 15, fontWeight: 800, color: col.bg }}>{movement.code}</div>
-          <div style={{ fontSize: 12, color: 'var(--gecko-text-secondary)', marginTop: 1 }}>{movement.name} — Charge &amp; VAS Configuration</div>
-        </div>
-        {/* Movement flags */}
-        <div style={{ marginLeft: 'auto', display: 'flex', gap: 6, flexWrap: 'wrap' }}>
-          {movement.releaseDM  && <span style={{ fontSize: 10, fontWeight: 700, padding: '3px 8px', borderRadius: 4, background: '#FEF3C7', color: '#92400E' }}>Release DM</span>}
-          {movement.grossWgt   && <span style={{ fontSize: 10, fontWeight: 700, padding: '3px 8px', borderRadius: 4, background: '#EDE9FE', color: '#6D28D9' }}>Gross Wgt</span>}
-          {movement.sealNo     && <span style={{ fontSize: 10, fontWeight: 700, padding: '3px 8px', borderRadius: 4, background: '#D1FAE5', color: '#065F46' }}>Seal No</span>}
-          {movement.ediEnabled && (
-            <div style={{ display: 'flex', gap: 4, alignItems: 'center' }}>
-              {movement.ediMessages.map(msg => {
-                const ec = EDI_COLORS[msg] ?? { bg: '#F3F4F6', text: '#374151' };
-                return <span key={msg} style={{ fontSize: 9, fontWeight: 700, padding: '2px 6px', borderRadius: 4, background: ec.bg, color: ec.text }}>{msg}</span>;
-              })}
-            </div>
-          )}
-        </div>
-      </div>
-
-      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 0 }}>
-
-        {/* Regular Charges */}
-        <div style={{ padding: '18px 20px', borderRight: '1px solid var(--gecko-border)' }}>
-          <div className="gecko-row gecko-row-between gecko-mb-3">
-            <div className="gecko-row" style={{ fontSize: 13, fontWeight: 700, color: 'var(--gecko-text-primary)', gap: 6 }}>
-              <Icon name="fileText" size={14} style={{ color: col.bg }} />
-              Regular Charges
-            </div>
-            <span className="gecko-cell-meta">
-              {movement.charges.filter(c => applicableCharges.has(c.id)).length} / {movement.charges.length} active
-            </span>
-          </div>
-
-          {movement.charges.length === 0 ? (
-            <div style={{ fontSize: 12, color: 'var(--gecko-text-disabled)', textAlign: 'center', padding: '24px 0' }}>No charges configured</div>
-          ) : (
-            <div className="gecko-stack" style={{ gap: 2 }}>
-              <div style={{ display: 'grid', gridTemplateColumns: '22px 1fr 72px 90px 36px', gap: 8, padding: '5px 8px', background: 'var(--gecko-bg-subtle)', borderRadius: 6, marginBottom: 4, alignItems: 'center' }}>
-                <div />
-                <ColHeader>Charge Code</ColHeader>
-                <ColHeader>Payment</ColHeader>
-                <ColHeader>Billed To</ColHeader>
-                <ColHeader>Cargo</ColHeader>
+    <table className="gecko-table gecko-table-compact" style={{ fontSize: 12 }}>
+      <thead>
+        <tr>
+          <th style={{ width: 130 }}>Charge</th>
+          <th>Description</th>
+          <th style={{ width: 110 }}>Step</th>
+          <th style={{ width: 110 }}>Bill to</th>
+          <th style={{ width: 90 }}>Term</th>
+          <th style={{ width: 90 }}>Raised</th>
+          <th style={{ width: 150 }}>Flags</th>
+          <th style={{ width: 60, textAlign: 'right' }}>Qty</th>
+        </tr>
+      </thead>
+      <tbody>
+        {shown.map(c => (
+          <tr key={c.orderTypeChargeId}>
+            <td>
+              <Link href={`/masters/charge-codes/${encodeURIComponent(c.chargeCode)}`} className="gecko-id-link">{c.chargeCode}</Link>
+            </td>
+            <td style={{ fontWeight: 500, color: 'var(--gecko-text-primary)' }}>{c.chargeDescription}</td>
+            <td>
+              {c.movementCode
+                ? <span style={{ fontFamily: 'var(--gecko-font-mono)', fontSize: 11, fontWeight: 700 }}>{c.movementCode}</span>
+                : <span className="gecko-cell-meta">every step</span>}
+            </td>
+            <td><span className="gecko-badge gecko-badge-xs gecko-badge-gray">{c.paymentTo}</span></td>
+            <td className="gecko-page-subtitle">{c.paymentTermCode ?? '—'}</td>
+            <td>
+              {c.isOptional
+                ? <span className="gecko-badge gecko-badge-xs gecko-badge-info" title="Offered to the clerk, not raised unless picked">optional</span>
+                : <span className="gecko-badge gecko-badge-xs gecko-badge-success" title="Raised automatically">default</span>}
+            </td>
+            <td>
+              <div className="gecko-row gecko-row-wrap" style={{ gap: 3 }}>
+                {c.isCargoCharge && <span className="gecko-badge gecko-badge-xs gecko-badge-gray">cargo</span>}
+                {c.isValueAddedService && <span className="gecko-badge gecko-badge-xs gecko-badge-warning">VAS</span>}
+                {c.raiseAtGateIn && <span className="gecko-badge gecko-badge-xs gecko-badge-info" title="Raised when the box gates in, not at invoicing">at gate-in</span>}
+                {!c.isCargoCharge && !c.isValueAddedService && !c.raiseAtGateIn && <span className="gecko-cell-meta">—</span>}
               </div>
-              {movement.charges.map(c => {
-                const on = applicableCharges.has(c.id);
-                return (
-                  <div
-                    key={c.id}
-                    onClick={() => onToggleCharge(c.id)}
-                    style={{
-                      display: 'grid', gridTemplateColumns: '22px 1fr 72px 90px 36px', gap: 8,
-                      padding: '9px 8px', borderRadius: 8, cursor: 'pointer', alignItems: 'center',
-                      background: on ? col.light : 'transparent',
-                      border: `1px solid ${on ? col.border : 'transparent'}`,
-                      transition: 'all 120ms',
-                    }}
-                  >
-                    <input type="checkbox" className="gecko-checkbox" checked={on} onChange={() => onToggleCharge(c.id)} onClick={e => e.stopPropagation()} style={{ margin: 0 }} />
-                    <div>
-                      <div style={{ fontFamily: 'var(--gecko-font-mono)', fontSize: 11, fontWeight: 700, color: on ? col.bg : 'var(--gecko-text-primary)' }}>{c.code}</div>
-                      <div className="gecko-cell-meta">{c.description}</div>
-                    </div>
-                    <PTBadge term={c.paymentTerm} />
-                    <ToBadge to={c.billedTo} />
-                    <div style={{ display: 'flex', justifyContent: 'center' }}>
-                      {c.cargoCharge && <Icon name="check" size={12} style={{ color: col.bg }} />}
-                    </div>
-                  </div>
-                );
-              })}
-            </div>
-          )}
-        </div>
-
-        {/* VAS Charges */}
-        <div style={{ padding: '18px 20px' }}>
-          <div className="gecko-row gecko-row-between gecko-mb-3">
-            <div className="gecko-row" style={{ fontSize: 13, fontWeight: 700, color: 'var(--gecko-text-primary)', gap: 6 }}>
-              <Icon name="tag" size={14} style={{ color: 'var(--gecko-accent-600)' }} />
-              VAS Charges
-            </div>
-            <span className="gecko-cell-meta">
-              {movement.vasCharges.filter(v => applicableVAS.has(v.id)).length} / {movement.vasCharges.length} active
-            </span>
-          </div>
-
-          {movement.vasCharges.length === 0 ? (
-            <div style={{ fontSize: 12, color: 'var(--gecko-text-disabled)', textAlign: 'center', padding: '24px 0' }}>
-              No VAS charges for this movement
-            </div>
-          ) : (
-            <div className="gecko-stack" style={{ gap: 2 }}>
-              <div style={{ display: 'grid', gridTemplateColumns: '22px 1fr 72px 90px 50px', gap: 8, padding: '5px 8px', background: 'var(--gecko-bg-subtle)', borderRadius: 6, marginBottom: 4, alignItems: 'center' }}>
-                <div />
-                <ColHeader>VAS Code</ColHeader>
-                <ColHeader>Payment</ColHeader>
-                <ColHeader>Pay To</ColHeader>
-                <ColHeader>In-MTY</ColHeader>
-              </div>
-              {movement.vasCharges.map(v => {
-                const on = applicableVAS.has(v.id);
-                return (
-                  <div
-                    key={v.id}
-                    onClick={() => onToggleVAS(v.id)}
-                    style={{
-                      display: 'grid', gridTemplateColumns: '22px 1fr 72px 90px 50px', gap: 8,
-                      padding: '9px 8px', borderRadius: 8, cursor: 'pointer', alignItems: 'center',
-                      background: on ? '#FFF7ED' : 'transparent',
-                      border: `1px solid ${on ? '#FED7AA' : 'transparent'}`,
-                      transition: 'all 120ms',
-                    }}
-                  >
-                    <input type="checkbox" className="gecko-checkbox" checked={on} onChange={() => onToggleVAS(v.id)} onClick={e => e.stopPropagation()} style={{ margin: 0 }} />
-                    <div>
-                      <div style={{ fontFamily: 'var(--gecko-font-mono)', fontSize: 11, fontWeight: 700, color: on ? 'var(--gecko-accent-700)' : 'var(--gecko-text-primary)' }}>{v.code}</div>
-                      <div className="gecko-cell-meta">{v.description}</div>
-                    </div>
-                    <PTBadge term={v.paymentTerm} />
-                    <ToBadge to={v.paymentTo} />
-                    <div style={{ display: 'flex', justifyContent: 'center' }}>
-                      {v.loadAtGateInMTY && <Icon name="check" size={12} style={{ color: 'var(--gecko-accent-600)' }} />}
-                    </div>
-                  </div>
-                );
-              })}
-            </div>
-          )}
-        </div>
-      </div>
-    </div>
+            </td>
+            <td style={{ textAlign: 'right', fontVariantNumeric: 'tabular-nums' }}>{c.defaultQty ?? '—'}</td>
+          </tr>
+        ))}
+        {shown.length === 0 && (
+          <tr><td colSpan={8} className="gecko-cell-meta" style={{ textAlign: 'center', padding: 20 }}>No charges on {selectedStep}.</td></tr>
+        )}
+      </tbody>
+    </table>
   );
 }
 
 // ── Main Page ─────────────────────────────────────────────────────────────────
 export default function OrderTypeMasterPage() {
-  const [selected, setSelected] = useState<OrderType>(ORDER_TYPES[0]);
-  const [selectedSeq, setSelectedSeq] = useState<number | null>(null);
-  const { toast } = useToast();
   const [search, setSearch] = useState('');
+  const [direction, setDirection] = useState('');
+  const [includeInactive, setIncludeInactive] = useState(false);
+  const [selectedCode, setSelectedCode] = useState<string | null>(null);
+  const [selectedSeq, setSelectedSeq] = useState<number | null>(null);
 
-  // All charges start as applicable
-  const [applicableCharges, setApplicableCharges] = useState<Set<string>>(() => {
-    const s = new Set<string>();
-    ORDER_TYPES.forEach(ot => ot.movements.forEach(m => m.charges.forEach(c => s.add(c.id))));
-    return s;
-  });
-  const [applicableVAS, setApplicableVAS] = useState<Set<string>>(() => {
-    const s = new Set<string>();
-    ORDER_TYPES.forEach(ot => ot.movements.forEach(m => m.vasCharges.forEach(v => s.add(v.id))));
-    return s;
-  });
+  const listPath = useMemo(() => {
+    const params = new URLSearchParams({ pageSize: '300' });
+    if (includeInactive) params.set('includeInactive', 'true');
+    return `/api/master/order-types?${params.toString()}`;
+  }, [includeInactive]);
+  const { data: all, error, loading, reload } = useApiList<OrderType>(listPath);
 
-  const filtered = useMemo(() => ORDER_TYPES.filter(ot =>
-    !search || ot.code.toLowerCase().includes(search.toLowerCase()) || ot.description.toLowerCase().includes(search.toLowerCase())
-  ), [search]);
+  const directions = useMemo(() => [...new Set((all ?? []).map(o => o.directionCode))].sort(), [all]);
 
-  const { page, setPage, pageSize, setPageSize, totalPages, pageItems, totalItems, startRow, endRow } = usePagination(filtered);
+  const filtered = useMemo(() => {
+    const q = search.trim().toLowerCase();
+    return (all ?? []).filter(o =>
+      (!direction || o.directionCode === direction) &&
+      (!q || o.orderTypeCode.toLowerCase().includes(q) || o.descriptionEn.toLowerCase().includes(q)
+        || (o.descriptionLocal ?? '').includes(search.trim())));
+  }, [all, search, direction]);
 
-  const activeMovement = selectedSeq !== null ? selected.movements.find(m => m.seq === selectedSeq) ?? null : null;
-  const bt = BTYPE[selected.bookingType];
+  // Select the first order type once the list arrives, and keep a valid selection.
+  useEffect(() => {
+    if (filtered.length === 0) return;
+    if (!selectedCode || !filtered.some(o => o.orderTypeCode === selectedCode)) {
+      setSelectedCode(filtered[0].orderTypeCode);
+      setSelectedSeq(null);
+    }
+  }, [filtered, selectedCode]);
 
-  const toggleCharge = (id: string) => setApplicableCharges(prev => { const n = new Set(prev); n.has(id) ? n.delete(id) : n.add(id); return n; });
-  const toggleVAS    = (id: string) => setApplicableVAS(prev => { const n = new Set(prev); n.has(id) ? n.delete(id) : n.add(id); return n; });
+  const detailPath = selectedCode ? `/api/master/order-types/${encodeURIComponent(selectedCode)}` : null;
+  const { data: detail, error: detailError, loading: detailLoading } = useApi<OrderTypeDetail>(detailPath);
+  // useApi keeps the previous answer while the next one loads; never show one order type's steps under another's name.
+  const current = detail && detail.orderType.orderTypeCode === selectedCode ? detail : null;
+
+  const steps = current?.movements ?? [];
+  const charges = current?.charges ?? [];
+  const selectedStep = selectedSeq !== null ? steps.find(s => s.sequenceNo === selectedSeq)?.movementCode ?? null : null;
+  const ot = current?.orderType;
+  const dir = ot ? directionOf(ot.directionCode) : null;
+
+  const select = (code: string) => { setSelectedCode(code); setSelectedSeq(null); };
+  const toggleSeq = (seq: number) => setSelectedSeq(prev => (prev === seq ? null : seq));
 
   return (
     <div className="gecko-stack" style={{ maxWidth: 'var(--gecko-container-max)', margin: '0 auto', gap: 20, paddingBottom: 40 }}>
-      <style>{ANIM_CSS}</style>
 
       {/* Page header */}
       <div className="gecko-page-actions">
         <div className="gecko-page-actions-left">
-          <h1 className="gecko-page-title">Work Order Types</h1>
+          <div className="gecko-row gecko-row-baseline gecko-stack-md">
+            <h1 className="gecko-page-title">Order Types</h1>
+            <span className="gecko-count-badge">{loading && !all ? '…' : `${(all ?? []).length} types`}</span>
+          </div>
           <div className="gecko-page-subtitle gecko-mt-1">
-            Configure order types, movement sequences, and associated charges per leg
+            What the depot is asked to do. Each order type expands into gate steps, and each step carries the checks the gate enforces.
           </div>
         </div>
         <div className="gecko-toolbar">
           <ExportButton resource="Order types" iconSize={15} />
-          <button className="gecko-btn gecko-btn-outline gecko-btn-sm" onClick={() => toast({ variant: 'info', title: 'Edit Order Type', message: 'Edit form coming soon.' })}><Icon name="edit" size={15} /> Edit</button>
-          <Link href="/masters/order-types/new" className="gecko-btn gecko-btn-primary gecko-btn-sm"><Icon name="plus" size={15} /> New Work Order Type</Link>
+          <button className="gecko-btn gecko-btn-outline gecko-btn-sm" onClick={reload}>
+            <Icon name="refreshCcw" size={15} /> Refresh
+          </button>
+          <Link href="/masters/order-types/new" className="gecko-btn gecko-btn-primary gecko-btn-sm"><Icon name="plus" size={15} /> New Order Type</Link>
         </div>
       </div>
+
+      {error && (
+        <div role="alert" className="gecko-alert gecko-alert-warning gecko-row" style={{ gap: 10 }}>
+          <Icon name="alertCircle" size={16} />
+          <span>{error.message}</span>
+          {error.status === 401 && <Link href="/login" className="gecko-link">Sign in</Link>}
+        </div>
+      )}
 
       <div className="gecko-row gecko-row-start" style={{ gap: 20 }}>
 
         {/* LEFT: Order type list */}
-        <div className="gecko-flex-shrink-0" style={{ width: 244, background: 'var(--gecko-bg-surface)', border: '1px solid var(--gecko-border)', borderRadius: 12, overflow: 'hidden', position: 'sticky', top: 80 }}>
-          <div style={{ padding: '14px 14px 10px', borderBottom: '1px solid var(--gecko-border)' }}>
-            <div className="gecko-eyebrow gecko-mb-3">
-              Work Order Types ({ORDER_TYPES.length})
-            </div>
+        <div className="gecko-flex-shrink-0" style={{ width: 264, background: 'var(--gecko-bg-surface)', border: '1px solid var(--gecko-border)', borderRadius: 12, overflow: 'hidden', position: 'sticky', top: 80 }}>
+          <div className="gecko-stack" style={{ padding: '14px 14px 10px', borderBottom: '1px solid var(--gecko-border)', gap: 8 }}>
             <div style={{ position: 'relative' }}>
               <Icon name="search" size={13} style={{ position: 'absolute', left: 8, top: '50%', transform: 'translateY(-50%)', color: 'var(--gecko-text-disabled)', pointerEvents: 'none' }} />
               <input
                 className="gecko-input gecko-input-sm"
-                placeholder="Search..."
+                placeholder="Search code or description…"
+                aria-label="Search order types"
                 value={search}
                 onChange={e => setSearch(e.target.value)}
                 style={{ paddingLeft: 28 }}
               />
             </div>
+            <div className="gecko-row gecko-row-wrap" style={{ gap: 4 }}>
+              {['', ...directions].map(d => (
+                <button key={d || 'all'} type="button" onClick={() => setDirection(d)}
+                  className={`gecko-btn gecko-btn-sm ${direction === d ? 'gecko-btn-primary' : 'gecko-btn-ghost'}`}>
+                  {d ? directionOf(d).label : 'All'}
+                </button>
+              ))}
+            </div>
+            <label className="gecko-row gecko-cell-meta" style={{ gap: 6, cursor: 'pointer' }}>
+              <input type="checkbox" className="gecko-checkbox" checked={includeInactive} onChange={e => setIncludeInactive(e.target.checked)} />
+              Show inactive
+            </label>
           </div>
-          <div style={{ maxHeight: 540, overflowY: 'auto' }}>
-            {pageItems.map(ot => {
-              const b = BTYPE[ot.bookingType];
-              const active = ot.id === selected.id;
+          <div style={{ maxHeight: 600, overflowY: 'auto' }}>
+            {loading && !all ? (
+              <div className="gecko-cell-meta" style={{ padding: 20, textAlign: 'center' }}>Loading order types…</div>
+            ) : filtered.length === 0 ? (
+              <div className="gecko-cell-meta" style={{ padding: 20, textAlign: 'center' }}>
+                {all && all.length === 0 ? 'No order types yet.' : 'Nothing matches.'}
+              </div>
+            ) : filtered.map(o => {
+              const b = directionOf(o.directionCode);
+              const active = o.orderTypeCode === selectedCode;
               return (
                 <button
-                  key={ot.id}
-                  onClick={() => { setSelected(ot); setSelectedSeq(null); }}
+                  key={o.orderTypeId}
+                  type="button"
+                  onClick={() => select(o.orderTypeCode)}
                   style={{
-                    width: '100%', textAlign: 'left', padding: '10px 14px',
+                    width: '100%', textAlign: 'left', padding: '10px 14px', opacity: o.isActive ? 1 : 0.55,
                     background: active ? 'var(--gecko-primary-50)' : 'transparent',
                     border: 'none', fontFamily: 'inherit', cursor: 'pointer',
                     borderLeft: `3px solid ${active ? 'var(--gecko-primary-600)' : 'transparent'}`,
-                    transition: 'all 100ms',
                   }}
                 >
                   <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 6 }}>
                     <span style={{ fontFamily: 'var(--gecko-font-mono)', fontSize: 12, fontWeight: 700, color: active ? 'var(--gecko-primary-700)' : 'var(--gecko-text-primary)' }}>
-                      {ot.code}
+                      {o.orderTypeCode}
                     </span>
-                    <span style={{ fontSize: 9, fontWeight: 700, padding: '1.5px 5px', borderRadius: 3, background: b.bg, color: b.text, flexShrink: 0 }}>
-                      {b.label}
-                    </span>
+                    <span style={{ fontSize: 9, fontWeight: 700, padding: '1.5px 5px', borderRadius: 3, background: b.bg, color: b.text, flexShrink: 0 }}>{b.label}</span>
                   </div>
-                  <div className="gecko-cell-meta" style={{ lineHeight: 1.3 }}>{ot.description}</div>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginTop: 5 }}>
-                    <span style={{ fontSize: 9, color: 'var(--gecko-text-disabled)', fontWeight: 500 }}>{ot.bookingMode}</span>
-                    <span style={{ fontSize: 9, color: 'var(--gecko-text-disabled)' }}>·</span>
-                    <span style={{ fontSize: 9, color: 'var(--gecko-text-disabled)' }}>{ot.movements.length} move{ot.movements.length !== 1 ? 's' : ''}</span>
-                    <div style={{ marginLeft: 'auto', width: 7, height: 7, borderRadius: '50%', background: ot.status === 'Active' ? 'var(--gecko-success-500)' : 'var(--gecko-gray-300)' }} />
+                  <div className="gecko-cell-meta" style={{ lineHeight: 1.3 }}>{o.descriptionEn}</div>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginTop: 4, fontSize: 9, color: 'var(--gecko-text-disabled)' }}>
+                    <span>{o.serviceCode ?? '—'}</span>
+                    <span>·</span>
+                    <span>{humanize(o.cargoClassCode)}</span>
+                    {!o.isActive && <span style={{ marginLeft: 'auto' }}>inactive</span>}
                   </div>
                 </button>
               );
             })}
           </div>
-          <TablePagination
-            page={page}
-            pageSize={pageSize}
-            totalItems={totalItems}
-            totalPages={totalPages}
-            startRow={startRow}
-            endRow={endRow}
-            onPageChange={setPage}
-            onPageSizeChange={setPageSize}
-            noun="order types"
-          />
+          {all && all.length > 0 && (
+            <div className="gecko-cell-meta" style={{ padding: '8px 14px', borderTop: '1px solid var(--gecko-border)' }}>
+              {filtered.length} of {all.length}
+            </div>
+          )}
         </div>
 
         {/* RIGHT: Detail area */}
-        <div className="gecko-flex-1 gecko-stack gecko-stack-lg">
+        <div className="gecko-flex-1 gecko-stack gecko-stack-lg" style={{ minWidth: 0 }}>
 
-          {/* Order type header */}
-          <div className="gecko-card" style={{ borderRadius: 14, padding: '20px 24px' }}>
-            <div className="gecko-row gecko-mb-3" style={{ gap: 12 }}>
-              <h2 style={{ margin: 0, fontFamily: 'var(--gecko-font-mono)', fontSize: 20, fontWeight: 800, color: 'var(--gecko-text-primary)' }}>{selected.code}</h2>
-              <span style={{ fontSize: 10, fontWeight: 700, padding: '3px 8px', borderRadius: 4, background: bt.bg, color: bt.text }}>{selected.bookingType}</span>
-              <span className="gecko-badge gecko-badge-xs gecko-badge-gray">{selected.bookingMode}</span>
-              <div className="gecko-row gecko-ml-auto">
-                <div style={{ width: 8, height: 8, borderRadius: '50%', background: selected.status === 'Active' ? 'var(--gecko-success-500)' : 'var(--gecko-gray-400)' }} />
-                <span style={{ fontSize: 12, fontWeight: 600, color: selected.status === 'Active' ? 'var(--gecko-success-700)' : 'var(--gecko-text-secondary)' }}>{selected.status}</span>
-              </div>
+          {detailError && (
+            <div role="alert" className="gecko-alert gecko-alert-warning gecko-row" style={{ gap: 10 }}>
+              <Icon name="alertCircle" size={16} /><span>{detailError.message}</span>
             </div>
-            <div className="gecko-mb-4" style={{ fontSize: 14, color: 'var(--gecko-text-secondary)' }}>{selected.description}</div>
-            <div className="gecko-row gecko-row-wrap" style={{ gap: 6 }}>
-              <span className="gecko-cell-meta" style={{ fontWeight: 700, marginRight: 2 }}>Rules:</span>
-              {[
-                { label: 'Release Damaged', val: selected.rules.allowReleaseDamaged },
-                { label: 'Check Max Weight', val: selected.rules.checkMaxWeight },
-                { label: 'Check Seal No',    val: selected.rules.checkSealNumber },
-                { label: 'Skip EDI',         val: selected.rules.skipEDI },
-              ].map(r => (
-                <span key={r.label} style={{
-                  fontSize: 10, fontWeight: 600, padding: '2px 8px', borderRadius: 4,
-                  background: r.val ? 'var(--gecko-success-50)' : 'var(--gecko-bg-subtle)',
-                  color: r.val ? 'var(--gecko-success-700)' : 'var(--gecko-text-disabled)',
-                  border: `1px solid ${r.val ? 'var(--gecko-success-200)' : 'var(--gecko-border)'}`,
-                }}>
-                  {r.val ? '✓' : '○'} {r.label}
-                </span>
-              ))}
-            </div>
-          </div>
+          )}
 
-          {/* Workflow canvas */}
-          <div className="gecko-table-card" style={{ borderRadius: 14 }}>
-            <div className="gecko-row" style={{ padding: '14px 20px', borderBottom: '1px solid var(--gecko-border)', gap: 10 }}>
-              <Icon name="activity" size={16} style={{ color: 'var(--gecko-primary-600)' }} />
-              <span style={{ fontSize: 14, fontWeight: 700, color: 'var(--gecko-text-primary)' }}>Movement Workflow</span>
-              <span className="gecko-page-subtitle">
-                — {selected.movements.length} movement leg{selected.movements.length !== 1 ? 's' : ''}
-              </span>
-              {selectedSeq !== null && (
-                <button
-                  onClick={() => setSelectedSeq(null)}
-                  className="gecko-row gecko-ml-auto gecko-cell-meta"
-                  style={{ background: 'none', border: 'none', cursor: 'pointer', gap: 4, fontFamily: 'inherit' }}
-                >
-                  <Icon name="xCircle" size={13} /> Clear selection
-                </button>
-              )}
+          {!ot ? (
+            <div className="gecko-card" style={{ borderRadius: 14, padding: 32, textAlign: 'center', color: 'var(--gecko-text-secondary)' }}>
+              {selectedCode && detailLoading ? `Loading ${selectedCode}…` : 'Pick an order type on the left.'}
             </div>
-
-            <div style={{ padding: '28px 28px 24px', overflowX: 'auto' }}>
-              <div className="gecko-row" style={{ minWidth: 'max-content' }}>
-                {selected.movements.map((mov, idx) => (
-                  <React.Fragment key={mov.seq}>
-                    <MovementNode
-                      movement={mov}
-                      isSelected={selectedSeq === mov.seq}
-                      onClick={() => setSelectedSeq(selectedSeq === mov.seq ? null : mov.seq)}
-                    />
-                    {idx < selected.movements.length - 1 && <FlowConnector idx={idx} />}
-                  </React.Fragment>
-                ))}
+          ) : (
+            <>
+              {/* Order type header */}
+              <div className="gecko-card" style={{ borderRadius: 14, padding: '20px 24px' }}>
+                <div className="gecko-row gecko-mb-3" style={{ gap: 12 }}>
+                  <h2 style={{ margin: 0, fontFamily: 'var(--gecko-font-mono)', fontSize: 20, fontWeight: 800, color: 'var(--gecko-text-primary)' }}>{ot.orderTypeCode}</h2>
+                  {dir && <span style={{ fontSize: 10, fontWeight: 700, padding: '3px 8px', borderRadius: 4, background: dir.bg, color: dir.text }}>{humanize(ot.directionCode)}</span>}
+                  {ot.serviceCode && <span className="gecko-badge gecko-badge-xs gecko-badge-gray">{ot.serviceCode}</span>}
+                  <div className="gecko-row gecko-ml-auto">
+                    <span className={`gecko-status-dot gecko-status-dot-${ot.isActive ? 'active' : 'neutral'}`}>{ot.isActive ? 'Active' : 'Inactive'}</span>
+                  </div>
+                </div>
+                <div style={{ fontSize: 14, color: 'var(--gecko-text-secondary)' }}>{ot.descriptionEn}</div>
+                {ot.descriptionLocal && <div className="gecko-cell-meta gecko-mt-1">{ot.descriptionLocal}</div>}
+                <div className="gecko-row gecko-row-wrap gecko-mt-4" style={{ gap: 20, fontSize: 12 }}>
+                  <div><span className="gecko-eyebrow">Cargo class</span><div>{humanize(ot.cargoClassCode)}</div></div>
+                  <div><span className="gecko-eyebrow">Booking type</span><div>{humanize(ot.bookingTypeCode)}</div></div>
+                  <div><span className="gecko-eyebrow">Steps</span><div>{steps.length}</div></div>
+                  <div><span className="gecko-eyebrow">Charges</span><div>{charges.length}</div></div>
+                </div>
               </div>
 
-              {selectedSeq === null && (
-                <div className="gecko-mt-5" style={{ fontSize: 12, color: 'var(--gecko-text-disabled)', fontStyle: 'italic', textAlign: 'center' }}>
-                  ↑ Click a movement node to view and configure its charges
+              {/* Workflow canvas */}
+              <div className="gecko-table-card" style={{ borderRadius: 14 }}>
+                <div className="gecko-row" style={{ padding: '14px 20px', borderBottom: '1px solid var(--gecko-border)', gap: 10 }}>
+                  <Icon name="activity" size={16} style={{ color: 'var(--gecko-primary-600)' }} />
+                  <span style={{ fontSize: 14, fontWeight: 700, color: 'var(--gecko-text-primary)' }}>Gate steps</span>
+                  <span className="gecko-page-subtitle">— walked in order; a box cannot skip a required step</span>
+                  {selectedSeq !== null && (
+                    <button onClick={() => setSelectedSeq(null)} className="gecko-row gecko-ml-auto gecko-cell-meta"
+                      style={{ background: 'none', border: 'none', cursor: 'pointer', gap: 4, fontFamily: 'inherit' }}>
+                      <Icon name="x" size={13} /> Clear selection
+                    </button>
+                  )}
+                </div>
+                <div style={{ padding: '24px 24px 20px', overflowX: 'auto' }}>
+                  {steps.length === 0 ? (
+                    <div className="gecko-cell-meta" style={{ textAlign: 'center' }}>No steps defined — the gate cannot process this order type yet.</div>
+                  ) : (
+                    <div className="gecko-row" style={{ minWidth: 'max-content' }}>
+                      {steps.map((s, idx) => (
+                        <React.Fragment key={s.orderTypeMovementId}>
+                          <MovementNode
+                            step={s}
+                            chargeCount={charges.filter(c => c.movementCode === s.movementCode).length}
+                            isSelected={selectedSeq === s.sequenceNo}
+                            onClick={() => toggleSeq(s.sequenceNo)}
+                          />
+                          {idx < steps.length - 1 && <FlowConnector />}
+                        </React.Fragment>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              </div>
+
+              {/* Gate rules, per step */}
+              {steps.length > 0 && (
+                <div className="gecko-table-card" style={{ borderRadius: 14 }}>
+                  <div className="gecko-row" style={{ padding: '14px 20px', borderBottom: '1px solid var(--gecko-border)', gap: 10 }}>
+                    <Icon name="shieldCheck" size={16} style={{ color: 'var(--gecko-primary-600)' }} />
+                    <span style={{ fontSize: 14, fontWeight: 700, color: 'var(--gecko-text-primary)' }}>Gate rules</span>
+                    <span className="gecko-page-subtitle">— set per step, not per order type: the same box is weighed at one gate and not at the next</span>
+                  </div>
+                  <RulesMatrix steps={steps} selectedSeq={selectedSeq} onSelect={toggleSeq} />
                 </div>
               )}
-            </div>
-          </div>
 
-          {/* Charges panel — slides in when a node is selected */}
-          {activeMovement && (
-            <ChargesPanel
-              movement={activeMovement}
-              applicableCharges={applicableCharges}
-              applicableVAS={applicableVAS}
-              onToggleCharge={toggleCharge}
-              onToggleVAS={toggleVAS}
-            />
+              {/* Charges */}
+              <div className="gecko-table-card" style={{ borderRadius: 14 }}>
+                <div className="gecko-row" style={{ padding: '14px 20px', borderBottom: '1px solid var(--gecko-border)', gap: 10 }}>
+                  <Icon name="fileText" size={16} style={{ color: 'var(--gecko-primary-600)' }} />
+                  <span style={{ fontSize: 14, fontWeight: 700, color: 'var(--gecko-text-primary)' }}>Charges raised</span>
+                  <span className="gecko-page-subtitle">
+                    {selectedStep ? `— on ${selectedStep}, plus those on every step` : '— the price comes from the tariff; this says who pays and when'}
+                  </span>
+                </div>
+                <ChargesTable charges={charges} selectedStep={selectedStep} />
+              </div>
+            </>
           )}
         </div>
       </div>

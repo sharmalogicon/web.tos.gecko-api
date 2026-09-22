@@ -148,6 +148,21 @@ export default function EquipmentPoolPage() {
 
   return (
     <div className="gecko-stack">
+      {/* Yard state — how many boxes are HERE, damaged, or awaiting survey — is
+          TOS's, and TOS has no API yet (Phase 5: yard.container_visit +
+          gate transactions). gecko_master only knows the registry: which boxes
+          exist and who owns them. Binding this screen to the registry would
+          report a fleet as if it were stock on hand, so it stays on sample data
+          until the TOS yard endpoints exist. */}
+      <div role="note" className="gecko-alert gecko-alert-info gecko-row" style={{ gap: 10 }}>
+        <Icon name="info" size={16} />
+        <span>
+          <strong>Sample data.</strong> Pool counts come from yard state, which arrives with the TOS
+          gate and yard module. The container <em>registry</em> is live under{' '}
+          <Link href="/masters/container-types" className="gecko-link">Container Types</Link>.
+        </span>
+      </div>
+
 
       {/* ── Header ── */}
       <div className="gecko-page-header">

@@ -1,16 +1,23 @@
 "use client";
 
-import React, { FormEvent, useState } from 'react';
+import React, { FormEvent, useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { Icon } from '../../components/ui/Icon';
+import { useSession } from '../../lib/auth/session';
+import { ApiError } from '../../lib/api/problem';
 
-// Demo credentials for the mock login. Real authentication arrives with
-// Azure AD B2C in the Phase 1 backend; this is a UI-only gate.
-const DEMO_EMAIL = 'somchai@lcb-icd.com';
-const DEMO_PASSWORD = 'GeckoTOS2026';
+// Development fixture user (gecko_identity dev_02). Real accounts are created
+// by invitation — ADR-006 D3: there is no self-service signup.
+//
+// TENANT_OWNER on purpose: the token's `prm` claim carries TENANT-WIDE role
+// permissions only, so a branch-scoped user such as ops.lcb@sct.co.th signs in
+// but can call nothing until the `bpm` claim exists (gecko_tos PLAN Q11).
+const DEMO_EMAIL = 'admin@sct.co.th';
+const DEMO_PASSWORD = 'Gecko#Test2026';
 
 export default function LoginPage() {
   const router = useRouter();
+  const { status, signIn } = useSession();
   const [email, setEmail] = useState(DEMO_EMAIL);
   const [password, setPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
@@ -28,17 +35,36 @@ export default function LoginPage() {
     return Object.keys(e).length === 0;
   };
 
+  // Already signed in (the refresh cookie survived the reload): don't ask again.
+  useEffect(() => {
+    if (status === 'authenticated') router.replace('/dashboard/overview');
+  }, [status, router]);
+
   const onSubmit = async (event: FormEvent) => {
     event.preventDefault();
     if (!validate()) return;
     setSubmitting(true);
     setErrors({});
-    await new Promise(r => setTimeout(r, 600));
 
-    if (email.trim().toLowerCase() === DEMO_EMAIL.toLowerCase() && password === DEMO_PASSWORD) {
+    try {
+      await signIn(email.trim(), password);
       router.push('/dashboard/overview');
-    } else {
-      setErrors({ general: 'Invalid email or password. Use the demo credentials shown below.' });
+    } catch (error) {
+      if (error instanceof ApiError) {
+        // The API answers 401 without saying WHICH half was wrong — telling the
+        // caller "no such email" would be a free account-enumeration oracle.
+        setErrors(
+          error.code === 'password_change_required'
+            ? { general: 'This account must set a new password before signing in.' }
+            : {
+                general: error.message,
+                email: error.forField('email'),
+                password: error.forField('password'),
+              },
+        );
+      } else {
+        setErrors({ general: 'Could not reach the Gecko API. Is Gecko.Api running on http://localhost:5100?' });
+      }
       setSubmitting(false);
     }
   };
@@ -300,7 +326,7 @@ export default function LoginPage() {
               </label>
               <a
                 href="#forgot"
-                onClick={(e) => { e.preventDefault(); alert('Password reset arrives with Azure AD B2C in the Phase 1 backend.'); }}
+                onClick={(e) => { e.preventDefault(); alert('Password reset is not built yet — ADR-006 lists forgot-password and reset-password as part of the auth surface.'); }}
                 style={{
                   fontSize: 13, color: 'var(--gecko-primary-600)',
                   textDecoration: 'none', fontWeight: 500,
@@ -379,7 +405,8 @@ export default function LoginPage() {
               </div>
             </div>
             <div style={{ marginTop: 8, fontSize: 11, opacity: 0.78 }}>
-              UI mock only. Real authentication arrives with Azure AD B2C in the Phase 1 backend.
+              Live against Gecko.Api — a fixture user from gecko_identity dev_02. Accounts are
+              created by invitation, not signup.
             </div>
           </div>
         </div>

@@ -3,11 +3,12 @@
   "version": "0.1.0",
   "private": true,
   "scripts": {
-    "dev": "next dev",
+    "dev": "next dev --experimental-https --experimental-https-key ./certificates/localhost-key.pem --experimental-https-cert ./certificates/localhost.pem",
     "build": "next build",
     "start": "next start",
     "lint": "eslint",
-    "audit:styles": "tsx scripts/style-catalog/detect.ts"
+    "audit:styles": "tsx scripts/style-catalog/detect.ts",
+    "dev:http": "next dev"
   },
   "dependencies": {
     "next": "16.2.4",

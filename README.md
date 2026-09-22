@@ -22,7 +22,7 @@ The UI is built on a proprietary **Gecko Design System** — a set of CSS custom
 | Language | TypeScript 5 |
 | Styling | Gecko Design System (CSS custom properties) + Tailwind CSS 4 |
 | State | React `useState` / `useMemo` (no external store) |
-| Data | Mock/static — Redis-backed API integration ready |
+| Data | Mock/static, screen by screen replaced by live calls to Gecko.Api (see Getting Started) |
 | Node Target | Node.js 20+ |
 
 ---
@@ -109,15 +109,73 @@ npm install
 npm run dev
 ```
 
-Open [http://localhost:3000](http://localhost:3000) in your browser.
+Open [https://localhost:3000](https://localhost:3000) in your browser — **https**, see below.
+
+### Running against the real API (Gecko.Api)
+
+Two terminals:
+
+```bash
+# 1. the API (repo: ../platform), http profile
+cd ../platform
+ASPNETCORE_ENVIRONMENT=Development ASPNETCORE_URLS=http://localhost:5100   dotnet run --project Gecko.Api --no-launch-profile
+
+# 2. this app, over https
+npm run dev
+```
+
+Sign in at `/login` with a fixture user from `gecko_identity/dev_02`, password
+`Gecko#Test2026`:
+
+| User | What it proves |
+|---|---|
+| `admin@sct.co.th` | TENANT_OWNER — tenant-wide permissions, every bound screen works |
+| `ops.lcb@sct.co.th` | branch-scoped OPS_MANAGER — signs in, but the token carries no permissions until the `bpm` claim exists (gecko_tos PLAN Q11) |
+| `gate1.lcb@sct.co.th` | gate clerk |
+
+**Why https, and why one origin.** `next.config.ts` proxies `/api` and `/auth`
+to the API, so the browser only ever talks to this app: no CORS, and the same
+URLs work in production. The refresh token is an HttpOnly `__Secure-` cookie,
+which browsers refuse over plain http — hence `npm run dev` passes
+`--experimental-https`, using the .NET dev certificate (already trusted on a
+machine that has run the API):
+
+```bash
+dotnet dev-certs https --export-path certificates/localhost.pem --format PEM --no-password
+```
+
+`certificates/` is git-ignored. Without the API running, screens that are bound
+to it say so and fall back to what they can show; the rest of the app is still
+mock data.
+
+**Bound so far:**
+
+| Screen | Talks to | Notes |
+|---|---|---|
+| `/login` | `POST /auth/login`, `/auth/refresh`, `/auth/me` | real session, HttpOnly refresh cookie |
+| `/masters/container-types` | `/api/master/equipment-types`, `/api/master/containers` | the tenant's own type vocabulary + how many boxes are registered |
+| `/tariff/plans` | `GET /api/revenue/tariffs` | server-side filters; approval status and in-force lifecycle are separate columns |
+| `/masters/charge-codes` | `GET /api/master/charge-codes` | the billable vocabulary, filtered by module; price columns dropped (a price is Revenue's) |
+| `/tariff/plans/[id]` | `GET tariffs/{id}`, `/rates`, `/free-time`, `POST submit/approve/reject/withdraw/revise`, `POST /api/revenue/price` | rates with tiers and surcharges, free time, the real workflow buttons, and **Test a move** which calls the live resolver and shows its precedence trail |
+
+Screens with no API yet: **parties, ports, vessels, locations, commodities and
+seal ranges** (gecko_master batches C and D are deferred), and anything that
+needs **yard state or gate history** (TOS has no module code yet).
+
+Screens that still carry sample data say so on the page. `/tariff/rate-cards`,
+`/tariff/free-time` and `/tariff/plans/new` are the notable ones: their rule
+model (extensions, reductions, multipliers) predates the Revenue API, so binding
+them means rewriting them against `PUT /tariffs/{id}/rates` and
+`.../free-time`, which replace whole sets.
 
 ### Available Commands
 
 ```bash
-npm run dev      # Development server with hot reload
-npm run build    # Production build
-npm run start    # Start production server
-npm run lint     # Run ESLint
+npm run dev       # Development server (https) with hot reload
+npm run dev:http  # Development server over plain http — login will NOT work
+npm run build     # Production build
+npm run start     # Start production server
+npm run lint      # Run ESLint
 ```
 
 ---

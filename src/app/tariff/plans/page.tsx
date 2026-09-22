@@ -1,41 +1,88 @@
 "use client";
-import React, { useState } from 'react';
+import React, { useMemo, useState } from 'react';
 import Link from 'next/link';
 import { Icon } from '@/components/ui/Icon';
 import { FilterPopover, FilterField, SortOption } from '@/components/ui/FilterPopover';
 import { ExportButton } from '@/components/ui/ExportButton';
+import { EmptyState } from '@/components/ui/EmptyState';
+import { useApiList } from '@/lib/api/use-api';
+import {
+  formatDate, partySummary, STATUS_TONE, TYPE_TONE,
+  type Schedule, type ScheduleLifecycle,
+} from '@/lib/api/revenue';
 
-const TARIFF_PLANS = [
-  { id: 'TP-2026-PUB', name: 'Public Tariff 2026 (Standard)', type: 'Public', customer: 'All Standard Customers', effective: 'Jan 01, 2026', expiry: 'Dec 31, 2026', status: 'Active' },
-  { id: 'TP-2026-C01', name: 'Thai Union Group Contract 2026', type: 'Contract', customer: 'Thai Union Group PCL', effective: 'Jan 01, 2026', expiry: 'Dec 31, 2026', status: 'Active' },
-  { id: 'TP-2026-C02', name: 'PTT Global VIP Volume Agreement', type: 'Contract', customer: 'PTT Global Chemical', effective: 'Mar 01, 2026', expiry: 'Feb 28, 2027', status: 'Active' },
-  { id: 'TP-2025-PUB', name: 'Public Tariff 2025', type: 'Public', customer: 'All Standard Customers', effective: 'Jan 01, 2025', expiry: 'Dec 31, 2025', status: 'Expired' },
-  { id: 'TP-2026-C03', name: 'CP Foods Short-Term Deal', type: 'Spot', customer: 'CP Foods Co., Ltd.', effective: 'May 01, 2026', expiry: 'Jul 31, 2026', status: 'Draft' },
+/**
+ * LIVE against gecko_revenue (Gecko.Revenue).
+ *
+ * TWO state columns, not one. `status` is where a version sits in the
+ * maker-checker workflow (DRAFT → PENDING → APPROVED); `lifecycle` is where it
+ * sits in time (SCHEDULED / ACTIVE / EXPIRED / SUPERSEDED) and is derived from
+ * the dates and the next version, never stored. The old single "Active /
+ * Draft / Expired" column could not show an approved tariff that starts in
+ * November, which is exactly what a pricing clerk needs to see.
+ */
+
+const FILTER_FIELDS: FilterField[] = [
+  { type: 'search', key: 'query', placeholder: 'Search schedule no or name…' },
+  {
+    type: 'select', key: 'scheduleType', label: 'Type', options: [
+      { label: 'All', value: '' },
+      { label: 'Public', value: 'PUBLIC' },
+      { label: 'Contract', value: 'CONTRACT' },
+      { label: 'Spot', value: 'SPOT' },
+    ],
+  },
+  {
+    type: 'select', key: 'status', label: 'Approval status', options: [
+      { label: 'All', value: '' },
+      { label: 'Draft', value: 'DRAFT' },
+      { label: 'Pending approval', value: 'PENDING' },
+      { label: 'Approved', value: 'APPROVED' },
+      { label: 'Rejected', value: 'REJECTED' },
+      { label: 'Withdrawn', value: 'WITHDRAWN' },
+    ],
+  },
+  {
+    type: 'select', key: 'lifecycle', label: 'In force', options: [
+      { label: 'All', value: '' },
+      { label: 'Active today', value: 'ACTIVE' },
+      { label: 'Starts later', value: 'SCHEDULED' },
+      { label: 'Expired', value: 'EXPIRED' },
+      { label: 'Superseded', value: 'SUPERSEDED' },
+    ],
+  },
 ];
 
-const PLAN_FILTER_FIELDS: FilterField[] = [
-  { type: 'search', key: 'query', placeholder: 'Search plan name, customer...' },
-  { type: 'select', key: 'type', label: 'Type', options: [{ label: 'All', value: '' }, { label: 'Public', value: 'public' }, { label: 'Contract', value: 'contract' }, { label: 'Spot', value: 'spot' }] },
-  { type: 'select', key: 'status', label: 'Status', options: [{ label: 'All', value: '' }, { label: 'Active', value: 'active' }, { label: 'Draft', value: 'draft' }, { label: 'Expired', value: 'expired' }] },
-];
-
-const PLAN_SORT_OPTIONS: SortOption[] = [
+const SORT_OPTIONS: SortOption[] = [
+  { label: 'Precedence (most specific first)', value: 'scope' },
   { label: 'Effective date (newest)', value: 'effective_desc' },
-  { label: 'Expiry date (soonest)', value: 'expiry_asc' },
-  { label: 'Plan name A → Z', value: 'name' },
-  { label: 'Type', value: 'type' },
+  { label: 'Schedule no A → Z', value: 'no' },
 ];
-
-function StatusBadge({ status }: { status: string }) {
-  if (status === 'Draft') return <span className="gecko-cell-meta" style={{ background: 'var(--gecko-gray-100)', padding: '2px 8px', borderRadius: 12, fontWeight: 700 }}>Draft</span>;
-  if (status === 'Active') return <span style={{ background: 'var(--gecko-success-100)', color: 'var(--gecko-success-700)', padding: '2px 8px', borderRadius: 12, fontSize: 11, fontWeight: 700 }}>Active</span>;
-  if (status === 'Expired') return <span style={{ background: 'var(--gecko-error-100)', color: 'var(--gecko-error-700)', padding: '2px 8px', borderRadius: 12, fontSize: 11, fontWeight: 700 }}>Expired</span>;
-  return null;
-}
 
 export default function TariffPlansPage() {
-  const [filters, setFilters] = useState<Record<string, string>>({ query: '', type: '', status: 'active' });
-  const [sortBy, setSortBy] = useState('');
+  const [filters, setFilters] = useState<Record<string, string>>({ query: '', scheduleType: '', status: '', lifecycle: '' });
+  const [sortBy, setSortBy] = useState('scope');
+
+  // Type, status and search are filtered by the API; lifecycle is derived per
+  // row (from dates and the next version), so it is filtered here.
+  const query = useMemo(() => {
+    const params = new URLSearchParams({ pageSize: '200', moduleCode: 'TOS' });
+    if (filters.query) params.set('search', filters.query);
+    if (filters.scheduleType) params.set('scheduleType', filters.scheduleType);
+    if (filters.status) params.set('status', filters.status);
+    return `/api/revenue/tariffs?${params.toString()}`;
+  }, [filters.query, filters.scheduleType, filters.status]);
+
+  const { data, error, loading, reload } = useApiList<Schedule>(query);
+
+  const rows = useMemo(() => {
+    const all = (data ?? []).filter(s => !filters.lifecycle || s.lifecycle === (filters.lifecycle as ScheduleLifecycle));
+    const sorted = [...all];
+    if (sortBy === 'effective_desc') sorted.sort((a, b) => b.effectiveFrom.localeCompare(a.effectiveFrom));
+    else if (sortBy === 'no') sorted.sort((a, b) => a.scheduleNo.localeCompare(b.scheduleNo) || a.versionNo - b.versionNo);
+    else sorted.sort((a, b) => a.scopeRank - b.scopeRank || a.scheduleNo.localeCompare(b.scheduleNo) || a.versionNo - b.versionNo);
+    return sorted;
+  }, [data, filters.lifecycle, sortBy]);
 
   return (
     <div style={{ maxWidth: 'var(--gecko-container-max)', margin: '0 auto', display: 'flex', flexDirection: 'column', gap: 24, paddingBottom: 40 }}>
@@ -45,19 +92,24 @@ export default function TariffPlansPage() {
         <div className="gecko-page-actions-left">
           <div className="gecko-row gecko-row-baseline" style={{ gap: 12 }}>
             <h1 className="gecko-page-title">Tariff Schedules</h1>
-            <span className="gecko-count-badge">5 schedules</span>
+            <span className="gecko-count-badge">{loading && !data ? '…' : `${rows.length} version${rows.length === 1 ? '' : 's'}`}</span>
           </div>
-          <p className="gecko-page-subtitle" style={{ marginTop: 4 }}>High-level pricing agreements containing rate cards and free-time logic.</p>
+          <p className="gecko-page-subtitle" style={{ marginTop: 4 }}>
+            One row per version of a price agreement. The resolver picks the most specific one in force on the day of the move.
+          </p>
         </div>
         <div className="gecko-toolbar">
-          <ExportButton resource="Tariff plans" iconSize={16} />
+          <ExportButton resource="Tariff schedules" iconSize={16} />
+          <button className="gecko-btn gecko-btn-outline gecko-btn-sm" onClick={reload}>
+            <Icon name="refreshCcw" size={16} /> Refresh
+          </button>
           <FilterPopover
-            fields={PLAN_FILTER_FIELDS}
+            fields={FILTER_FIELDS}
             values={filters}
             onChange={setFilters}
             onApply={(v) => setFilters(v)}
-            onClear={() => setFilters({ query: '', type: '', status: 'active' })}
-            sortOptions={PLAN_SORT_OPTIONS}
+            onClear={() => setFilters({ query: '', scheduleType: '', status: '', lifecycle: '' })}
+            sortOptions={SORT_OPTIONS}
             sortValue={sortBy}
             onSortChange={setSortBy}
           />
@@ -65,46 +117,72 @@ export default function TariffPlansPage() {
         </div>
       </div>
 
+      {error && (
+        <div role="alert" className="gecko-alert gecko-alert-warning gecko-row" style={{ gap: 10 }}>
+          <Icon name="alertCircle" size={16} />
+          <span>{error.message}</span>
+          {error.status === 401 && <Link href="/login" className="gecko-link">Sign in</Link>}
+        </div>
+      )}
+
       {/* Table */}
       <div className="gecko-table-card">
         <table className="gecko-table gecko-table-comfortable" style={{ fontSize: 13 }}>
           <thead>
             <tr>
-              <th>Schedule ID</th>
-              <th>Schedule Name</th>
+              <th>Schedule</th>
+              <th>Name</th>
               <th>Type</th>
-              <th>Assigned To</th>
-              <th>Effective Date</th>
-              <th>Expiry Date</th>
-              <th>Status</th>
-              <th style={{ textAlign: 'right' }}></th>
+              <th>Applies to</th>
+              <th>Precedence</th>
+              <th>Effective</th>
+              <th>Until</th>
+              <th style={{ textAlign: 'right' }}>Rates</th>
+              <th>Approval</th>
+              <th>In force</th>
             </tr>
           </thead>
           <tbody>
-            {TARIFF_PLANS.map((plan) => (
-              <tr key={plan.id} className="gecko-row-clickable">
-                <td>
-                  <Link href={`/tariff/plans/${plan.id}`} className="gecko-id-link">{plan.id}</Link>
-                </td>
-                <td style={{ fontWeight: 600, color: 'var(--gecko-text-primary)' }}>
-                  <Link href={`/tariff/plans/${plan.id}`} style={{ color: 'inherit', textDecoration: 'none' }}>{plan.name}</Link>
-                </td>
-                <td>
-                  {plan.type === 'Public' && <span style={{ color: 'var(--gecko-info-600)', fontWeight: 600 }}><Icon name="globe" size={14} style={{ marginBottom: -2, marginRight: 4 }} /> {plan.type}</span>}
-                  {plan.type === 'Contract' && <span style={{ color: 'var(--gecko-primary-600)', fontWeight: 600 }}><Icon name="fileText" size={14} style={{ marginBottom: -2, marginRight: 4 }} /> {plan.type}</span>}
-                  {plan.type === 'Spot' && <span style={{ color: 'var(--gecko-warning-600)', fontWeight: 600 }}><Icon name="clock" size={14} style={{ marginBottom: -2, marginRight: 4 }} /> {plan.type}</span>}
-                </td>
-                <td style={{ color: 'var(--gecko-text-secondary)' }}>{plan.customer}</td>
-                <td className="gecko-text-mono" style={{ color: 'var(--gecko-text-primary)' }}>{plan.effective}</td>
-                <td className="gecko-text-mono" style={{ color: plan.status === 'Expired' ? 'var(--gecko-error-600)' : 'var(--gecko-text-primary)' }}>{plan.expiry}</td>
-                <td>
-                  <StatusBadge status={plan.status} />
-                </td>
-                <td style={{ textAlign: 'right' }}>
-                  <button style={{ background: 'transparent', border: 'none', color: 'var(--gecko-text-disabled)', cursor: 'pointer' }}><Icon name="moreHorizontal" size={16} /></button>
-                </td>
-              </tr>
-            ))}
+            {loading && !data ? (
+              <tr><td colSpan={10} style={{ textAlign: 'center', padding: 32, color: 'var(--gecko-text-secondary)' }}>Loading tariffs…</td></tr>
+            ) : rows.length === 0 ? (
+              <tr><td colSpan={10} style={{ padding: 0 }}>
+                <EmptyState
+                  icon="dollarSign"
+                  title={data && data.length > 0 ? 'Nothing matches those filters' : 'No tariff schedules yet'}
+                  description={data && data.length > 0
+                    ? 'Clear a filter, or look for a superseded version.'
+                    : 'A tariff is the input to every charge the gate raises. Start with the public list.'}
+                />
+              </td></tr>
+            ) : rows.map((s) => {
+              const tone = TYPE_TONE[s.scheduleType];
+              return (
+                <tr key={s.scheduleId} className="gecko-row-clickable">
+                  <td>
+                    <Link href={`/tariff/plans/${s.scheduleId}`} className="gecko-id-link">{s.scheduleNo}</Link>
+                    <span className="gecko-cell-meta" style={{ marginLeft: 6 }}>v{s.versionNo}</span>
+                  </td>
+                  <td style={{ fontWeight: 600, color: 'var(--gecko-text-primary)' }}>
+                    <Link href={`/tariff/plans/${s.scheduleId}`} style={{ color: 'inherit', textDecoration: 'none' }}>{s.name}</Link>
+                  </td>
+                  <td>
+                    <span className={`gecko-pill gecko-pill-${tone.tone}`}>
+                      <Icon name={tone.icon} size={11} style={{ marginBottom: -1, marginRight: 4 }} /> {tone.label}
+                    </span>
+                  </td>
+                  <td style={{ color: 'var(--gecko-text-secondary)' }}>{partySummary(s)}</td>
+                  <td className="gecko-cell-meta">rank {s.scopeRank}</td>
+                  <td className="gecko-text-mono">{formatDate(s.effectiveFrom)}</td>
+                  <td className="gecko-text-mono" style={{ color: s.lifecycle === 'EXPIRED' ? 'var(--gecko-error-600)' : undefined }}>
+                    {s.effectiveUntil ? formatDate(s.effectiveUntil) : 'open-ended'}
+                  </td>
+                  <td style={{ textAlign: 'right' }} className="gecko-text-mono">{s.rateCount}</td>
+                  <td><span className={`gecko-pill gecko-pill-${STATUS_TONE[s.status] ?? 'neutral'}`}>{s.status}</span></td>
+                  <td><span className={`gecko-pill gecko-pill-${STATUS_TONE[s.lifecycle] ?? 'neutral'}`}>{s.lifecycle}</span></td>
+                </tr>
+              );
+            })}
           </tbody>
         </table>
       </div>

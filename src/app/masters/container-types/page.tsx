@@ -4,19 +4,63 @@ import Link from 'next/link';
 import { Icon } from '@/components/ui/Icon';
 import { usePagination, TablePagination } from '@/components/ui/TablePagination';
 import { ExportButton } from '@/components/ui/ExportButton';
-import { useToast } from '@/components/ui/Toast';
+import { EmptyState } from '@/components/ui/EmptyState';
+import { useApiList } from '@/lib/api/use-api';
 
-const CONTAINER_TYPES = [
-  { id: '22G1', iso: '22G1', name: "20' Standard", dims: "20' × 8'6\"", type: 'GP', cat: 'GENERAL', payload: '28,230 kg', tare: '2,300 kg', cube: '33.2 m³', active: 12, color: 'var(--gecko-primary-500)', bg: 'var(--gecko-primary-50)' },
-  { id: '42G1', iso: '42G1', name: "40' Standard", dims: "40' × 8'6\"", type: 'GP', cat: 'GENERAL', payload: '26,700 kg', tare: '3,750 kg', cube: '67.7 m³', active: 18, color: 'var(--gecko-primary-500)', bg: 'var(--gecko-primary-50)' },
-  { id: '45G1', iso: '45G1', name: "40' High-Cube", dims: "40' × 9'6\"", type: 'GP', cat: 'GENERAL', payload: '26,500 kg', tare: '3,900 kg', cube: '76.3 m³', active: 14, color: 'var(--gecko-primary-500)', bg: 'var(--gecko-primary-50)' },
-  { id: 'L5G1', iso: 'L5G1', name: "45' High-Cube", dims: "45' × 9'6\"", type: 'GP', cat: 'GENERAL', payload: '26,500 kg', tare: '4,800 kg', cube: '86 m³', active: 3, color: 'var(--gecko-primary-500)', bg: 'var(--gecko-primary-50)' },
-  { id: '22R1', iso: '22R1', name: "20' Reefer", dims: "20' × 8'6\"", type: 'RF', cat: 'REEFER', payload: '27,400 kg', tare: '3,000 kg', cube: '28.1 m³', active: 4, color: 'var(--gecko-info-500)', bg: 'var(--gecko-info-50)' },
-  { id: '42R1', iso: '42R1', name: "40' Reefer", dims: "40' × 8'6\"", type: 'RF', cat: 'REEFER', payload: '26,900 kg', tare: '4,800 kg', cube: '57.8 m³', active: 3, color: 'var(--gecko-info-500)', bg: 'var(--gecko-info-50)' },
-  { id: '45R1', iso: '45R1', name: "40' Reefer HC", dims: "40' × 9'6\"", type: 'RF', cat: 'REEFER', payload: '29,520 kg', tare: '4,580 kg', cube: '67.3 m³', active: 5, color: 'var(--gecko-info-500)', bg: 'var(--gecko-info-50)' },
-  { id: '22U1', iso: '22U1', name: "20' Open Top", dims: "20' × 8'6\"", type: 'OT', cat: 'SPECIAL', payload: '28,080 kg', tare: '2,450 kg', cube: '32 m³', active: 2, color: 'var(--gecko-warning-500)', bg: 'var(--gecko-warning-50)' },
-  { id: '42U1', iso: '42U1', name: "40' Open Top", dims: "40' × 8'6\"", type: 'OT', cat: 'SPECIAL', payload: '26,580 kg', tare: '3,870 kg', cube: '65.4 m³', active: 3, color: 'var(--gecko-warning-500)', bg: 'var(--gecko-warning-50)' },
-];
+/**
+ * LIVE against gecko_master (Gecko.MasterData, batch A).
+ *
+ * The screen shows the TENANT'S OWN equipment types, not the ISO catalogue:
+ * SCT calls a 20ft dry box 20GP and KORAKIT calls it 20DV, and both map to ISO
+ * 22G1 (gecko_master decision 4). Showing ISO codes here would show a
+ * vocabulary no depot clerk uses.
+ */
+
+interface EquipmentType {
+  equipmentTypeId: string;
+  typeCode: string;
+  descriptionEn: string;
+  descriptionLocal: string | null;
+  lengthFt: number | null;
+  heightClass: string | null;
+  isoGroupCode: string | null;
+  teu: number | null;
+  isReefer: boolean;
+  isOog: boolean;
+  isTank: boolean;
+  tareWeightKg: number | null;
+  maxPayloadKg: number | null;
+  maxGrossKg: number | null;
+  displayColorHex: string | null;
+  isActive: boolean;
+}
+
+interface Container {
+  containerNo: string;
+  equipmentTypeId: string;
+}
+
+type Category = 'GENERAL' | 'REEFER' | 'SPECIAL';
+
+function categoryOf(t: EquipmentType): Category {
+  if (t.isReefer) return 'REEFER';
+  if (t.isOog || t.isTank) return 'SPECIAL';
+  return 'GENERAL';
+}
+
+const CATEGORY_STYLE: Record<Category, { color: string; bg: string }> = {
+  GENERAL: { color: 'var(--gecko-primary-500)', bg: 'var(--gecko-primary-50)' },
+  REEFER: { color: 'var(--gecko-info-500)', bg: 'var(--gecko-info-50)' },
+  SPECIAL: { color: 'var(--gecko-warning-500)', bg: 'var(--gecko-warning-50)' },
+};
+
+const kg = (value: number | null) =>
+  value === null ? '—' : `${Math.round(value).toLocaleString('en-US')} kg`;
+
+const heightLabel = (t: EquipmentType) => (t.heightClass === 'HIGH_CUBE' ? "9'6\"" : "8'6\"");
+
+const dimensions = (t: EquipmentType) =>
+  t.lengthFt === null ? '—' : `${t.lengthFt}' × ${heightLabel(t)}`;
 
 function ContainerGraphic({ width, height, color }: { width: number, height: number, color: string }) {
   return (
@@ -43,9 +87,46 @@ function ContainerGraphic({ width, height, color }: { width: number, height: num
 }
 
 export default function ContainerTypesPage() {
-  const filtered = useMemo(() => CONTAINER_TYPES, []);
+  const types = useApiList<EquipmentType>('/api/master/equipment-types?pageSize=200&includeInactive=false');
+  // The registry is small (tens of boxes per tenant); counting client-side keeps
+  // this to one call. Yard occupancy — what is actually HERE today — belongs to
+  // TOS and arrives with Phase 5.
+  const containers = useApiList<Container>('/api/master/containers?pageSize=500');
+
+  const [category, setCategory] = useState<Category | 'ALL'>('ALL');
+  const [sizes, setSizes] = useState<number[]>([20, 40, 45]);
+
+  const rows = useMemo(() => types.data ?? [], [types.data]);
+
+  const registered = useMemo(() => {
+    const counts = new Map<string, number>();
+    for (const c of containers.data ?? []) counts.set(c.equipmentTypeId, (counts.get(c.equipmentTypeId) ?? 0) + 1);
+    return counts;
+  }, [containers.data]);
+
+  const counts = useMemo(() => ({
+    ALL: rows.length,
+    GENERAL: rows.filter(t => categoryOf(t) === 'GENERAL').length,
+    REEFER: rows.filter(t => categoryOf(t) === 'REEFER').length,
+    SPECIAL: rows.filter(t => categoryOf(t) === 'SPECIAL').length,
+  }), [rows]);
+
+  const filtered = useMemo(() => rows.filter(t =>
+    (category === 'ALL' || categoryOf(t) === category) &&
+    (t.lengthFt === null || sizes.includes(Math.round(t.lengthFt)))
+  ), [rows, category, sizes]);
+
   const { page, setPage, pageSize, setPageSize, totalPages, pageItems, totalItems, startRow, endRow } = usePagination(filtered);
-  const { toast } = useToast();
+
+  const toggleSize = (size: number) =>
+    setSizes(current => current.includes(size) ? current.filter(s => s !== size) : [...current, size]);
+
+  const categories: Array<{ key: Category | 'ALL'; label: string }> = [
+    { key: 'ALL', label: 'All types' },
+    { key: 'GENERAL', label: 'Dry / General' },
+    { key: 'REEFER', label: 'Reefer' },
+    { key: 'SPECIAL', label: 'Special / Open' },
+  ];
 
   return (
     <div className="gecko-stack gecko-stack-xl" style={{ maxWidth: 'var(--gecko-container-max)', margin: '0 auto', paddingBottom: 40 }}>
@@ -54,18 +135,28 @@ export default function ContainerTypesPage() {
       <div className="gecko-page-actions">
         <div className="gecko-page-actions-left">
           <div className="gecko-row gecko-row-baseline gecko-stack-md">
-            <h1 className="gecko-page-title">ISO Container Types</h1>
-            <span className="gecko-count-badge">58 types</span>
-            <span className="gecko-badge gecko-badge-info">ISO 6346</span>
+            <h1 className="gecko-page-title">Container Types</h1>
+            <span className="gecko-count-badge">{types.loading ? '…' : `${counts.ALL} types`}</span>
+            <span className="gecko-badge gecko-badge-info">ISO 6346 mapped</span>
           </div>
-          <div className="gecko-page-subtitle gecko-mt-1">ISO 6346 type code catalog. Drives rate matrix, yard slot dimensions, and vessel stow.</div>
+          <div className="gecko-page-subtitle gecko-mt-1">Your own equipment vocabulary, mapped to ISO 6346. Drives rate matrix, yard slot dimensions and vessel stow.</div>
         </div>
         <div className="gecko-toolbar">
           <ExportButton resource="Container types" iconSize={16} />
-          <button className="gecko-btn gecko-btn-outline gecko-btn-sm" onClick={() => toast({ variant: 'info', title: 'Sync BIC', message: 'BIC code registry sync queued.' })}><Icon name="refreshCcw" size={16} /> Sync BIC</button>
+          <button className="gecko-btn gecko-btn-outline gecko-btn-sm" onClick={() => { types.reload(); containers.reload(); }}>
+            <Icon name="refreshCcw" size={16} /> Refresh
+          </button>
           <Link href="/masters/container-types/new" className="gecko-btn gecko-btn-primary gecko-btn-sm"><Icon name="plus" size={16} /> New Type</Link>
         </div>
       </div>
+
+      {types.error && (
+        <div role="alert" className="gecko-alert gecko-alert-warning gecko-row" style={{ gap: 10 }}>
+          <Icon name="alertCircle" size={16} />
+          <span>{types.error.message}</span>
+          {types.error.status === 401 && <Link href="/login" className="gecko-link">Sign in</Link>}
+        </div>
+      )}
 
       <div className="gecko-row gecko-row-start" style={{ gap: 24 }}>
 
@@ -74,31 +165,43 @@ export default function ContainerTypesPage() {
 
           {/* Categories */}
           <div className="gecko-table-card">
-            <div className="gecko-row gecko-row-between" style={{ padding: '12px 16px', background: 'var(--gecko-primary-50)', color: 'var(--gecko-primary-700)', fontWeight: 600, fontSize: 13, borderBottom: '1px solid var(--gecko-border)' }}>
-              <span>All types</span>
-              <span className="gecko-badge gecko-badge-xs gecko-badge-primary-solid">12</span>
-            </div>
-            <div className="gecko-row gecko-row-between" style={{ padding: '12px 16px', color: 'var(--gecko-text-secondary)', fontWeight: 500, fontSize: 13, borderBottom: '1px solid var(--gecko-border)' }}>
-              <span>Dry / General</span>
-              <span>4</span>
-            </div>
-            <div className="gecko-row gecko-row-between" style={{ padding: '12px 16px', color: 'var(--gecko-text-secondary)', fontWeight: 500, fontSize: 13, borderBottom: '1px solid var(--gecko-border)' }}>
-              <span>Reefer</span>
-              <span>3</span>
-            </div>
-            <div className="gecko-row gecko-row-between" style={{ padding: '12px 16px', color: 'var(--gecko-text-secondary)', fontWeight: 500, fontSize: 13 }}>
-              <span>Special / Open</span>
-              <span>5</span>
-            </div>
+            {categories.map(({ key, label }, index) => {
+              const selected = category === key;
+              return (
+                <button
+                  key={key}
+                  type="button"
+                  onClick={() => { setCategory(key); setPage(1); }}
+                  className="gecko-row gecko-row-between"
+                  style={{
+                    width: '100%', padding: '12px 16px', fontSize: 13, cursor: 'pointer',
+                    fontWeight: selected ? 600 : 500,
+                    background: selected ? 'var(--gecko-primary-50)' : 'transparent',
+                    color: selected ? 'var(--gecko-primary-700)' : 'var(--gecko-text-secondary)',
+                    border: 'none',
+                    borderBottom: index < categories.length - 1 ? '1px solid var(--gecko-border)' : undefined,
+                    textAlign: 'left',
+                  }}
+                >
+                  <span>{label}</span>
+                  <span className={selected ? 'gecko-badge gecko-badge-xs gecko-badge-primary-solid' : undefined}>
+                    {counts[key]}
+                  </span>
+                </button>
+              );
+            })}
           </div>
 
           {/* Size Filter */}
           <div className="gecko-card">
             <div className="gecko-eyebrow gecko-mb-3">Filter</div>
             <div className="gecko-stack" style={{ gap: 10 }}>
-              <label className="gecko-row" style={{ fontSize: 13, fontWeight: 500 }}><input type="checkbox" checked readOnly /> 20'</label>
-              <label className="gecko-row" style={{ fontSize: 13, fontWeight: 500 }}><input type="checkbox" checked readOnly /> 40'</label>
-              <label className="gecko-row" style={{ fontSize: 13, fontWeight: 500 }}><input type="checkbox" checked readOnly /> 45'</label>
+              {[20, 40, 45].map(size => (
+                <label key={size} className="gecko-row" style={{ fontSize: 13, fontWeight: 500 }}>
+                  <input type="checkbox" checked={sizes.includes(size)} onChange={() => { toggleSize(size); setPage(1); }} />
+                  {size}&apos;
+                </label>
+              ))}
             </div>
           </div>
 
@@ -106,57 +209,80 @@ export default function ContainerTypesPage() {
 
         {/* Right Grid */}
         <div className="gecko-flex-1">
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(280px, 1fr))', gap: 20 }}>
-            {pageItems.map((c) => (
-              <div key={c.iso} className="gecko-table-card gecko-stack" style={{ gap: 0 }}>
+          {types.loading && !types.data ? (
+            <div className="gecko-card gecko-row" style={{ justifyContent: 'center', padding: 48, color: 'var(--gecko-text-secondary)' }}>
+              Loading container types…
+            </div>
+          ) : filtered.length === 0 ? (
+            <EmptyState
+              icon="box"
+              title={rows.length === 0 ? 'No container types yet' : 'Nothing matches those filters'}
+              description={rows.length === 0
+                ? 'Equipment types are the tenant vocabulary the gate resolves ISO codes into.'
+                : 'Try another category or size.'}
+            />
+          ) : (
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(280px, 1fr))', gap: 20 }}>
+              {pageItems.map((c) => {
+                const style = CATEGORY_STYLE[categoryOf(c)];
+                const color = c.displayColorHex ?? style.color;
+                const length = c.lengthFt === null ? 40 : Math.round(c.lengthFt);
+                return (
+                  <div key={c.equipmentTypeId} className="gecko-table-card gecko-stack" style={{ gap: 0 }}>
 
-                {/* Graphic Area */}
-                <div style={{ background: c.bg, padding: 16, borderBottom: '1px solid var(--gecko-border)' }}>
-                  <div className="gecko-row gecko-row-between gecko-mb-3">
-                    <span style={{ fontSize: 10, fontWeight: 700, color: c.color, letterSpacing: '0.05em' }}>{c.cat}</span>
-                    <span className="gecko-mono-strong" style={{ fontSize: 12 }}>{c.iso}</span>
+                    {/* Graphic Area */}
+                    <div style={{ background: style.bg, padding: 16, borderBottom: '1px solid var(--gecko-border)' }}>
+                      <div className="gecko-row gecko-row-between gecko-mb-3">
+                        <span style={{ fontSize: 10, fontWeight: 700, color, letterSpacing: '0.05em' }}>{categoryOf(c)}</span>
+                        <span className="gecko-mono-strong" style={{ fontSize: 12 }}>{c.typeCode}</span>
+                      </div>
+
+                      <ContainerGraphic
+                        width={length <= 20 ? 80 : length >= 45 ? 160 : 140}
+                        height={c.heightClass === 'HIGH_CUBE' ? 50 : 40}
+                        color={color}
+                      />
+                    </div>
+
+                    {/* Info Area */}
+                    <div className="gecko-flex-1" style={{ padding: 16 }}>
+                      <h3 style={{ fontSize: 16, fontWeight: 700, margin: '0 0 4px 0', color: 'var(--gecko-text-primary)' }}>{c.descriptionEn}</h3>
+                      <div className="gecko-card-subtitle gecko-mb-4" style={{ fontSize: 12 }}>
+                        {dimensions(c)} · {c.isoGroupCode ?? '—'}{c.teu === null ? '' : ` · ${c.teu} TEU`}
+                      </div>
+
+                      <div className="gecko-grid-2">
+                        <div>
+                          <div className="gecko-eyebrow" style={{ letterSpacing: '0.06em' }}>Payload</div>
+                          <div className="gecko-mono-strong" style={{ fontSize: 13 }}>{kg(c.maxPayloadKg)}</div>
+                        </div>
+                        <div>
+                          <div className="gecko-eyebrow" style={{ letterSpacing: '0.06em' }}>Tare</div>
+                          <div className="gecko-mono-strong" style={{ fontSize: 13 }}>{kg(c.tareWeightKg)}</div>
+                        </div>
+                        <div>
+                          <div className="gecko-eyebrow" style={{ letterSpacing: '0.06em' }}>Max gross</div>
+                          <div className="gecko-mono-strong" style={{ fontSize: 13 }}>{kg(c.maxGrossKg)}</div>
+                        </div>
+                        <div>
+                          <div className="gecko-eyebrow" style={{ letterSpacing: '0.06em' }}>Registered</div>
+                          <div style={{ fontSize: 13, fontWeight: 600, color: 'var(--gecko-primary-600)' }}>
+                            {containers.loading ? '…' : `${registered.get(c.equipmentTypeId) ?? 0} boxes`}
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* Footer Link */}
+                    <div className="gecko-row gecko-row-between" style={{ padding: '12px 16px', borderTop: '1px solid var(--gecko-border)', background: 'var(--gecko-bg-subtle)' }}>
+                      <span className="gecko-cell-meta">Rate row in tariff</span>
+                      <Link href={`/masters/container-types/${c.typeCode}`} className="gecko-link" style={{ fontSize: 12 }}>View →</Link>
+                    </div>
                   </div>
-
-                  <ContainerGraphic
-                    width={c.id.startsWith('2') ? 80 : c.id.startsWith('45') ? 160 : 140}
-                    height={c.id.endsWith('1') && c.id.includes('5') ? 50 : 40}
-                    color={c.color}
-                  />
-                </div>
-
-                {/* Info Area */}
-                <div className="gecko-flex-1" style={{ padding: 16 }}>
-                  <h3 style={{ fontSize: 16, fontWeight: 700, margin: '0 0 4px 0', color: 'var(--gecko-text-primary)' }}>{c.name}</h3>
-                  <div className="gecko-card-subtitle gecko-mb-4" style={{ fontSize: 12 }}>{c.dims} · {c.type}</div>
-
-                  <div className="gecko-grid-2">
-                    <div>
-                      <div className="gecko-eyebrow" style={{ letterSpacing: '0.06em' }}>Payload</div>
-                      <div className="gecko-mono-strong" style={{ fontSize: 13 }}>{c.payload}</div>
-                    </div>
-                    <div>
-                      <div className="gecko-eyebrow" style={{ letterSpacing: '0.06em' }}>Tare</div>
-                      <div className="gecko-mono-strong" style={{ fontSize: 13 }}>{c.tare}</div>
-                    </div>
-                    <div>
-                      <div className="gecko-eyebrow" style={{ letterSpacing: '0.06em' }}>Cube</div>
-                      <div className="gecko-mono-strong" style={{ fontSize: 13 }}>{c.cube}</div>
-                    </div>
-                    <div>
-                      <div className="gecko-eyebrow" style={{ letterSpacing: '0.06em' }}>In Yard</div>
-                      <div style={{ fontSize: 13, fontWeight: 600, color: 'var(--gecko-primary-600)' }}>{c.active} active</div>
-                    </div>
-                  </div>
-                </div>
-
-                {/* Footer Link */}
-                <div className="gecko-row gecko-row-between" style={{ padding: '12px 16px', borderTop: '1px solid var(--gecko-border)', background: 'var(--gecko-bg-subtle)' }}>
-                  <span className="gecko-cell-meta">Rate row in tariff</span>
-                  <Link href={`/masters/container-types/${c.iso}`} className="gecko-link" style={{ fontSize: 12 }}>View →</Link>
-                </div>
-              </div>
-            ))}
-          </div>
+                );
+              })}
+            </div>
+          )}
           <TablePagination page={page} pageSize={pageSize} totalItems={totalItems}
             totalPages={totalPages} startRow={startRow} endRow={endRow}
             onPageChange={setPage} onPageSizeChange={setPageSize} noun="container types" />

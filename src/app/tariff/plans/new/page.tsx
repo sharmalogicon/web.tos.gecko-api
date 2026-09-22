@@ -294,6 +294,13 @@ function StickyHeader({
           <span className={`gecko-pill gecko-pill-${tt.tone}`}>
             <Icon name={tt.icon} size={11} style={{ marginBottom: -1, marginRight: 4 }} /> {tt.label}
           </span>
+          {/* Not bound yet: creating a tariff through the API is POST
+              /api/revenue/tariffs (header) then PUT .../rates and
+              .../free-time as whole sets, with maker-checker on top. This
+              builder still keeps everything in local state. */}
+          <span className="gecko-pill gecko-pill-info" style={{ fontSize: 11 }}>
+            <Icon name="info" size={11} style={{ marginBottom: -1, marginRight: 4 }} /> sample data — not saved to Revenue
+          </span>
           {dirty && (
             <span className="gecko-inline-row" style={{ fontSize: 11, color: 'var(--gecko-warning-700)', fontWeight: 600, gap: 4 }}>
               <span style={{ width: 6, height: 6, borderRadius: '50%', background: 'var(--gecko-warning-500)' }} />
