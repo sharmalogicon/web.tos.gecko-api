@@ -2,11 +2,13 @@
 
 import React, { useState, useEffect, useMemo } from 'react';
 import Link from 'next/link';
-import { usePathname } from 'next/navigation';
+import { usePathname, useRouter } from 'next/navigation';
+import { useSession } from '@/lib/auth/session';
 import { Icon } from '../ui/Icon';
 import { ToastProvider } from '../ui/Toast';
 import { AskGeckoProvider, AskGeckoTrigger } from '../ai/AskGeckoWidget';
 import { autoSeedIfEmpty, seedDemoData } from '@/lib/demo-seed';
+import { IS_PILOT, PILOT_PATHS } from '@/lib/edition';
 
 // Page-title / breadcrumb derivation from the NAV tree. Single source of truth:
 // browser tab title and in-app header both come from here. Future pages added
@@ -52,7 +54,9 @@ function useNavMatch(pathname: string | null) {
     // Deeper path: detail page under the child. Surface the trailing segment
     // (booking number, IMO, invoice id) so the tab title and breadcrumb stay distinct.
     const remainder = path.slice(child.path.length).replace(/^\/+/, '');
-    const detail = decodeURIComponent(remainder.split('/').filter(Boolean).pop() || '');
+    const raw = decodeURIComponent(remainder.split('/').filter(Boolean).pop() || '');
+    // A surrogate GUID (tariff schedule, booking) means nothing to an operator — say "Detail".
+    const detail = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(raw) ? 'Detail' : raw;
     return {
       pageTitle: detail || child.label,
       breadcrumbs: [mod.label, child.label, detail].filter(Boolean),
@@ -90,6 +94,9 @@ const NAV = [
   },
   { id: 'gate', icon: 'truck', label: 'Gate & Yard',
     children: [
+      // Live against gecko_tos (Phase 5). The screens below them are still mock.
+      { id: 'gate-desk', label: 'Gate Desk (live)', path: '/gate/desk' },
+      { id: 'gate-stock', label: 'Yard Stock (live)', path: '/gate/stock' },
       { id: 'appointments', label: 'Gate Appointments', path: '/gate/appointments' },
       { id: 'kiosk', label: 'Gate Kiosk', path: '/gate/kiosk' },
       { id: 'eir-in', label: 'EIR-In', path: '/gate/eir-in' },
@@ -118,6 +125,7 @@ const NAV = [
   },
   { id: 'billing', icon: 'invoice', label: 'Billing & Invoicing',
     children: [
+      { id: 'cash-window',    label: 'Cash Window',    path: '/billing/cash-window'    },
       { id: 'service-orders', label: 'Service Orders', path: '/billing/service-orders' },
       { id: 'billing-statement', label: 'Billing Statement', path: '/billing/statement' },
       { id: 'invoices',       label: 'Invoices',       path: '/billing/invoices'       },
@@ -179,19 +187,38 @@ const NAV = [
   },
 ];
 
+// Pilot edition: only the API-bound screens (src/lib/edition.ts). Modules left empty drop out.
+// Full edition: NAV unchanged.
+const isPilotEntry = (path: string) => PILOT_PATHS.some(p => path === p || path.startsWith(p + '/'));
+const VISIBLE_NAV = IS_PILOT
+  ? NAV.map(m => ({ ...m, children: m.children.filter(c => isPilotEntry(c.path)) }))
+       .filter(m => m.children.length > 0)
+  : NAV;
+
 function Sidebar({ collapsed, onToggle }: { collapsed: boolean, onToggle: () => void }) {
   const pathname = usePathname();
+  const router = useRouter();
+  const { user, status, signOut } = useSession();
+  // The token carries no display name, so the card shows what it does carry: the role and the depots.
+  const who = status === 'authenticated' && user
+    ? { name: (user.roles[0] ?? user.userType ?? 'Signed in').replace(/_/g, ' '),
+        role: `${user.roles.length > 1 ? `+${user.roles.length - 1} role(s) · ` : ''}${user.branches.length} depot(s)`,
+        initials: (user.roles[0] ?? 'U').slice(0, 2).toUpperCase() }
+    : { name: 'Not signed in', role: 'Demo screens only', initials: '—' };
+  const doSignOut = async () => { try { await signOut(); } finally { router.push('/login'); } };
   
   // Determine active module based on URL path
   const activeModule = pathname ? pathname.split('/')[1] : 'dashboard';
   
   const [openGroups, setOpenGroups] = useState<Set<string>>(new Set([activeModule]));
 
-  useEffect(() => {
-    if (activeModule) {
-      setOpenGroups(prev => new Set([...prev, activeModule]));
-    }
-  }, [activeModule]);
+  // Open the group of the module we just navigated into (adjust state during render,
+  // not in an effect — https://react.dev/learn/you-might-not-need-an-effect).
+  const [seenModule, setSeenModule] = useState(activeModule);
+  if (activeModule !== seenModule) {
+    setSeenModule(activeModule);
+    if (activeModule) setOpenGroups(prev => new Set([...prev, activeModule]));
+  }
 
   const toggleGroup = (id: string) => {
     const next = new Set(openGroups);
@@ -216,7 +243,7 @@ function Sidebar({ collapsed, onToggle }: { collapsed: boolean, onToggle: () => 
       </div>
 
       <nav className="gecko-sidebar-nav" role="navigation" aria-label="Main navigation" style={{ overflowY: 'auto' }}>
-        {NAV.map((mod) => {
+        {VISIBLE_NAV.map((mod) => {
           const isActiveMod = activeModule === mod.id;
           const isOpen = openGroups.has(mod.id);
           return (
@@ -274,8 +301,8 @@ function Sidebar({ collapsed, onToggle }: { collapsed: boolean, onToggle: () => 
       <div className="gecko-sidebar-footer">
         {!collapsed ? (
           <>
-            {/* Demo / reset row — subtle, only visible expanded */}
-            <button
+            {/* Demo / reset row — subtle, only visible expanded. Not in the pilot edition. */}
+            {!IS_PILOT && <button
               onClick={() => {
                 const r = seedDemoData();
                 if (r.seeded) {
@@ -295,21 +322,21 @@ function Sidebar({ collapsed, onToggle }: { collapsed: boolean, onToggle: () => 
             >
               <Icon name="refresh" size={11} />
               Demo · reset data
-            </button>
+            </button>}
             <div className="gecko-sidebar-user-row">
-              <div className="gecko-avatar gecko-avatar-accent">SK</div>
+              <div className="gecko-avatar gecko-avatar-accent">{who.initials}</div>
               <div className="gecko-flex-1 gecko-min-w-0">
-                <div className="gecko-sidebar-user-name">Somchai K.</div>
-                <div className="gecko-sidebar-user-role">Terminal Supervisor · LCB</div>
+                <div className="gecko-sidebar-user-name">{who.name}</div>
+                <div className="gecko-sidebar-user-role">{who.role}</div>
               </div>
-              <button className="gecko-btn gecko-btn-ghost gecko-btn-icon gecko-btn-sm gecko-text-secondary-btn" title="Sign out">
+              <button className="gecko-btn gecko-btn-ghost gecko-btn-icon gecko-btn-sm gecko-text-secondary-btn" title="Sign out" onClick={doSignOut}>
                 <Icon name="logOut" size={15} />
               </button>
             </div>
           </>
         ) : (
           <div className="gecko-row" style={{ justifyContent: 'center' }}>
-            <div className="gecko-avatar gecko-avatar-accent">SK</div>
+            <div className="gecko-avatar gecko-avatar-accent">{who.initials}</div>
           </div>
         )}
       </div>
@@ -317,7 +344,9 @@ function Sidebar({ collapsed, onToggle }: { collapsed: boolean, onToggle: () => 
   );
 }
 
-function Header({ collapsed, onToggleSidebar, pageTitle = "Dashboard", breadcrumbs = ["Workspace", "Overview"] }: any) {
+type HeaderProps = { collapsed: boolean; onToggleSidebar: () => void; pageTitle?: string; breadcrumbs?: string[] };
+
+function Header({ onToggleSidebar, pageTitle = "Dashboard", breadcrumbs = ["Workspace", "Overview"] }: HeaderProps) {
   const [theme, setTheme] = useState('light');
 
   const onToggleTheme = () => {

@@ -5,6 +5,7 @@ import { useRouter } from 'next/navigation';
 import { Icon } from '../../components/ui/Icon';
 import { useSession } from '../../lib/auth/session';
 import { ApiError } from '../../lib/api/problem';
+import { LANDING_PATH } from '../../lib/edition';
 
 // Development fixture user (gecko_identity dev_02). Real accounts are created
 // by invitation — ADR-006 D3: there is no self-service signup.
@@ -37,7 +38,7 @@ export default function LoginPage() {
 
   // Already signed in (the refresh cookie survived the reload): don't ask again.
   useEffect(() => {
-    if (status === 'authenticated') router.replace('/dashboard/overview');
+    if (status === 'authenticated') router.replace(LANDING_PATH);
   }, [status, router]);
 
   const onSubmit = async (event: FormEvent) => {
@@ -48,7 +49,7 @@ export default function LoginPage() {
 
     try {
       await signIn(email.trim(), password);
-      router.push('/dashboard/overview');
+      router.push(LANDING_PATH);
     } catch (error) {
       if (error instanceof ApiError) {
         // The API answers 401 without saying WHICH half was wrong — telling the
@@ -63,7 +64,11 @@ export default function LoginPage() {
               },
         );
       } else {
-        setErrors({ general: 'Could not reach the Gecko API. Is Gecko.Api running on http://localhost:5100?' });
+        setErrors({
+          general: process.env.NODE_ENV === 'development'
+            ? 'Could not reach the Gecko API. Is Gecko.Api running on http://localhost:5100?'
+            : 'The Gecko service is not reachable right now. Please try again in a minute.',
+        });
       }
       setSubmitting(false);
     }
