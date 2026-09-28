@@ -1,7 +1,7 @@
 "use client";
 import React, { useMemo, useState, use } from 'react';
 import Link from 'next/link';
-import { useRouter } from 'next/navigation';
+import { useRouter, useSearchParams } from 'next/navigation';
 import { Icon } from '@/components/ui/Icon';
 import { useToast } from '@/components/ui/Toast';
 import { EmptyState } from '@/components/ui/EmptyState';
@@ -14,6 +14,7 @@ import {
   SCOPE_RANK_LABEL, STATUS_TONE, tierLabel, TYPE_TONE,
   type FreeTimeSet, type PriceRequest, type PriceResult, type Rate, type RateSet, type Schedule,
 } from '@/lib/api/revenue';
+import { ExcelImportPanel } from '../../_components/ExcelImportPanel';
 
 /**
  * LIVE against gecko_revenue. One version of one price agreement.
@@ -31,14 +32,16 @@ import {
  *     rejected, by whom — not invented workflow steps.
  */
 
-type Tab = 'overview' | 'charges' | 'time' | 'free-time' | 'test-move' | 'activity';
+type Tab = 'overview' | 'charges' | 'time' | 'free-time' | 'excel' | 'test-move' | 'activity';
 
 export default function TariffScheduleDetailPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = use(params);
   const router = useRouter();
   const { toast } = useToast();
   const { can, user } = useSession();
-  const [tab, setTab] = useState<Tab>('overview');
+  const searchParams = useSearchParams();
+  // ?tab=excel — the new-quotation screen lands here to load rates from Excel.
+  const [tab, setTab] = useState<Tab>(searchParams.get('tab') === 'excel' ? 'excel' : 'overview');
   const [busy, setBusy] = useState<string | null>(null);
 
   const schedule = useApi<Schedule>(`/api/revenue/tariffs/${id}`);
@@ -227,6 +230,7 @@ export default function TariffScheduleDetailPage({ params }: { params: Promise<{
             { id: 'charges', label: `Move charges (${moveCharges.length})`, icon: 'truck' },
             { id: 'time', label: `Storage & time (${timeCharges.length})`, icon: 'clock' },
             { id: 'free-time', label: `Free time (${freeTime.data?.rules.length ?? 0})`, icon: 'calendar' },
+            ...(can('revenue.import.manage') ? [{ id: 'excel', label: 'Excel', icon: 'fileText' }] : []),
             { id: 'test-move', label: 'Test a move', icon: 'play' },
             { id: 'activity', label: 'Activity', icon: 'activity' },
           ] as { id: Tab; label: string; icon: string }[]).map(t => (
@@ -336,6 +340,11 @@ export default function TariffScheduleDetailPage({ params }: { params: Promise<{
               </table>
             )}
           </Card>
+        )}
+
+        {tab === 'excel' && (
+          <ExcelImportPanel scheduleId={s.scheduleId} scheduleNo={s.scheduleNo} versionNo={s.versionNo}
+            editable={s.isEditable && canManage} onApplied={reloadAll} />
         )}
 
         {tab === 'test-move' && <TestAMove schedule={s} rates={rates} />}
@@ -517,12 +526,18 @@ function TestAMove({ schedule, rates }: { schedule: Schedule; rates: Rate[] }) {
   const orderTypes = useMemo(() => [...new Set(rates.map(r => r.orderTypeCode).filter(Boolean))] as string[], [rates]);
   const sizes = useMemo(() => [...new Set(rates.map(r => r.equipmentSize).filter(Boolean))] as string[], [rates]);
   const cargoCategories = useMemo(() => [...new Set(rates.map(r => r.cargoCategoryCode).filter(Boolean))] as string[], [rates]);
-  const firstRate = rates[0];
+  // Seed the form from ONE rate row (the first by charge code), so the default
+  // question is a shipment this tariff actually prices. Mixing the first charge
+  // with the first order type / size of OTHER rows asked for combinations no
+  // row covers, and the first click always answered "no price found".
+  // Prefer a row the form can express (no movement / truck axis — neither is on the form).
+  const firstRate = [...rates].sort((a, b) => a.chargeCode.localeCompare(b.chargeCode))
+    .find(r => !r.movementCode && !r.truckCategoryCode) ?? rates[0];
 
   const [form, setForm] = useState<PriceRequest>({
     moduleCode: schedule.moduleCode,
     eventTime: new Date().toISOString(),
-    chargeCode: chargeCodes[0] ?? 'LIFTIN',
+    chargeCode: firstRate?.chargeCode ?? 'LIFTIN',
     billTo: firstRate?.billTo ?? 'CUSTOMER',
     paymentTermCode: firstRate?.paymentTermCode ?? 'CREDIT',
     branchId: schedule.branchId,
@@ -530,9 +545,10 @@ function TestAMove({ schedule, rates }: { schedule: Schedule; rates: Rate[] }) {
     forwarderPartyCode: schedule.forwarderPartyCode,
     customerPartyCode: schedule.customerPartyCode,
     bookingRef: schedule.bookingRef,
-    orderTypeCode: orderTypes[0] ?? null,
-    equipmentSize: sizes[0] ?? null,
-    cargoCategoryCode: cargoCategories[0] ?? null,
+    orderTypeCode: firstRate ? firstRate.orderTypeCode : (orderTypes[0] ?? null),
+    equipmentTypeCode: firstRate?.equipmentTypeCode ?? null,
+    equipmentSize: firstRate ? firstRate.equipmentSize : (sizes[0] ?? null),
+    cargoCategoryCode: firstRate ? firstRate.cargoCategoryCode : (cargoCategories[0] ?? null),
     quantity: 1,
     freeTimeKind: null,
     fullEmpty: 'FULL',
