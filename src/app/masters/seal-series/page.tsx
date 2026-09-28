@@ -126,7 +126,7 @@ export default function SealSeriesPage() {
             <h1 className="gecko-seal-series-title">Seal Series</h1>
             <span className="gecko-count-badge">{totals.total} series</span>
             <span className="gecko-seal-series-remaining-pill">
-              {totals.remaining.toLocaleString()} seals available
+              {totals.remaining.toLocaleString('en-US')} seals available
             </span>
           </div>
           <div className="gecko-seal-series-sub">
@@ -162,7 +162,7 @@ export default function SealSeriesPage() {
         <KPI label="Active"        value={String(totals.active)}    sub="accepting seals"     tone="success" />
         <KPI label="Exhausted"     value={String(totals.exhausted)} sub="fully consumed"      tone="neutral" />
         <KPI label="Suspended"     value={String(totals.suspended)} sub="agent / audit holds" tone="danger"  />
-        <KPI label="Seals Available" value={totals.remaining.toLocaleString()} sub="in active series" tone="info" />
+        <KPI label="Seals Available" value={totals.remaining.toLocaleString('en-US')} sub="in active series" tone="info" />
       </div>
 
       {/* Table */}
@@ -192,13 +192,13 @@ export default function SealSeriesPage() {
                   </div>
                 </td>
                 <td><span className="gecko-mono gecko-seal-series-prefix">{r.prefix}</span></td>
-                <td className="gecko-num gecko-mono">{r.seriesStart.toLocaleString()}</td>
-                <td className="gecko-num gecko-mono">{r.seriesEnd.toLocaleString()}</td>
-                <td className="gecko-num gecko-mono">{r.currentSeal.toLocaleString()}</td>
+                <td className="gecko-num gecko-mono">{r.seriesStart.toLocaleString('en-US')}</td>
+                <td className="gecko-num gecko-mono">{r.seriesEnd.toLocaleString('en-US')}</td>
+                <td className="gecko-num gecko-mono">{r.currentSeal.toLocaleString('en-US')}</td>
                 <td className="gecko-num gecko-mono gecko-seal-series-remaining">
-                  {r.remaining.toLocaleString()}
+                  {r.remaining.toLocaleString('en-US')}
                 </td>
-                <td className="gecko-num gecko-mono gecko-seal-series-total">{totalOf(r).toLocaleString()}</td>
+                <td className="gecko-num gecko-mono gecko-seal-series-total">{totalOf(r).toLocaleString('en-US')}</td>
                 <td><span className={STATUS_BADGE[r.status].cls}>{STATUS_BADGE[r.status].label}</span></td>
                 <td className="gecko-seal-series-remarks-cell">{r.remarks ?? '—'}</td>
                 <td>
@@ -414,9 +414,9 @@ function SealSeriesDrawer({
             <div className="gecko-seal-series-preview">
               <Icon name="info" size={13} />
               <span>
-                <strong>{(Number(seriesEnd) - Number(seriesStart) + 1).toLocaleString()}</strong>{' '}
-                seals in this series ({prefix || '—'} {Number(seriesStart).toLocaleString()} →{' '}
-                {Number(seriesEnd).toLocaleString()})
+                <strong>{(Number(seriesEnd) - Number(seriesStart) + 1).toLocaleString('en-US')}</strong>{' '}
+                seals in this series ({prefix || '—'} {Number(seriesStart).toLocaleString('en-US')} →{' '}
+                {Number(seriesEnd).toLocaleString('en-US')})
               </span>
             </div>
           )}

@@ -2545,8 +2545,10 @@ input[type="checkbox"].gecko-toggle.gecko-toggle-sm:checked::after { transform: 
 .gecko-nav-child {
   display: flex;
   align-items: center;
-  height: 34px;
-  padding: 0 10px;
+  /* min-height, not height: a two-line label ("Vessel Call Schedule") overflowed into the next item. */
+  min-height: 34px;
+  padding: 6px 10px;
+  line-height: 1.3;
   border-radius: 6px;
   font-size: 13px;
   font-weight: 400;

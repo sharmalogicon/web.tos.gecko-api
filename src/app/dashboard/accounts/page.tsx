@@ -148,7 +148,7 @@ export default function AccountsRevenuePage() {
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', marginBottom: 5 }}>
                   <span style={{ fontSize: 12, fontWeight: 500, color: 'var(--gecko-text-primary)' }}>{b.label}</span>
                   <div style={{ display: 'flex', alignItems: 'baseline', gap: 6 }}>
-                    <span style={{ fontSize: 12, fontWeight: 700, fontFamily: 'var(--gecko-font-mono)', color: b.color }}>฿{b.amount.toLocaleString()}</span>
+                    <span style={{ fontSize: 12, fontWeight: 700, fontFamily: 'var(--gecko-font-mono)', color: b.color }}>฿{b.amount.toLocaleString('en-US')}</span>
                     <span className="gecko-cell-meta">{b.pct}%</span>
                   </div>
                 </div>
@@ -176,7 +176,7 @@ export default function AccountsRevenuePage() {
                   <div style={{ height: 8, borderRadius: 4, background: 'var(--gecko-bg-subtle)', overflow: 'hidden' }}>
                     <div style={{ height: '100%', width: `${barPct}%`, background: i === 0 ? 'var(--gecko-primary-600)' : 'var(--gecko-primary-300)', borderRadius: 4 }} />
                   </div>
-                  <span className="gecko-money" style={{ fontSize: 12 }}>฿{c.rev.toLocaleString()}</span>
+                  <span className="gecko-money" style={{ fontSize: 12 }}>฿{c.rev.toLocaleString('en-US')}</span>
                   <span className="gecko-cell-meta" style={{ textAlign: 'right' }}>{totalPct}%</span>
                 </div>
               );
