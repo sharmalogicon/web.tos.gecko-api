@@ -1,0 +1,141 @@
+%% GECKO IMS — High-Level Architecture Diagram (Mermaid source)
+%% Render at: https://mermaid.live  OR  paste into drawio (Arrange → Insert → Advanced → Mermaid)
+
+flowchart TB
+  %% ─── Actors / Edge ─────────────────────────────────────────────
+  subgraph EXTERNAL["EXTERNAL ACTORS"]
+    direction LR
+    STAFF[Depot Staff<br/>Web Browser]
+    CUST[Customer<br/>Portal Web]
+    HAUL[Haulier<br/>Portal Web]
+    DRIVER[Driver Mobile<br/>Flutter iOS+Android]
+    PARTNER[EDI Partners<br/>Carriers/Customs]
+  end
+
+  subgraph EDGE["EDGE / CDN"]
+    CF[Cloudflare / Azure Front Door<br/>DDoS · WAF · TLS · Static Assets]
+  end
+
+  subgraph GW["API GATEWAY"]
+    APIM[Azure API Management<br/>Auth · Rate Limit · Routing · OpenAPI]
+  end
+
+  %% ─── Application Tier ─────────────────────────────────────────
+  subgraph FRONT["WEB FRONT-ENDS · Azure App Service / Vercel"]
+    direction LR
+    F_TOS[TOS Web<br/>Next.js 16]
+    F_TRK[Trucking Web<br/>Next.js 16]
+    F_EDI[EDI Web<br/>Next.js 16]
+    F_CP[Customer Portal<br/>Next.js 16]
+    F_HP[Haulier Portal<br/>Next.js 16]
+  end
+
+  subgraph K8S["MICROSERVICES · Azure Kubernetes Service AKS"]
+    direction LR
+    S_TOS[TOS API<br/>C# .NET 9]
+    S_TRK[Trucking API<br/>C# .NET 9]
+    S_EDI[EDI API<br/>Go]
+    S_BILL[Billing API<br/>C# .NET 9]
+    S_AUTH[Auth API<br/>Go]
+    S_NOTIF[Notification<br/>Go]
+    S_SCHED[Scheduler<br/>Go]
+  end
+
+  subgraph FUNCS["AI / COMPUTE FUNCTIONS · Azure Functions"]
+    direction LR
+    FN_OCR[Auto-Gate OCR]
+    FN_VRP[VRP Optimizer<br/>OR-Tools]
+    FN_TXTSQL[Text-to-SQL<br/>Claude API]
+    FN_EDI[EDI Parser<br/>EDIFACT/X12]
+    FN_PDF[PDF/Excel<br/>Render]
+  end
+
+  %% ─── Bus & Shared Services ────────────────────────────────────
+  subgraph BUS["EVENT BUS"]
+    SB[Azure Service Bus<br/>Topics: gate.* booking.* trip.* edi.* billing.* notify.*]
+  end
+
+  subgraph SHARED["SHARED PLATFORM SERVICES"]
+    direction LR
+    PAY[Payment Gateway<br/>PromptPay · Thai Banks · 2C2P · Stripe · Omise]
+    NOTIF[Notification Engine<br/>Email · SMS · LINE · WhatsApp · In-App · Webhook]
+    REPORT[Scheduled Reports<br/>Cron · Multi-format · Multi-channel]
+  end
+
+  %% ─── Data Tier ────────────────────────────────────────────────
+  subgraph DATA["DATA LAYER"]
+    direction LR
+    PG[(PostgreSQL 16<br/>Operational)]
+    REDIS[(Redis 7<br/>Cache + Queue)]
+    TS[(Timescale DB<br/>GPS + Telemetry)]
+    OBJ[(Azure Blob / R2<br/>Documents + Photos)]
+  end
+
+  %% ─── Integration Tier ─────────────────────────────────────────
+  subgraph INT["INTEGRATION LAYER · Outbound"]
+    direction LR
+    I_EDI[EDI Partners<br/>AS2 / SFTP]
+    I_CARR[Carriers<br/>CMA · Maersk · ONE · OOCL]
+    I_PAY[Banks / Payment Rails]
+    I_GOV[Customs / Gov APIs]
+    I_ACCT[Accounting Systems<br/>SAP · Oracle · QB · Xero]
+  end
+
+  %% ─── Flows ────────────────────────────────────────────────────
+  STAFF --> CF
+  CUST --> CF
+  HAUL --> CF
+  DRIVER --> CF
+  PARTNER --> APIM
+
+  CF --> APIM
+  APIM --> FRONT
+  APIM --> K8S
+
+  FRONT -.->|REST/GraphQL/WebSocket| K8S
+
+  K8S --> SB
+  FUNCS --> SB
+  SB --> NOTIF
+  SB --> REPORT
+
+  S_TOS --> PG
+  S_TRK --> PG
+  S_EDI --> PG
+  S_BILL --> PG
+  S_AUTH --> PG
+  K8S --> REDIS
+  S_TRK --> TS
+  K8S --> OBJ
+  REPORT --> OBJ
+
+  S_BILL --> PAY
+  PAY --> I_PAY
+  S_EDI --> I_EDI
+  S_EDI --> I_CARR
+  S_EDI --> I_GOV
+  S_BILL --> I_ACCT
+
+  K8S -.->|HTTPS| FUNCS
+  FUNCS -.->|LLM| FN_TXTSQL
+
+  %% ─── Styling ──────────────────────────────────────────────────
+  classDef edge fill:#fef3c7,stroke:#92400e
+  classDef gw fill:#dbeafe,stroke:#1e40af
+  classDef front fill:#d1fae5,stroke:#065f46
+  classDef svc fill:#fde68a,stroke:#92400e
+  classDef func fill:#ede9fe,stroke:#5b21b6
+  classDef bus fill:#fee2e2,stroke:#991b1b
+  classDef shared fill:#cffafe,stroke:#155e75
+  classDef data fill:#fecaca,stroke:#991b1b
+  classDef int fill:#e0e7ff,stroke:#3730a3
+
+  class CF edge
+  class APIM gw
+  class F_TOS,F_TRK,F_EDI,F_CP,F_HP front
+  class S_TOS,S_TRK,S_EDI,S_BILL,S_AUTH,S_NOTIF,S_SCHED svc
+  class FN_OCR,FN_VRP,FN_TXTSQL,FN_EDI,FN_PDF func
+  class SB bus
+  class PAY,NOTIF,REPORT shared
+  class PG,REDIS,TS,OBJ data
+  class I_EDI,I_CARR,I_PAY,I_GOV,I_ACCT int
