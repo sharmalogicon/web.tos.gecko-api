@@ -25,6 +25,8 @@ export interface Me {
   modules: string[];
   roles: string[];
   permissions: string[];
+  /** `bpm`: permissions held only at named branches, as "p1,p2@branchId,branchId". */
+  branchPermissions: string[];
 }
 
 let accessToken: AccessToken | null = null;
@@ -50,11 +52,17 @@ export function forgetToken(): void {
   accessToken = null;
 }
 
-async function send(path: string, init: RequestInit, token?: string): Promise<Response> {
+/**
+ * One HTTP call. JSON unless told otherwise: a FormData body must leave
+ * Content-Type to the browser (it writes the multipart boundary), and a file
+ * download asks for whatever the server sends.
+ */
+async function send(path: string, init: RequestInit, token?: string, binary = false): Promise<Response> {
   const headers = new Headers(init.headers);
   if (token) headers.set("Authorization", `Bearer ${token}`);
-  if (init.body !== undefined && !headers.has("Content-Type")) headers.set("Content-Type", "application/json");
-  headers.set("Accept", "application/json");
+  const isForm = typeof FormData !== "undefined" && init.body instanceof FormData;
+  if (init.body !== undefined && !isForm && !headers.has("Content-Type")) headers.set("Content-Type", "application/json");
+  if (!headers.has("Accept")) headers.set("Accept", binary ? "*/*" : "application/json");
   return fetch(path, { ...init, headers, credentials: "same-origin" });
 }
 
@@ -73,7 +81,9 @@ export function refresh(): Promise<AccessToken | null> {
         // The API is not running. That is NOT "signed out": the caller shows the
         // mock screens rather than bouncing a developer to the login page.
         accessToken = null;
-        throw new ApiError(0, "The Gecko API is not reachable. Start Gecko.Api (http://localhost:5100).");
+        throw new ApiError(0, process.env.NODE_ENV === "development"
+          ? "The Gecko API is not reachable. Start Gecko.Api (http://localhost:5100)."
+          : "The Gecko service is not reachable right now.");
       }
       if (!response.ok) {
         accessToken = null;
@@ -99,22 +109,78 @@ async function tokenForRequest(): Promise<string | null> {
  * token issued before a redeploy).
  */
 export async function api<T>(path: string, init: RequestInit = {}): Promise<T> {
+  const response = await authorised(path, init, false);
+  if (response.status === 204) return undefined as T;
+  return (await response.json()) as T;
+}
+
+/** Sends with the bearer token, refreshing once on 401; throws an ApiError for any failure. */
+async function authorised(path: string, init: RequestInit, binary: boolean): Promise<Response> {
   const token = await tokenForRequest();
-  let response = await send(path, init, token ?? undefined);
+  let response = await send(path, init, token ?? undefined, binary);
 
   if (response.status === 401 && token) {
     const renewed = await refresh();
-    if (renewed) response = await send(path, init, renewed.token);
+    if (renewed) response = await send(path, init, renewed.token, binary);
   }
 
   if (!response.ok) throw await toApiError(response);
-  if (response.status === 204) return undefined as T;
-  return (await response.json()) as T;
+  return response;
 }
 
 export const apiGet = <T>(path: string) => api<T>(path);
 export const apiSend = <T>(method: string, path: string, body?: unknown) =>
   api<T>(path, { method, body: body === undefined ? undefined : JSON.stringify(body) });
+
+/** multipart/form-data POST (a file upload); the answer is JSON. */
+export async function apiUpload<T>(path: string, form: FormData, method = "POST"): Promise<T> {
+  const response = await authorised(path, { method, body: form }, false);
+  if (response.status === 204) return undefined as T;
+  return (await response.json()) as T;
+}
+
+export interface Download {
+  blob: Blob;
+  /** From Content-Disposition (RFC 5987 filename* first); null when the server named none. */
+  filename: string | null;
+  contentType: string | null;
+}
+
+/** GET a file (a PDF, a workbook) as a Blob with the name the server gave it. */
+export async function apiDownload(path: string): Promise<Download> {
+  const response = await authorised(path, { method: "GET" }, true);
+  return {
+    blob: await response.blob(),
+    filename: filenameOf(response.headers.get("Content-Disposition")),
+    contentType: response.headers.get("Content-Type"),
+  };
+}
+
+export function filenameOf(disposition: string | null): string | null {
+  if (!disposition) return null;
+  const star = /filename\*=(?:UTF-8'')?([^;]+)/i.exec(disposition);
+  if (star) {
+    try {
+      return decodeURIComponent(star[1].trim().replace(/^"|"$/g, ""));
+    } catch {
+      // A malformed escape falls through to the plain name.
+    }
+  }
+  const plain = /filename="?([^";]+)"?/i.exec(disposition);
+  return plain ? plain[1].trim() : null;
+}
+
+/** Hands a Blob to the browser as a download. */
+export function saveBlob(blob: Blob, filename: string): void {
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement("a");
+  a.href = url;
+  a.download = filename;
+  document.body.appendChild(a);
+  a.click();
+  a.remove();
+  setTimeout(() => URL.revokeObjectURL(url), 1000);
+}
 
 /** Email + password for an access token; the refresh cookie is set by the response. */
 export async function login(email: string, password: string): Promise<AccessToken> {
