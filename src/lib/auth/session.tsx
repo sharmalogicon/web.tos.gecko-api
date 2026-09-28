@@ -25,11 +25,31 @@ interface SessionValue {
   user: Me | null;
   signIn: (email: string, password: string) => Promise<void>;
   signOut: () => Promise<void>;
-  /** Tenant-wide permissions from the token (`prm`). Branch-scoped grants are not in it yet. */
+  /** Held tenant-wide (`prm`) OR at any branch (`bpm`) — the door check a screen uses. */
   can: (permission: string) => boolean;
+  /** Held for THIS depot's rows. A gate clerk works at one branch (gecko_tos PLAN Q11). */
+  canAt: (permission: string, branchId: string | null | undefined) => boolean;
+  /** The branches the user can act in for a permission; empty means none. */
+  branchesFor: (permission: string) => string[];
 }
 
 const SessionContext = createContext<SessionValue | null>(null);
+
+/**
+ * The `bpm` claim: "perm1,perm2@branchId,branchId", one claim per distinct
+ * permission set (gecko_tos PLAN Q11 — grouped, because a 40-permission
+ * OPS_MANAGER over three depots would not fit in a header otherwise).
+ */
+function branchesOf(user: Me | null, permission: string): string[] {
+  const branches: string[] = [];
+  for (const claim of user?.branchPermissions ?? []) {
+    const at = claim.lastIndexOf("@");
+    if (at <= 0) continue;
+    if (!claim.slice(0, at).split(",").includes(permission)) continue;
+    for (const branchId of claim.slice(at + 1).split(",")) if (branchId) branches.push(branchId);
+  }
+  return branches;
+}
 
 export function SessionProvider({ children }: { children: React.ReactNode }) {
   const [status, setStatus] = useState<SessionStatus>("loading");
@@ -84,7 +104,13 @@ export function SessionProvider({ children }: { children: React.ReactNode }) {
     user,
     signIn,
     signOut,
-    can: (permission: string) => user?.permissions.includes(permission) ?? false,
+    can: (permission: string) =>
+      (user?.permissions.includes(permission) ?? false) || branchesOf(user, permission).length > 0,
+    canAt: (permission: string, branchId: string | null | undefined) =>
+      (user?.permissions.includes(permission) ?? false)
+      || (!!branchId && branchesOf(user, permission).includes(branchId)),
+    branchesFor: (permission: string) =>
+      user?.permissions.includes(permission) ? (user?.branches ?? []) : branchesOf(user, permission),
   }), [status, user, signIn, signOut]);
 
   return <SessionContext.Provider value={value}>{children}</SessionContext.Provider>;
