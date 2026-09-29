@@ -32,7 +32,7 @@ export const PILOT_PATHS: readonly string[] = [
   '/billing/cash-window',
   '/tariff/plans',              // schedules, /tariff/plans/new, /tariff/plans/[id]
   '/masters/customers',
-  '/masters/vessels/schedule',
+  '/masters/vessels',           // list, /new, /[code], and the schedule
   '/masters/container-types',
   '/masters/order-types',
   '/masters/charge-codes',
@@ -41,6 +41,12 @@ export const PILOT_PATHS: readonly string[] = [
   '/masters/lookups',
   '/masters/yards',
   '/config/system-params',
+  '/masters/ports',
+  '/masters/commodities',
+  '/masters/locations',
+  '/masters/seal-series',
+  '/masters/countries',
+  '/masters/public-holidays',
 ];
 
 /**

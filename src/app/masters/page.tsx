@@ -9,8 +9,7 @@ import { isPathAvailable } from '@/lib/edition';
  * The masters hub: links only (decision C). No counts, no "recent changes",
  * no quick actions — the mock invented all of them. A tile shows when its
  * page is served in this edition AND the user may read it, so nobody is sent
- * to a page that answers 403. Tier 2 masters (ports, vessels, commodities…)
- * join here when they are live.
+ * to a page that answers 403.
  */
 
 interface Tile {
@@ -28,6 +27,16 @@ const GROUPS: { title: string; tiles: Tile[] }[] = [
     tiles: [
       { href: '/masters/customers', label: 'Customers', icon: 'user', desc: 'Every party — customers, lines, hauliers — with tax id, branch and contacts.', view: ['mdm.party.view'] },
       { href: '/masters/lines', label: 'Shipping Lines', icon: 'anchor', desc: 'Line operators and the agents that act for them: SCAC, SMDG, EDI.', view: ['mdm.party.view'] },
+      { href: '/masters/seal-series', label: 'Seal Series', icon: 'lock', desc: 'The seal numbers each line has handed a depot.', view: ['mdm.party.view'] },
+    ],
+  },
+  {
+    title: 'Logistics',
+    tiles: [
+      { href: '/masters/vessels', label: 'Vessels', icon: 'ship', desc: 'Vessels by code, IMO, call sign and operator — and their schedule.', view: ['mdm.logistics.view'] },
+      { href: '/masters/ports', label: 'Ports', icon: 'anchor', desc: 'Ports of loading, discharge and destination, by UN/LOCODE.', view: ['mdm.logistics.view'] },
+      { href: '/masters/locations', label: 'Locations', icon: 'mapPin', desc: 'Factories, warehouses, estates and port terminals boxes go to.', view: ['mdm.logistics.view'] },
+      { href: '/masters/commodities', label: 'Commodities', icon: 'packageOpen', desc: 'Cargo by HS code, with its DG class and reefer range.', view: ['mdm.logistics.view'] },
     ],
   },
   {
@@ -48,13 +57,14 @@ const GROUPS: { title: string; tiles: Tile[] }[] = [
     title: 'Reference',
     tiles: [
       { href: '/masters/lookups', label: 'Lookups', icon: 'database', desc: 'Grades, conditions, movements, service types, tax codes, code lists and mappings.', view: ['mdm.equipment.view', 'mdm.commercial.view', 'mdm.config.view'] },
-      { href: '/masters/vessels/schedule', label: 'Vessel Schedule', icon: 'ship', desc: 'Vessel calls and their cut-offs.', view: [] },
+      { href: '/masters/countries', label: 'Countries', icon: 'globe', desc: 'ISO 3166 — shared by every tenant, read-only.', view: [] },
     ],
   },
   {
     title: 'Organisation',
     tiles: [
       { href: '/masters/yards', label: 'Yards', icon: 'layers', desc: 'A depot\'s yards: what they hold and their TEU capacity.', view: [] },
+      { href: '/masters/public-holidays', label: 'Public Holidays', icon: 'calendar', desc: 'Days the depots close or run half a day.', view: ['mdm.org.view'] },
       { href: '/config/system-params', label: 'System Parameters', icon: 'settings', desc: 'Tenant and depot settings, and how documents are numbered.', view: ['mdm.config.view'] },
     ],
   },
