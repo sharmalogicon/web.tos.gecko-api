@@ -1,179 +1,106 @@
 "use client";
-import React, { useState, useMemo } from 'react';
-import { usePagination, TablePagination } from '@/components/ui/TablePagination';
+import React, { useState } from 'react';
 import Link from 'next/link';
+import { useRouter } from 'next/navigation';
 import { Icon } from '@/components/ui/Icon';
-import { ExportButton } from '@/components/ui/ExportButton';
-import { useToast } from '@/components/ui/Toast';
-import { FilterPopover, FilterField, SortOption } from '@/components/ui/FilterPopover';
+import { EmptyState } from '@/components/ui/EmptyState';
+import { useSession } from '@/lib/auth/session';
+import { useServerList } from '@/lib/api/use-server-list';
+import { VESSELS_PATH, VESSEL_TYPES, type Vessel } from '@/lib/api/logistics';
 
-const VESSEL_FILTER_FIELDS: FilterField[] = [
-  { type: 'search', key: 'query', placeholder: 'Search IMO, name, call sign...' },
-  { type: 'select', key: 'line', label: 'Line', options: [{ label: 'All', value: '' }, { label: 'MSC', value: 'msc' }, { label: 'OOCL', value: 'oocl' }, { label: 'Maersk', value: 'maeu' }, { label: 'CMA CGM', value: 'cma' }] },
-  { type: 'select', key: 'class', label: 'Class', options: [{ label: 'All', value: '' }, { label: 'ULCV', value: 'ulcv' }, { label: 'Post-Panamax', value: 'postpanamax' }, { label: 'Panamax', value: 'panamax' }] },
-  { type: 'select', key: 'eta', label: 'ETA window', options: [{ label: 'All', value: '' }, { label: 'Next 7 days', value: '7d' }, { label: 'Next 30 days', value: '30d' }, { label: 'Scheduled', value: 'scheduled' }] },
-];
-const VESSEL_SORT_OPTIONS: SortOption[] = [
-  { label: 'ETA (soonest)', value: 'eta_asc' },
-  { label: 'Name A → Z', value: 'name' },
-  { label: 'TEU (large → small)', value: 'teu_desc' },
-  { label: 'Built (newest)', value: 'built_desc' },
-];
-
-const VESSELS = [
-  { imo: '9345612', name: 'MSC LISBON', line: 'NSC', flag: 'PA', class: 'Post-Panamax', loa: '299.9m', teu: '11,312', built: '2008', voyage: '142E', eta: 'Apr 24 - 06:00', status: 'Expected' },
-  { imo: '9776418', name: 'OOCL SEOUL', line: 'OOCL', flag: 'HK', class: 'ULCV', loa: '399.9m', teu: '21,413', built: '2017', voyage: '512E', eta: 'Apr 23 - 14:00', status: 'Arriving' },
-  { imo: '9778820', name: 'MAERSK HONAM', line: 'NAEU', flag: 'SG', class: 'ULCV', loa: '399.9m', teu: '15,262', built: '2017', voyage: '804W', eta: 'Apr 25 - 22:00', status: 'Expected' },
-  { imo: '9839891', name: 'CMA CGM JACQUES SAADE', line: 'CMA', flag: 'FR', class: 'ULCV', loa: '400.0m', teu: '23,000', built: '2020', voyage: '0FTE4W1MA', eta: 'Apr 28 - 08:00', status: 'Scheduled' },
-  { imo: '9302555', name: 'EVER GIVEN', line: 'EMC', flag: 'PA', class: 'ULCV', loa: '399.9m', teu: '20,124', built: '2018', voyage: '0112E', eta: 'May 02 - 06:00', status: 'Scheduled' },
-  { imo: '9725132', name: 'ONE STORK', line: 'ONE', flag: 'JP', class: 'Post-Panamax', loa: '364.0m', teu: '14,052', built: '2015', voyage: '055E', eta: 'Apr 26 - 10:00', status: 'Scheduled' },
-  { imo: '9501578', name: 'HYUNDAI EARTH', line: 'HLC', flag: 'MH', class: 'Post-Panamax', loa: '366.5m', teu: '13,100', built: '2012', voyage: '—', eta: '—', status: 'Archived' },
-];
-
-const ACTIVE_VOYAGES = [
-  { voyage: '512E', vessel: 'OOCL SEOUL', berth: 'B-3', eta: 'Today 14:00', etd: 'Apr 24 02:00', disch: 820, load: 640 },
-  { voyage: '142E', vessel: 'MSC LISBON', berth: 'C-1', eta: 'Apr 24 06:00', etd: 'Apr 24 18:00', disch: 540, load: 480 },
-  { voyage: '804W', vessel: 'MAERSK HONAM', berth: 'B-2', eta: 'Apr 25 22:00', etd: 'Apr 26 14:00', disch: 910, load: 720 },
-];
-
-function StatusBadge({ status }: { status: string }) {
-  let cls = 'gecko-badge-gray';
-  if (status === 'Expected') cls = 'gecko-badge-info';
-  if (status === 'Arriving') cls = 'gecko-badge-warning';
-  return <span className={`gecko-badge gecko-badge-xs ${cls}`}>{status}</span>;
-}
-
+/**
+ * LIVE against gecko_master logistics.vessel. KORAKIT starts with none (its
+ * old system had one placeholder, DUMMY, which was not loaded). The mock's
+ * fleet, voyages and "in port" counts were fixtures and are gone; a vessel's
+ * calls are on the vessel schedule.
+ */
 export default function VesselsPage() {
-  const [filters, setFilters] = useState<Record<string, string>>({ query: '', line: '', class: '', eta: '7d' });
-  const [sortBy, setSortBy] = useState('eta_asc');
-  const { toast } = useToast();
-
-  const filtered = useMemo(() => VESSELS, []);
-  const { page, setPage, pageSize, setPageSize, totalPages, pageItems, totalItems, startRow, endRow } = usePagination(filtered);
+  const router = useRouter();
+  const { can } = useSession();
+  const [includeInactive, setIncludeInactive] = useState(false);
+  const list = useServerList<Vessel>(VESSELS_PATH, { includeInactive }, 'vessels');
+  const open = (v: Vessel) => router.push(`/masters/vessels/${encodeURIComponent(v.vesselCode)}`);
 
   return (
-    <div className="gecko-stack gecko-stack-xl" style={{ maxWidth: 'var(--gecko-container-max)', margin: '0 auto', paddingBottom: 40 }}>
-
-      {/* Header */}
+    <div className="gecko-stack gecko-stack-xl" style={{ maxWidth: 'var(--gecko-container-max)', margin: '0 auto' }}>
       <div className="gecko-page-actions">
         <div className="gecko-page-actions-left">
           <div className="gecko-row gecko-row-baseline gecko-stack-md">
-            <h1 className="gecko-page-title">Vessels & Voyages</h1>
-            <span className="gecko-count-badge">126 vessels</span>
-            <span className="gecko-badge gecko-badge-info">14 in next 7 days</span>
+            <h1 className="gecko-page-title">Vessels</h1>
+            <span className="gecko-count-badge">{list.loading && !list.data ? '…' : `${list.total.toLocaleString()} found`}</span>
           </div>
-          <div className="gecko-page-subtitle gecko-mt-1">Vessel catalog with IMO-keyed identity, plus current and scheduled voyages.</div>
+          <div className="gecko-page-subtitle gecko-mt-1">The vessels vessel calls and bookings point at — by code, IMO, call sign and operator.</div>
         </div>
         <div className="gecko-toolbar">
-          <ExportButton resource="Vessels" iconSize={16} />
-          <button className="gecko-btn gecko-btn-outline gecko-btn-sm" onClick={() => toast({ variant: 'info', title: 'Import BAPLIE', message: 'BAPLIE EDI message import coming soon.' })}><Icon name="refreshCcw" size={16} /> Import BAPLIE</button>
-          <FilterPopover
-            fields={VESSEL_FILTER_FIELDS}
-            values={filters}
-            onChange={setFilters}
-            onApply={(v) => setFilters(v)}
-            onClear={() => setFilters({ query: '', line: '', class: '', eta: '' })}
-            sortOptions={VESSEL_SORT_OPTIONS}
-            sortValue={sortBy}
-            onSortChange={setSortBy}
-          />
-          <Link href="/masters/vessels/new" className="gecko-btn gecko-btn-primary gecko-btn-sm"><Icon name="plus" size={16} /> New Vessel</Link>
+          <Link href="/masters/vessels/schedule" className="gecko-btn gecko-btn-outline gecko-btn-sm"><Icon name="calendar" size={16} /> Vessel schedule</Link>
+          {can('mdm.logistics.manage') && (
+            <Link href="/masters/vessels/new" className="gecko-btn gecko-btn-primary gecko-btn-sm"><Icon name="plus" size={16} /> New vessel</Link>
+          )}
         </div>
       </div>
 
-      {/* Vessels Table */}
+      <div className="gecko-row gecko-row-wrap" style={{ gap: 12 }}>
+        <div className="gecko-row" style={{ gap: 8, flex: '1 1 320px', maxWidth: 520 }}>
+          <Icon name="search" size={16} style={{ color: 'var(--gecko-text-secondary)' }} />
+          <input className="gecko-input" type="search" placeholder="Search code, name, IMO, call sign or MMSI…"
+            value={list.search} onChange={e => list.setSearch(e.target.value)} aria-label="Search vessels" />
+        </div>
+        <label className="gecko-row gecko-cell-meta">
+          <input type="checkbox" className="gecko-checkbox" checked={includeInactive} onChange={e => setIncludeInactive(e.target.checked)} />
+          Show inactive
+        </label>
+      </div>
+
+      {list.error && (
+        <div role="alert" className="gecko-alert gecko-alert-error gecko-row" style={{ gap: 10 }}>
+          <Icon name="alertCircle" size={16} /><span>{list.error.message}</span>
+        </div>
+      )}
+
       <div className="gecko-table-card">
         <table className="gecko-table gecko-table-comfortable" style={{ fontSize: 13 }}>
           <thead>
             <tr>
+              <th>Code</th>
+              <th>Name</th>
               <th>IMO</th>
-              <th>Vessel</th>
-              <th>Line</th>
+              <th>Call sign</th>
+              <th>Type</th>
+              <th>Operator</th>
               <th>Flag</th>
-              <th>Class</th>
-              <th style={{ textAlign: 'right' }}>LOA</th>
               <th style={{ textAlign: 'right' }}>TEU</th>
-              <th style={{ textAlign: 'right' }}>Built</th>
-              <th>Next Voyage · ETA</th>
               <th>Status</th>
             </tr>
           </thead>
           <tbody>
-            {pageItems.map((v, i) => (
-              <tr key={v.imo}>
+            {!list.loading && !list.error && (list.rows ?? []).length === 0 && (
+              <tr><td colSpan={9}>
+                <EmptyState icon="ship" title={list.search ? 'No vessels match' : 'No vessels yet'}
+                  description={list.search ? 'Try the IMO number or the call sign.' : 'Add the vessels your depot works with.'} />
+              </td></tr>
+            )}
+            {(list.rows ?? []).map(v => (
+              <tr key={v.vesselCode} onClick={() => open(v)} style={{ cursor: 'pointer', opacity: list.loading ? 0.6 : 1 }}>
+                <td><Link href={`/masters/vessels/${encodeURIComponent(v.vesselCode)}`} className="gecko-id-link" onClick={e => e.stopPropagation()}>{v.vesselCode}</Link></td>
                 <td>
-                  <Link href={`/masters/vessels/${v.imo}`} className="gecko-id-link">{v.imo}</Link>
-                </td>
-                <td>
-                  <div className="gecko-row">
-                    <Icon name="anchor" size={16} style={{ color: 'var(--gecko-info-500)' }} />
-                    <span className="gecko-cell-primary" style={{ fontSize: 13 }}>{v.name}</span>
+                  <div className="gecko-cell-two-line">
+                    <div className="gecko-cell-primary">{v.vesselName}</div>
+                    {v.vesselNameLocal && <div className="gecko-cell-sub" lang="th">{v.vesselNameLocal}</div>}
                   </div>
                 </td>
-                <td style={{ fontWeight: 600 }}>{v.line}</td>
-                <td className="gecko-cell-meta" style={{ fontWeight: 600 }}>{v.flag} {v.flag}</td>
-                <td style={{ color: 'var(--gecko-text-secondary)' }}>{v.class}</td>
-                <td className="gecko-num-tabular" style={{ fontWeight: 600 }}>{v.loa}</td>
-                <td className="gecko-num-tabular" style={{ fontWeight: 600 }}>{v.teu}</td>
-                <td style={{ textAlign: 'right', color: 'var(--gecko-text-secondary)' }}>{v.built}</td>
-                <td>
-                  <div className="gecko-mono-strong" style={{ fontSize: 12 }}>{v.voyage}</div>
-                  <div className="gecko-cell-meta">{v.eta}</div>
-                </td>
-                <td>
-                  <StatusBadge status={v.status} />
-                </td>
+                <td className="gecko-text-mono">{v.imoNumber ?? '—'}</td>
+                <td className="gecko-text-mono">{v.callSign ?? '—'}</td>
+                <td>{VESSEL_TYPES.find(t => t.value === v.vesselType)?.label ?? '—'}</td>
+                <td>{v.operatorPartyCode ? <span title={v.operatorName ?? undefined}>{v.operatorPartyCode}</span> : '—'}</td>
+                <td className="gecko-text-mono">{v.flagCountryCode ?? '—'}</td>
+                <td className="gecko-num-tabular" style={{ textAlign: 'right' }}>{v.teuCapacity?.toLocaleString() ?? '—'}</td>
+                <td><span className={`gecko-status-dot gecko-status-dot-${v.isActive ? 'active' : 'warning'}`}>{v.isActive ? 'Active' : 'Inactive'}</span></td>
               </tr>
             ))}
           </tbody>
         </table>
-        <TablePagination page={page} pageSize={pageSize} totalItems={totalItems}
-          totalPages={totalPages} startRow={startRow} endRow={endRow}
-          onPageChange={setPage} onPageSizeChange={setPageSize} noun="vessels" />
+        {list.footer}
       </div>
-
-      {/* Active Voyages Section */}
-      <div className="gecko-table-card">
-        <div className="gecko-row gecko-row-between" style={{ padding: '20px 24px', borderBottom: '1px solid var(--gecko-border)' }}>
-          <div>
-            <h3 style={{ fontSize: 16, fontWeight: 700, margin: 0, color: 'var(--gecko-text-primary)' }}>Active voyages at Laem Chabang</h3>
-            <div className="gecko-page-subtitle gecko-mt-1">Vessels berthed or expected at this facility in the next 48h</div>
-          </div>
-          <Link href="/masters/vessels/schedule" className="gecko-btn gecko-btn-ghost gecko-btn-sm" style={{ color: 'var(--gecko-text-secondary)', textDecoration: 'none' }}>
-            Berth schedule <Icon name="arrowRight" size={14} />
-          </Link>
-        </div>
-
-        <table className="gecko-table gecko-table-comfortable" style={{ fontSize: 13 }}>
-          <thead>
-            <tr>
-              <th>Voyage</th>
-              <th>Vessel</th>
-              <th>Berth</th>
-              <th>ETA</th>
-              <th>ETD</th>
-              <th style={{ textAlign: 'right' }}>Discharge</th>
-              <th style={{ textAlign: 'right' }}>Load</th>
-            </tr>
-          </thead>
-          <tbody>
-            {ACTIVE_VOYAGES.map((v) => (
-              <tr key={v.voyage}>
-                <td className="gecko-text-mono" style={{ fontWeight: 700 }}>{v.voyage}</td>
-                <td style={{ fontWeight: 600, color: 'var(--gecko-text-secondary)' }}>{v.vessel}</td>
-                <td>
-                  <span className="gecko-badge gecko-badge-xs gecko-badge-primary gecko-text-mono">{v.berth}</span>
-                </td>
-                <td style={{ color: 'var(--gecko-text-secondary)' }}>{v.eta}</td>
-                <td style={{ color: 'var(--gecko-text-secondary)' }}>{v.etd}</td>
-                <td className="gecko-num-tabular" style={{ fontWeight: 600 }}>{v.disch}</td>
-                <td className="gecko-num-tabular" style={{ fontWeight: 600 }}>{v.load}</td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
-      </div>
-
     </div>
   );
 }
