@@ -25,6 +25,8 @@ export default function CustomersListPage() {
   const { can } = useSession();
   const [search, setSearch] = useState('');
   const [role, setRole] = useState<PartyRole | ''>('CUSTOMER');
+  // The API lists inactive parties by default; a counter clerk should not pick one by accident.
+  const [includeInactive, setIncludeInactive] = useState(false);
   const [page, setPage] = useState(0);           // 0-based, as TablePagination counts
   const [pageSize, setPageSize] = useState(20);
   const debouncedSearch = useDebounced(search);
@@ -37,7 +39,7 @@ export default function CustomersListPage() {
   }
 
   const { data, error, loading } = useApi<Paged<PartySummary>>(
-    partiesQueryPath({ search: debouncedSearch, role, page: page + 1, pageSize }));
+    partiesQueryPath({ search: debouncedSearch, role, page: page + 1, pageSize, includeInactive }));
 
   const rows = data?.items ?? [];
   const total = data?.totalCount ?? 0;
@@ -83,6 +85,11 @@ export default function CustomersListPage() {
           <option value="">All roles</option>
           {PARTY_ROLES.map(r => <option key={r.value} value={r.value}>{r.label}</option>)}
         </select>
+        <label className="gecko-row gecko-cell-meta">
+          <input type="checkbox" className="gecko-checkbox" checked={includeInactive}
+            onChange={e => { setIncludeInactive(e.target.checked); setPage(0); }} />
+          Show inactive
+        </label>
       </div>
 
       {error && (

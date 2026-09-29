@@ -50,7 +50,36 @@ export interface PartyContact {
   mobile: string | null;
   email: string | null;
   isDefault: boolean;
+  address1: string | null;
+  address2: string | null;
+  city: string | null;
+  state: string | null;
+  postcode: string | null;
+  /** Base64 ROWVERSION; send it back on PUT / DELETE. */
+  rowVersion: string;
 }
+
+export const CONTACT_ROLES = ['BILLING', 'OPERATIONS', 'SHIPPING', 'GATE', 'CUSTOMS', 'EMERGENCY', 'TECHNICAL', 'OTHER'] as const;
+
+/** Body of POST / PUT /parties/{code}/contacts. Needs mdm.party.manage. */
+export interface SaveContactRequest {
+  contactType: string;
+  contactPerson: string | null;
+  jobTitle: string | null;
+  phone: string | null;
+  mobile: string | null;
+  email: string | null;
+  address1: string | null;
+  address2: string | null;
+  city: string | null;
+  state: string | null;
+  postcode: string | null;
+  isDefault: boolean;
+  rowVersion?: string;
+}
+
+/** Another live party with the same tax id + branch — shown as a hint, never merged. */
+export interface PartyDuplicate { partyCode: string; nameEn: string; isActive: boolean }
 
 export interface PartyDetail extends PartySummary {
   shortName: string | null;
@@ -73,6 +102,7 @@ export interface PartyDetail extends PartySummary {
   updatedAt: string;
   /** Base64 ROWVERSION; send it back on PUT. A stale one answers 409. */
   rowVersion: string;
+  duplicates?: PartyDuplicate[] | null;
 }
 
 /**
@@ -115,6 +145,8 @@ export interface PartyQuery {
   role?: PartyRole | '';
   page?: number;
   pageSize?: number;
+  /** The API default is true; the list sends false unless the user asks for inactive parties. */
+  includeInactive?: boolean;
 }
 
 export const PARTIES_PATH = '/api/master/parties';
@@ -122,8 +154,8 @@ export const PARTIES_PATH = '/api/master/parties';
 /** URL of one party. Encodes '/' as %2F, which the API decodes back. */
 export const partyPath = (partyCode: string) => `${PARTIES_PATH}/${encodeURIComponent(partyCode)}`;
 
-export function partiesQueryPath({ search = '', role = '', page = 1, pageSize = 20 }: PartyQuery): string {
-  const q = new URLSearchParams({ page: String(page), pageSize: String(pageSize) });
+export function partiesQueryPath({ search = '', role = '', page = 1, pageSize = 20, includeInactive = false }: PartyQuery): string {
+  const q = new URLSearchParams({ page: String(page), pageSize: String(pageSize), includeInactive: String(includeInactive) });
   if (search.trim()) q.set('search', search.trim());
   if (role) q.set('role', role);
   return `${PARTIES_PATH}?${q.toString()}`;
@@ -137,3 +169,11 @@ export const updateParty = (partyCode: string, body: SavePartyRequest) =>
 
 /** Client-side mirror of the API rule, for instant feedback. */
 export const isThaiTaxId = (value: string) => /^\d{13}$/.test(value);
+
+const contactsPath = (partyCode: string) => `${partyPath(partyCode)}/contacts`;
+export const createContact = (partyCode: string, body: SaveContactRequest) =>
+  apiSend<PartyContact>('POST', contactsPath(partyCode), body);
+export const updateContact = (partyCode: string, contactId: string, body: SaveContactRequest) =>
+  apiSend<PartyContact>('PUT', `${contactsPath(partyCode)}/${contactId}`, body);
+export const deleteContact = (partyCode: string, contactId: string, rowVersion: string) =>
+  apiSend<void>('DELETE', `${contactsPath(partyCode)}/${contactId}?rowVersion=${encodeURIComponent(rowVersion)}`);

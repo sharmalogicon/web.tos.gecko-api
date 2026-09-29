@@ -11,6 +11,7 @@ import { ApiError } from '@/lib/api/problem';
 import { partyPath, updateParty, type PartyDetail } from '@/lib/api/parties';
 import { PartyForm, formFromParty, localErrors, requestFromForm, type PartyFormValue } from '../_components/PartyForm';
 import { RoleBadge } from '../_components/RoleBadge';
+import { ContactsSection } from '../_components/ContactsSection';
 
 function Info({ label, value, mono, lang }: { label: string; value: React.ReactNode; mono?: boolean; lang?: string }) {
   return (
@@ -121,6 +122,18 @@ export default function CustomerDetailPage() {
         )}
       </div>
 
+      {(party.duplicates?.length ?? 0) > 0 && (
+        <div role="note" className="gecko-alert gecko-alert-info gecko-row gecko-row-wrap">
+          <Icon name="alertCircle" size={16} />
+          <span>{party.duplicates!.length} other code{party.duplicates!.length === 1 ? '' : 's'} share this tax ID and branch — check you are billing the right one:</span>
+          {party.duplicates!.map(d => (
+            <Link key={d.partyCode} href={`/masters/customers/${encodeURIComponent(d.partyCode)}`} className="gecko-link gecko-text-mono">
+              {d.partyCode}{d.isActive ? '' : ' (inactive)'}
+            </Link>
+          ))}
+        </div>
+      )}
+
       {editing && form ? (
         <>
           {saveError && (
@@ -167,29 +180,7 @@ export default function CustomerDetailPage() {
             </div>
           </div>
 
-          <div className="gecko-table-card">
-            <div style={{ padding: '14px 16px', fontWeight: 700 }}>Contacts</div>
-            <table className="gecko-table" style={{ fontSize: 13 }}>
-              <thead>
-                <tr><th>Name</th><th>Role</th><th>Job title</th><th>Phone</th><th>Mobile</th><th>E-mail</th></tr>
-              </thead>
-              <tbody>
-                {party.contacts.length === 0 && (
-                  <tr><td colSpan={6} className="gecko-cell-meta">No contacts on file.</td></tr>
-                )}
-                {party.contacts.map(c => (
-                  <tr key={c.contactId}>
-                    <td>{c.name ?? '—'}{c.isDefault && <span className="gecko-badge gecko-badge-xs" style={{ marginLeft: 6 }}>Default</span>}</td>
-                    <td>{c.role}</td>
-                    <td>{c.jobTitle ?? '—'}</td>
-                    <td className="gecko-text-mono">{c.phone ?? '—'}</td>
-                    <td className="gecko-text-mono">{c.mobile ?? '—'}</td>
-                    <td>{c.email ? <a href={`mailto:${c.email}`}>{c.email}</a> : '—'}</td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
+          <ContactsSection partyCode={party.partyCode} contacts={party.contacts} canEdit={canEdit} onChanged={reload} />
 
           <div className="gecko-table-card">
             <div style={{ padding: '14px 16px', fontWeight: 700 }}>Other codes (aliases)</div>
