@@ -40,6 +40,7 @@ export const PILOT_PATHS: readonly string[] = [
   '/masters/lines',
   '/masters/lookups',
   '/masters/yards',
+  '/config/system-params',
 ];
 
 /**
