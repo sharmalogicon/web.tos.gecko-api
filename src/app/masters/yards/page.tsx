@@ -4,14 +4,15 @@ import { useApi, useApiList, type Paged } from '@/lib/api/use-api';
 import { useSession } from '@/lib/auth/session';
 import { YARD_DIRECTIONS, YARD_FULL_EMPTY, YARD_TYPES, updateYard, yardsPath, type Yard } from '@/lib/api/yards';
 import { EditableTable } from '../lookups/_components/EditableTable';
+import { YardLayout } from './_components/YardLayout';
 
 interface Branch { branchId: string; branchCode: string; displayName: string }
 
 /**
  * LIVE against gecko_master org.yard — a depot's yards: rename, retype,
  * resize. Editing needs mdm.org.manage at THAT depot. There is no add or
- * delete (the gate and the visits point at a yard) and no block / row / slot
- * layout: KORAKIT locates boxes at yard level.
+ * delete (the gate and the visits point at a yard). Blocks and rows are edited
+ * below (Tier 3); KORAKIT locates boxes at yard level and needs none.
  */
 export default function YardsPage() {
   const { canAt } = useSession();
@@ -56,6 +57,10 @@ export default function YardsPage() {
           </select>
         }
       />
+
+      {branchId && data && (
+        <YardLayout key={branchId} yards={data.items} canManage={canAt('mdm.org.manage', branchId)} />
+      )}
     </div>
   );
 }
