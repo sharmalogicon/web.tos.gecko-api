@@ -1,11 +1,22 @@
 "use client";
-import React, { useState, useMemo, useEffect } from 'react';
+import React, { useState, useMemo } from 'react';
 import Link from 'next/link';
 import { Icon } from '@/components/ui/Icon';
-import { ExportButton } from '@/components/ui/ExportButton';
 import { EmptyState } from '@/components/ui/EmptyState';
+import { ConfirmDialog } from '@/components/ui/ConfirmDialog';
+import { useToast } from '@/components/ui/Toast';
 import { useApi, useApiList } from '@/lib/api/use-api';
+import { useSession } from '@/lib/auth/session';
+import { ApiError } from '@/lib/api/problem';
+import { useCommercialVocabulary } from '@/lib/api/charge-codes';
+import {
+  deleteOrderType, replaceCharges, replaceSteps, updateOrderType, useOrderTypeVocabulary,
+  type OrderType, type OrderTypeCharge, type OrderTypeDetail, type OrderTypeStep,
+} from '@/lib/api/order-types';
 import { isPathAvailable } from '@/lib/edition';
+import { OrderTypeForm, formFromOrderType, orderTypeErrors, requestFromOrderType, type OrderTypeFormValue } from './_components/OrderTypeForm';
+import { StepsEditor, requestFromSteps, rowsFromSteps, stepErrors, type StepRow } from './_components/StepsEditor';
+import { ChargesEditor, chargeRowErrors, requestFromCharges, rowsFromCharges, type ChargeRow } from './_components/ChargesEditor';
 
 /**
  * LIVE against gecko_master (commercial.order_type + order_type_movement +
@@ -27,58 +38,22 @@ import { isPathAvailable } from '@/lib/edition';
  * per-step EDI message lists (COPARN/CODECO…) — EDI is one flag, `skipEdi`;
  * which messages go out is the EDI profile's business, not the order type's —
  * and the click-to-toggle charge checkboxes, which changed nothing anywhere.
- * Editing comes with the /new form rework (the API replaces steps and charges
- * as whole sets: PUT …/movements, PUT …/charges).
+ *
+ * Editing (mdm.commercial.manage, tenant-wide): the header, the steps and the
+ * charges are edited one section at a time, each sent with the order type's
+ * rowVersion (steps and charges are whole-set replaces). A 409 means someone
+ * else saved first — reload, never overwrite. Deactivate is the normal way out;
+ * Delete is confirmed. Export is gone: it was a toast, not a file.
  */
 
-interface OrderType {
-  orderTypeId: string;
-  orderTypeCode: string;
-  descriptionEn: string;
-  descriptionLocal: string | null;
-  directionCode: string;
-  serviceCode: string | null;
-  cargoClassCode: string;
-  bookingTypeCode: string | null;
-  isActive: boolean;
-  rowVersion: string;
-}
+/** The API's page-size ceiling (Gecko.Data PagingExtensions.MaxPageSize). */
+const MAX_PAGE = 200;
 
-interface Step {
-  orderTypeMovementId: string;
-  movementCode: string;
-  movementDescription: string;
-  sequenceNo: number;
-  isRequired: boolean;
-  isBillable: boolean;
-  checkSealNo: boolean;
-  checkGrossWeight: boolean;
-  requireVesselVoyage: boolean;
-  allowDamagedRelease: boolean;
-  skipEdi: boolean;
-  pudoMode: string | null;
-}
+/** The API's words for a lost race — distinct from other 409s. */
+const isStale = (e: ApiError | null) => e?.status === 409 && /changed since you loaded/i.test(e.title);
 
-interface Charge {
-  orderTypeChargeId: string;
-  chargeCode: string;
-  chargeDescription: string;
-  movementCode: string | null;
-  paymentTo: string;
-  paymentTermCode: string | null;
-  isDefault: boolean;
-  isOptional: boolean;
-  isCargoCharge: boolean;
-  isValueAddedService: boolean;
-  raiseAtGateIn: boolean;
-  defaultQty: number | null;
-}
-
-interface OrderTypeDetail {
-  orderType: OrderType;
-  movements: Step[];
-  charges: Charge[];
-}
+type Step = OrderTypeStep;
+type Charge = OrderTypeCharge;
 
 // ── Design tokens ─────────────────────────────────────────────────────────────
 const SEQ_COLORS = [
@@ -313,13 +288,16 @@ export default function OrderTypeMasterPage() {
   const [includeInactive, setIncludeInactive] = useState(false);
   const [selectedCode, setSelectedCode] = useState<string | null>(null);
   const [selectedSeq, setSelectedSeq] = useState<number | null>(null);
+  const { user } = useSession();
+  const { toast } = useToast();
+  const canManage = user?.permissions.includes('mdm.commercial.manage') ?? false;
 
   const listPath = useMemo(() => {
-    const params = new URLSearchParams({ pageSize: '300' });
+    const params = new URLSearchParams({ pageSize: String(MAX_PAGE) });
     if (includeInactive) params.set('includeInactive', 'true');
     return `/api/master/order-types?${params.toString()}`;
   }, [includeInactive]);
-  const { data: all, error, loading, reload } = useApiList<OrderType>(listPath);
+  const { data: all, error, loading, reload, totalCount } = useApiList<OrderType>(listPath);
 
   const directions = useMemo(() => [...new Set((all ?? []).map(o => o.directionCode))].sort(), [all]);
 
@@ -331,19 +309,16 @@ export default function OrderTypeMasterPage() {
         || (o.descriptionLocal ?? '').includes(search.trim())));
   }, [all, search, direction]);
 
-  // Select the first order type once the list arrives, and keep a valid selection.
-  useEffect(() => {
-    if (filtered.length === 0) return;
-    if (!selectedCode || !filtered.some(o => o.orderTypeCode === selectedCode)) {
-      setSelectedCode(filtered[0].orderTypeCode);
-      setSelectedSeq(null);
-    }
-  }, [filtered, selectedCode]);
+  // The shown order type: the one picked, or the first in the list when none is
+  // picked (or the pick was filtered out / deleted). Derived, not set in an effect.
+  const activeCode = selectedCode && filtered.some(o => o.orderTypeCode === selectedCode)
+    ? selectedCode
+    : filtered[0]?.orderTypeCode ?? null;
 
-  const detailPath = selectedCode ? `/api/master/order-types/${encodeURIComponent(selectedCode)}` : null;
-  const { data: detail, error: detailError, loading: detailLoading } = useApi<OrderTypeDetail>(detailPath);
+  const detailPath = activeCode ? `/api/master/order-types/${encodeURIComponent(activeCode)}` : null;
+  const { data: detail, error: detailError, loading: detailLoading, reload: reloadDetail } = useApi<OrderTypeDetail>(detailPath);
   // useApi keeps the previous answer while the next one loads; never show one order type's steps under another's name.
-  const current = detail && detail.orderType.orderTypeCode === selectedCode ? detail : null;
+  const current = detail && detail.orderType.orderTypeCode === activeCode ? detail : null;
 
   const steps = current?.movements ?? [];
   const charges = current?.charges ?? [];
@@ -351,7 +326,95 @@ export default function OrderTypeMasterPage() {
   const ot = current?.orderType;
   const dir = ot ? directionOf(ot.directionCode) : null;
 
-  const select = (code: string) => { setSelectedCode(code); setSelectedSeq(null); };
+  // ── editing: one section at a time ──────────────────────────────────────
+  const { data: vocabulary } = useOrderTypeVocabulary();
+  const { data: commercial } = useCommercialVocabulary();
+  const [mode, setMode] = useState<'view' | 'header' | 'steps' | 'charges'>('view');
+  const [form, setForm] = useState<OrderTypeFormValue | null>(null);
+  const [stepRows, setStepRows] = useState<StepRow[]>([]);
+  const [chargeRows, setChargeRows] = useState<ChargeRow[]>([]);
+  const [submitted, setSubmitted] = useState(false);
+  const [busy, setBusy] = useState(false);
+  const [actionError, setActionError] = useState<ApiError | null>(null);
+  const [confirmDelete, setConfirmDelete] = useState(false);
+  const canEdit = canManage && mode === 'view' && !!vocabulary && !!commercial;
+
+  const begin = (next: 'header' | 'steps' | 'charges') => {
+    if (!current) return;
+    setForm(formFromOrderType(current.orderType));
+    setStepRows(rowsFromSteps(current.movements));
+    setChargeRows(rowsFromCharges(current.charges));
+    setSubmitted(false);
+    setActionError(null);
+    setMode(next);
+  };
+  const cancel = () => { setMode('view'); setActionError(null); };
+
+  const run = async (work: () => Promise<unknown>, done: string) => {
+    if (!current) return;
+    setBusy(true);
+    setActionError(null);
+    try {
+      await work();
+      toast({ variant: 'success', title: done, message: current.orderType.orderTypeCode });
+      setMode('view');
+      reloadDetail();
+      reload();
+    } catch (e) {
+      setActionError(e instanceof ApiError ? e : new ApiError(0, 'Could not reach the Gecko API.'));
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  const savedStepCodes = [...(current?.movements ?? [])].sort((a, b) => a.sequenceNo - b.sequenceNo).map(m => m.movementCode);
+  const headerErrors = submitted && form ? orderTypeErrors(form) : {};
+  const stepRowErrors = submitted ? stepErrors(stepRows) : {};
+  const chargeErrors = submitted ? chargeRowErrors(chargeRows, savedStepCodes) : {};
+
+  const saveHeader = () => {
+    if (!current || !form) return;
+    setSubmitted(true);
+    if (Object.keys(orderTypeErrors(form)).length > 0) return;
+    run(() => updateOrderType(current.orderType.orderTypeCode, requestFromOrderType(form, current.orderType.rowVersion)), 'Order type saved');
+  };
+  const saveSteps = () => {
+    if (!current) return;
+    setSubmitted(true);
+    if (Object.keys(stepErrors(stepRows)).length > 0) return;
+    run(() => replaceSteps(current.orderType.orderTypeCode, requestFromSteps(stepRows), current.orderType.rowVersion), 'Gate steps saved');
+  };
+  const saveCharges = () => {
+    if (!current) return;
+    setSubmitted(true);
+    if (Object.keys(chargeRowErrors(chargeRows, savedStepCodes)).length > 0) return;
+    run(() => replaceCharges(current.orderType.orderTypeCode, requestFromCharges(chargeRows), current.orderType.rowVersion), 'Charges saved');
+  };
+  const toggleActive = () => {
+    if (!current) return;
+    const next = { ...formFromOrderType(current.orderType), isActive: !current.orderType.isActive };
+    run(() => updateOrderType(current.orderType.orderTypeCode, requestFromOrderType(next, current.orderType.rowVersion)),
+      next.isActive ? 'Order type reactivated' : 'Order type deactivated');
+  };
+  const remove = async () => {
+    if (!current) return;
+    setConfirmDelete(false);
+    const code = current.orderType.orderTypeCode;
+    setBusy(true);
+    setActionError(null);
+    try {
+      await deleteOrderType(code, current.orderType.rowVersion);
+      toast({ variant: 'success', title: 'Order type deleted', message: code });
+      setSelectedCode(null);
+      reload();
+    } catch (e) {
+      setActionError(e instanceof ApiError ? e : new ApiError(0, 'Could not reach the Gecko API.'));
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  const select = (code: string) => { setSelectedCode(code); setSelectedSeq(null); setMode('view'); setActionError(null); };
   const toggleSeq = (seq: number) => setSelectedSeq(prev => (prev === seq ? null : seq));
 
   return (
@@ -369,11 +432,10 @@ export default function OrderTypeMasterPage() {
           </div>
         </div>
         <div className="gecko-toolbar">
-          <ExportButton resource="Order types" iconSize={15} />
           <button className="gecko-btn gecko-btn-outline gecko-btn-sm" onClick={reload}>
             <Icon name="refreshCcw" size={15} /> Refresh
           </button>
-          {isPathAvailable('/masters/order-types/new') && (
+          {canManage && isPathAvailable('/masters/order-types/new') && (
             <Link href="/masters/order-types/new" className="gecko-btn gecko-btn-primary gecko-btn-sm"><Icon name="plus" size={15} /> New Order Type</Link>
           )}
         </div>
@@ -384,6 +446,13 @@ export default function OrderTypeMasterPage() {
           <Icon name="alertCircle" size={16} />
           <span>{error.message}</span>
           {error.status === 401 && <Link href="/login" className="gecko-link">Sign in</Link>}
+        </div>
+      )}
+
+      {totalCount > (all?.length ?? 0) && (
+        <div role="status" className="gecko-alert gecko-alert-info gecko-row">
+          <Icon name="alertCircle" size={16} />
+          <span>Showing the first {all?.length} of {totalCount} order types — search to find the rest.</span>
         </div>
       )}
 
@@ -425,7 +494,7 @@ export default function OrderTypeMasterPage() {
               </div>
             ) : filtered.map(o => {
               const b = directionOf(o.directionCode);
-              const active = o.orderTypeCode === selectedCode;
+              const active = o.orderTypeCode === activeCode;
               return (
                 <button
                   key={o.orderTypeId}
@@ -473,7 +542,7 @@ export default function OrderTypeMasterPage() {
 
           {!ot ? (
             <div className="gecko-card" style={{ borderRadius: 14, padding: 32, textAlign: 'center', color: 'var(--gecko-text-secondary)' }}>
-              {selectedCode && detailLoading ? `Loading ${selectedCode}…` : 'Pick an order type on the left.'}
+              {activeCode && detailLoading ? `Loading ${activeCode}…` : 'Pick an order type on the left.'}
             </div>
           ) : (
             <>
@@ -485,17 +554,62 @@ export default function OrderTypeMasterPage() {
                   {ot.serviceCode && <span className="gecko-badge gecko-badge-xs gecko-badge-gray">{ot.serviceCode}</span>}
                   <div className="gecko-row gecko-ml-auto">
                     <span className={`gecko-status-dot gecko-status-dot-${ot.isActive ? 'active' : 'neutral'}`}>{ot.isActive ? 'Active' : 'Inactive'}</span>
+                    {canEdit && (
+                      <>
+                        <button className="gecko-btn gecko-btn-outline gecko-btn-sm" onClick={() => begin('header')} disabled={busy}>
+                          <Icon name="edit" size={14} /> Edit
+                        </button>
+                        <button className="gecko-btn gecko-btn-outline gecko-btn-sm" onClick={toggleActive} disabled={busy}>
+                          <Icon name={ot.isActive ? 'eyeOff' : 'check'} size={14} /> {ot.isActive ? 'Deactivate' : 'Reactivate'}
+                        </button>
+                        <button className="gecko-btn gecko-btn-ghost gecko-btn-sm" onClick={() => setConfirmDelete(true)} disabled={busy}>
+                          <Icon name="trash" size={14} /> Delete
+                        </button>
+                      </>
+                    )}
                   </div>
                 </div>
-                <div style={{ fontSize: 14, color: 'var(--gecko-text-secondary)' }}>{ot.descriptionEn}</div>
-                {ot.descriptionLocal && <div className="gecko-cell-meta gecko-mt-1">{ot.descriptionLocal}</div>}
-                <div className="gecko-row gecko-row-wrap gecko-mt-4" style={{ gap: 20, fontSize: 12 }}>
-                  <div><span className="gecko-eyebrow">Cargo class</span><div>{humanize(ot.cargoClassCode)}</div></div>
-                  <div><span className="gecko-eyebrow">Booking type</span><div>{humanize(ot.bookingTypeCode)}</div></div>
-                  <div><span className="gecko-eyebrow">Steps</span><div>{steps.length}</div></div>
-                  <div><span className="gecko-eyebrow">Charges</span><div>{charges.length}</div></div>
-                </div>
+                {mode === 'header' && form && vocabulary ? (
+                  <div className="gecko-stack gecko-stack-md gecko-mt-4">
+                    <OrderTypeForm value={form} onChange={setForm} vocabulary={vocabulary} localErrors={headerErrors} apiError={actionError} mode="edit" />
+                    <div className="gecko-row gecko-row-right">
+                      <button className="gecko-btn gecko-btn-outline" onClick={cancel} disabled={busy}>Cancel</button>
+                      <button className="gecko-btn gecko-btn-primary" onClick={saveHeader} disabled={busy}>
+                        <Icon name="save" size={16} /> {busy ? 'Saving…' : 'Save changes'}
+                      </button>
+                    </div>
+                  </div>
+                ) : (
+                  <>
+                    <div style={{ fontSize: 14, color: 'var(--gecko-text-secondary)' }}>{ot.descriptionEn}</div>
+                    {ot.descriptionLocal && <div className="gecko-cell-meta gecko-mt-1">{ot.descriptionLocal}</div>}
+                    <div className="gecko-row gecko-row-wrap gecko-mt-4" style={{ gap: 20, fontSize: 12 }}>
+                      <div><span className="gecko-eyebrow">Cargo class</span><div>{humanize(ot.cargoClassCode)}</div></div>
+                      <div><span className="gecko-eyebrow">Booking type</span><div>{humanize(ot.bookingTypeCode)}</div></div>
+                      <div><span className="gecko-eyebrow">Steps</span><div>{steps.length}</div></div>
+                      <div><span className="gecko-eyebrow">Charges</span><div>{charges.length}</div></div>
+                    </div>
+                  </>
+                )}
               </div>
+
+              {actionError && (
+                <div role="alert" className="gecko-alert gecko-alert-error gecko-row">
+                  <Icon name="alertCircle" size={16} />
+                  <span>
+                    {isStale(actionError)
+                      ? 'Someone else saved this order type while you were working. Reload to see their change, then make yours again.'
+                      : actionError.status === 400 && Object.keys(actionError.fieldErrors).length > 0
+                        ? 'Some values were refused — see the marked fields and rows.'
+                        : actionError.explanation ? `${actionError.title} ${actionError.explanation}` : actionError.message}
+                  </span>
+                  {isStale(actionError) && (
+                    <button className="gecko-btn gecko-btn-outline gecko-btn-sm" onClick={() => { cancel(); reloadDetail(); }}>
+                      <Icon name="refresh" size={14} /> Reload
+                    </button>
+                  )}
+                </div>
+              )}
 
               {/* Workflow canvas */}
               <div className="gecko-table-card" style={{ borderRadius: 14 }}>
@@ -503,15 +617,30 @@ export default function OrderTypeMasterPage() {
                   <Icon name="activity" size={16} style={{ color: 'var(--gecko-primary-600)' }} />
                   <span style={{ fontSize: 14, fontWeight: 700, color: 'var(--gecko-text-primary)' }}>Gate steps</span>
                   <span className="gecko-page-subtitle">— walked in order; a box cannot skip a required step</span>
-                  {selectedSeq !== null && (
+                  {selectedSeq !== null && mode === 'view' && (
                     <button onClick={() => setSelectedSeq(null)} className="gecko-row gecko-ml-auto gecko-cell-meta"
                       style={{ background: 'none', border: 'none', cursor: 'pointer', gap: 4, fontFamily: 'inherit' }}>
                       <Icon name="x" size={13} /> Clear selection
                     </button>
                   )}
+                  {canEdit && (
+                    <button className="gecko-btn gecko-btn-outline gecko-btn-sm gecko-ml-auto" onClick={() => begin('steps')} disabled={busy}>
+                      <Icon name="edit" size={14} /> Edit steps &amp; gate rules
+                    </button>
+                  )}
                 </div>
                 <div style={{ padding: '24px 24px 20px', overflowX: 'auto' }}>
-                  {steps.length === 0 ? (
+                  {mode === 'steps' && vocabulary ? (
+                    <div className="gecko-stack gecko-stack-md">
+                      <StepsEditor rows={stepRows} onChange={setStepRows} vocabulary={vocabulary} localErrors={stepRowErrors} apiError={actionError} />
+                      <div className="gecko-row gecko-row-right">
+                        <button className="gecko-btn gecko-btn-outline" onClick={cancel} disabled={busy}>Cancel</button>
+                        <button className="gecko-btn gecko-btn-primary" onClick={saveSteps} disabled={busy}>
+                          <Icon name="save" size={16} /> {busy ? 'Saving…' : 'Save steps'}
+                        </button>
+                      </div>
+                    </div>
+                  ) : steps.length === 0 ? (
                     <div className="gecko-cell-meta" style={{ textAlign: 'center' }}>No steps defined — the gate cannot process this order type yet.</div>
                   ) : (
                     <div className="gecko-row" style={{ minWidth: 'max-content' }}>
@@ -532,7 +661,7 @@ export default function OrderTypeMasterPage() {
               </div>
 
               {/* Gate rules, per step */}
-              {steps.length > 0 && (
+              {steps.length > 0 && mode !== 'steps' && (
                 <div className="gecko-table-card" style={{ borderRadius: 14 }}>
                   <div className="gecko-row" style={{ padding: '14px 20px', borderBottom: '1px solid var(--gecko-border)', gap: 10 }}>
                     <Icon name="shieldCheck" size={16} style={{ color: 'var(--gecko-primary-600)' }} />
@@ -551,13 +680,41 @@ export default function OrderTypeMasterPage() {
                   <span className="gecko-page-subtitle">
                     {selectedStep ? `— on ${selectedStep}, plus those on every step` : '— the price comes from the tariff; this says who pays and when'}
                   </span>
+                  {canEdit && (
+                    <button className="gecko-btn gecko-btn-outline gecko-btn-sm gecko-ml-auto" onClick={() => begin('charges')} disabled={busy}>
+                      <Icon name="edit" size={14} /> Edit charges
+                    </button>
+                  )}
                 </div>
-                <ChargesTable charges={charges} selectedStep={selectedStep} />
+                {mode === 'charges' && vocabulary && commercial ? (
+                  <div className="gecko-stack gecko-stack-md gecko-card-padded">
+                    <ChargesEditor rows={chargeRows} onChange={setChargeRows} stepCodes={savedStepCodes}
+                      vocabulary={vocabulary} commercial={commercial} localErrors={chargeErrors} apiError={actionError} />
+                    <div className="gecko-row gecko-row-right">
+                      <button className="gecko-btn gecko-btn-outline" onClick={cancel} disabled={busy}>Cancel</button>
+                      <button className="gecko-btn gecko-btn-primary" onClick={saveCharges} disabled={busy}>
+                        <Icon name="save" size={16} /> {busy ? 'Saving…' : 'Save charges'}
+                      </button>
+                    </div>
+                  </div>
+                ) : (
+                  <ChargesTable charges={charges} selectedStep={selectedStep} />
+                )}
               </div>
             </>
           )}
         </div>
       </div>
+
+      <ConfirmDialog
+        isOpen={confirmDelete}
+        onClose={() => setConfirmDelete(false)}
+        onConfirm={remove}
+        variant="danger"
+        title={`Delete ${ot?.orderTypeCode ?? 'order type'}?`}
+        message="It disappears from every list, with its steps and charges. Bookings already made keep the steps they copied, and the history keeps every version. To stop using it without deleting it, Deactivate instead."
+        confirmLabel="Delete order type"
+      />
     </div>
   );
 }

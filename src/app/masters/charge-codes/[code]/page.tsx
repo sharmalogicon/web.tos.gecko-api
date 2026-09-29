@@ -5,6 +5,7 @@ import { useParams, useRouter } from 'next/navigation';
 import { Icon } from '@/components/ui/Icon';
 import { useToast } from '@/components/ui/Toast';
 import { EmptyState } from '@/components/ui/EmptyState';
+import { ConfirmDialog } from '@/components/ui/ConfirmDialog';
 import { useApi } from '@/lib/api/use-api';
 import { useSession } from '@/lib/auth/session';
 import { ApiError } from '@/lib/api/problem';
@@ -65,6 +66,7 @@ export default function ChargeCodeDetailPage() {
   const [submitted, setSubmitted] = useState(false);
   const [busy, setBusy] = useState(false);
   const [actionError, setActionError] = useState<ApiError | null>(null);
+  const [confirmDelete, setConfirmDelete] = useState(false);
 
   const begin = (next: 'fields' | 'variants') => {
     if (!data) return;
@@ -121,7 +123,7 @@ export default function ChargeCodeDetailPage() {
 
   const remove = async () => {
     if (!data) return;
-    if (!window.confirm(`Delete charge code ${code}? It disappears from every list. If an order type still raises it, the delete is refused — deactivate it instead.`)) return;
+    setConfirmDelete(false);
     setBusy(true);
     setActionError(null);
     try {
@@ -193,7 +195,7 @@ export default function ChargeCodeDetailPage() {
             <button className="gecko-btn gecko-btn-outline gecko-btn-sm" onClick={toggleActive} disabled={busy}>
               <Icon name={c.isActive ? 'eyeOff' : 'check'} size={15} /> {c.isActive ? 'Deactivate' : 'Reactivate'}
             </button>
-            <button className="gecko-btn gecko-btn-ghost gecko-btn-sm" onClick={remove} disabled={busy}>
+            <button className="gecko-btn gecko-btn-ghost gecko-btn-sm" onClick={() => setConfirmDelete(true)} disabled={busy}>
               <Icon name="trash" size={15} /> Delete
             </button>
           </div>
@@ -296,6 +298,15 @@ export default function ChargeCodeDetailPage() {
           </div>
         )}
       </div>
+      <ConfirmDialog
+        isOpen={confirmDelete}
+        onClose={() => setConfirmDelete(false)}
+        onConfirm={remove}
+        variant="danger"
+        title={`Delete ${code}?`}
+        message="It disappears from every list; the history keeps every version. If an order type still raises it, the delete is refused — deactivate it instead."
+        confirmLabel="Delete charge code"
+      />
     </div>
   );
 }

@@ -1,5 +1,6 @@
 "use client";
 import React from 'react';
+import { Field } from '@/components/ui/FormGrid';
 import type { ApiError } from '@/lib/api/problem';
 import type { ChargeCode, CommercialVocabulary, SaveChargeCode } from '@/lib/api/charge-codes';
 
@@ -69,18 +70,6 @@ export function chargeErrors(f: ChargeFormValue): Record<string, string> {
   return e;
 }
 
-export function Field({ label, required, hint, error, span, children }: {
-  label: string; required?: boolean; hint?: string; error?: string; span?: boolean; children: React.ReactNode;
-}) {
-  return (
-    <div className={`gecko-form-group${span ? ' gecko-form-group-span-2' : ''}`}>
-      <label className={`gecko-label${required ? ' gecko-label-required' : ''}`}>{label}</label>
-      {children}
-      {error ? <div className="gecko-field-error">{error}</div> : hint ? <div className="gecko-field-hint">{hint}</div> : null}
-    </div>
-  );
-}
-
 const label = (s: string) => s.charAt(0) + s.slice(1).toLowerCase().replace(/_/g, ' ');
 
 export function ChargeCodeForm({ value, onChange, vocabulary, localErrors, apiError, mode }: {
@@ -99,12 +88,12 @@ export function ChargeCodeForm({ value, onChange, vocabulary, localErrors, apiEr
   return (
     <div className="gecko-form-grid gecko-form-grid-2">
       <Field label="Charge code" required error={err('chargeCode')}
-        hint={mode === 'edit' ? 'The code cannot change — tariffs and invoices refer to it.' : 'As it appears on the invoice, e.g. S-002'}>
+        helper={mode === 'edit' ? 'The code cannot change — tariffs and invoices refer to it.' : 'As it appears on the invoice, e.g. S-002'}>
         <input className={cls('chargeCode', ' gecko-text-mono')} value={value.chargeCode} maxLength={15}
           disabled={mode === 'edit'} autoFocus={mode === 'create'}
           onChange={e => set({ chargeCode: e.target.value.toUpperCase() })} />
       </Field>
-      <Field label="Module" required error={err('moduleCode')} hint="The part of the platform that raises this charge">
+      <Field label="Module" required error={err('moduleCode')} helper="The part of the platform that raises this charge">
         <select className={`gecko-select${err('moduleCode') ? ' gecko-input-error' : ''}`} value={value.moduleCode}
           onChange={e => set({ moduleCode: e.target.value })}>
           <option value="">Choose…</option>
@@ -112,11 +101,11 @@ export function ChargeCodeForm({ value, onChange, vocabulary, localErrors, apiEr
         </select>
       </Field>
 
-      <Field label="Description (English)" required span error={err('descriptionEn')}>
+      <Field label="Description (English)" required full error={err('descriptionEn')}>
         <input className={cls('descriptionEn')} value={value.descriptionEn} maxLength={200}
           placeholder="e.g. In-yard lift service" onChange={e => set({ descriptionEn: e.target.value })} />
       </Field>
-      <Field label="Description (Thai)" span error={err('descriptionLocal')} hint="Printed on Thai receipts when present">
+      <Field label="Description (Thai)" full error={err('descriptionLocal')} helper="Printed on Thai receipts when present">
         <input className={cls('descriptionLocal')} value={value.descriptionLocal} maxLength={200} lang="th"
           placeholder="เช่น ค่าบริการยกตู้ในลาน" onChange={e => set({ descriptionLocal: e.target.value })} />
       </Field>
@@ -128,20 +117,20 @@ export function ChargeCodeForm({ value, onChange, vocabulary, localErrors, apiEr
           {vocabulary.chargeTypes.map(t => <option key={t} value={t}>{label(t)}</option>)}
         </select>
       </Field>
-      <Field label="Category" error={err('chargeCategory')} hint="Laden / empty / reefer … — how tariffs group it">
+      <Field label="Category" error={err('chargeCategory')} helper="Laden / empty / reefer … — how tariffs group it">
         <select className="gecko-select" value={value.chargeCategory} onChange={e => set({ chargeCategory: e.target.value })}>
           {vocabulary.chargeCategories.map(c => <option key={c} value={c}>{label(c)}</option>)}
         </select>
       </Field>
 
-      <Field label="Billing unit" required error={err('billingUnitCode')} hint="What one unit of this charge is">
+      <Field label="Billing unit" required error={err('billingUnitCode')} helper="What one unit of this charge is">
         <select className={`gecko-select${err('billingUnitCode') ? ' gecko-input-error' : ''}`} value={value.billingUnitCode}
           onChange={e => set({ billingUnitCode: e.target.value })}>
           <option value="">Choose…</option>
           {vocabulary.billingUnits.map(u => <option key={u.code} value={u.code}>{u.name}</option>)}
         </select>
       </Field>
-      <Field label="Priced per service type" hint="On = the tariff sets a different price for each service (CY-CY, CFS-CY …)">
+      <Field label="Priced per service type" helper="On = the tariff sets a different price for each service (CY-CY, CFS-CY …)">
         <label className="gecko-row gecko-mt-2">
           <input type="checkbox" className="gecko-checkbox" checked={value.isByService} onChange={e => set({ isByService: e.target.checked })} />
           <span>By service type</span>
