@@ -59,6 +59,14 @@ interface Props<T> {
   toolbar?: React.ReactNode;
   /** Shown above the table: what this master is for. */
   note?: React.ReactNode;
+  /**
+   * Server-side search for big masters (ports, vessels…): the box is controlled
+   * by the caller, which queries the API; rows are shown as given, not filtered.
+   */
+  search?: string;
+  onSearchChange?: (value: string) => void;
+  /** Placed under the table — pagination for a paged master. */
+  footer?: React.ReactNode;
 }
 
 function Cell<T>({ col, draft, set, error, isNew }: {
@@ -118,10 +126,13 @@ function display<T>(col: Column<T>, value: unknown): React.ReactNode {
 
 export function EditableTable<T>({
   columns, rows, loading, error, rowKey, blank, canManage, onSave, onDelete, cannotDelete,
-  deleteLabel, deleteMessage, searchText, noun, toolbar, note,
+  deleteLabel, deleteMessage, searchText, noun, toolbar, note, search: serverSearch, onSearchChange, footer,
 }: Props<T>) {
   const { toast } = useToast();
-  const [search, setSearch] = useState('');
+  const [localSearch, setLocalSearch] = useState('');
+  const serverSide = onSearchChange !== undefined;
+  const search = serverSide ? serverSearch ?? '' : localSearch;
+  const setSearch = serverSide ? onSearchChange : setLocalSearch;
   /** Key of the row being edited; '' = the new row. null = nothing in edit. */
   const [editing, setEditing] = useState<string | null>(null);
   const [draft, setDraft] = useState<T | null>(null);
@@ -132,8 +143,8 @@ export function EditableTable<T>({
 
   const visible = useMemo(() => {
     const q = search.trim().toLowerCase();
-    return (rows ?? []).filter(r => !q || searchText(r).toLowerCase().includes(q));
-  }, [rows, search, searchText]);
+    return (rows ?? []).filter(r => serverSide || !q || searchText(r).toLowerCase().includes(q));
+  }, [rows, search, searchText, serverSide]);
 
   const start = (row: T | null) => {
     setEditing(row ? rowKey(row) : '');
@@ -270,6 +281,7 @@ export function EditableTable<T>({
             {visible.map(r => renderRow(r, false))}
           </tbody>
         </table>
+        {footer}
       </div>
 
       {confirm && (
