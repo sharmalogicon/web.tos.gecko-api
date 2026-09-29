@@ -37,6 +37,7 @@ export const PILOT_PATHS: readonly string[] = [
   '/masters/order-types',
   '/masters/charge-codes',
   '/masters/holds',
+  '/masters/lines',
 ];
 
 /**
