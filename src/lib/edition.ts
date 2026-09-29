@@ -38,6 +38,7 @@ export const PILOT_PATHS: readonly string[] = [
   '/masters/charge-codes',
   '/masters/holds',
   '/masters/lines',
+  '/masters/lookups',
 ];
 
 /**
