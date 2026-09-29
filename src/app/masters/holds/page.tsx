@@ -234,7 +234,8 @@ function HoldModal({ hold, events, onClose, onSaved }: {
 
   const remove = () => {
     if (isNew || !window.confirm(`Delete hold ${hold.holdCode}? Boxes already carrying it keep their history.`)) return;
-    run(() => apiSend('DELETE', `/api/master/holds/${encodeURIComponent(hold.holdCode)}`), 'Hold deleted');
+    // The API refuses a delete without the version this row was read at (409 if someone changed it since).
+    run(() => apiSend('DELETE', `/api/master/holds/${encodeURIComponent(hold.holdCode)}?rowVersion=${encodeURIComponent(hold.rowVersion)}`), 'Hold deleted');
   };
 
   const fieldError = (name: string) => error?.forField(name);
