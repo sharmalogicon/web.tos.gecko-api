@@ -1,6 +1,8 @@
 "use client";
 import React, { useState } from 'react';
 import { Icon } from '@/components/ui/Icon';
+import { CodeListsTab } from './_components/CodeListsTab';
+import { MappingsTab } from './_components/MappingsTab';
 import { ConditionsTab, GradesTab, MovementsTab, ServiceTypesTab, TaxCodesTab } from './_components/MasterTabs';
 
 /**
@@ -16,7 +18,7 @@ import { ConditionsTab, GradesTab, MovementsTab, ServiceTypesTab, TaxCodesTab } 
  * API backs them. Active is the lifecycle; history is in SQL system versioning.
  */
 
-type TabId = 'grades' | 'conditions' | 'movements' | 'services' | 'tax';
+type TabId = 'grades' | 'conditions' | 'movements' | 'services' | 'tax' | 'codes' | 'mappings';
 
 const TABS: { id: TabId; label: string; icon: string; render: () => React.ReactNode }[] = [
   { id: 'grades', label: 'Grades', icon: 'box', render: () => <GradesTab /> },
@@ -24,6 +26,8 @@ const TABS: { id: TabId; label: string; icon: string; render: () => React.ReactN
   { id: 'movements', label: 'Movements', icon: 'transferH', render: () => <MovementsTab /> },
   { id: 'services', label: 'Service types', icon: 'layers', render: () => <ServiceTypesTab /> },
   { id: 'tax', label: 'Tax codes', icon: 'percent', render: () => <TaxCodesTab /> },
+  { id: 'codes', label: 'Code lists', icon: 'database', render: () => <CodeListsTab /> },
+  { id: 'mappings', label: 'Mappings', icon: 'copy', render: () => <MappingsTab /> },
 ];
 
 export default function LookupsPage() {
