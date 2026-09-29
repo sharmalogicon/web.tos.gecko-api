@@ -3,9 +3,10 @@ import React, { useMemo, useState } from 'react';
 import Link from 'next/link';
 import { Icon } from '@/components/ui/Icon';
 import { usePagination, TablePagination } from '@/components/ui/TablePagination';
-import { ExportButton } from '@/components/ui/ExportButton';
 import { EmptyState } from '@/components/ui/EmptyState';
 import { useApiList } from '@/lib/api/use-api';
+import { useSession } from '@/lib/auth/session';
+import { useContainerCounts } from '@/lib/api/equipment-types';
 import { isPathAvailable } from '@/lib/edition';
 
 /**
@@ -34,11 +35,6 @@ interface EquipmentType {
   maxGrossKg: number | null;
   displayColorHex: string | null;
   isActive: boolean;
-}
-
-interface Container {
-  containerNo: string;
-  equipmentTypeId: string;
 }
 
 type Category = 'GENERAL' | 'REEFER' | 'SPECIAL';
@@ -89,10 +85,12 @@ function ContainerGraphic({ width, height, color }: { width: number, height: num
 
 export default function ContainerTypesPage() {
   const types = useApiList<EquipmentType>('/api/master/equipment-types?pageSize=200&includeInactive=false');
-  // The registry is small (tens of boxes per tenant); counting client-side keeps
-  // this to one call. Yard occupancy — what is actually HERE today — belongs to
-  // TOS and arrives with Phase 5.
-  const containers = useApiList<Container>('/api/master/containers?pageSize=500');
+  // Counted by the database over the whole registry — a migrated depot carries
+  // 100k+ boxes, so a page of containers counted here would be wrong. Yard
+  // occupancy (what is HERE today) is TOS's, not this page's.
+  const containerCounts = useContainerCounts();
+  const { user } = useSession();
+  const canManage = user?.permissions.includes('mdm.equipment.manage') ?? false;
 
   const [category, setCategory] = useState<Category | 'ALL'>('ALL');
   const [sizes, setSizes] = useState<number[]>([20, 40, 45]);
@@ -101,9 +99,9 @@ export default function ContainerTypesPage() {
 
   const registered = useMemo(() => {
     const counts = new Map<string, number>();
-    for (const c of containers.data ?? []) counts.set(c.equipmentTypeId, (counts.get(c.equipmentTypeId) ?? 0) + 1);
+    for (const c of containerCounts.data ?? []) counts.set(c.equipmentTypeId, c.containers);
     return counts;
-  }, [containers.data]);
+  }, [containerCounts.data]);
 
   const counts = useMemo(() => ({
     ALL: rows.length,
@@ -143,11 +141,10 @@ export default function ContainerTypesPage() {
           <div className="gecko-page-subtitle gecko-mt-1">Your own equipment vocabulary, mapped to ISO 6346. Drives rate matrix, yard slot dimensions and vessel stow.</div>
         </div>
         <div className="gecko-toolbar">
-          <ExportButton resource="Container types" iconSize={16} />
-          <button className="gecko-btn gecko-btn-outline gecko-btn-sm" onClick={() => { types.reload(); containers.reload(); }}>
+          <button className="gecko-btn gecko-btn-outline gecko-btn-sm" onClick={() => { types.reload(); containerCounts.reload(); }}>
             <Icon name="refreshCcw" size={16} /> Refresh
           </button>
-          {isPathAvailable('/masters/container-types/new') && (
+          {canManage && isPathAvailable('/masters/container-types/new') && (
             <Link href="/masters/container-types/new" className="gecko-btn gecko-btn-primary gecko-btn-sm"><Icon name="plus" size={16} /> New Type</Link>
           )}
         </div>
@@ -270,7 +267,7 @@ export default function ContainerTypesPage() {
                         <div>
                           <div className="gecko-eyebrow" style={{ letterSpacing: '0.06em' }}>Registered</div>
                           <div style={{ fontSize: 13, fontWeight: 600, color: 'var(--gecko-primary-600)' }}>
-                            {containers.loading ? '…' : `${registered.get(c.equipmentTypeId) ?? 0} boxes`}
+                            {containerCounts.loading ? '…' : `${registered.get(c.equipmentTypeId) ?? 0} boxes`}
                           </div>
                         </div>
                       </div>
@@ -279,8 +276,8 @@ export default function ContainerTypesPage() {
                     {/* Footer Link */}
                     <div className="gecko-row gecko-row-between" style={{ padding: '12px 16px', borderTop: '1px solid var(--gecko-border)', background: 'var(--gecko-bg-subtle)' }}>
                       <span className="gecko-cell-meta">Rate row in tariff</span>
-                      {isPathAvailable(`/masters/container-types/${c.typeCode}`) && (
-                        <Link href={`/masters/container-types/${c.typeCode}`} className="gecko-link" style={{ fontSize: 12 }}>View →</Link>
+                      {isPathAvailable(`/masters/container-types/${c.equipmentTypeId}`) && (
+                        <Link href={`/masters/container-types/${c.equipmentTypeId}`} className="gecko-link" style={{ fontSize: 12 }}>View →</Link>
                       )}
                     </div>
                   </div>

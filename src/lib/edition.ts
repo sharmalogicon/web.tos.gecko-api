@@ -47,8 +47,6 @@ export const PILOT_PATHS: readonly string[] = [
  */
 export const PILOT_BLOCKED: readonly string[] = [
   '/bookings/EGLV149602390729',
-  '/masters/container-types/new',
-  '/masters/container-types/*',   // [iso] detail
 ];
 
 /** Pages every edition serves: sign-in, the root redirect, and the guard's own page. */
