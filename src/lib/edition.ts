@@ -39,6 +39,7 @@ export const PILOT_PATHS: readonly string[] = [
   '/masters/holds',
   '/masters/lines',
   '/masters/lookups',
+  '/masters/yards',
 ];
 
 /**
