@@ -7,6 +7,8 @@ import { FilterPopover, FilterField, SortOption } from '@/components/ui/FilterPo
 import { useToast } from '@/components/ui/Toast';
 import { EmptyState } from '@/components/ui/EmptyState';
 import { ExportButton } from '@/components/ui/ExportButton';
+import { ConfirmDialog } from '@/components/ui/ConfirmDialog';
+import { useSession } from '@/lib/auth/session';
 import { useApi } from '@/lib/api/use-api';
 import { apiSend } from '@/lib/api/client';
 import { ApiError } from '@/lib/api/problem';
@@ -185,17 +187,19 @@ const sectionHead = (title: string) => (
   }}>{title}</div>
 );
 
-function HoldModal({ hold, events, onClose, onSaved }: {
-  hold: Hold | null; events: CodeValue[]; onClose: () => void; onSaved: () => void;
+/** `readOnly` for a viewer without mdm.equipment.manage: the same form, nothing to save. */
+function HoldModal({ hold, events, readOnly, onClose, onSaved }: {
+  hold: Hold | null; events: CodeValue[]; readOnly: boolean; onClose: () => void; onSaved: () => void;
 }) {
   const isNew = hold === null;
+  const [confirmDelete, setConfirmDelete] = useState(false);
   const [form, setForm] = useState<HoldForm>(hold ? toForm(hold) : { ...EMPTY_FORM });
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<ApiError | null>(null);
   const { toast } = useToast();
   const set = (partial: Partial<HoldForm>) => setForm(prev => ({ ...prev, ...partial }));
 
-  const canSave = !saving && form.holdCode.trim() !== '' && form.descriptionEn.trim() !== '';
+  const canSave = !readOnly && !saving && form.holdCode.trim() !== '' && form.descriptionEn.trim() !== '';
 
   const body = () => ({
     holdCode: form.holdCode.trim(),
@@ -233,7 +237,8 @@ function HoldModal({ hold, events, onClose, onSaved }: {
     isNew ? 'Hold added' : 'Hold updated');
 
   const remove = () => {
-    if (isNew || !window.confirm(`Delete hold ${hold.holdCode}? Boxes already carrying it keep their history.`)) return;
+    setConfirmDelete(false);
+    if (isNew) return;
     // The API refuses a delete without the version this row was read at (409 if someone changed it since).
     run(() => apiSend('DELETE', `/api/master/holds/${encodeURIComponent(hold.holdCode)}?rowVersion=${encodeURIComponent(hold.rowVersion)}`), 'Hold deleted');
   };
@@ -266,8 +271,8 @@ function HoldModal({ hold, events, onClose, onSaved }: {
           </button>
         </div>
 
-        {/* Body */}
-        <div className="gecko-stack gecko-stack-xl gecko-flex-1" style={{ padding: '22px 24px', overflowY: 'auto' }}>
+        {/* Body — a disabled fieldset makes every input and switch in it read-only */}
+        <fieldset disabled={readOnly || saving} className="gecko-stack gecko-stack-xl gecko-flex-1" style={{ padding: '22px 24px', overflowY: 'auto', border: 'none', margin: 0, minWidth: 0 }}>
 
           {error && (
             <div role="alert" className="gecko-alert gecko-alert-error gecko-row" style={{ gap: 10 }}>
@@ -354,24 +359,44 @@ function HoldModal({ hold, events, onClose, onSaved }: {
               </Switch>
             </div>
           </div>
-        </div>
+        </fieldset>
 
         {/* Footer */}
         <div className="gecko-row gecko-flex-shrink-0" style={{ padding: '14px 24px', borderTop: '1px solid var(--gecko-border)', background: 'var(--gecko-bg-surface)', borderRadius: '0 0 12px 12px', gap: 10 }}>
-          {!isNew && (
-            <button className="gecko-btn gecko-btn-ghost gecko-btn-sm" onClick={remove} disabled={saving} style={{ color: 'var(--gecko-error-600)' }}>
+          {readOnly && <div className="gecko-cell-meta">You can view this hold type; changing it needs equipment-manage permission.</div>}
+          {!isNew && !readOnly && (
+            <button className="gecko-btn gecko-btn-ghost gecko-btn-sm" onClick={() => setConfirmDelete(true)} disabled={saving} style={{ color: 'var(--gecko-error-600)' }}>
               <Icon name="trash" size={14} /> Delete
             </button>
           )}
           <div className="gecko-action-toolbar" style={{ marginLeft: 'auto' }}>
-            <button className="gecko-btn gecko-btn-outline gecko-btn-sm" onClick={onClose} disabled={saving}>Cancel</button>
-            <button className="gecko-btn gecko-btn-primary gecko-btn-sm" onClick={save} disabled={!canSave}
-              style={!canSave ? { opacity: 0.45, cursor: 'not-allowed' } : {}}>
-              <Icon name="save" size={14} /> {saving ? 'Saving…' : isNew ? 'Save Hold' : 'Save Changes'}
-            </button>
+            <button className="gecko-btn gecko-btn-outline gecko-btn-sm" onClick={onClose} disabled={saving}>{readOnly ? 'Close' : 'Cancel'}</button>
+            {!readOnly && (
+              <button className="gecko-btn gecko-btn-primary gecko-btn-sm" onClick={save} disabled={!canSave}
+                style={!canSave ? { opacity: 0.45, cursor: 'not-allowed' } : {}}>
+                <Icon name="save" size={14} /> {saving ? 'Saving…' : isNew ? 'Save Hold' : 'Save Changes'}
+              </button>
+            )}
           </div>
         </div>
       </div>
+
+      {!isNew && (
+        <ConfirmDialog
+          isOpen={confirmDelete}
+          onClose={() => setConfirmDelete(false)}
+          onConfirm={remove}
+          variant="danger"
+          title={`Delete hold type ${hold.holdCode}?`}
+          message="It disappears from this list and can no longer be placed on a box. To keep it listed but unused, switch it to Inactive instead."
+          consequences={[
+            'Boxes and bookings already carrying it stay held — the gate still blocks them — until someone releases it.',
+            `Releasing those holds still needs ${AUTHORITIES[hold.releaseAuthority] ?? hold.releaseAuthority}.`,
+            'The code is free to be set up again later.',
+          ]}
+          confirmLabel="Delete hold type"
+        />
+      )}
     </div>
   );
 }
@@ -398,6 +423,8 @@ const NO_FILTERS = { query: '', holdType: '', blockingScope: '', releaseAuthorit
 // ─── Page ────────────────────────────────────────────────────────────────────
 
 export default function HoldsPage() {
+  const { can } = useSession();
+  const canManage = can('mdm.equipment.manage');
   const [filters, setFilters] = useState<Record<string, string>>(NO_FILTERS);
   const [sortBy, setSortBy] = useState('priority');
   // undefined = closed, null = new, Hold = editing
@@ -462,9 +489,11 @@ export default function HoldsPage() {
             sortValue={sortBy}
             onSortChange={setSortBy}
           />
-          <button className="gecko-btn gecko-btn-primary gecko-btn-sm" onClick={() => setEditing(null)} disabled={!!error}>
-            <Icon name="plus" size={16} /> New Hold
-          </button>
+          {canManage && (
+            <button className="gecko-btn gecko-btn-primary gecko-btn-sm" onClick={() => setEditing(null)} disabled={!!error}>
+              <Icon name="plus" size={16} /> New Hold
+            </button>
+          )}
         </div>
       </div>
 
@@ -573,6 +602,7 @@ export default function HoldsPage() {
           key={editing?.holdId ?? 'new'}
           hold={editing}
           events={events ?? []}
+          readOnly={!canManage}
           onClose={() => setEditing(undefined)}
           onSaved={onSaved}
         />
