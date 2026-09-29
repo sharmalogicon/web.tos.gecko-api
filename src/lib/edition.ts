@@ -53,6 +53,15 @@ export const PILOT_BLOCKED: readonly string[] = [
   '/bookings/EGLV149602390729',
 ];
 
+/**
+ * Live pages served EXACTLY — not their children. The masters hub is live, but
+ * the Tier 2 mocks under /masters (ports, vessels, commodities…) are not, so
+ * '/masters' cannot go into the prefix list above.
+ */
+export const PILOT_EXACT_PATHS: readonly string[] = [
+  '/masters',                   // hub: link-only tiles to the live masters
+];
+
 /** Pages every edition serves: sign-in, the root redirect, and the guard's own page. */
 const ALWAYS_ALLOWED: readonly string[] = ['/login', '/not-available'];
 
@@ -65,6 +74,7 @@ export function isPathAvailable(path: string): boolean {
   if (!IS_PILOT) return true;
   if (path === '/' || path === '') return true;
   if (underAny(path, ALWAYS_ALLOWED)) return true;
+  if (PILOT_EXACT_PATHS.includes(path)) return true;
   if (PILOT_BLOCKED.some(b => b.endsWith('/*') ? path.startsWith(b.slice(0, -1)) : path === b || path.startsWith(b + '/'))) return false;
   return underAny(path, PILOT_PATHS);
 }

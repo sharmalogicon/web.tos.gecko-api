@@ -2,159 +2,102 @@
 import React from 'react';
 import Link from 'next/link';
 import { Icon } from '@/components/ui/Icon';
-import { PageToolbar } from '@/components/ui/OpsPrimitives';
-import { ExportButton } from '@/components/ui/ExportButton';
-import { useToast } from '@/components/ui/Toast';
+import { useSession } from '@/lib/auth/session';
+import { isPathAvailable } from '@/lib/edition';
 
-function EntityCard({ entity }: { entity: any }) {
-  return (
-    <Link href={`/masters/${entity.id}`} className="gecko-card gecko-stack" style={{
-      cursor: 'pointer', fontFamily: 'inherit',
-      transition: 'border-color 120ms, box-shadow 120ms',
-      textDecoration: 'none', color: 'inherit',
-    }}>
-      <div className="gecko-row gecko-stack-md">
-        <div className="gecko-mini-icon gecko-mini-icon-lg gecko-mini-icon-primary">
-          <Icon name={entity.icon} size={18} />
-        </div>
-        <div className="gecko-flex-1">
-          <div style={{ fontSize: 14, fontWeight: 700 }}>{entity.label}</div>
-          <div className="gecko-cell-sub" style={{ fontSize: 10.5, marginTop: 1 }}>Updated {entity.updated}</div>
-        </div>
-        <div style={{ textAlign: 'right' }}>
-          <div className="gecko-page-title" style={{ fontFamily: 'var(--gecko-font-mono)', lineHeight: 1 }}>{entity.count.toLocaleString()}</div>
-          <div style={{ fontSize: 10, color: 'var(--gecko-text-disabled)' }}>records</div>
-        </div>
-      </div>
+/**
+ * The masters hub: links only (decision C). No counts, no "recent changes",
+ * no quick actions — the mock invented all of them. A tile shows when its
+ * page is served in this edition AND the user may read it, so nobody is sent
+ * to a page that answers 403. Tier 2 masters (ports, vessels, commodities…)
+ * join here when they are live.
+ */
 
-      <div style={{ fontSize: 12, color: 'var(--gecko-text-secondary)', lineHeight: 1.5 }}>{entity.desc}</div>
-
-      <div className="gecko-row gecko-row-wrap gecko-stack-md" style={{ paddingTop: 10, borderTop: '1px dashed var(--gecko-border)' }}>
-        {entity.stats.map(([label, n]: [string, number]) => (
-          <div key={label} className="gecko-row gecko-row-baseline" style={{ gap: 4, fontSize: 11 }}>
-            <span style={{ fontWeight: 700, fontFamily: 'var(--gecko-font-mono)', color: 'var(--gecko-text-primary)' }}>{n}</span>
-            <span style={{ color: 'var(--gecko-text-secondary)', textTransform: 'capitalize' }}>{label.replace('-', ' ')}</span>
-          </div>
-        ))}
-      </div>
-    </Link>
-  );
+interface Tile {
+  href: string;
+  label: string;
+  icon: string;
+  desc: string;
+  /** Any of these lets the user read the page; empty = every signed-in user. */
+  view: string[];
 }
 
-export default function MastersHubPage() {
-  const { toast } = useToast();
-  const entities = [
-    { id: 'customers',       icon: 'user',       label: 'Customers',                    count: 284,  desc: 'Bill-to · consignee · shipper · agent. One entity, many roles.',                              updated: '2h ago',    stats: [['active', 268], ['on-hold', 4], ['prospect', 12]] },
-    { id: 'lines',           icon: 'anchor',     label: 'Shipping Lines',               count: 42,   desc: 'Line operators / carriers. Drives EDO linkage and line tariff.',                              updated: 'Yesterday', stats: [['with-tariff', 38], ['edi-linked', 34]] },
-    { id: 'vessels',         icon: 'ship',       label: 'Vessels & Voyages',            count: 126,  desc: 'Vessel catalog + active voyages. Links to bookings and EDO.',                                 updated: '10m ago',   stats: [['in-port', 3], ['next-7d', 14], ['archived', 89]] },
-    { id: 'container-types', icon: 'box',        label: 'ISO Container Types',          count: 58,   desc: 'ISO 6346 code catalog. Feeds rate matrix and EIR.',                                           updated: 'Mar 12',    stats: [['dry', 34], ['reefer', 8], ['special', 16]] },
-    { id: 'charge-codes',    icon: 'tag',        label: 'Charge Codes',                 count: 96,   desc: 'Billable services. The atomic unit of every tariff and invoice.',                             updated: '4d ago',    stats: [['gate', 12], ['yard', 18], ['cfs', 24], ['vas', 42]] },
-    { id: 'locations',       icon: 'layers',     label: 'Facility & Yard Locations',    count: 1842, desc: 'Facility → Yard → Block → Row → Slot. 6-level spatial hierarchy.',                           updated: 'Apr 20',    stats: [['facilities', 3], ['blocks', 24], ['slots', 1815]] },
-    { id: 'countries',       icon: 'globe',      label: 'Countries',                    count: 249,  desc: 'ISO 3166-1 country catalog. Reference for ports, customers, customs, and trade compliance.',  updated: 'Jan 01',    stats: [['asia-pacific', 38], ['europe', 44], ['americas', 57]] },
-    { id: 'ports',           icon: 'anchor',     label: 'Ports & Locations (UN/LOCODE)', count: 112, desc: 'UN/LOCODE global place catalog. References POL, POD, and transshipment on every BL.',        updated: '1d ago',    stats: [['seaports', 84], ['icd', 18], ['cfs-depot', 10]] },
-    { id: 'commodities',     icon: 'layers',     label: 'Commodity / HS Codes',         count: 1241, desc: 'WCO Harmonized System catalog. Used on BL, customs declaration, and DG/reefer verification.', updated: 'Jan 01',    stats: [['chapters', 97], ['headings', 1144], ['dg-flagged', 48]] },
-    { id: 'holds',           icon: 'shieldCheck',label: 'Holds & Remarks',              count: 24,   desc: 'Named hold catalog. Applied to containers to block gate-out, load, or all movement.',         updated: '1w ago',    stats: [['customs', 4], ['line', 3], ['critical', 6]] },
-    { id: 'lookups',         icon: 'database',   label: 'Reference Codes',              count: 420,  desc: 'Global reference codelist — SMDG, ISO, IICL, EDIFACT. Drives every dropdown.',               updated: '2d ago',    stats: [['categories', 22], ['system', 186], ['user', 234]] },
-  ];
+const GROUPS: { title: string; tiles: Tile[] }[] = [
+  {
+    title: 'Parties',
+    tiles: [
+      { href: '/masters/customers', label: 'Customers', icon: 'user', desc: 'Every party — customers, lines, hauliers — with tax id, branch and contacts.', view: ['mdm.party.view'] },
+      { href: '/masters/lines', label: 'Shipping Lines', icon: 'anchor', desc: 'Line operators and the agents that act for them: SCAC, SMDG, EDI.', view: ['mdm.party.view'] },
+    ],
+  },
+  {
+    title: 'Equipment',
+    tiles: [
+      { href: '/masters/container-types', label: 'Container Types', icon: 'box', desc: 'The tenant\'s equipment types and the ISO 6346 codes that resolve to them.', view: ['mdm.equipment.view'] },
+      { href: '/masters/holds', label: 'Holds', icon: 'lock', desc: 'The kinds of hold a box can carry — what each stops, and who may lift it.', view: ['mdm.equipment.view'] },
+    ],
+  },
+  {
+    title: 'Commercial',
+    tiles: [
+      { href: '/masters/charge-codes', label: 'Charge Codes', icon: 'tag', desc: 'What is billed, to whom and on which terms.', view: ['mdm.commercial.view'] },
+      { href: '/masters/order-types', label: 'Order Types', icon: 'clipboardList', desc: 'Booking types: their movements, gate rules and charges.', view: ['mdm.commercial.view'] },
+    ],
+  },
+  {
+    title: 'Reference',
+    tiles: [
+      { href: '/masters/lookups', label: 'Lookups', icon: 'database', desc: 'Grades, conditions, movements, service types, tax codes, code lists and mappings.', view: ['mdm.equipment.view', 'mdm.commercial.view', 'mdm.config.view'] },
+      { href: '/masters/vessels/schedule', label: 'Vessel Schedule', icon: 'ship', desc: 'Vessel calls and their cut-offs.', view: [] },
+    ],
+  },
+  {
+    title: 'Organisation',
+    tiles: [
+      { href: '/masters/yards', label: 'Yards', icon: 'layers', desc: 'A depot\'s yards: what they hold and their TEU capacity.', view: [] },
+      { href: '/config/system-params', label: 'System Parameters', icon: 'settings', desc: 'Tenant and depot settings, and how documents are numbered.', view: ['mdm.config.view'] },
+    ],
+  },
+];
 
-  const recent = [
-    { who: 'J. Pattana',    what: 'Updated tariff binding',  entity: 'Customer · Thai Union Group',      time: '14:28', tone: 'primary' },
-    { who: 'System · EDI',  what: 'Imported new vessel',      entity: 'Vessel · MSC LISBON (IMO 9345612)', time: '13:55', tone: 'info' },
-    { who: 'S. Chen',       what: 'Added charge code',        entity: 'Charge · DG-HNDL-45',               time: '11:02', tone: 'success' },
-    { who: 'K. Phumin',     what: 'Deactivated consignee',    entity: 'Customer · Bangchak Corp.',         time: 'Yesterday', tone: 'warning' },
-    { who: 'A. Suwat',      what: 'Restructured yard block',  entity: 'Location · Block C · Rows 1-12',    time: '2 days ago', tone: 'primary' },
-  ];
+export default function MastersHubPage() {
+  const { can } = useSession();
+  const visible = GROUPS
+    .map(g => ({ ...g, tiles: g.tiles.filter(t => isPathAvailable(t.href) && (t.view.length === 0 || t.view.some(p => can(p)))) }))
+    .filter(g => g.tiles.length > 0);
 
   return (
-    <div className="gecko-stack" style={{ gap: 14 }}>
-      <PageToolbar
-        title="Master Data"
-        subtitle="Central catalog for every reference entity used across Gate, Yard, CFS, Billing, and Tariff"
-        badges={[{ label: '11 catalogs', kind: 'gray' }, { label: 'Single source of truth', kind: 'info' }]}
-        actions={
-          <>
-            <ExportButton label="Export All" resource="All master data" iconSize={13} />
-            <button className="gecko-btn gecko-btn-outline gecko-btn-sm" onClick={() => toast({ variant: 'info', title: 'EDI sync queued', message: 'Master data will refresh from EDI partners.' })}><Icon name="refresh" size={13} />Sync from EDI</button>
-            <button className="gecko-btn gecko-btn-primary gecko-btn-sm" onClick={() => toast({ variant: 'info', title: 'New Record', message: 'Pick a master entity below to create a new record.' })}><Icon name="plus" size={13} />New Record</button>
-          </>
-        }
-      />
-
-      {/* Cross-entity search */}
-      <div className="gecko-row" style={{ padding: 14, background: 'linear-gradient(to right, var(--gecko-primary-50), var(--gecko-bg-surface) 60%)', border: '1px solid var(--gecko-border)', borderRadius: 10, gap: 14 }}>
-        <div className="gecko-mini-icon gecko-mini-icon-solid" style={{ width: 44, height: 44, borderRadius: 10 }}>
-          <Icon name="search" size={20} />
-        </div>
-        <div className="gecko-flex-1">
-          <div style={{ fontSize: 13, fontWeight: 600, color: 'var(--gecko-primary-700)' }}>Unified search across master data</div>
-          <div className="gecko-cell-meta">Find any customer, line, vessel, charge code, container type or yard slot by name, code, IMO, scac, or ISO designation.</div>
-        </div>
-        <div style={{ position: 'relative', width: 420 }}>
-          <Icon name="search" size={13} style={{ position: 'absolute', left: 10, top: '50%', transform: 'translateY(-50%)', color: 'var(--gecko-text-disabled)' }} />
-          <input className="gecko-input gecko-input-sm" placeholder="Search all masters… e.g. MSC, 0107537000084, 40HC, Block B-04" style={{ paddingLeft: 32, paddingRight: 40, fontFamily: 'inherit' }} />
-          <span style={{ position: 'absolute', right: 8, top: '50%', transform: 'translateY(-50%)', fontSize: 10, padding: '2px 5px', background: 'var(--gecko-bg-surface)', border: '1px solid var(--gecko-border)', borderRadius: 3, fontFamily: 'var(--gecko-font-mono)', color: 'var(--gecko-text-secondary)' }}>⌘K</span>
+    <div className="gecko-stack gecko-stack-xl" style={{ maxWidth: 'var(--gecko-container-max)', margin: '0 auto' }}>
+      <div className="gecko-page-actions">
+        <div className="gecko-page-actions-left">
+          <h1 className="gecko-page-title">Master Data</h1>
+          <div className="gecko-page-subtitle gecko-mt-1">The reference data the gate, the yard and billing work from.</div>
         </div>
       </div>
 
-      {/* Main grid: entities (2/3) + recent (1/3) */}
-      <div style={{ display: 'grid', gridTemplateColumns: '2fr 1fr', gap: 14, alignItems: 'flex-start' }}>
-        <div>
-          <div className="gecko-row gecko-row-between gecko-mb-3">
-            <span className="gecko-eyebrow">Catalogs</span>
-            <span className="gecko-cell-meta" style={{ fontWeight: 500 }}>{entities.reduce((s, e) => s + e.count, 0).toLocaleString()} records total</span>
-          </div>
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: 12 }}>
-            {entities.map(e => <EntityCard key={e.id} entity={e} />)}
-          </div>
+      {visible.length === 0 && (
+        <div className="gecko-alert gecko-alert-info gecko-row" style={{ gap: 10 }}>
+          <Icon name="info" size={16} /><span>Your role has no master data to show. Ask an administrator if you need access.</span>
         </div>
+      )}
 
-        <div>
-          <div className="gecko-eyebrow gecko-mb-3">Recent Changes</div>
-          <div className="gecko-card gecko-card-flush" style={{ overflow: 'hidden' }}>
-            {recent.map((r, i) => (
-              <div key={i} className="gecko-row gecko-row-start gecko-stack-md" style={{ padding: 12, borderBottom: i === recent.length - 1 ? 'none' : '1px solid var(--gecko-border)' }}>
-                <div className={`gecko-mini-icon gecko-mini-icon-${r.tone}`} style={{ width: 28, height: 28, borderRadius: 8, fontSize: 11, fontWeight: 700 }}>
-                  {r.who.split(' ').map(w => w[0]).join('').slice(0, 2)}
-                </div>
+      {visible.map(g => (
+        <section key={g.title} className="gecko-stack gecko-stack-md" aria-label={g.title}>
+          <div className="gecko-eyebrow">{g.title}</div>
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(280px, 1fr))', gap: 12 }}>
+            {g.tiles.map(t => (
+              <Link key={t.href} href={t.href} className="gecko-card gecko-row gecko-row-start" style={{ gap: 12, textDecoration: 'none', color: 'inherit' }}>
+                <div className="gecko-mini-icon gecko-mini-icon-lg gecko-mini-icon-primary"><Icon name={t.icon} size={18} /></div>
                 <div className="gecko-flex-1">
-                  <div style={{ fontSize: 11.5, color: 'var(--gecko-text-primary)' }}>
-                    <span style={{ fontWeight: 600 }}>{r.who}</span> {r.what}
-                  </div>
-                  <div className="gecko-cell-meta gecko-truncate">{r.entity}</div>
-                  <div className="gecko-cell-sub">{r.time}</div>
+                  <div style={{ fontSize: 14, fontWeight: 700 }}>{t.label}</div>
+                  <div className="gecko-cell-meta" style={{ marginTop: 2, lineHeight: 1.45 }}>{t.desc}</div>
                 </div>
-              </div>
+                <Icon name="chevronRight" size={14} style={{ color: 'var(--gecko-text-disabled)', marginTop: 3 }} />
+              </Link>
             ))}
-            <div style={{ padding: '10px 12px', background: 'var(--gecko-bg-subtle)', textAlign: 'center' }}>
-              <button className="gecko-btn gecko-btn-ghost gecko-btn-sm" style={{ fontSize: 11 }} onClick={() => toast({ variant: 'info', title: 'Audit log', message: 'Full audit log view coming soon.' })}>View full audit log <Icon name="arrowRight" size={11} /></button>
-            </div>
           </div>
-
-          {/* Quick actions */}
-          <div style={{ marginTop: 14 }}>
-            <div className="gecko-eyebrow gecko-mb-3">Quick Actions</div>
-            <div className="gecko-stack" style={{ gap: 6 }}>
-              {[
-                { icon: 'plus',     label: 'New customer onboarding',    sub: 'Guided 5-step wizard' },
-                { icon: 'download', label: 'Bulk import vessels',         sub: 'Excel or EDI COPARN' },
-                { icon: 'refresh',  label: 'Re-sync ISO catalog',          sub: 'Pulls from BIC registry' },
-                { icon: 'invoice',  label: 'Clone charge codes',           sub: 'Copy from facility to facility' },
-              ].map(q => (
-                <button key={q.label} className="gecko-card gecko-card-tight gecko-row" style={{ gap: 10, textAlign: 'left', cursor: 'pointer', fontFamily: 'inherit' }}>
-                  <div className="gecko-mini-icon gecko-mini-icon-neutral" style={{ width: 28, height: 28, borderRadius: 7 }}>
-                    <Icon name={q.icon} size={14} />
-                  </div>
-                  <div className="gecko-flex-1">
-                    <div style={{ fontSize: 12, fontWeight: 600 }}>{q.label}</div>
-                    <div className="gecko-cell-sub">{q.sub}</div>
-                  </div>
-                  <Icon name="arrowRight" size={12} style={{ color: 'var(--gecko-text-disabled)' }} />
-                </button>
-              ))}
-            </div>
-          </div>
-        </div>
-      </div>
+        </section>
+      ))}
     </div>
   );
 }
