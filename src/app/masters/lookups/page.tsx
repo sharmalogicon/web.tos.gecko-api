@@ -3,6 +3,7 @@ import React, { useState } from 'react';
 import { Icon } from '@/components/ui/Icon';
 import { CodeListsTab } from './_components/CodeListsTab';
 import { MappingsTab } from './_components/MappingsTab';
+import { ComponentsTab, DamageCodesTab, DamageLocationsTab, RepairCodesTab } from './_components/SurveyTabs';
 import { ConditionsTab, GradesTab, MovementsTab, ServiceTypesTab, TaxCodesTab } from './_components/MasterTabs';
 
 /**
@@ -18,7 +19,7 @@ import { ConditionsTab, GradesTab, MovementsTab, ServiceTypesTab, TaxCodesTab } 
  * API backs them. Active is the lifecycle; history is in SQL system versioning.
  */
 
-type TabId = 'grades' | 'conditions' | 'movements' | 'services' | 'tax' | 'codes' | 'mappings';
+type TabId = 'grades' | 'conditions' | 'movements' | 'services' | 'tax' | 'damage' | 'repair' | 'locations' | 'components' | 'codes' | 'mappings';
 
 const TABS: { id: TabId; label: string; icon: string; render: () => React.ReactNode }[] = [
   { id: 'grades', label: 'Grades', icon: 'box', render: () => <GradesTab /> },
@@ -26,6 +27,10 @@ const TABS: { id: TabId; label: string; icon: string; render: () => React.ReactN
   { id: 'movements', label: 'Movements', icon: 'transferH', render: () => <MovementsTab /> },
   { id: 'services', label: 'Service types', icon: 'layers', render: () => <ServiceTypesTab /> },
   { id: 'tax', label: 'Tax codes', icon: 'percent', render: () => <TaxCodesTab /> },
+  { id: 'damage', label: 'Damage codes', icon: 'warning', render: () => <DamageCodesTab /> },
+  { id: 'repair', label: 'Repair codes', icon: 'tool', render: () => <RepairCodesTab /> },
+  { id: 'locations', label: 'Damage locations', icon: 'mapPin', render: () => <DamageLocationsTab /> },
+  { id: 'components', label: 'Components', icon: 'layers', render: () => <ComponentsTab /> },
   { id: 'codes', label: 'Code lists', icon: 'database', render: () => <CodeListsTab /> },
   { id: 'mappings', label: 'Mappings', icon: 'copy', render: () => <MappingsTab /> },
 ];
