@@ -7,6 +7,7 @@ import { ExportButton } from '@/components/ui/ExportButton';
 import { EmptyState } from '@/components/ui/EmptyState';
 import { usePagination, TablePagination } from '@/components/ui/TablePagination';
 import { useApiList } from '@/lib/api/use-api';
+import { isPathAvailable } from '@/lib/edition';
 
 /**
  * LIVE against gecko_master (commercial.charge_code).
@@ -139,9 +140,11 @@ export default function ChargeCodesPage() {
             sortValue={sortBy}
             onSortChange={setSortBy}
           />
-          <Link href="/masters/charge-codes/new" className="gecko-btn gecko-btn-primary gecko-btn-sm">
-            <Icon name="plus" size={16} /> New Charge Code
-          </Link>
+          {isPathAvailable('/masters/charge-codes/new') && (
+            <Link href="/masters/charge-codes/new" className="gecko-btn gecko-btn-primary gecko-btn-sm">
+              <Icon name="plus" size={16} /> New Charge Code
+            </Link>
+          )}
         </div>
       </div>
 
@@ -203,10 +206,16 @@ export default function ChargeCodesPage() {
             ) : pageItems.map(c => (
               <tr key={c.chargeCodeId} style={{ opacity: c.isActive ? 1 : 0.55 }}>
                 <td style={{ whiteSpace: 'nowrap' }}>
-                  <Link href={`/masters/charge-codes/${encodeURIComponent(c.chargeCode)}`} className="gecko-id-link"
-                    style={{ color: MODULE_COLOR[c.moduleCode] ?? undefined }}>
-                    {c.chargeCode}
-                  </Link>
+                  {isPathAvailable(`/masters/charge-codes/${c.chargeCode}`) ? (
+                    <Link href={`/masters/charge-codes/${encodeURIComponent(c.chargeCode)}`} className="gecko-id-link"
+                      style={{ color: MODULE_COLOR[c.moduleCode] ?? undefined }}>
+                      {c.chargeCode}
+                    </Link>
+                  ) : (
+                    <span className="gecko-id-link" style={{ color: MODULE_COLOR[c.moduleCode] ?? undefined, cursor: 'default' }}>
+                      {c.chargeCode}
+                    </span>
+                  )}
                 </td>
                 <td style={{ fontWeight: 500, color: 'var(--gecko-text-primary)' }}>
                   {c.descriptionEn}

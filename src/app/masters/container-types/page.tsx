@@ -6,6 +6,7 @@ import { usePagination, TablePagination } from '@/components/ui/TablePagination'
 import { ExportButton } from '@/components/ui/ExportButton';
 import { EmptyState } from '@/components/ui/EmptyState';
 import { useApiList } from '@/lib/api/use-api';
+import { isPathAvailable } from '@/lib/edition';
 
 /**
  * LIVE against gecko_master (Gecko.MasterData, batch A).
@@ -146,7 +147,9 @@ export default function ContainerTypesPage() {
           <button className="gecko-btn gecko-btn-outline gecko-btn-sm" onClick={() => { types.reload(); containers.reload(); }}>
             <Icon name="refreshCcw" size={16} /> Refresh
           </button>
-          <Link href="/masters/container-types/new" className="gecko-btn gecko-btn-primary gecko-btn-sm"><Icon name="plus" size={16} /> New Type</Link>
+          {isPathAvailable('/masters/container-types/new') && (
+            <Link href="/masters/container-types/new" className="gecko-btn gecko-btn-primary gecko-btn-sm"><Icon name="plus" size={16} /> New Type</Link>
+          )}
         </div>
       </div>
 
@@ -276,7 +279,9 @@ export default function ContainerTypesPage() {
                     {/* Footer Link */}
                     <div className="gecko-row gecko-row-between" style={{ padding: '12px 16px', borderTop: '1px solid var(--gecko-border)', background: 'var(--gecko-bg-subtle)' }}>
                       <span className="gecko-cell-meta">Rate row in tariff</span>
-                      <Link href={`/masters/container-types/${c.typeCode}`} className="gecko-link" style={{ fontSize: 12 }}>View →</Link>
+                      {isPathAvailable(`/masters/container-types/${c.typeCode}`) && (
+                        <Link href={`/masters/container-types/${c.typeCode}`} className="gecko-link" style={{ fontSize: 12 }}>View →</Link>
+                      )}
                     </div>
                   </div>
                 );

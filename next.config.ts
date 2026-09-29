@@ -21,7 +21,22 @@ import type { NextConfig } from "next";
  * Secure attribute is about the BROWSER's connection to this app, which is
  * https either way.
  */
-const API_ORIGIN = process.env.GECKO_API_ORIGIN ?? "http://localhost:5100";
+const API_ORIGIN = resolveApiOrigin();
+
+/**
+ * Production must name the API explicitly. A silent localhost fallback on Vercel
+ * builds fine and then fails every sign-in with "service not reachable". It must
+ * also be https: Gecko.Api redirects http to https, and the browser would follow
+ * that 307 cross-origin, losing the one-origin cookie setup described above.
+ */
+function resolveApiOrigin(): string {
+  const configured = process.env.GECKO_API_ORIGIN?.trim().replace(/\/+$/, "");
+  if (process.env.NODE_ENV !== "production") return configured || "http://localhost:5100";
+  if (!configured) throw new Error("GECKO_API_ORIGIN is not set. Set it for this build (Vercel: Production and Preview env vars).");
+  if (!configured.startsWith("https://") && !/^http:\/\/(localhost|127\.0\.0\.1)(:\d+)?$/.test(configured))
+    throw new Error(`GECKO_API_ORIGIN must be https:// in production (got ${configured}).`);
+  return configured;
+}
 
 const nextConfig: NextConfig = {
   async rewrites() {

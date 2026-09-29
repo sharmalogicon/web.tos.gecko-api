@@ -39,6 +39,21 @@ export const PILOT_PATHS: readonly string[] = [
   '/masters/holds',
 ];
 
+/**
+ * Mock pages that sit UNDER a live prefix above. They show fixture data and fake
+ * saves ("Charge code cloned" writes nothing), so the pilot must not serve them
+ * even though their parent list page is live. Remove an entry when its page is
+ * bound to the API.
+ */
+export const PILOT_BLOCKED: readonly string[] = [
+  '/bookings/EGLV149602390729',
+  '/masters/container-types/new',
+  '/masters/container-types/*',   // [iso] detail
+  '/masters/order-types/new',
+  '/masters/charge-codes/new',
+  '/masters/charge-codes/*',      // [code] detail
+];
+
 /** Pages every edition serves: sign-in, the root redirect, and the guard's own page. */
 const ALWAYS_ALLOWED: readonly string[] = ['/login', '/not-available'];
 
@@ -50,7 +65,9 @@ function underAny(path: string, prefixes: readonly string[]): boolean {
 export function isPathAvailable(path: string): boolean {
   if (!IS_PILOT) return true;
   if (path === '/' || path === '') return true;
-  return underAny(path, ALWAYS_ALLOWED) || underAny(path, PILOT_PATHS);
+  if (underAny(path, ALWAYS_ALLOWED)) return true;
+  if (PILOT_BLOCKED.some(b => b.endsWith('/*') ? path.startsWith(b.slice(0, -1)) : path === b || path.startsWith(b + '/'))) return false;
+  return underAny(path, PILOT_PATHS);
 }
 
 /** Where a signed-in user lands. Pilot: a live screen, never a mock dashboard. */

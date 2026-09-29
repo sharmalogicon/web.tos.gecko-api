@@ -7,19 +7,15 @@ import { useSession } from '../../lib/auth/session';
 import { ApiError } from '../../lib/api/problem';
 import { LANDING_PATH } from '../../lib/edition';
 
-// Development fixture user (gecko_identity dev_02). Real accounts are created
-// by invitation — ADR-006 D3: there is no self-service signup.
-//
-// TENANT_OWNER on purpose: the token's `prm` claim carries TENANT-WIDE role
-// permissions only, so a branch-scoped user such as ops.lcb@sct.co.th signs in
-// but can call nothing until the `bpm` claim exists (gecko_tos PLAN Q11).
-const DEMO_EMAIL = 'admin@sct.co.th';
-const DEMO_PASSWORD = 'Gecko#Test2026';
+// Development only: pre-fill the gecko_identity dev_02 fixture owner so a local
+// sign-in is one password away. Production starts empty and shows no hints —
+// real accounts are created by invitation (ADR-006 D3: no self-service signup).
+const DEV_EMAIL = process.env.NODE_ENV === 'development' ? 'admin@sct.co.th' : '';
 
 export default function LoginPage() {
   const router = useRouter();
   const { status, signIn } = useSession();
-  const [email, setEmail] = useState(DEMO_EMAIL);
+  const [email, setEmail] = useState(DEV_EMAIL);
   const [password, setPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
   const [remember, setRemember] = useState(true);
@@ -139,33 +135,14 @@ export default function LoginPage() {
           </div>
         </div>
 
-        {/* Testimonial */}
+        {/* Product line — no testimonial until a customer gives us a real one */}
         <div style={{ position: 'relative', zIndex: 1, maxWidth: 540 }}>
-          <div aria-hidden style={{
-            fontSize: 64, fontWeight: 700, lineHeight: 0.6,
-            opacity: 0.22, marginBottom: 8, fontFamily: 'Georgia, serif',
-          }}>&ldquo;</div>
-          <blockquote style={{
+          <p style={{
             fontSize: 22, lineHeight: 1.5, fontWeight: 500, margin: 0,
             letterSpacing: '-0.01em',
           }}>
-            Gecko replaced our 15-year-old TOS in three weeks. Yard productivity is up 22%, billing disputes are down to almost zero, and our customers can finally self-serve without calling the ops desk.
-          </blockquote>
-          <div style={{ display: 'flex', alignItems: 'center', gap: 14, marginTop: 28 }}>
-            <div style={{
-              width: 46, height: 46, borderRadius: '50%',
-              background: 'rgba(255,255,255,0.18)',
-              display: 'flex', alignItems: 'center', justifyContent: 'center',
-              fontWeight: 600, fontSize: 14, letterSpacing: '0.04em',
-              border: '1px solid rgba(255,255,255,0.22)',
-            }}>
-              PC
-            </div>
-            <div>
-              <div style={{ fontWeight: 600, fontSize: 15 }}>Pim Chaiyaporn</div>
-              <div style={{ opacity: 0.82, fontSize: 13, marginTop: 2 }}>Operations Director · Laem Chabang ICD</div>
-            </div>
-          </div>
+            Gate, yard, bookings, tariffs and the cash window — one system for the whole depot.
+          </p>
         </div>
       </div>
 
@@ -381,39 +358,6 @@ export default function LoginPage() {
               </button>
             </div>
           </form>
-
-          {/* Demo credentials hint */}
-          <div style={{
-            marginTop: 28,
-            padding: '12px 14px',
-            background: 'var(--gecko-bg-subtle)',
-            border: '1px dashed var(--gecko-border)',
-            borderRadius: 8,
-            fontSize: 12,
-            color: 'var(--gecko-text-secondary)',
-          }}>
-            <div style={{ fontWeight: 600, marginBottom: 6, color: 'var(--gecko-text-primary)', fontSize: 12 }}>
-              Demo credentials
-            </div>
-            <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
-              <div>
-                Email: <code style={{
-                  background: 'var(--gecko-bg-surface)', padding: '1px 6px',
-                  borderRadius: 4, fontSize: 11, border: '1px solid var(--gecko-border)',
-                }}>{DEMO_EMAIL}</code>
-              </div>
-              <div>
-                Password: <code style={{
-                  background: 'var(--gecko-bg-surface)', padding: '1px 6px',
-                  borderRadius: 4, fontSize: 11, border: '1px solid var(--gecko-border)',
-                }}>{DEMO_PASSWORD}</code>
-              </div>
-            </div>
-            <div style={{ marginTop: 8, fontSize: 11, opacity: 0.78 }}>
-              Live against Gecko.Api — a fixture user from gecko_identity dev_02. Accounts are
-              created by invitation, not signup.
-            </div>
-          </div>
         </div>
       </div>
 

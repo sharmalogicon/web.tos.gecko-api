@@ -5,6 +5,7 @@ import { Icon } from '@/components/ui/Icon';
 import { ExportButton } from '@/components/ui/ExportButton';
 import { EmptyState } from '@/components/ui/EmptyState';
 import { useApi, useApiList } from '@/lib/api/use-api';
+import { isPathAvailable } from '@/lib/edition';
 
 /**
  * LIVE against gecko_master (commercial.order_type + order_type_movement +
@@ -269,7 +270,9 @@ function ChargesTable({ charges, selectedStep }: { charges: Charge[]; selectedSt
         {shown.map(c => (
           <tr key={c.orderTypeChargeId}>
             <td>
-              <Link href={`/masters/charge-codes/${encodeURIComponent(c.chargeCode)}`} className="gecko-id-link">{c.chargeCode}</Link>
+              {isPathAvailable(`/masters/charge-codes/${c.chargeCode}`)
+                ? <Link href={`/masters/charge-codes/${encodeURIComponent(c.chargeCode)}`} className="gecko-id-link">{c.chargeCode}</Link>
+                : <span className="gecko-id-link" style={{ cursor: 'default' }}>{c.chargeCode}</span>}
             </td>
             <td style={{ fontWeight: 500, color: 'var(--gecko-text-primary)' }}>{c.chargeDescription}</td>
             <td>
@@ -370,7 +373,9 @@ export default function OrderTypeMasterPage() {
           <button className="gecko-btn gecko-btn-outline gecko-btn-sm" onClick={reload}>
             <Icon name="refreshCcw" size={15} /> Refresh
           </button>
-          <Link href="/masters/order-types/new" className="gecko-btn gecko-btn-primary gecko-btn-sm"><Icon name="plus" size={15} /> New Order Type</Link>
+          {isPathAvailable('/masters/order-types/new') && (
+            <Link href="/masters/order-types/new" className="gecko-btn gecko-btn-primary gecko-btn-sm"><Icon name="plus" size={15} /> New Order Type</Link>
+          )}
         </div>
       </div>
 
