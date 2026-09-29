@@ -3,10 +3,11 @@ import React, { useState, useMemo } from 'react';
 import Link from 'next/link';
 import { Icon } from '@/components/ui/Icon';
 import { FilterPopover, FilterField, SortOption } from '@/components/ui/FilterPopover';
-import { ExportButton } from '@/components/ui/ExportButton';
 import { EmptyState } from '@/components/ui/EmptyState';
 import { usePagination, TablePagination } from '@/components/ui/TablePagination';
 import { useApiList } from '@/lib/api/use-api';
+import { useSession } from '@/lib/auth/session';
+import { useCommercialVocabulary, type ChargeCode } from '@/lib/api/charge-codes';
 import { isPathAvailable } from '@/lib/edition';
 
 /**
@@ -20,30 +21,12 @@ import { isPathAvailable } from '@/lib/edition';
  * What the mock had and the API does not, so it is gone rather than faked:
  * base rate, VAT %, GL account, "in use (30d)" and tariff counts. A price is
  * Revenue's (a charge code is the thing priced, not the price); GL mapping and
- * usage analytics are not modelled anywhere yet.
+ * usage analytics are not modelled anywhere yet. Export is gone too: it was a
+ * toast, not a file.
  */
 
-interface ChargeVariant {
-  billTo: string;
-  paymentTermCode: string | null;
-  taxCode: string | null;
-  withholdingTaxCode: string | null;
-  isDefault: boolean;
-}
-
-interface ChargeCode {
-  chargeCodeId: string;
-  chargeCode: string;
-  descriptionEn: string;
-  descriptionLocal: string | null;
-  moduleCode: string;
-  chargeType: string;
-  chargeCategory: string | null;
-  billingUnitCode: string | null;
-  isByService: boolean;
-  isActive: boolean;
-  variants?: ChargeVariant[];
-}
+/** The API's page-size ceiling (Gecko.Data PagingExtensions.MaxPageSize). */
+const MAX_PAGE = 200;
 
 const MODULE_COLOR: Record<string, string> = {
   TOS: 'var(--gecko-primary-600)',
@@ -54,13 +37,12 @@ const MODULE_COLOR: Record<string, string> = {
   FREIGHT: 'var(--gecko-info-700)',
 };
 
-const FILTER_FIELDS: FilterField[] = [
+/** Module choices come from the vocabulary — the operational modules the API accepts — not a list typed here. */
+const filterFields = (modules: { code: string; name: string }[]): FilterField[] => [
   { type: 'search', key: 'query', placeholder: 'Search code or description…' },
   {
-    type: 'select', key: 'moduleCode', label: 'Module', options: [
-      { label: 'All', value: '' }, { label: 'TOS', value: 'TOS' }, { label: 'CFS', value: 'CFS' },
-      { label: 'M&R', value: 'MNR' }, { label: 'Trucking', value: 'TRUCKING' }, { label: 'Fleet', value: 'FLEET' },
-    ],
+    type: 'select', key: 'moduleCode', label: 'Module',
+    options: [{ label: 'All', value: '' }, ...modules.map(m => ({ label: m.name, value: m.code }))],
   },
   {
     type: 'select', key: 'status', label: 'Status', options: [
@@ -78,16 +60,20 @@ const SORT_OPTIONS: SortOption[] = [
 export default function ChargeCodesPage() {
   const [filters, setFilters] = useState<Record<string, string>>({ query: '', moduleCode: '', status: 'active' });
   const [sortBy, setSortBy] = useState('module');
+  const { user } = useSession();
+  const canManage = user?.permissions.includes('mdm.commercial.manage') ?? false;
+  const { data: vocabulary } = useCommercialVocabulary();
+  const fields = useMemo(() => filterFields(vocabulary?.modules ?? []), [vocabulary]);
 
   const path = useMemo(() => {
-    const params = new URLSearchParams({ pageSize: '300' });
+    const params = new URLSearchParams({ pageSize: String(MAX_PAGE) });
     if (filters.query) params.set('search', filters.query);
     if (filters.moduleCode) params.set('moduleCode', filters.moduleCode);
     if (filters.status === 'all') params.set('includeInactive', 'true');
     return `/api/master/charge-codes?${params.toString()}`;
   }, [filters.query, filters.moduleCode, filters.status]);
 
-  const { data, error, loading, reload } = useApiList<ChargeCode>(path);
+  const { data, error, loading, reload, totalCount } = useApiList<ChargeCode>(path);
 
   const rows = useMemo(() => {
     const all = [...(data ?? [])];
@@ -126,12 +112,11 @@ export default function ChargeCodesPage() {
           </div>
         </div>
         <div className="gecko-toolbar">
-          <ExportButton resource="Charge codes" iconSize={16} />
           <button className="gecko-btn gecko-btn-outline gecko-btn-sm" onClick={reload}>
             <Icon name="refreshCcw" size={16} /> Refresh
           </button>
           <FilterPopover
-            fields={FILTER_FIELDS}
+            fields={fields}
             values={filters}
             onChange={setFilters}
             onApply={(v) => setFilters(v)}
@@ -140,7 +125,7 @@ export default function ChargeCodesPage() {
             sortValue={sortBy}
             onSortChange={setSortBy}
           />
-          {isPathAvailable('/masters/charge-codes/new') && (
+          {canManage && isPathAvailable('/masters/charge-codes/new') && (
             <Link href="/masters/charge-codes/new" className="gecko-btn gecko-btn-primary gecko-btn-sm">
               <Icon name="plus" size={16} /> New Charge Code
             </Link>
@@ -153,6 +138,13 @@ export default function ChargeCodesPage() {
           <Icon name="alertCircle" size={16} />
           <span>{error.message}</span>
           {error.status === 401 && <Link href="/login" className="gecko-link">Sign in</Link>}
+        </div>
+      )}
+
+      {totalCount > (data?.length ?? 0) && (
+        <div role="status" className="gecko-alert gecko-alert-info gecko-row">
+          <Icon name="alertCircle" size={16} />
+          <span>Showing the first {data?.length} of {totalCount} charge codes — narrow the search or pick a module to see the rest.</span>
         </div>
       )}
 
