@@ -15,6 +15,7 @@ import {
 } from '@/lib/api/window';
 import { DrawerBar } from './DrawerBar';
 import { ShiftReceipts } from './ShiftReceipts';
+import { VoidReceiptModal } from '../_components/VoidReceiptModal';
 import { ReceiptView, usePrintReceipt } from './ReceiptView';
 
 /**
@@ -105,6 +106,9 @@ export default function CashWindowPage() {
   const [payError, setPayError] = useState<Problem | null>(null);
   const [receipt, setReceipt] = useState<Receipt | null>(null);
   const [waiving, setWaiving] = useState<{ box: WindowBox; line: QuoteLine } | null>(null);
+  // Paying again after a void: which voided receipt of this booking the new one replaces ('' = none).
+  const [replaces, setReplaces] = useState('');
+  const [voidingReceipt, setVoidingReceipt] = useState<Receipt | null>(null);
 
   const orderInput = useRef<HTMLInputElement>(null);
   const tenderedInput = useRef<HTMLInputElement>(null);
@@ -118,6 +122,11 @@ export default function CashWindowPage() {
         `/api/revenue/window/bookings?orderNo=${encodeURIComponent(no)}${until ? `&paidUntil=${until}` : ''}`);
       setBooking(answer);
       setOrderNo(answer.orderNo);
+      // The latest unreplaced void of this booking is what a new payment most likely replaces.
+      setReplaces(prev => {
+        const open = answer.voidedReceipts ?? [];
+        return open.some(v => v.receiptId === prev) ? prev : (open[0]?.receiptId ?? '');
+      });
       setPaidUntil(answer.paidUntil ?? (until && until >= answer.today ? until : answer.today));
       const payable = answer.boxes.filter(isPayable).map(b => b.bookingContainerId);
       setSelected(prev => {
@@ -145,7 +154,7 @@ export default function CashWindowPage() {
   function nextDriver() {
     setBooking(null); setReceipt(null); setOrderNo(''); setQuoteError(null); setPayError(null);
     setPayments([CASH_ROW]); setPayerName(''); setPayerTaxId(''); setPayerBranchNo(''); setPayerAddress('');
-    setFullInvoice(false); setPaidUntil(''); setSelected(new Set()); setCustomerName(null);
+    setFullInvoice(false); setPaidUntil(''); setSelected(new Set()); setCustomerName(null); setReplaces('');
     window.setTimeout(() => orderInput.current?.focus(), 0);
   }
 
@@ -176,6 +185,7 @@ export default function CashWindowPage() {
 
   const mayCollect = canAt(WINDOW_PERMISSIONS.collect, booking?.branchId ?? activeBranch);
   const mayWaive = canAt(WINDOW_PERMISSIONS.waive, booking?.branchId ?? activeBranch);
+  const mayVoid = canAt(WINDOW_PERMISSIONS.voidReceipt, receipt?.branchId ?? booking?.branchId ?? activeBranch);
   const wrongDepot = !!booking && !!activeBranch && booking.branchId !== activeBranch;
 
   async function takePayment(e?: React.FormEvent) {
@@ -198,6 +208,7 @@ export default function CashWindowPage() {
           bankName: r.channel !== 'CASH' && r.bankName.trim() ? r.bankName.trim() : null,
         })),
         expectedTotal: total,
+        replacesReceiptId: replaces || null,
       };
       const issued = await apiSend<Receipt>('POST', '/api/revenue/window/receipts', body);
       setReceipt(issued);
@@ -267,10 +278,29 @@ export default function CashWindowPage() {
       )}
 
       <DrawerBar branchId={activeBranch} shift={shift} loading={shiftLoading || status === 'loading'} onChanged={s => { setShift(s); if (!s) loadShift(); }} />
-      {shift && <ShiftReceipts shift={shift} onReprint={r => { setReceipt(r); window.scrollTo({ top: 0 }); }} />}
+      {shift && (
+        <ShiftReceipts shift={shift} onReprint={r => { setReceipt(r); window.scrollTo({ top: 0 }); }}
+          mayVoid={mayVoid}
+          onVoided={v => {
+            toast.toast({ variant: 'warning', title: `${v.receiptNo} voided`, message: 'Take the payment again for the right customer or box.' });
+            if (receipt?.receiptId === v.receiptId) setReceipt(v);
+            loadShift();
+          }} />
+      )}
+
+      {voidingReceipt && (
+        <VoidReceiptModal receipt={voidingReceipt} onClose={() => setVoidingReceipt(null)}
+          onVoided={v => {
+            setVoidingReceipt(null);
+            setReceipt(v);
+            toast.toast({ variant: 'warning', title: `${v.receiptNo} voided`, message: 'Take the payment again for the right customer or box.' });
+            loadShift();
+          }} />
+      )}
 
       {receipt ? (
-        <ReceiptView receipt={receipt} depot={depotName} onPrint={printReceipt} onNext={nextDriver} />
+        <ReceiptView receipt={receipt} depot={depotName} onPrint={printReceipt} onNext={nextDriver}
+          onVoid={mayVoid && receipt.status === 'ISSUED' ? () => setVoidingReceipt(receipt) : undefined} />
       ) : (
         <>
           {/* ── the number ─────────────────────────────────────────── */}
@@ -410,6 +440,19 @@ export default function CashWindowPage() {
                         Full tax invoice (payer name / tax ID)
                       </label>
                     </div>
+                    {(booking.voidedReceipts ?? []).length > 0 && (
+                      <div className="gecko-form-group">
+                        <label className="gecko-form-label" htmlFor="replaces">This receipt replaces</label>
+                        <select id="replaces" className="gecko-input" value={replaces} onChange={e => setReplaces(e.target.value)}>
+                          <option value="">Nothing — a new payment</option>
+                          {(booking.voidedReceipts ?? []).map(v => (
+                            <option key={v.receiptId} value={v.receiptId}>
+                              {v.receiptNo} (voided{v.voidReason ? `: ${v.voidReason}` : ''}) · {formatBaht(v.total)}
+                            </option>
+                          ))}
+                        </select>
+                      </div>
+                    )}
                     {fullInvoice && (
                       <div className="gecko-row" style={{ gap: 10, flexWrap: 'wrap' }}>
                         <input className="gecko-input" style={{ flex: '2 1 220px' }} placeholder={customerName ?? 'Payer name'} value={payerName} onChange={e => setPayerName(e.target.value)} />

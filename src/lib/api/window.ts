@@ -7,9 +7,13 @@
  * DateOnly arrives as "yyyy-MM-dd", DateTimeOffset as ISO text, decimals as numbers.
  */
 
+import { apiSend } from './client';
+
 export const WINDOW_PERMISSIONS = {
   collect: 'revenue.cash.collect',
   waive: 'revenue.charge.waive',
+  /** Undo a wrong receipt before the box has moved (owner / ops manager / accounts). */
+  voidReceipt: 'revenue.receipt.void',
 } as const;
 
 /** The only channels the API accepts (WindowEndpoints.Channels). */
@@ -94,6 +98,16 @@ export interface WindowBooking {
   tax: number;
   total: number;
   currencyCode: string | null;
+  /** This booking's voided receipts that nothing replaces yet — a new payment may name one. */
+  voidedReceipts?: VoidedReceipt[] | null;
+}
+
+export interface VoidedReceipt {
+  receiptId: string;
+  receiptNo: string;
+  voidedAt: string | null;
+  voidReason: string | null;
+  total: number;
 }
 
 // ── the drawer ──────────────────────────────────────────────────────────────
@@ -179,6 +193,8 @@ export interface CreateReceiptRequest {
   payments: PaymentRequest[];
   /** MUST be the total the cashier was shown — the API refuses (409) if the price moved. */
   expectedTotal: number;
+  /** Paying again after a void: the voided receipt of this booking this one replaces. */
+  replacesReceiptId?: string | null;
 }
 
 export interface ReceiptLine {
@@ -256,6 +272,9 @@ export interface Receipt {
   seller: Seller | null;
   voidedAt: string | null;
   voidReason: string | null;
+  /** The voided receipt this one replaces, and the receipt that replaced this one (when voided). */
+  replacesReceiptNo?: string | null;
+  replacedByReceiptNo?: string | null;
 }
 
 // ── waiving ─────────────────────────────────────────────────────────────────
@@ -293,6 +312,10 @@ export function taxBranchLabel(branchNo: string | null, isHeadOffice?: boolean |
 }
 
 export const receiptPdfPath = (receiptId: string) => `/api/revenue/window/receipts/${receiptId}/receipt.pdf`;
+
+/** Void a wrong receipt; the answer is the receipt as it now reads (VOIDED, reason, same number). */
+export const voidReceipt = (receiptId: string, reason: string) =>
+  apiSend<Receipt>('POST', `/api/revenue/window/receipts/${receiptId}/void`, { reason });
 
 /** A booking's box can be taken to the counter when the quote has lines on it. */
 export const isPayable = (box: WindowBox) => box.due.length > 0;

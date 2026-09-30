@@ -4,6 +4,7 @@ import { Icon } from '@/components/ui/Icon';
 import { apiGet } from '@/lib/api/client';
 import { ProblemAlert, problemOf, type Problem } from './ProblemAlert';
 import { formatBaht, type Receipt, type Shift, type ShiftReceipt } from '@/lib/api/window';
+import { VoidReceiptModal } from '../_components/VoidReceiptModal';
 
 const time = (iso: string) => new Date(iso).toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' });
 
@@ -15,8 +16,11 @@ const time = (iso: string) => new Date(iso).toLocaleTimeString('en-GB', { hour: 
  * Collapsed by default: at ~140 receipts a day the list is for the driver who
  * comes back, not for every sale. It re-reads whenever the drawer's count moves.
  */
-export function ShiftReceipts({ shift, onReprint }: { shift: Shift; onReprint: (receipt: Receipt) => void }) {
+export function ShiftReceipts({ shift, onReprint, mayVoid = false, onVoided }: {
+  shift: Shift; onReprint: (receipt: Receipt) => void; mayVoid?: boolean; onVoided?: (receipt: Receipt) => void;
+}) {
   const [open, setOpen] = useState(false);
+  const [voiding, setVoiding] = useState<ShiftReceipt | null>(null);
   const [rows, setRows] = useState<ShiftReceipt[] | null>(null);
   const [error, setError] = useState<Problem | null>(null);
   const [opening, setOpening] = useState<string | null>(null);
@@ -74,6 +78,12 @@ export function ShiftReceipts({ shift, onReprint }: { shift: Shift; onReprint: (
                         onClick={() => void reprint(r.receiptId)}>
                         <Icon name="printer" size={14} /> {opening === r.receiptId ? 'Opening…' : 'Reprint'}
                       </button>
+                      {mayVoid && r.status === 'ISSUED' && (
+                        <button type="button" className="gecko-btn gecko-btn-sm gecko-btn-ghost" style={{ marginLeft: 4 }}
+                          onClick={() => setVoiding(r)} title="Void this receipt — before the box has moved">
+                          <Icon name="x" size={14} /> Void
+                        </button>
+                      )}
                     </td>
                   </tr>
                 ))}
@@ -81,6 +91,14 @@ export function ShiftReceipts({ shift, onReprint }: { shift: Shift; onReprint: (
             </table>
           )}
         </div>
+      )}
+      {voiding && (
+        <VoidReceiptModal receipt={voiding} onClose={() => setVoiding(null)}
+          onVoided={v => {
+            setVoiding(null);
+            setRows(rs => rs?.map(x => (x.receiptId === v.receiptId ? { ...x, status: v.status } : x)) ?? rs);
+            onVoided?.(v);
+          }} />
       )}
     </div>
   );

@@ -38,6 +38,7 @@ export const PILOT_PATHS: readonly string[] = [
   '/units/equipment-pool',      // stock pools: type × line × grade × condition
   '/billing/cash-window',
   '/billing/service-orders',     // the charge register (billing.charge), /api/revenue/charges
+  '/billing/statement',         // one booking's charge lines and receipts, read-only (?orderNo=)
   '/billing/unbilled',          // credit lines not yet invoiced, per payer (empty for a cash depot)
   '/reports/operational',       // gate movements by day / movement / customer / line / type + the EIRs
   '/reports/accounts',          // cash receipts by shift / cashier / customer / channel + the receipts

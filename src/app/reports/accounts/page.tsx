@@ -24,15 +24,18 @@ import {
   type ReceiptRow, type ReceiptsReport,
 } from '@/lib/api/reports';
 import { ReportKpi, ReportParams, ReportTable, type Depot } from '../_components/ReportParams';
+import { VoidReceiptModal } from '@/app/billing/_components/VoidReceiptModal';
+import { WINDOW_PERMISSIONS } from '@/lib/api/window';
 
 const TOP = 15;
 const CHANNEL: Record<string, string> = { CASH: 'Cash', TRANSFER: 'Transfer', CHEQUE: 'Cheque', CARD: 'Card' };
 
 export default function AccountsReportsPage() {
-  const { branchesFor } = useSession();
+  const { branchesFor, canAt } = useSession();
   const [picked, setPicked] = useState('');
   const [range, setRange] = useState(() => presetRange('today'));
   const [status, setStatus] = useState<'' | 'ISSUED' | 'VOIDED'>('');
+  const [voiding, setVoiding] = useState<ReceiptRow | null>(null);
 
   const { data: branchRows } = useApiList<Depot>('/api/branches?pageSize=100');
   const mine = new Set(branchesFor(REPORT_PERMISSIONS.receipts));
@@ -49,6 +52,7 @@ export default function AccountsReportsPage() {
   }, 'receipts');
   const rows = list.rows ?? [];
   const error = report.error ?? list.error;
+  const mayVoid = !!branchId && canAt(WINDOW_PERMISSIONS.voidReceipt, branchId);
 
   const exportSummary = () => {
     if (!r) return;
@@ -220,6 +224,11 @@ export default function AccountsReportsPage() {
                 <td>
                   <span className={`gecko-badge ${x.status === 'VOIDED' ? 'gecko-badge-gray' : 'gecko-badge-success'}`}>{x.status === 'VOIDED' ? 'Voided' : 'Issued'}</span>
                   {x.voidReason && <div className="gecko-cell-meta gecko-truncate" style={{ maxWidth: 160 }} title={x.voidReason}>{x.voidReason}</div>}
+                  {mayVoid && x.status === 'ISSUED' && (
+                    <button className="gecko-btn gecko-btn-ghost gecko-btn-sm" onClick={() => setVoiding(x)} title="Void — only before the box has moved">
+                      <Icon name="x" size={12} /> Void
+                    </button>
+                  )}
                 </td>
               </tr>
             ))}
@@ -227,6 +236,11 @@ export default function AccountsReportsPage() {
         </table>
         {list.footer}
       </div>
+
+      {voiding && (
+        <VoidReceiptModal receipt={voiding} onClose={() => setVoiding(null)}
+          onVoided={() => { setVoiding(null); report.reload(); list.reload(); }} />
+      )}
 
       <div className="gecko-row gecko-row-wrap" style={{ gap: 8 }}>
         <span className="gecko-cell-meta">The lines behind the money:</span>

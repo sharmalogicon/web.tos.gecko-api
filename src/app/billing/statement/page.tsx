@@ -1,1750 +1,264 @@
 "use client";
-import React, { useState, useMemo, useEffect, useRef, useCallback } from 'react';
+
+/**
+ * BOOKING STATEMENT — live, read-only (INVOICING_PROPOSAL part D), from
+ * GET /api/revenue/charges/statement?orderNo= (revenue.charge.view).
+ *
+ * One booking: each box with every priced line and where it is in its life
+ * (paid, earned, waived, unbilled, invoiced, cancelled), and the receipts that paid
+ * them — a voided receipt beside the one that replaced it. It replaces Vector's
+ * BookingStatement mock: nothing here edits a price (a discount is a tariff or a
+ * waiver, never an edit to a line), and "send to invoice" waits for credit invoicing.
+ */
+
+import React, { Suspense, useState } from 'react';
+import Link from 'next/link';
+import { usePathname, useRouter, useSearchParams } from 'next/navigation';
 import { Icon } from '@/components/ui/Icon';
-import { usePagination, TablePagination } from '@/components/ui/TablePagination';
-import { FilterPopover, FilterField, SortOption } from '@/components/ui/FilterPopover';
-import { useToast } from '@/components/ui/Toast';
-import { ExportButton } from '@/components/ui/ExportButton';
+import { EmptyState } from '@/components/ui/EmptyState';
+import { useApi } from '@/lib/api/use-api';
+import { saveBlob } from '@/lib/api/client';
+import { formatContainerNo, formatDateTime } from '@/lib/api/tos';
+import { money } from '@/lib/api/revenue';
+import { toCsv } from '@/lib/api/reports';
 import {
-  SendToInvoiceMenu, NewInvoiceModal, ExistingInvoiceModal,
-  type SendAction,
-} from '@/components/billing/SendToInvoice';
+  CHARGE_SOURCE, CHARGE_STATUS, payerLabel, statementPath,
+  type BookingStatement, type StatementTotals,
+} from '@/lib/api/charges';
 
-// ─── Types ────────────────────────────────────────────────────────────────────
-
-type BookingType = 'EXPORT' | 'IMPORT';
-type OrderType = 'EXP CY/CY' | 'EXP CY/CFS' | 'IMP CY/CY' | 'IMP CFS/CY' | 'TRANSHIP';
-type PaymentTerm = 'CREDIT' | 'CASH' | 'FREE' | 'PREPAID';
-type StatementStatus = 'Draft' | 'Ready' | 'Invoiced' | 'Partial';
-type ChargeStatus = 'Pending' | 'Invoiced' | 'Waived' | 'Cancelled';
-type DiscountType = 'NONE' | 'AMT' | 'PCT';
-type ChargeType = 'GENERAL' | 'STORAGE' | 'DEMURRAGE' | 'VAS' | 'SURCHARGE';
-type BillingUnit = 'UNIT' | 'DAY' | 'TON' | 'BAG' | 'TRIP';
-
-interface ChargeRow {
-  id: string;
-  chargeCode: string;
-  chargeDesc: string;
-  containerNo: string;
-  containerKey: string;
-  size: string;
-  ctrType: string;
-  movementCode: string;
-  paymentTerm: PaymentTerm;
-  paymentTo: 'CUSTOMER' | 'AGENT' | 'LINE';
-  qty: number;
-  originalRate: number;
-  discountType: DiscountType;
-  discountRate: number;
-  sellingRate: number;
-  quotation: string;
-  chargeType: ChargeType;
-  billingUnit: BillingUnit;
-  truckCategory: string;
-  cargoCategory: string;
-  billedTo: 'CUSTOMER' | 'AGENT';
-  isWaived: boolean;
-  waivedBy: string;
-  waivedOn: string;
-  waiverReason: string;
-  isLocked: boolean;
-  paidAmount: number;
-  status: ChargeStatus;
-  createdBy: string;
-  createdOn: string;
-}
-
-interface BookingStatement {
-  bookingNo: string;
-  blNo: string;
-  orderNo: string;
-  agentCode: string;
-  agentName: string;
-  customerCode: string;
-  customerName: string;
-  bookingType: BookingType;
-  orderType: OrderType;
-  subBlNo: string;
-  vesselVoyage: string;
-  containers: string[];
-  totalBillable: number;
-  billedAmount: number;
-  status: StatementStatus;
-  createdBy: string;
-  createdOn: string;
-  modifiedBy: string;
-  modifiedOn: string;
-  charges: ChargeRow[];
-}
-
-// ─── Sample Data ──────────────────────────────────────────────────────────────
-
-const STATEMENTS: BookingStatement[] = [
-  {
-    bookingNo: 'ANSLCH06112625',
-    blNo: 'ANSLCH06112625',
-    orderNo: 'ESCT1260400612',
-    agentCode: 'ASEAEN-TH',
-    agentName: 'Fujitrans (Thailand) Co. Ltd',
-    customerCode: 'C-00892',
-    customerName: 'TCL Electronics (Thailand) Co. Ltd',
-    bookingType: 'EXPORT',
-    orderType: 'EXP CY/CY',
-    subBlNo: 'ANSLCH06112625',
-    vesselVoyage: 'EVER GOLDEN / 042W',
-    containers: ['AXEU6002050', 'AXEU6017830'],
-    totalBillable: 4765.42,
-    billedAmount: 1132.71,
-    status: 'Draft',
-    createdBy: 'EDI',
-    createdOn: '2026-04-03 10:56',
-    modifiedBy: 'SOMPORN',
-    modifiedOn: '2026-04-05 09:12',
-    charges: [
-      { id: 'c1',  chargeCode: 'SA001-CA', chargeDesc: 'Terminal Access Fee',      containerNo: 'AXEU6002050', containerKey: 'CNT-001', size: '40', ctrType: 'HC', movementCode: 'FULL IN',  paymentTerm: 'CASH',   paymentTo: 'CUSTOMER', qty: 1, originalRate: 200.00, discountType: 'NONE', discountRate: 0, sellingRate: 200.00, quotation: 'STANDARD_240', chargeType: 'GENERAL',   billingUnit: 'UNIT', truckCategory: '', cargoCategory: '', billedTo: 'CUSTOMER', isWaived: false, waivedBy: '', waivedOn: '', waiverReason: '', isLocked: false, paidAmount: 0,      status: 'Pending',  createdBy: 'EDI', createdOn: '2026-04-03 10:56' },
-      { id: 'c2',  chargeCode: 'SL003-CA', chargeDesc: 'Lift-On laden',            containerNo: 'AXEU6002050', containerKey: 'CNT-001', size: '40', ctrType: 'HC', movementCode: 'FULL IN',  paymentTerm: 'CASH',   paymentTo: 'CUSTOMER', qty: 1, originalRate: 900.00, discountType: 'NONE', discountRate: 0, sellingRate: 900.00, quotation: 'STANDARD_240', chargeType: 'GENERAL',   billingUnit: 'UNIT', truckCategory: '', cargoCategory: '', billedTo: 'CUSTOMER', isWaived: false, waivedBy: '', waivedOn: '', waiverReason: '', isLocked: false, paidAmount: 0,      status: 'Pending',  createdBy: 'EDI', createdOn: '2026-04-03 10:56' },
-      { id: 'c3',  chargeCode: 'SW001-CA', chargeDesc: 'Wharfage',                 containerNo: 'AXEU6002050', containerKey: 'CNT-001', size: '40', ctrType: 'HC', movementCode: 'FULL IN',  paymentTerm: 'CASH',   paymentTo: 'CUSTOMER', qty: 1, originalRate:  32.71, discountType: 'NONE', discountRate: 0, sellingRate:  32.71, quotation: 'STANDARD_240', chargeType: 'GENERAL',   billingUnit: 'UNIT', truckCategory: '', cargoCategory: '', billedTo: 'CUSTOMER', isWaived: false, waivedBy: '', waivedOn: '', waiverReason: '', isLocked: false, paidAmount: 0,      status: 'Pending',  createdBy: 'EDI', createdOn: '2026-04-03 10:56' },
-      { id: 'c4',  chargeCode: 'SF001-CA', chargeDesc: 'Lift-Off empty return',    containerNo: 'AXEU6002050', containerKey: 'CNT-001', size: '40', ctrType: 'HC', movementCode: 'FULL OUT', paymentTerm: 'FREE',   paymentTo: 'CUSTOMER', qty: 1, originalRate:   0.00, discountType: 'NONE', discountRate: 0, sellingRate:   0.00, quotation: '',             chargeType: 'GENERAL',   billingUnit: 'UNIT', truckCategory: '', cargoCategory: '', billedTo: 'CUSTOMER', isWaived: false, waivedBy: '', waivedOn: '', waiverReason: '', isLocked: false, paidAmount: 0,      status: 'Pending',  createdBy: 'EDI', createdOn: '2026-04-03 10:56' },
-      { id: 'c5',  chargeCode: 'SA001-CA', chargeDesc: 'Terminal Access Fee',      containerNo: 'AXEU6017830', containerKey: 'CNT-002', size: '40', ctrType: 'HC', movementCode: 'FULL IN',  paymentTerm: 'CASH',   paymentTo: 'CUSTOMER', qty: 1, originalRate: 200.00, discountType: 'NONE', discountRate: 0, sellingRate: 200.00, quotation: 'STANDARD_240', chargeType: 'GENERAL',   billingUnit: 'UNIT', truckCategory: '', cargoCategory: '', billedTo: 'CUSTOMER', isWaived: false, waivedBy: '', waivedOn: '', waiverReason: '', isLocked: false, paidAmount: 200.00, status: 'Invoiced', createdBy: 'EDI', createdOn: '2026-04-03 10:56' },
-      { id: 'c6',  chargeCode: 'SL003-CA', chargeDesc: 'Lift-On laden',            containerNo: 'AXEU6017830', containerKey: 'CNT-002', size: '40', ctrType: 'HC', movementCode: 'FULL IN',  paymentTerm: 'CASH',   paymentTo: 'CUSTOMER', qty: 1, originalRate: 900.00, discountType: 'NONE', discountRate: 0, sellingRate: 900.00, quotation: 'STANDARD_240', chargeType: 'GENERAL',   billingUnit: 'UNIT', truckCategory: '', cargoCategory: '', billedTo: 'CUSTOMER', isWaived: false, waivedBy: '', waivedOn: '', waiverReason: '', isLocked: true,  paidAmount: 900.00, status: 'Invoiced', createdBy: 'EDI', createdOn: '2026-04-03 10:56' },
-      { id: 'c7',  chargeCode: 'SW001-CA', chargeDesc: 'Wharfage',                 containerNo: 'AXEU6017830', containerKey: 'CNT-002', size: '40', ctrType: 'HC', movementCode: 'FULL IN',  paymentTerm: 'CASH',   paymentTo: 'CUSTOMER', qty: 1, originalRate:  32.71, discountType: 'NONE', discountRate: 0, sellingRate:  32.71, quotation: 'STANDARD_240', chargeType: 'GENERAL',   billingUnit: 'UNIT', truckCategory: '', cargoCategory: '', billedTo: 'CUSTOMER', isWaived: false, waivedBy: '', waivedOn: '', waiverReason: '', isLocked: false, paidAmount:  32.71, status: 'Invoiced', createdBy: 'EDI', createdOn: '2026-04-03 10:56' },
-      { id: 'c8',  chargeCode: 'STORAGE-L',chargeDesc: 'Storage laden (4 days)',   containerNo: 'AXEU6002050', containerKey: 'CNT-001', size: '40', ctrType: 'HC', movementCode: 'FULL IN',  paymentTerm: 'CREDIT', paymentTo: 'CUSTOMER', qty: 4, originalRate:  80.00, discountType: 'NONE', discountRate: 0, sellingRate:  80.00, quotation: 'STANDARD_240', chargeType: 'STORAGE',   billingUnit: 'DAY',  truckCategory: '', cargoCategory: '', billedTo: 'CUSTOMER', isWaived: false, waivedBy: '', waivedOn: '', waiverReason: '', isLocked: false, paidAmount: 0,      status: 'Pending',  createdBy: 'EDI', createdOn: '2026-04-03 10:56' },
-      { id: 'c9',  chargeCode: 'RF-PLUG',  chargeDesc: 'Reefer monitoring',        containerNo: 'AXEU6017830', containerKey: 'CNT-002', size: '40', ctrType: 'HC', movementCode: 'FULL IN',  paymentTerm: 'CREDIT', paymentTo: 'CUSTOMER', qty: 2, originalRate: 420.00, discountType: 'NONE', discountRate: 0, sellingRate: 420.00, quotation: 'STANDARD_240', chargeType: 'VAS',       billingUnit: 'DAY',  truckCategory: '', cargoCategory: '', billedTo: 'CUSTOMER', isWaived: false, waivedBy: '', waivedOn: '', waiverReason: '', isLocked: true,  paidAmount: 0,      status: 'Pending',  createdBy: 'EDI', createdOn: '2026-04-03 10:56' },
-    ],
-  },
-  {
-    bookingNo: '2324935800',
-    blNo: '2324935800',
-    orderNo: 'ESCT1260400463',
-    agentCode: 'OOCL-TH',
-    agentName: 'Orient Overseas Container Line (Thailand)',
-    customerCode: 'C-00629',
-    customerName: 'Thai Agri Foods Public Co.',
-    bookingType: 'EXPORT',
-    orderType: 'EXP CY/CY',
-    subBlNo: '2324935800',
-    vesselVoyage: 'OOCL THAILAND / 038E',
-    containers: ['OOLU2021001', 'OOLU2021002'],
-    totalBillable: 882.71,
-    billedAmount: 0,
-    status: 'Ready',
-    createdBy: 'EDI',
-    createdOn: '2026-04-03 13:11',
-    modifiedBy: 'EDI',
-    modifiedOn: '2026-04-03 13:11',
-    charges: [
-      { id: 'd1', chargeCode: 'SA001-CA', chargeDesc: 'Terminal Access Fee', containerNo: 'OOLU2021001', containerKey: 'CNT-010', size: '40', ctrType: 'GP', movementCode: 'FULL IN', paymentTerm: 'CASH',   paymentTo: 'CUSTOMER', qty: 1, originalRate: 200.00, discountType: 'NONE', discountRate: 0, sellingRate: 200.00, quotation: 'STANDARD_240', chargeType: 'GENERAL', billingUnit: 'UNIT', truckCategory: '', cargoCategory: '', billedTo: 'CUSTOMER', isWaived: false, waivedBy: '', waivedOn: '', waiverReason: '', isLocked: false, paidAmount: 0, status: 'Pending', createdBy: 'EDI', createdOn: '2026-04-03 13:11' },
-      { id: 'd2', chargeCode: 'SL003-CA', chargeDesc: 'Lift-On laden',        containerNo: 'OOLU2021001', containerKey: 'CNT-010', size: '40', ctrType: 'GP', movementCode: 'FULL IN', paymentTerm: 'CASH',   paymentTo: 'CUSTOMER', qty: 1, originalRate: 500.00, discountType: 'NONE', discountRate: 0, sellingRate: 500.00, quotation: 'STANDARD_240', chargeType: 'GENERAL', billingUnit: 'UNIT', truckCategory: '', cargoCategory: '', billedTo: 'CUSTOMER', isWaived: false, waivedBy: '', waivedOn: '', waiverReason: '', isLocked: false, paidAmount: 0, status: 'Pending', createdBy: 'EDI', createdOn: '2026-04-03 13:11' },
-      { id: 'd3', chargeCode: 'SW001-CA', chargeDesc: 'Wharfage',             containerNo: 'OOLU2021001', containerKey: 'CNT-010', size: '40', ctrType: 'GP', movementCode: 'FULL IN', paymentTerm: 'CASH',   paymentTo: 'CUSTOMER', qty: 1, originalRate:  32.71, discountType: 'NONE', discountRate: 0, sellingRate:  32.71, quotation: 'STANDARD_240', chargeType: 'GENERAL', billingUnit: 'UNIT', truckCategory: '', cargoCategory: '', billedTo: 'CUSTOMER', isWaived: false, waivedBy: '', waivedOn: '', waiverReason: '', isLocked: false, paidAmount: 0, status: 'Pending', createdBy: 'EDI', createdOn: '2026-04-03 13:11' },
-      { id: 'd4', chargeCode: 'VAS-DOC',  chargeDesc: 'Documentation fee',   containerNo: 'OOLU2021002', containerKey: 'CNT-011', size: '40', ctrType: 'GP', movementCode: 'FULL IN', paymentTerm: 'CASH',   paymentTo: 'CUSTOMER', qty: 1, originalRate: 150.00, discountType: 'NONE', discountRate: 0, sellingRate: 150.00, quotation: 'STANDARD_240', chargeType: 'VAS',     billingUnit: 'UNIT', truckCategory: '', cargoCategory: '', billedTo: 'CUSTOMER', isWaived: false, waivedBy: '', waivedOn: '', waiverReason: '', isLocked: false, paidAmount: 0, status: 'Pending', createdBy: 'EDI', createdOn: '2026-04-03 13:11' },
-    ],
-  },
-  {
-    bookingNo: 'BKGTH20260412',
-    blNo: 'BKGTH20260412',
-    orderNo: 'ESCT1260400501',
-    agentCode: 'MAEU-TH',
-    agentName: 'Maersk Line (Thailand)',
-    customerCode: 'C-00142',
-    customerName: 'Thai Union Group PCL',
-    bookingType: 'IMPORT',
-    orderType: 'IMP CY/CY',
-    subBlNo: 'BKGTH20260412',
-    vesselVoyage: 'MAERSK SENTOSA / 041W',
-    containers: ['MSKU7441823', 'MSKU7441824', 'MSKU7441825'],
-    totalBillable: 2100,
-    billedAmount: 0,
-    status: 'Draft',
-    createdBy: 'SOMPORN',
-    createdOn: '2026-04-12 09:30',
-    modifiedBy: 'SOMPORN',
-    modifiedOn: '2026-04-12 09:30',
-    charges: [
-      { id: 'e1', chargeCode: 'SA002-CA',  chargeDesc: 'Terminal Handling Charge', containerNo: 'MSKU7441823', containerKey: 'CNT-020', size: '20', ctrType: 'GP', movementCode: 'FULL IN',  paymentTerm: 'CREDIT', paymentTo: 'CUSTOMER', qty: 1, originalRate: 700.00, discountType: 'NONE', discountRate: 0, sellingRate: 700.00, quotation: 'IMP_RATE_001', chargeType: 'GENERAL', billingUnit: 'UNIT', truckCategory: '', cargoCategory: '', billedTo: 'CUSTOMER', isWaived: false, waivedBy: '', waivedOn: '', waiverReason: '', isLocked: false, paidAmount: 0, status: 'Pending', createdBy: 'SOMPORN', createdOn: '2026-04-12 09:30' },
-      { id: 'e2', chargeCode: 'SL001-CA',  chargeDesc: 'Lift-Off laden',           containerNo: 'MSKU7441824', containerKey: 'CNT-021', size: '20', ctrType: 'GP', movementCode: 'FULL OUT', paymentTerm: 'CREDIT', paymentTo: 'CUSTOMER', qty: 1, originalRate: 900.00, discountType: 'NONE', discountRate: 0, sellingRate: 900.00, quotation: 'IMP_RATE_001', chargeType: 'GENERAL', billingUnit: 'UNIT', truckCategory: '', cargoCategory: '', billedTo: 'CUSTOMER', isWaived: false, waivedBy: '', waivedOn: '', waiverReason: '', isLocked: false, paidAmount: 0, status: 'Pending', createdBy: 'SOMPORN', createdOn: '2026-04-12 09:30' },
-      { id: 'e3', chargeCode: 'STORAGE-I', chargeDesc: 'Storage import laden',     containerNo: 'MSKU7441825', containerKey: 'CNT-022', size: '20', ctrType: 'GP', movementCode: 'FULL IN',  paymentTerm: 'CREDIT', paymentTo: 'CUSTOMER', qty: 3, originalRate: 166.67, discountType: 'NONE', discountRate: 0, sellingRate: 166.67, quotation: 'IMP_RATE_001', chargeType: 'STORAGE', billingUnit: 'DAY',  truckCategory: '', cargoCategory: '', billedTo: 'CUSTOMER', isWaived: false, waivedBy: '', waivedOn: '', waiverReason: '', isLocked: false, paidAmount: 0, status: 'Pending', createdBy: 'SOMPORN', createdOn: '2026-04-12 09:30' },
-    ],
-  },
-  {
-    bookingNo: 'CMAUTH0420261',
-    blNo: 'CMAUTH0420261',
-    orderNo: 'ESCT1260400522',
-    agentCode: 'CMA-TH',
-    agentName: 'CMA CGM (Thailand)',
-    customerCode: 'C-00308',
-    customerName: 'PTT Global Chemical',
-    bookingType: 'EXPORT',
-    orderType: 'EXP CY/CFS',
-    subBlNo: 'CMAUTH0420261',
-    vesselVoyage: 'CMA CGM TITUS / 019W',
-    containers: ['CMAU8812345'],
-    totalBillable: 1650,
-    billedAmount: 1650,
-    status: 'Invoiced',
-    createdBy: 'EDI',
-    createdOn: '2026-04-15 08:45',
-    modifiedBy: 'WANCHAI',
-    modifiedOn: '2026-04-18 14:20',
-    charges: [
-      { id: 'f1', chargeCode: 'SA001-CA', chargeDesc: 'Terminal Access Fee', containerNo: 'CMAU8812345', containerKey: 'CNT-030', size: '40', ctrType: 'GP', movementCode: 'FULL IN',  paymentTerm: 'CASH', paymentTo: 'CUSTOMER', qty: 1, originalRate: 200.00, discountType: 'NONE', discountRate: 0, sellingRate: 200.00, quotation: 'STANDARD_240', chargeType: 'GENERAL', billingUnit: 'UNIT', truckCategory: '', cargoCategory: '', billedTo: 'CUSTOMER', isWaived: false, waivedBy: '', waivedOn: '', waiverReason: '', isLocked: false, paidAmount: 200.00, status: 'Invoiced', createdBy: 'EDI', createdOn: '2026-04-15 08:45' },
-      { id: 'f2', chargeCode: 'SL003-CA', chargeDesc: 'Lift-On laden',        containerNo: 'CMAU8812345', containerKey: 'CNT-030', size: '40', ctrType: 'GP', movementCode: 'FULL IN',  paymentTerm: 'CASH', paymentTo: 'CUSTOMER', qty: 1, originalRate: 900.00, discountType: 'NONE', discountRate: 0, sellingRate: 900.00, quotation: 'STANDARD_240', chargeType: 'GENERAL', billingUnit: 'UNIT', truckCategory: '', cargoCategory: '', billedTo: 'CUSTOMER', isWaived: false, waivedBy: '', waivedOn: '', waiverReason: '', isLocked: true,  paidAmount: 900.00, status: 'Invoiced', createdBy: 'EDI', createdOn: '2026-04-15 08:45' },
-      { id: 'f3', chargeCode: 'SW001-CA', chargeDesc: 'Wharfage',             containerNo: 'CMAU8812345', containerKey: 'CNT-030', size: '40', ctrType: 'GP', movementCode: 'FULL IN',  paymentTerm: 'CASH', paymentTo: 'CUSTOMER', qty: 1, originalRate: 550.00, discountType: 'NONE', discountRate: 0, sellingRate: 550.00, quotation: 'STANDARD_240', chargeType: 'GENERAL', billingUnit: 'UNIT', truckCategory: '', cargoCategory: '', billedTo: 'CUSTOMER', isWaived: false, waivedBy: '', waivedOn: '', waiverReason: '', isLocked: false, paidAmount: 550.00, status: 'Invoiced', createdBy: 'EDI', createdOn: '2026-04-15 08:45' },
-    ],
-  },
-  {
-    bookingNo: 'HLCTH20260420',
-    blNo: 'HLCTH20260420',
-    orderNo: 'ESCT1260400588',
-    agentCode: 'HLC-TH',
-    agentName: 'Hapag-Lloyd (Thailand)',
-    customerCode: 'C-00412',
-    customerName: 'CP Foods Co.',
-    bookingType: 'IMPORT',
-    orderType: 'IMP CFS/CY',
-    subBlNo: 'HLCTH20260420',
-    vesselVoyage: 'HAPAG LLOYD EXPRESS / 022E',
-    containers: ['HLXU4419208'],
-    totalBillable: 2840,
-    billedAmount: 840,
-    status: 'Partial',
-    createdBy: 'EDI',
-    createdOn: '2026-04-20 11:00',
-    modifiedBy: 'EDI',
-    modifiedOn: '2026-04-21 08:30',
-    charges: [
-      { id: 'g1', chargeCode: 'SA002-CA',  chargeDesc: 'Terminal Handling Charge', containerNo: 'HLXU4419208', containerKey: 'CNT-040', size: '40', ctrType: 'GP', movementCode: 'FULL IN',  paymentTerm: 'CASH',   paymentTo: 'CUSTOMER', qty: 1, originalRate:  500.00, discountType: 'NONE', discountRate: 0, sellingRate:  500.00, quotation: 'IMP_RATE_002', chargeType: 'GENERAL',   billingUnit: 'UNIT', truckCategory: '', cargoCategory: '', billedTo: 'CUSTOMER', isWaived: false, waivedBy: '', waivedOn: '', waiverReason: '', isLocked: false, paidAmount: 500.00, status: 'Invoiced', createdBy: 'EDI', createdOn: '2026-04-20 11:00' },
-      { id: 'g2', chargeCode: 'SL001-CA',  chargeDesc: 'Lift-Off laden',           containerNo: 'HLXU4419208', containerKey: 'CNT-040', size: '40', ctrType: 'GP', movementCode: 'FULL OUT', paymentTerm: 'CASH',   paymentTo: 'CUSTOMER', qty: 1, originalRate:  340.00, discountType: 'NONE', discountRate: 0, sellingRate:  340.00, quotation: 'IMP_RATE_002', chargeType: 'GENERAL',   billingUnit: 'UNIT', truckCategory: '', cargoCategory: '', billedTo: 'CUSTOMER', isWaived: false, waivedBy: '', waivedOn: '', waiverReason: '', isLocked: true,  paidAmount: 340.00, status: 'Invoiced', createdBy: 'EDI', createdOn: '2026-04-20 11:00' },
-      { id: 'g3', chargeCode: 'STORAGE-I', chargeDesc: 'Storage import laden',     containerNo: 'HLXU4419208', containerKey: 'CNT-040', size: '40', ctrType: 'GP', movementCode: 'FULL IN',  paymentTerm: 'CREDIT', paymentTo: 'CUSTOMER', qty: 5, originalRate:  200.00, discountType: 'NONE', discountRate: 0, sellingRate:  200.00, quotation: 'IMP_RATE_002', chargeType: 'STORAGE',   billingUnit: 'DAY',  truckCategory: '', cargoCategory: '', billedTo: 'CUSTOMER', isWaived: false, waivedBy: '', waivedOn: '', waiverReason: '', isLocked: false, paidAmount: 0,      status: 'Pending',  createdBy: 'EDI', createdOn: '2026-04-20 11:00' },
-      { id: 'g4', chargeCode: 'DEM-CONT',  chargeDesc: 'Demurrage (container)',    containerNo: 'HLXU4419208', containerKey: 'CNT-040', size: '40', ctrType: 'GP', movementCode: 'FULL IN',  paymentTerm: 'CREDIT', paymentTo: 'CUSTOMER', qty: 3, originalRate:  300.00, discountType: 'NONE', discountRate: 0, sellingRate:  300.00, quotation: 'IMP_RATE_002', chargeType: 'DEMURRAGE', billingUnit: 'DAY',  truckCategory: '', cargoCategory: '', billedTo: 'CUSTOMER', isWaived: false, waivedBy: '', waivedOn: '', waiverReason: '', isLocked: false, paidAmount: 0,      status: 'Pending',  createdBy: 'EDI', createdOn: '2026-04-20 11:00' },
-    ],
-  },
-];
-
-// ─── Helpers ──────────────────────────────────────────────────────────────────
-
-function fmt(n: number): string {
-  return '฿' + n.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
-}
-
-// ─── Badges ───────────────────────────────────────────────────────────────────
-
-function StatementStatusBadge({ status }: { status: StatementStatus }) {
-  const MAP: Record<StatementStatus, { bg: string; color: string }> = {
-    Draft:    { bg: 'var(--gecko-gray-200)',    color: 'var(--gecko-text-secondary)' },
-    Ready:    { bg: 'var(--gecko-info-100)',    color: 'var(--gecko-info-700)'       },
-    Invoiced: { bg: 'var(--gecko-success-100)', color: 'var(--gecko-success-700)'   },
-    Partial:  { bg: 'var(--gecko-warning-100)', color: 'var(--gecko-warning-700)'   },
-  };
-  const s = MAP[status];
-  return <span style={{ background: s.bg, color: s.color, padding: '2px 8px', borderRadius: 12, fontSize: 11, fontWeight: 700, whiteSpace: 'nowrap' }}>{status}</span>;
-}
-
-function ChargeStatusBadge({ status }: { status: ChargeStatus }) {
-  const MAP: Record<ChargeStatus, { bg: string; color: string }> = {
-    Pending:   { bg: 'var(--gecko-warning-100)', color: 'var(--gecko-warning-700)'    },
-    Invoiced:  { bg: 'var(--gecko-success-100)', color: 'var(--gecko-success-700)'    },
-    Waived:    { bg: 'var(--gecko-info-100)',    color: 'var(--gecko-info-700)'        },
-    Cancelled: { bg: 'var(--gecko-gray-200)',    color: 'var(--gecko-text-secondary)' },
-  };
-  const s = MAP[status];
-  return <span style={{ background: s.bg, color: s.color, padding: '2px 8px', borderRadius: 12, fontSize: 11, fontWeight: 700, whiteSpace: 'nowrap' }}>{status}</span>;
-}
-
-function PaymentTermBadge({ term }: { term: PaymentTerm }) {
-  const MAP: Record<PaymentTerm, { bg: string; color: string }> = {
-    CASH:    { bg: 'var(--gecko-gray-100)',    color: 'var(--gecko-gray-600)'        },
-    CREDIT:  { bg: 'var(--gecko-info-100)',    color: 'var(--gecko-info-700)'        },
-    FREE:    { bg: 'var(--gecko-success-50)',  color: 'var(--gecko-success-600)'     },
-    PREPAID: { bg: 'var(--gecko-warning-100)', color: 'var(--gecko-warning-700)'     },
-  };
-  const s = MAP[term];
-  return <span style={{ background: s.bg, color: s.color, padding: '2px 7px', borderRadius: 10, fontSize: 11, fontWeight: 700, whiteSpace: 'nowrap' }}>{term}</span>;
-}
-
-function BookingTypeBadge({ type }: { type: BookingType }) {
-  const tone = type === 'EXPORT' ? 'primary' : 'info';
-  return <span className={`gecko-pill gecko-pill-${tone}`}>{type}</span>;
-}
-
-// ─── Section Header ───────────────────────────────────────────────────────────
-
-function SectionHead({ title }: { title: string }) {
+export default function BookingStatementPage() {
   return (
-    <div
-      className="gecko-eyebrow gecko-mb-3"
-      style={{
-        color: 'var(--gecko-primary-600)',
-        paddingBottom: 7,
-        borderBottom: '2px solid rgba(37,99,235,0.12)',
-      }}
-    >
-      {title}
-    </div>
+    <Suspense fallback={<div className="gecko-cell-meta" style={{ padding: 24 }}>Loading…</div>}>
+      <Statement />
+    </Suspense>
   );
 }
 
-// ─── Modal Close ──────────────────────────────────────────────────────────────
+function Statement() {
+  const router = useRouter();
+  const pathname = usePathname();
+  const params = useSearchParams();
+  const orderNo = (params.get('orderNo') ?? '').trim().toUpperCase();
+  const [typed, setTyped] = useState(orderNo);
 
-function ModalCloseBtn({ onClose }: { onClose: () => void }) {
-  return (
-    <button onClick={onClose} className="gecko-icon-btn-ghost" style={{ width: 32, height: 32, fontSize: 17 }}>×</button>
-  );
-}
+  const statement = useApi<BookingStatement>(orderNo ? statementPath(orderNo) : null);
+  const s = orderNo ? statement.data : null;
+  const cur = s?.receipts[0]?.currencyCode ?? s?.boxes.flatMap(b => b.lines)[0]?.charge.currencyCode ?? 'THB';
+  const m = (v: number) => money(v, cur);
 
-// ─── Toggle ───────────────────────────────────────────────────────────────────
-
-function Toggle({ value, onChange, colorOn }: { value: boolean; onChange: (v: boolean) => void; colorOn?: string }) {
-  // colorOn is a dynamic tone override (caller may pass warning-600 instead of default primary-600).
-  // Use the CSS-driven .gecko-toggle primitive; override the track background when checked via inline.
-  return (
-    <label className="gecko-toggle" onClick={(e) => e.stopPropagation()}>
-      <input type="checkbox" checked={value} onChange={(e) => onChange(e.target.checked)} />
-      <span
-        className="gecko-toggle-track"
-        style={value && colorOn ? { background: colorOn } : undefined}
-      >
-        <span className="gecko-toggle-thumb" />
-      </span>
-    </label>
-  );
-}
-
-// ─── Filter / Sort Config ─────────────────────────────────────────────────────
-
-const STMT_FILTER_FIELDS: FilterField[] = [
-  { type: 'search', key: 'query', placeholder: 'Booking No, BL No, Order No...' },
-  { type: 'select', key: 'bookingType', label: 'Booking Type', options: [{ label: 'All', value: '' }, { label: 'EXPORT', value: 'EXPORT' }, { label: 'IMPORT', value: 'IMPORT' }] },
-  { type: 'select', key: 'orderType', label: 'Order Type', options: [{ label: 'All', value: '' }, { label: 'EXP CY/CY', value: 'EXP CY/CY' }, { label: 'EXP CY/CFS', value: 'EXP CY/CFS' }, { label: 'IMP CY/CY', value: 'IMP CY/CY' }, { label: 'IMP CFS/CY', value: 'IMP CFS/CY' }, { label: 'TRANSHIP', value: 'TRANSHIP' }] },
-  { type: 'select', key: 'agent', label: 'Agent', options: [{ label: 'All', value: '' }, { label: 'ASEAEN-TH', value: 'ASEAEN-TH' }, { label: 'OOCL-TH', value: 'OOCL-TH' }, { label: 'MAEU-TH', value: 'MAEU-TH' }, { label: 'CMA-TH', value: 'CMA-TH' }, { label: 'HLC-TH', value: 'HLC-TH' }] },
-  { type: 'select', key: 'customer', label: 'Customer', options: [{ label: 'All', value: '' }, { label: 'C-00142', value: 'C-00142' }, { label: 'C-00308', value: 'C-00308' }, { label: 'C-00412', value: 'C-00412' }, { label: 'C-00629', value: 'C-00629' }, { label: 'C-00892', value: 'C-00892' }] },
-  { type: 'select', key: 'status', label: 'Status', options: [{ label: 'All', value: '' }, { label: 'Draft', value: 'Draft' }, { label: 'Ready', value: 'Ready' }, { label: 'Invoiced', value: 'Invoiced' }, { label: 'Partial', value: 'Partial' }] },
-  { type: 'select', key: 'date', label: 'Date', options: [{ label: 'All time', value: '' }, { label: 'Today', value: 'today' }, { label: 'Last 7 days', value: '7d' }, { label: 'Last 30 days', value: '30d' }] },
-];
-
-const STMT_SORT_OPTIONS: SortOption[] = [
-  { label: 'Date (newest)', value: 'date_desc' },
-  { label: 'Booking No', value: 'bookingNo' },
-  { label: 'Unbilled (high → low)', value: 'unbilled_desc' },
-  { label: 'Customer', value: 'customer' },
-];
-
-// ─── EMPTY CHARGE ─────────────────────────────────────────────────────────────
-
-const EMPTY_CHARGE: ChargeRow = {
-  id: '',
-  chargeCode: '',
-  chargeDesc: '',
-  containerNo: '',
-  containerKey: '',
-  size: '40',
-  ctrType: 'GP',
-  movementCode: 'FULL IN',
-  paymentTerm: 'CASH',
-  paymentTo: 'CUSTOMER',
-  qty: 1,
-  originalRate: 0,
-  discountType: 'NONE',
-  discountRate: 0,
-  sellingRate: 0,
-  quotation: '',
-  chargeType: 'GENERAL',
-  billingUnit: 'UNIT',
-  truckCategory: '',
-  cargoCategory: '',
-  billedTo: 'CUSTOMER',
-  isWaived: false,
-  waivedBy: '',
-  waivedOn: '',
-  waiverReason: '',
-  isLocked: false,
-  paidAmount: 0,
-  status: 'Pending',
-  createdBy: '',
-  createdOn: '',
-};
-
-// ─── ChargeDetailModal ────────────────────────────────────────────────────────
-
-type ApplyTo = 'this' | 'all' | 'select';
-
-interface ChargeDetailModalProps {
-  charge: ChargeRow;
-  isNew: boolean;
-  containers: string[];
-  onClose: () => void;
-}
-
-function ChargeDetailModal({ charge, isNew, containers, onClose }: ChargeDetailModalProps) {
-  const [form, setForm] = useState<ChargeRow>({ ...charge });
-  const [applyTo, setApplyTo] = useState<ApplyTo>('this');
-  const [selectedContainers, setSelectedContainers] = useState<Set<string>>(new Set(containers));
-  const { toast } = useToast();
-  const handleSaveCharge = () => {
-    if (!canSave) return;
-    toast({ variant: 'success', title: isNew ? 'Charge added' : 'Charge updated', message: `${form.chargeCode} · ${form.chargeDesc}` });
-    onClose();
+  const open = (e: React.FormEvent) => {
+    e.preventDefault();
+    const no = typed.trim().toUpperCase();
+    router.replace(no ? `${pathname}?orderNo=${encodeURIComponent(no)}` : pathname);
   };
 
-  const set = useCallback((partial: Partial<ChargeRow>) => {
-    setForm(prev => {
-      const next = { ...prev, ...partial };
-      if ('originalRate' in partial || 'discountType' in partial || 'discountRate' in partial) {
-        if (next.discountType === 'NONE') next.sellingRate = next.originalRate;
-        else if (next.discountType === 'AMT') next.sellingRate = Math.max(0, next.originalRate - next.discountRate);
-        else next.sellingRate = Math.max(0, next.originalRate * (1 - next.discountRate / 100));
-      }
-      return next;
-    });
-  }, []);
-
-  const canSave = form.chargeCode.trim() !== '' && form.chargeDesc.trim() !== '';
-  const totalAmount = form.sellingRate * form.qty;
-
-  const toggleCtr = (c: string) => {
-    setSelectedContainers(prev => {
-      const next = new Set(prev);
-      if (next.has(c)) next.delete(c); else next.add(c);
-      return next;
-    });
+  const exportCsv = () => {
+    if (!s) return;
+    const rows = s.boxes.flatMap(b => b.lines.map(l => [
+      b.containerNo ?? '', l.charge.movementCode, l.charge.chargeCode, l.charge.chargeName, l.charge.billTo, l.charge.paymentTermCode,
+      l.charge.payerCode, l.charge.quantity, l.charge.unitRate, l.charge.amount, l.charge.taxAmount, l.charge.total,
+      l.charge.status, l.receiptNo, l.charge.waiveReason ?? l.charge.cancelReason, l.charge.createdAt,
+    ]));
+    saveBlob(toCsv(['Container', 'Movement', 'Charge', 'Name', 'Bill to', 'Term', 'Payer', 'Qty', 'Unit rate', 'Amount', 'VAT', 'Total',
+      'Status', 'Receipt', 'Reason', 'Created'], rows), `statement-${s.orderNo}.csv`);
   };
 
   return (
-    <div className="gecko-overlay" onClick={e => { if (e.target === e.currentTarget) onClose(); }}>
-      <div className="gecko-modal gecko-modal-lg gecko-stack gecko-stack-xs">
+    <div className="gecko-stack gecko-stack-xl" style={{ maxWidth: 'var(--gecko-container-max)', margin: '0 auto', paddingBottom: 40 }}>
 
-        {/* Header */}
-        <div
-          className="gecko-modal-header gecko-row-start"
-          style={{ background: 'var(--gecko-primary-50)', borderRadius: '12px 12px 0 0' }}
-        >
-          <div>
-            <div className="gecko-row">
-              <Icon name="fileText" size={16} style={{ color: 'var(--gecko-primary-600)' }} />
-              <span className="gecko-modal-title">
-                {isNew ? 'New Manual Charge' : `Edit Charge — ${charge.chargeCode}`}
-              </span>
-            </div>
-            <div className="gecko-cell-meta">
-              {isNew ? 'Add a manual charge to the booking statement.' : 'Editing charge line. Changes update the cost sheet.'}
-            </div>
+      {/* Header */}
+      <div className="gecko-page-actions">
+        <div className="gecko-page-actions-left">
+          <div className="gecko-row gecko-row-baseline gecko-stack-md">
+            <h1 className="gecko-page-title">Booking Statement</h1>
+            <span className="gecko-badge gecko-badge-success">LIVE</span>
           </div>
-          <ModalCloseBtn onClose={onClose} />
+          <div className="gecko-page-subtitle gecko-mt-1">
+            Everything charged on one booking, box by box, and the receipts that paid it.
+          </div>
         </div>
-
-        {/* Body */}
-        <div className="gecko-modal-body gecko-stack gecko-stack-xl">
-
-          {/* Section 1: Charge Identity */}
-          <div>
-            <SectionHead title="Charge Identity" />
-            <div
-              className="gecko-mb-4"
-              style={{ display: 'grid', gridTemplateColumns: '180px 1fr', gap: 16 }}
-            >
-              <div className="gecko-form-group">
-                <label className="gecko-label gecko-label-required">Charge Code</label>
-                <input className="gecko-input gecko-text-mono" placeholder="e.g. SA001-CA" value={form.chargeCode} onChange={e => set({ chargeCode: e.target.value.toUpperCase() })} style={{ textTransform: 'uppercase', fontWeight: 700 }} />
-              </div>
-              <div className="gecko-form-group">
-                <label className="gecko-label gecko-label-required">Description</label>
-                <input className="gecko-input" placeholder="e.g. Terminal Access Fee" value={form.chargeDesc} onChange={e => set({ chargeDesc: e.target.value })} />
-              </div>
-            </div>
-            <div
-              className="gecko-mb-4"
-              style={{ display: 'grid', gridTemplateColumns: '1fr 80px 80px', gap: 16 }}
-            >
-              <div className="gecko-form-group">
-                <label className="gecko-label">Container No</label>
-                <select className="gecko-input gecko-text-mono" value={form.containerNo} onChange={e => set({ containerNo: e.target.value })}>
-                  <option value="">— select —</option>
-                  {containers.map(c => <option key={c} value={c}>{c}</option>)}
-                </select>
-              </div>
-              <div className="gecko-form-group">
-                <label className="gecko-label">Size</label>
-                <select className="gecko-input" value={form.size} onChange={e => set({ size: e.target.value })}>
-                  <option value="20">20</option>
-                  <option value="40">40</option>
-                  <option value="45">45</option>
-                </select>
-              </div>
-              <div className="gecko-form-group">
-                <label className="gecko-label">Type</label>
-                <select className="gecko-input" value={form.ctrType} onChange={e => set({ ctrType: e.target.value })}>
-                  <option value="GP">GP</option>
-                  <option value="HC">HC</option>
-                  <option value="RF">RF</option>
-                  <option value="OT">OT</option>
-                </select>
-              </div>
-            </div>
-            {/* Apply To */}
-            <div className="gecko-card gecko-card-tight" style={{ background: 'var(--gecko-bg-subtle)' }}>
-              <div className="gecko-eyebrow gecko-mb-3">Apply to</div>
-              <div className="gecko-stack gecko-stack-sm">
-                {(['this', 'all', 'select'] as ApplyTo[]).map(opt => (
-                  <label key={opt} className="gecko-row" style={{ cursor: 'pointer' }}>
-                    <input type="radio" name="applyTo" value={opt} checked={applyTo === opt} onChange={() => setApplyTo(opt)} />
-                    <span>{opt === 'this' ? 'This container only' : opt === 'all' ? 'All containers on booking' : 'Select containers'}</span>
-                  </label>
-                ))}
-              </div>
-              {applyTo === 'select' && (
-                <div className="gecko-row gecko-row-wrap gecko-mt-2">
-                  {containers.map(c => (
-                    <label
-                      key={c}
-                      className="gecko-row gecko-mono"
-                      style={{
-                        gap: 6,
-                        cursor: 'pointer',
-                        padding: '4px 10px',
-                        border: `1px solid ${selectedContainers.has(c) ? 'var(--gecko-primary-400)' : 'var(--gecko-border)'}`,
-                        borderRadius: 6,
-                        background: selectedContainers.has(c) ? 'var(--gecko-primary-50)' : 'var(--gecko-bg-surface)',
-                      }}
-                    >
-                      <input type="checkbox" checked={selectedContainers.has(c)} onChange={() => toggleCtr(c)} />
-                      {c}
-                    </label>
-                  ))}
-                </div>
-              )}
-            </div>
-          </div>
-
-          {/* Section 2: Movement & Billing */}
-          <div>
-            <SectionHead title="Movement & Billing" />
-            <div className="gecko-grid-5">
-              {[
-                { label: 'Movement Code', key: 'movementCode', opts: ['FULL IN','FULL OUT','MTY IN','MTY OUT','TRANSHIP'] },
-                { label: 'Payment Term', key: 'paymentTerm', opts: ['CASH','CREDIT','FREE','PREPAID'] },
-                { label: 'Payment To', key: 'paymentTo', opts: ['CUSTOMER','AGENT','LINE'] },
-                { label: 'Charge Type', key: 'chargeType', opts: ['GENERAL','STORAGE','DEMURRAGE','VAS','SURCHARGE'] },
-                { label: 'Billing Unit', key: 'billingUnit', opts: ['UNIT','DAY','TON','BAG','TRIP'] },
-              ].map(({ label, key, opts }) => (
-                <div key={key} className="gecko-form-group">
-                  <label className="gecko-label">{label}</label>
-                  <select className="gecko-input" value={(form as unknown as Record<string, string>)[key]} onChange={e => set({ [key]: e.target.value } as Partial<ChargeRow>)}>
-                    {opts.map(o => <option key={o} value={o}>{o}</option>)}
-                  </select>
-                </div>
-              ))}
-            </div>
-          </div>
-
-          {/* Section 3: Rates & Discount */}
-          <div>
-            <SectionHead title="Rates & Discount" />
-            <div className="gecko-grid-4 gecko-mb-4">
-              <div className="gecko-form-group">
-                <label className="gecko-label gecko-label-required">Original Rate</label>
-                <div style={{ position: 'relative' }}>
-                  <span style={{ position: 'absolute', left: 10, top: '50%', transform: 'translateY(-50%)', color: 'var(--gecko-text-secondary)', fontSize: 12 }}>฿</span>
-                  <input className="gecko-input gecko-text-mono" type="number" step="0.01" value={form.originalRate} onChange={e => set({ originalRate: parseFloat(e.target.value) || 0 })} style={{ paddingLeft: 22, textAlign: 'right' }} />
-                </div>
-              </div>
-              <div className="gecko-form-group">
-                <label className="gecko-label">Discount Type</label>
-                <select className="gecko-input" value={form.discountType} onChange={e => set({ discountType: e.target.value as DiscountType })}>
-                  <option value="NONE">NONE</option>
-                  <option value="AMT">AMT — Amount</option>
-                  <option value="PCT">PCT — Percentage</option>
-                </select>
-              </div>
-              <div className="gecko-form-group">
-                <label className="gecko-label">Discount Rate</label>
-                <input
-                  className="gecko-input gecko-text-mono"
-                  type="number"
-                  step="0.01"
-                  value={form.discountRate}
-                  onChange={e => set({ discountRate: parseFloat(e.target.value) || 0 })}
-                  disabled={form.discountType === 'NONE'}
-                  style={{ textAlign: 'right', opacity: form.discountType === 'NONE' ? 0.4 : 1 }}
-                />
-              </div>
-              <div className="gecko-form-group">
-                <label className="gecko-label">Selling Rate</label>
-                <div style={{ position: 'relative' }}>
-                  <span style={{ position: 'absolute', left: 10, top: '50%', transform: 'translateY(-50%)', color: 'var(--gecko-text-secondary)', fontSize: 12 }}>฿</span>
-                  <input className="gecko-input gecko-text-mono" type="number" step="0.01" value={form.sellingRate} onChange={e => set({ sellingRate: parseFloat(e.target.value) || 0 })} style={{ paddingLeft: 22, textAlign: 'right' }} />
-                </div>
-              </div>
-            </div>
-            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 2fr', gap: 16, alignItems: 'end' }}>
-              <div className="gecko-form-group">
-                <label className="gecko-label gecko-label-required">Quantity</label>
-                <input className="gecko-input gecko-text-mono" type="number" step="0.001" value={form.qty} onChange={e => set({ qty: parseFloat(e.target.value) || 0 })} style={{ textAlign: 'right' }} />
-              </div>
-              <div className="gecko-form-group">
-                <label className="gecko-label">Total Amount</label>
-                <div style={{ position: 'relative' }}>
-                  <span style={{ position: 'absolute', left: 10, top: '50%', transform: 'translateY(-50%)', color: 'var(--gecko-text-secondary)', fontSize: 12 }}>฿</span>
-                  <input
-                    className="gecko-input gecko-text-mono"
-                    value={totalAmount.toFixed(2)}
-                    readOnly
-                    style={{ paddingLeft: 22, textAlign: 'right', background: 'var(--gecko-bg-subtle)', color: 'var(--gecko-primary-700)', fontWeight: 700 }}
-                  />
-                </div>
-              </div>
-              <div className="gecko-banner gecko-banner-info">
-                <span className="gecko-mono-strong" style={{ color: 'var(--gecko-primary-700)' }}>
-                  {fmt(form.sellingRate)} × {form.qty.toFixed(3)} {form.billingUnit} = {fmt(totalAmount)}
-                </span>
-              </div>
-            </div>
-          </div>
-
-          {/* Section 4: Payment & Waiver */}
-          <div>
-            <SectionHead title="Payment & Waiver" />
-            <div
-              className="gecko-row gecko-row-start"
-              style={{
-                gap: 12,
-                padding: '12px 14px',
-                border: `1px solid ${form.isWaived ? 'var(--gecko-warning-200)' : 'var(--gecko-border)'}`,
-                borderRadius: 8,
-                background: form.isWaived ? 'var(--gecko-warning-50)' : 'var(--gecko-bg-surface)',
-                marginBottom: form.isWaived ? 12 : 0,
-              }}
-            >
-              <Toggle value={form.isWaived} onChange={v => set({ isWaived: v })} colorOn="var(--gecko-warning-600)" />
-              <div>
-                <div style={{ fontWeight: 700, color: form.isWaived ? 'var(--gecko-warning-700)' : 'var(--gecko-text-primary)' }}>Waived</div>
-                <div className="gecko-cell-meta">Mark this charge as waived — amount excluded from billing</div>
-              </div>
-            </div>
-            {form.isWaived && (
-              <div className="gecko-grid-2">
-                <div className="gecko-form-group">
-                  <label className="gecko-label">Waived By</label>
-                  <input className="gecko-input" value={form.waivedBy} onChange={e => set({ waivedBy: e.target.value })} />
-                </div>
-                <div className="gecko-form-group">
-                  <label className="gecko-label">Waiver Reason</label>
-                  <input className="gecko-input" value={form.waiverReason} onChange={e => set({ waiverReason: e.target.value })} placeholder="e.g. Management Approval" />
-                </div>
-              </div>
-            )}
-          </div>
-
-        </div>
-
-        {/* Footer */}
-        <div className="gecko-modal-footer gecko-modal-footer-split">
-          {isNew && <div className="gecko-modal-footer-note">* Charge Code and Description are required</div>}
-          <div className="gecko-row" style={{ marginLeft: isNew ? undefined : 'auto' }}>
-            <button className="gecko-btn gecko-btn-outline gecko-btn-sm" onClick={onClose}>Cancel</button>
-            <button className="gecko-btn gecko-btn-primary gecko-btn-sm" onClick={handleSaveCharge} disabled={!canSave}>
-              <Icon name="save" size={14} /> Save Charge
+        <div className="gecko-toolbar">
+          <button className="gecko-btn gecko-btn-outline gecko-btn-sm" onClick={exportCsv} disabled={!s}>
+            <Icon name="download" size={14} /> Export
+          </button>
+          {orderNo && (
+            <button className="gecko-btn gecko-btn-outline gecko-btn-sm" onClick={statement.reload}>
+              <Icon name="refreshCcw" size={14} /> Refresh
             </button>
-          </div>
+          )}
         </div>
       </div>
-    </div>
-  );
-}
 
-// ─── BulkChargeModal ──────────────────────────────────────────────────────────
-
-interface BulkChargeModalProps {
-  containers: string[];
-  mode: 'add' | 'update';
-  onClose: () => void;
-}
-
-function BulkChargeModal({ containers, mode, onClose }: BulkChargeModalProps) {
-  const [chargeCode, setChargeCode] = useState('');
-  const [desc, setDesc] = useState('');
-  const [movementCode, setMovementCode] = useState('FULL IN');
-  const [paymentTerm, setPaymentTerm] = useState<PaymentTerm>('CASH');
-  const [paymentTo, setPaymentTo] = useState<'CUSTOMER' | 'AGENT' | 'LINE'>('CUSTOMER');
-  const [chargeType, setChargeType] = useState<ChargeType>('GENERAL');
-  const [billingUnit, setBillingUnit] = useState<BillingUnit>('UNIT');
-  const [originalRate, setOriginalRate] = useState(0);
-  const [discountType, setDiscountType] = useState<DiscountType>('NONE');
-  const [discountRate, setDiscountRate] = useState(0);
-  const [includedCtrs, setIncludedCtrs] = useState<Set<string>>(new Set(containers));
-  const { toast } = useToast();
-  const handleApply = () => {
-    if (includedCtrs.size === 0 || !chargeCode.trim()) return;
-    toast({ variant: 'success', title: mode === 'add' ? 'Charges added' : 'Charges updated', message: `${chargeCode} applied to ${includedCtrs.size} container(s).` });
-    onClose();
-  };
-
-  const sellingRate = discountType === 'NONE' ? originalRate : discountType === 'AMT' ? Math.max(0, originalRate - discountRate) : Math.max(0, originalRate * (1 - discountRate / 100));
-  const toggleCtr = (c: string) => setIncludedCtrs(prev => { const n = new Set(prev); n.has(c) ? n.delete(c) : n.add(c); return n; });
-
-  const title = mode === 'add' ? 'Add Charges to All Items' : 'Update Charges to All Items';
-
-  return (
-    <div className="gecko-overlay" onClick={e => { if (e.target === e.currentTarget) onClose(); }}>
-      <div className="gecko-modal gecko-modal-lg gecko-stack gecko-stack-xs">
-
-        <div
-          className="gecko-modal-header"
-          style={{ background: 'var(--gecko-warning-50)', borderRadius: '12px 12px 0 0' }}
-        >
-          <div className="gecko-row">
-            <Icon name="layers" size={16} style={{ color: 'var(--gecko-warning-600)' }} />
-            <span className="gecko-modal-title">{title}</span>
+      <form className="gecko-card" style={{ padding: 14 }} onSubmit={open}>
+        <div className="gecko-row" style={{ gap: 12, alignItems: 'flex-end', flexWrap: 'wrap' }}>
+          <div className="gecko-form-group" style={{ flex: '1 1 320px' }}>
+            <label className="gecko-form-label" htmlFor="orderNo">Order number</label>
+            <input id="orderNo" className="gecko-input" autoFocus autoComplete="off" value={typed}
+                   style={{ fontFamily: 'var(--gecko-font-mono, monospace)', textTransform: 'uppercase' }}
+                   placeholder="Booking / order no." onChange={e => setTyped(e.target.value)} />
           </div>
-          <ModalCloseBtn onClose={onClose} />
+          <button type="submit" className="gecko-btn gecko-btn-primary" disabled={!typed.trim()}>
+            <Icon name="search" size={16} /> Open
+          </button>
         </div>
+      </form>
 
-        <div className="gecko-modal-body gecko-stack gecko-stack-lg">
-
+      {orderNo && statement.error && (
+        <div className="gecko-alert gecko-alert-error">
+          <Icon name="alertCircle" size={18} />
           <div>
-            <SectionHead title="Charge" />
-            <div
-              className="gecko-mb-3"
-              style={{ display: 'grid', gridTemplateColumns: '160px 1fr', gap: 16 }}
-            >
-              <div className="gecko-form-group">
-                <label className="gecko-label gecko-label-required">Charge Code</label>
-                <input className="gecko-input gecko-text-mono" value={chargeCode} onChange={e => setChargeCode(e.target.value.toUpperCase())} style={{ fontWeight: 700 }} />
+            <div style={{ fontWeight: 600 }}>{statement.error.title}</div>
+            {statement.error.explanation && <div>{statement.error.explanation}</div>}
+          </div>
+        </div>
+      )}
+
+      {!orderNo && (
+        <div className="gecko-card">
+          <EmptyState icon="fileText" title="Open a booking"
+            description="Type an order number to see every line charged on it and the receipts that paid them." />
+        </div>
+      )}
+
+      {s && (
+        <>
+          {/* The booking */}
+          <div className="gecko-card" style={{ padding: 16 }}>
+            <div className="gecko-row gecko-row-between gecko-row-wrap" style={{ gap: 12 }}>
+              <div>
+                <div className="gecko-mono-strong" style={{ fontSize: 18 }}>{s.orderNo}</div>
+                <div className="gecko-cell-meta">
+                  {s.orderTypeCode} · {s.bookingStatus.toLowerCase()} · {payerLabel(s.customerCode, s.customerName)}
+                  {s.customerName && s.customerCode ? <span className="gecko-mono"> ({s.customerCode})</span> : null}
+                </div>
               </div>
-              <div className="gecko-form-group">
-                <label className="gecko-label">Description</label>
-                <input className="gecko-input" value={desc} onChange={e => setDesc(e.target.value)} />
-              </div>
-            </div>
-            <div className="gecko-grid-4">
-              <div className="gecko-form-group">
-                <label className="gecko-label">Movement Code</label>
-                <select className="gecko-input" value={movementCode} onChange={e => setMovementCode(e.target.value)}>
-                  {['FULL IN','FULL OUT','MTY IN','MTY OUT','TRANSHIP'].map(o => <option key={o} value={o}>{o}</option>)}
-                </select>
-              </div>
-              <div className="gecko-form-group">
-                <label className="gecko-label">Payment Term</label>
-                <select className="gecko-input" value={paymentTerm} onChange={e => setPaymentTerm(e.target.value as PaymentTerm)}>
-                  {['CASH','CREDIT','FREE','PREPAID'].map(o => <option key={o} value={o}>{o}</option>)}
-                </select>
-              </div>
-              <div className="gecko-form-group">
-                <label className="gecko-label">Charge Type</label>
-                <select className="gecko-input" value={chargeType} onChange={e => setChargeType(e.target.value as ChargeType)}>
-                  {['GENERAL','STORAGE','DEMURRAGE','VAS','SURCHARGE'].map(o => <option key={o} value={o}>{o}</option>)}
-                </select>
-              </div>
-              <div className="gecko-form-group">
-                <label className="gecko-label">Billing Unit</label>
-                <select className="gecko-input" value={billingUnit} onChange={e => setBillingUnit(e.target.value as BillingUnit)}>
-                  {['UNIT','DAY','TON','BAG','TRIP'].map(o => <option key={o} value={o}>{o}</option>)}
-                </select>
-              </div>
+              <Totals totals={s.totals} m={m} />
             </div>
           </div>
 
-          <div>
-            <SectionHead title="Rate" />
-            <div className="gecko-grid-3">
-              <div className="gecko-form-group">
-                <label className="gecko-label">Original Rate (฿)</label>
-                <input className="gecko-input gecko-text-mono" type="number" step="0.01" value={originalRate} onChange={e => setOriginalRate(parseFloat(e.target.value) || 0)} style={{ textAlign: 'right' }} />
+          {/* Boxes */}
+          {s.boxes.length === 0 && (
+            <div className="gecko-card"><EmptyState icon="box" title="No boxes on this booking yet" description="Boxes appear as they are assigned." /></div>
+          )}
+          {s.boxes.map(b => (
+            <section key={b.bookingContainerId ?? 'none'} className="gecko-table-card">
+              <div className="gecko-row gecko-row-between gecko-row-wrap" style={{ padding: '10px 12px', gap: 8 }}>
+                <div className="gecko-row" style={{ gap: 8 }}>
+                  {b.containerNo
+                    ? <Link href={`/units/unit-inquiry?no=${encodeURIComponent(b.containerNo)}`} className="gecko-mono-strong gecko-link">{formatContainerNo(b.containerNo)}</Link>
+                    : <span className="gecko-mono-strong">{b.bookingContainerId ? 'Box not yet named' : 'Lines without a box'}</span>}
+                  {b.equipmentTypeCode && <span className="gecko-cell-meta gecko-mono">{b.equipmentTypeCode}</span>}
+                  {b.endReason && <span className="gecko-badge gecko-badge-gray">left the booking: {b.endReason.toLowerCase()}</span>}
+                </div>
+                <Totals totals={b.totals} m={m} compact />
               </div>
-              <div className="gecko-form-group">
-                <label className="gecko-label">Discount Type</label>
-                <select className="gecko-input" value={discountType} onChange={e => setDiscountType(e.target.value as DiscountType)}>
-                  <option value="NONE">NONE</option>
-                  <option value="AMT">AMT</option>
-                  <option value="PCT">PCT</option>
-                </select>
-              </div>
-              <div className="gecko-form-group">
-                <label className="gecko-label">Selling Rate (฿)</label>
-                <input className="gecko-input gecko-text-mono" value={sellingRate.toFixed(2)} readOnly style={{ textAlign: 'right', background: 'var(--gecko-bg-subtle)', color: 'var(--gecko-primary-700)', fontWeight: 700 }} />
-              </div>
-            </div>
-          </div>
-
-          <div>
-            <SectionHead title={`Preview — Will be applied to ${includedCtrs.size} container${includedCtrs.size !== 1 ? 's' : ''}:`} />
-            <div className="gecko-table-card">
               <table className="gecko-table gecko-table-compact">
                 <thead>
                   <tr>
-                    <th style={{ width: 32, textAlign: 'center' }}>✓</th>
-                    <th style={{ textAlign: 'left' }}>CONTAINER</th>
+                    <th>Movement</th><th>Charge</th><th>Payer</th>
+                    <th className="gecko-num">Amount</th><th className="gecko-num">VAT</th><th className="gecko-num">Total</th>
+                    <th>Status</th><th>Receipt</th>
                   </tr>
                 </thead>
                 <tbody>
-                  {containers.map(c => (
-                    <tr key={c}>
-                      <td style={{ textAlign: 'center' }}>
-                        <input type="checkbox" checked={includedCtrs.has(c)} onChange={() => toggleCtr(c)} />
-                      </td>
-                      <td className="gecko-mono-strong">{c}</td>
-                    </tr>
-                  ))}
+                  {b.lines.length === 0 && (
+                    <tr><td colSpan={8} className="gecko-cell-meta" style={{ textAlign: 'center', padding: 12 }}>Nothing charged on this box yet.</td></tr>
+                  )}
+                  {b.lines.map(({ charge: c, receiptNo }) => {
+                    const st = CHARGE_STATUS[c.status] ?? CHARGE_STATUS.QUOTED;
+                    const reason = c.waiveReason ?? c.cancelReason;
+                    return (
+                      <tr key={c.chargeId} style={c.status === 'CANCELLED' ? { opacity: 0.6 } : undefined}>
+                        <td>
+                          <span className="gecko-mono">{c.movementCode ?? '—'}</span>
+                          {c.eirNo && <div className="gecko-cell-meta gecko-mono">{c.eirNo}</div>}
+                          {c.serviceFrom && <div className="gecko-cell-meta">{c.serviceFrom} → {c.serviceTo ?? '…'}</div>}
+                        </td>
+                        <td>
+                          <div className="gecko-mono-strong">{c.chargeCode}</div>
+                          <div className="gecko-cell-meta">
+                            {c.chargeName ?? ''}{c.quantity !== 1 ? ` · ${c.quantity} × ${money(c.unitRate, c.currencyCode)}` : ''}
+                          </div>
+                          <div className="gecko-cell-meta">{CHARGE_SOURCE[c.source] ?? c.source} · {formatDateTime(c.createdAt)}</div>
+                        </td>
+                        <td>
+                          <div className="gecko-truncate" style={{ maxWidth: 200 }}>{payerLabel(c.payerCode, c.payerName)}</div>
+                          <div className="gecko-cell-meta">{c.billTo.toLowerCase()} · {c.paymentTermCode.toLowerCase()}</div>
+                        </td>
+                        <td className="gecko-num gecko-mono">{money(c.amount, c.currencyCode)}</td>
+                        <td className="gecko-num gecko-mono">{money(c.taxAmount, c.currencyCode)}</td>
+                        <td className="gecko-num gecko-mono" style={{ fontWeight: 700 }}>{money(c.total, c.currencyCode)}</td>
+                        <td>
+                          <span className={`gecko-badge ${st.badge}`} title={st.hint}>{st.label}</span>
+                          {reason && <div className="gecko-cell-meta gecko-truncate" style={{ maxWidth: 200 }} title={reason}>{reason}</div>}
+                        </td>
+                        <td className="gecko-mono">{receiptNo ?? '—'}</td>
+                      </tr>
+                    );
+                  })}
                 </tbody>
               </table>
-            </div>
-          </div>
-
-        </div>
-
-        <div className="gecko-modal-footer">
-          <button className="gecko-btn gecko-btn-outline gecko-btn-sm" onClick={onClose}>Cancel</button>
-          <button className="gecko-btn gecko-btn-primary gecko-btn-sm" onClick={handleApply} disabled={includedCtrs.size === 0 || !chargeCode.trim()}>
-            Apply to {includedCtrs.size} Container{includedCtrs.size !== 1 ? 's' : ''}
-          </button>
-        </div>
-      </div>
-    </div>
-  );
-}
-
-// ─── RegenerateModal ──────────────────────────────────────────────────────────
-
-interface RegenerateModalProps {
-  charges: ChargeRow[];
-  onClose: () => void;
-}
-
-function RegenerateModal({ charges, onClose }: RegenerateModalProps) {
-  const willUpdate = charges.filter(c => !c.isLocked && c.status === 'Pending');
-  const willSkip = charges.filter(c => c.isLocked || c.status === 'Invoiced');
-  const invoicedCount = charges.filter(c => c.status === 'Invoiced').length;
-  const { toast } = useToast();
-  const handleRegenerate = () => {
-    toast({ variant: 'warning', title: 'Charges regenerated', message: `${willUpdate.length} updated · ${willSkip.length} skipped (locked or invoiced).` });
-    onClose();
-  };
-
-  return (
-    <div className="gecko-overlay" onClick={e => { if (e.target === e.currentTarget) onClose(); }}>
-      <div className="gecko-modal gecko-stack gecko-stack-xs">
-
-        <div
-          className="gecko-modal-header"
-          style={{ background: 'var(--gecko-info-50)', borderRadius: '12px 12px 0 0' }}
-        >
-          <div className="gecko-row">
-            <Icon name="refreshCcw" size={16} style={{ color: 'var(--gecko-info-600)' }} />
-            <span className="gecko-modal-title">Regenerate Charges</span>
-          </div>
-          <ModalCloseBtn onClose={onClose} />
-        </div>
-
-        <div className="gecko-modal-body gecko-stack gecko-stack-lg">
-
-          <div className="gecko-banner gecko-banner-info">
-            <Icon name="info" size={16} className="gecko-banner-icon" />
-            <span>Charges will be recalculated based on current tariff rates. Rate-locked charges (🔒) will not be affected.</span>
-          </div>
-
-          {invoicedCount > 0 && (
-            <div className="gecko-banner gecko-banner-warning">
-              <Icon name="warning" size={15} className="gecko-banner-icon" />
-              <span>{invoicedCount} invoiced charge{invoicedCount !== 1 ? 's' : ''} cannot be regenerated.</span>
-            </div>
-          )}
-
-          {willUpdate.length > 0 && (
-            <div>
-              <div className="gecko-eyebrow gecko-mb-2" style={{ color: 'var(--gecko-success-700)' }}>Will be updated ({willUpdate.length} charges)</div>
-              <div className="gecko-stack gecko-stack-xs">
-                {willUpdate.map(c => (
-                  <div key={c.id} className="gecko-banner gecko-banner-success gecko-row-between">
-                    <span className="gecko-id-link">{c.chargeCode}</span>
-                    <span className="gecko-cell-meta">{c.chargeDesc}</span>
-                    <span className="gecko-money gecko-money-sm" style={{ color: 'var(--gecko-success-700)' }}>{fmt(c.sellingRate)}</span>
-                  </div>
-                ))}
-              </div>
-            </div>
-          )}
-
-          {willSkip.length > 0 && (
-            <div>
-              <div className="gecko-eyebrow gecko-mb-2">Will be skipped ({willSkip.length} charges)</div>
-              <div className="gecko-stack gecko-stack-xs">
-                {willSkip.map(c => (
-                  <div
-                    key={c.id}
-                    className="gecko-row gecko-row-between"
-                    style={{
-                      padding: '6px 10px',
-                      background: 'var(--gecko-bg-subtle)',
-                      border: '1px solid var(--gecko-border)',
-                      borderRadius: 6,
-                      opacity: 0.7,
-                    }}
-                  >
-                    <span className="gecko-mono-strong">{c.chargeCode}</span>
-                    <span className="gecko-cell-meta">{c.chargeDesc}</span>
-                    <span className="gecko-helper-text">{c.isLocked ? 'Rate locked' : 'Invoiced'}</span>
-                  </div>
-                ))}
-              </div>
-            </div>
-          )}
-
-        </div>
-
-        <div className="gecko-modal-footer">
-          <button className="gecko-btn gecko-btn-outline gecko-btn-sm" onClick={onClose}>Cancel</button>
-          <button onClick={handleRegenerate} className="gecko-btn gecko-btn-danger gecko-btn-sm">
-            <Icon name="refreshCcw" size={13} /> Regenerate Now
-          </button>
-        </div>
-      </div>
-    </div>
-  );
-}
-
-// ─── WaiveModal ───────────────────────────────────────────────────────────────
-
-interface WaiveModalProps {
-  selectedCharges: ChargeRow[];
-  customerName: string;
-  onClose: () => void;
-}
-
-function WaiveModal({ selectedCharges, customerName, onClose }: WaiveModalProps) {
-  const [waivedBy, setWaivedBy] = useState('SOMPORN');
-  const [reasonCode, setReasonCode] = useState('');
-  const [notes, setNotes] = useState('');
-  const totalWaived = selectedCharges.reduce((s, c) => s + c.sellingRate * c.qty, 0);
-  const canConfirm = reasonCode.trim() !== '';
-  const { toast } = useToast();
-  const handleWaive = () => {
-    if (!canConfirm) return;
-    toast({ variant: 'warning', title: 'Charges waived', message: `${selectedCharges.length} charge(s) waived for ${customerName} · Reason: ${reasonCode}.` });
-    onClose();
-  };
-
-  return (
-    <div className="gecko-overlay" onClick={e => { if (e.target === e.currentTarget) onClose(); }}>
-      <div className="gecko-modal gecko-modal-sm gecko-stack gecko-stack-xs">
-
-        <div
-          className="gecko-modal-header"
-          style={{ background: 'var(--gecko-warning-50)', borderRadius: '12px 12px 0 0' }}
-        >
-          <div className="gecko-row">
-            <Icon name="warning" size={16} style={{ color: 'var(--gecko-warning-600)' }} />
-            <span className="gecko-modal-title">Waive Selected Charges</span>
-          </div>
-          <ModalCloseBtn onClose={onClose} />
-        </div>
-
-        <div className="gecko-modal-body gecko-stack gecko-stack-lg">
-
-          <div className="gecko-modal-description">
-            Waiving <strong style={{ color: 'var(--gecko-text-primary)' }}>{selectedCharges.length} charge{selectedCharges.length !== 1 ? 's' : ''}</strong> for <strong style={{ color: 'var(--gecko-text-primary)' }}>{customerName}</strong>
-          </div>
-
-          <div className="gecko-stack gecko-stack-xs">
-            {selectedCharges.map(c => (
-              <div
-                key={c.id}
-                className="gecko-row gecko-row-between"
-                style={{
-                  padding: '6px 10px',
-                  background: 'var(--gecko-bg-subtle)',
-                  border: '1px solid var(--gecko-border)',
-                  borderRadius: 6,
-                }}
-              >
-                <span className="gecko-id-link">{c.chargeCode}</span>
-                <span className="gecko-cell-meta">{c.chargeDesc}</span>
-                <span className="gecko-money gecko-money-sm">{fmt(c.sellingRate * c.qty)}</span>
-              </div>
-            ))}
-            <div
-              className="gecko-row gecko-row-right gecko-mt-1"
-              style={{ padding: '8px 10px 0', borderTop: '2px solid var(--gecko-border)' }}
-            >
-              <span className="gecko-money gecko-money-lg" style={{ color: 'var(--gecko-warning-700)' }}>Total waived: {fmt(totalWaived)}</span>
-            </div>
-          </div>
-
-          <div className="gecko-form-group">
-            <label className="gecko-label">Waived By</label>
-            <input className="gecko-input" value={waivedBy} onChange={e => setWaivedBy(e.target.value)} />
-          </div>
-
-          <div className="gecko-form-group">
-            <label className="gecko-label gecko-label-required">Reason Code</label>
-            <select className="gecko-input" value={reasonCode} onChange={e => setReasonCode(e.target.value)}>
-              <option value="">— select reason —</option>
-              <option value="GOODWILL">Goodwill</option>
-              <option value="RATE_ERROR">Rate Error</option>
-              <option value="MGMT_APPROVAL">Management Approval</option>
-              <option value="DISPUTE">Dispute Resolution</option>
-              <option value="SYS_ERROR">System Error</option>
-            </select>
-          </div>
-
-          <div className="gecko-form-group">
-            <label className="gecko-label">Notes (optional)</label>
-            <textarea
-              className="gecko-input"
-              value={notes}
-              onChange={e => setNotes(e.target.value)}
-              rows={3}
-              style={{ resize: 'vertical', lineHeight: 1.55 }}
-              placeholder="Additional context..."
-            />
-          </div>
-
-        </div>
-
-        <div className="gecko-modal-footer">
-          <button className="gecko-btn gecko-btn-outline gecko-btn-sm" onClick={onClose}>Cancel</button>
-          <button onClick={handleWaive} disabled={!canConfirm} className="gecko-btn gecko-btn-warning gecko-btn-sm">
-            <Icon name="check" size={13} /> Confirm Waiver
-          </button>
-        </div>
-      </div>
-    </div>
-  );
-}
-
-// ─── Modal State Union ────────────────────────────────────────────────────────
-
-type ModalState =
-  | { type: 'chargeDetail'; charge: ChargeRow; isNew: boolean }
-  | { type: 'bulkCharge'; mode: 'add' | 'update' }
-  | { type: 'regenerate' }
-  | { type: 'waive' }
-  | null;
-
-// ─── Grouped Select Menu ──────────────────────────────────────────────────────
-// Drives the new "Select ▼" dropdown that lets the user bulk-select pending
-// charges by payment term (CASH/CREDIT) or by charge code. Only pending,
-// non-waived rows are eligible for selection — invoiced/waived rows stay out.
-
-function GroupedSelectMenu({ charges, onSetSelection, onDeselectAll }: {
-  charges: ChargeRow[];
-  onSetSelection: (ids: string[]) => void;
-  onDeselectAll: () => void;
-}) {
-  const [open, setOpen] = useState(false);
-  const ref = useRef<HTMLDivElement>(null);
-
-  useEffect(() => {
-    const h = (e: MouseEvent) => { if (ref.current && !ref.current.contains(e.target as Node)) setOpen(false); };
-    const k = (e: KeyboardEvent) => { if (e.key === 'Escape') setOpen(false); };
-    document.addEventListener('mousedown', h);
-    document.addEventListener('keydown', k);
-    return () => { document.removeEventListener('mousedown', h); document.removeEventListener('keydown', k); };
-  }, []);
-
-  const eligible = useMemo(
-    () => charges.filter(c => c.status === 'Pending' && !c.isWaived),
-    [charges]
-  );
-
-  const byTerm = useMemo(() => {
-    const groups: Record<'CASH' | 'CREDIT' | 'FREE' | 'PREPAID', { ids: string[]; total: number }> = {
-      CASH:    { ids: [], total: 0 },
-      CREDIT:  { ids: [], total: 0 },
-      FREE:    { ids: [], total: 0 },
-      PREPAID: { ids: [], total: 0 },
-    };
-    eligible.forEach(c => {
-      groups[c.paymentTerm].ids.push(c.id);
-      groups[c.paymentTerm].total += c.sellingRate * c.qty;
-    });
-    return groups;
-  }, [eligible]);
-
-  const byCode = useMemo(() => {
-    const map = new Map<string, { ids: string[]; total: number; desc: string }>();
-    eligible.forEach(c => {
-      const prev = map.get(c.chargeCode) ?? { ids: [], total: 0, desc: c.chargeDesc };
-      prev.ids.push(c.id);
-      prev.total += c.sellingRate * c.qty;
-      map.set(c.chargeCode, prev);
-    });
-    return [...map.entries()].sort((a, b) => a[0].localeCompare(b[0]));
-  }, [eligible]);
-
-  const allIds = eligible.map(c => c.id);
-
-  const Section = ({ title, children }: { title: string; children: React.ReactNode }) => (
-    <div style={{ padding: '6px 0', borderBottom: '1px solid var(--gecko-border)' }}>
-      <div className="gecko-eyebrow" style={{ padding: '6px 14px 4px' }}>
-        {title}
-      </div>
-      {children}
-    </div>
-  );
-
-  const Row = ({ label, meta, tone, onClick, disabled, mono }: {
-    label: React.ReactNode; meta?: string; tone?: 'success' | 'info' | 'neutral';
-    onClick: () => void; disabled?: boolean; mono?: boolean;
-  }) => (
-    <button
-      onClick={onClick}
-      disabled={disabled}
-      className="gecko-dropdown-item gecko-row gecko-row-between"
-      style={{
-        gap: 12,
-        cursor: disabled ? 'not-allowed' : 'pointer',
-        opacity: disabled ? 0.45 : 1,
-      }}
-    >
-      <span className={mono ? 'gecko-row gecko-mono gecko-cell-primary' : 'gecko-row gecko-cell-primary'}>
-        {tone === 'success' && <span style={{ width: 6, height: 6, borderRadius: '50%', background: 'var(--gecko-success-500)' }} />}
-        {tone === 'info'    && <span style={{ width: 6, height: 6, borderRadius: '50%', background: 'var(--gecko-info-500)' }} />}
-        {label}
-      </span>
-      {meta && (
-        <span className="gecko-mono gecko-cell-meta">
-          {meta}
-        </span>
-      )}
-    </button>
-  );
-
-  return (
-    <div ref={ref} style={{ position: 'relative' }}>
-      <button
-        className="gecko-btn gecko-btn-outline gecko-btn-sm gecko-inline-row"
-        onClick={() => setOpen(o => !o)}
-      >
-        <Icon name="checkSquare" size={13} />
-        Select
-        <Icon name="chevronDown" size={12} />
-      </button>
-      {open && (
-        <div
-          className="gecko-floating-card"
-          style={{
-            position: 'absolute',
-            left: 0,
-            top: 'calc(100% + 6px)',
-            width: 320,
-            maxHeight: 480,
-            overflowY: 'auto',
-            zIndex: 200,
-          }}
-        >
-          <Section title="Quick">
-            <Row
-              label={`Select all pending`}
-              meta={`${allIds.length} · ฿${fmt(eligible.reduce((s, c) => s + c.sellingRate * c.qty, 0))}`}
-              onClick={() => { onSetSelection(allIds); setOpen(false); }}
-              disabled={allIds.length === 0}
-            />
-            <Row label="Deselect all" onClick={() => { onDeselectAll(); setOpen(false); }} />
-          </Section>
-
-          {(byTerm.CASH.ids.length > 0 || byTerm.CREDIT.ids.length > 0) && (
-            <Section title="By payment term">
-              {byTerm.CASH.ids.length > 0 && (
-                <Row
-                  label={`All CASH pending`}
-                  meta={`${byTerm.CASH.ids.length} · ฿${fmt(byTerm.CASH.total)}`}
-                  tone="success"
-                  onClick={() => { onSetSelection(byTerm.CASH.ids); setOpen(false); }}
-                />
-              )}
-              {byTerm.CREDIT.ids.length > 0 && (
-                <Row
-                  label={`All CREDIT pending`}
-                  meta={`${byTerm.CREDIT.ids.length} · ฿${fmt(byTerm.CREDIT.total)}`}
-                  tone="info"
-                  onClick={() => { onSetSelection(byTerm.CREDIT.ids); setOpen(false); }}
-                />
-              )}
-            </Section>
-          )}
-
-          {byCode.length > 0 && (
-            <Section title="By charge code">
-              {byCode.map(([code, g]) => (
-                <Row
-                  key={code}
-                  label={code}
-                  meta={`${g.ids.length} · ฿${fmt(g.total)}`}
-                  mono
-                  onClick={() => { onSetSelection(g.ids); setOpen(false); }}
-                />
-              ))}
-            </Section>
-          )}
-
-          {eligible.length === 0 && (
-            <div style={{ padding: '16px 14px', fontSize: 11, color: 'var(--gecko-text-disabled)', fontStyle: 'italic', textAlign: 'center' }}>
-              Nothing eligible to select — all charges are already invoiced, waived, or cancelled.
-            </div>
-          )}
-        </div>
-      )}
-    </div>
-  );
-}
-
-// ─── Main Page ────────────────────────────────────────────────────────────────
-
-export default function BillingStatementPage() {
-  const [activeStatement, setActiveStatement] = useState<BookingStatement | null>(null);
-  const [selectedRows, setSelectedRows] = useState<Set<string>>(new Set());
-  const [showActionMenu, setShowActionMenu] = useState(false);
-  const [pendingSendAction, setPendingSendAction] = useState<SendAction | null>(null);
-  const { toast } = useToast();
-  const [modalState, setModalState] = useState<ModalState>(null);
-  const [filters, setFilters] = useState<Record<string, string>>({ query: '', bookingType: '', orderType: '', agent: '', customer: '', status: '', date: '' });
-  const [sortBy, setSortBy] = useState('date_desc');
-  const actionMenuRef = useRef<HTMLDivElement>(null);
-
-  // Close action menu on outside click
-  useEffect(() => {
-    function handleOutside(e: MouseEvent) {
-      if (actionMenuRef.current && !actionMenuRef.current.contains(e.target as Node)) {
-        setShowActionMenu(false);
-      }
-    }
-    document.addEventListener('mousedown', handleOutside);
-    return () => document.removeEventListener('mousedown', handleOutside);
-  }, []);
-
-  // Reset selection when active statement changes
-  useEffect(() => { setSelectedRows(new Set()); }, [activeStatement]);
-
-  // ── List View Filtering ──────────────────────────────────────────────────────
-
-  const filtered = useMemo(() => {
-    let result = STATEMENTS.filter(s => {
-      if (filters.bookingType && s.bookingType !== filters.bookingType) return false;
-      if (filters.orderType && s.orderType !== filters.orderType) return false;
-      if (filters.agent && s.agentCode !== filters.agent) return false;
-      if (filters.customer && s.customerCode !== filters.customer) return false;
-      if (filters.status && s.status !== filters.status) return false;
-      if (filters.query) {
-        const q = filters.query.toLowerCase();
-        if (!s.bookingNo.toLowerCase().includes(q) && !s.blNo.toLowerCase().includes(q) && !s.orderNo.toLowerCase().includes(q)) return false;
-      }
-      return true;
-    });
-    if (sortBy === 'bookingNo') result = [...result].sort((a, b) => a.bookingNo.localeCompare(b.bookingNo));
-    if (sortBy === 'unbilled_desc') result = [...result].sort((a, b) => (b.totalBillable - b.billedAmount) - (a.totalBillable - a.billedAmount));
-    if (sortBy === 'customer') result = [...result].sort((a, b) => a.customerName.localeCompare(b.customerName));
-    return result;
-  }, [filters, sortBy]);
-
-  const { page, setPage, pageSize, setPageSize, totalPages, pageItems: listPageItems, totalItems, startRow, endRow } = usePagination(filtered);
-
-  // ── Detail View Pagination ───────────────────────────────────────────────────
-
-  const charges = activeStatement?.charges ?? [];
-  const chargesPagination = usePagination(charges);
-
-  // ── Row Selection helpers ────────────────────────────────────────────────────
-
-  const toggleRow = (id: string) => setSelectedRows(prev => { const n = new Set(prev); n.has(id) ? n.delete(id) : n.add(id); return n; });
-  const selectAll = () => setSelectedRows(new Set(charges.map(c => c.id)));
-  const deselectAll = () => setSelectedRows(new Set());
-  const allSelected = charges.length > 0 && selectedRows.size === charges.length;
-
-  const selectedCharges = charges.filter(c => selectedRows.has(c.id));
-
-  // ── Send-to-Invoice: scope selected charges to a single payment term ──────
-  // (Only Pending + non-waived rows count toward an invoice.)
-  const sendableByTerm = useMemo(() => {
-    const cash   = selectedCharges.filter(c => c.status === 'Pending' && !c.isWaived && c.paymentTerm === 'CASH');
-    const credit = selectedCharges.filter(c => c.status === 'Pending' && !c.isWaived && c.paymentTerm === 'CREDIT');
-    return {
-      CASH:   { count: cash.length,   total: cash.reduce((s, c) => s + c.sellingRate * c.qty, 0) },
-      CREDIT: { count: credit.length, total: credit.reduce((s, c) => s + c.sellingRate * c.qty, 0) },
-    } as const;
-  }, [selectedCharges]);
-
-  const sendModalTotals = pendingSendAction
-    ? sendableByTerm[pendingSendAction.term as 'CASH' | 'CREDIT']
-    : { count: 0, total: 0 };
-
-  const handleSendPick = (a: SendAction) => setPendingSendAction(a);
-
-  const handleNewInvoiceConfirm = (_note: string) => {
-    if (!pendingSendAction) return;
-    const term = pendingSendAction.term;
-    const { count, total } = sendableByTerm[term as 'CASH' | 'CREDIT'];
-    const draftNo = `INV-${new Date().getFullYear()}-${String(Math.floor(Math.random() * 9000 + 1000))}`;
-    toast({
-      variant: 'success',
-      title: 'Draft invoice created',
-      message: `${draftNo} · ${term} · ${count} charges · ฿${fmt(total)}`,
-    });
-    deselectAll();
-    setPendingSendAction(null);
-  };
-
-  const handleExistingInvoiceConfirm = (invoiceNo: string) => {
-    if (!pendingSendAction) return;
-    const term = pendingSendAction.term;
-    const { count, total } = sendableByTerm[term as 'CASH' | 'CREDIT'];
-    toast({
-      variant: 'success',
-      title: 'Appended to invoice',
-      message: `${count} charges (฿${fmt(total)}) added to ${invoiceNo}`,
-    });
-    deselectAll();
-    setPendingSendAction(null);
-  };
-
-  // ── Charge totals ────────────────────────────────────────────────────────────
-  const chargesSubtotal = charges.filter(c => !c.isWaived).reduce((s, c) => s + c.sellingRate * c.qty, 0);
-
-  // ═══════════════════════════════════════════════════════════════════════════
-  // VIEW A — LIST VIEW
-  // ═══════════════════════════════════════════════════════════════════════════
-
-  if (!activeStatement) {
-    return (
-      <div
-        className="gecko-stack gecko-stack-xl"
-        style={{ maxWidth: 'var(--gecko-container-max)', margin: '0 auto', paddingBottom: 40 }}
-      >
-
-        {/* Header */}
-        <div className="gecko-page-actions">
-          <div className="gecko-page-actions-left">
-            <div className="gecko-row gecko-row-baseline gecko-stack-md">
-              <h1 className="gecko-page-title">Billing Statements</h1>
-              <span className="gecko-count-badge">{STATEMENTS.length} total</span>
-            </div>
-            <div className="gecko-page-subtitle gecko-mt-1">
-              Per-booking charge ledger. Filter by agent, customer, vessel, or booking reference.
-            </div>
-          </div>
-          <div className="gecko-toolbar">
-            <ExportButton resource="Billing statement" iconSize={16} />
-            <FilterPopover
-              fields={STMT_FILTER_FIELDS}
-              values={filters}
-              onChange={setFilters}
-              onApply={v => setFilters(v)}
-              onClear={() => setFilters({ query: '', bookingType: '', orderType: '', agent: '', customer: '', status: '', date: '' })}
-              sortOptions={STMT_SORT_OPTIONS}
-              sortValue={sortBy}
-              onSortChange={setSortBy}
-            />
-            <button className="gecko-btn gecko-btn-primary gecko-btn-sm" onClick={() => setModalState({ type: 'chargeDetail', charge: { ...EMPTY_CHARGE }, isNew: true })}>
-              <Icon name="plus" size={16} /> New Statement
-            </button>
-          </div>
-        </div>
-
-        {/* Table */}
-        <div className="gecko-table-card">
-          <table className="gecko-table gecko-table-comfortable" style={{ fontSize: 13, tableLayout: 'fixed', width: '100%' }}>
-            <thead>
-              <tr>
-                <th style={{ width: 140 }}>BOOKING NO</th>
-                <th style={{ width: 130 }}>ORDER NO</th>
-                <th style={{ width: 80 }}>TYPE</th>
-                <th style={{ width: 110 }}>ORDER TYPE</th>
-                <th>VESSEL / VOYAGE</th>
-                <th style={{ width: 120 }}>AGENT</th>
-                <th style={{ width: 150 }}>CUSTOMER</th>
-                <th style={{ width: 50, textAlign: 'center' }}>CTRS</th>
-                <th style={{ width: 100, textAlign: 'right' }}>BILLABLE</th>
-                <th style={{ width: 90, textAlign: 'right' }}>BILLED</th>
-                <th style={{ width: 90, textAlign: 'right' }}>UNBILLED</th>
-                <th style={{ width: 80 }}>STATUS</th>
-                <th style={{ width: 40 }}></th>
-              </tr>
-            </thead>
-            <tbody>
-              {filtered.length === 0 && (
-                <tr>
-                  <td colSpan={13} style={{ textAlign: 'center', padding: '48px 24px', color: 'var(--gecko-text-secondary)' }}>
-                    <Icon name="filter" size={28} style={{ color: 'var(--gecko-text-disabled)', display: 'block', margin: '0 auto 10px' }} />
-                    <div className="gecko-card-title">No statements match the current filters</div>
-                  </td>
-                </tr>
-              )}
-              {listPageItems.map(s => {
-                const unbilled = s.totalBillable - s.billedAmount;
-                return (
-                  <tr key={s.bookingNo}>
-                    <td>
-                      <span
-                        className="gecko-id-link"
-                        style={{ cursor: 'pointer' }}
-                        onClick={() => setActiveStatement(s)}
-                      >
-                        {s.bookingNo}
-                      </span>
-                    </td>
-                    <td className="gecko-mono gecko-cell-meta">{s.orderNo}</td>
-                    <td><BookingTypeBadge type={s.bookingType} /></td>
-                    <td className="gecko-cell-meta">{s.orderType}</td>
-                    <td className="gecko-truncate gecko-cell-meta">{s.vesselVoyage}</td>
-                    <td className="gecko-mono-strong">{s.agentCode}</td>
-                    <td className="gecko-truncate gecko-cell-primary" title={s.customerName}>{s.customerName}</td>
-                    <td className="gecko-num-tabular" style={{ textAlign: 'center', fontWeight: 700 }}>{s.containers.length}</td>
-                    <td className="gecko-money gecko-money-sm" style={{ color: 'var(--gecko-primary-600)' }}>{fmt(s.totalBillable)}</td>
-                    <td className="gecko-money gecko-money-sm" style={{ fontWeight: 600, color: 'var(--gecko-success-700)' }}>{fmt(s.billedAmount)}</td>
-                    <td className="gecko-money gecko-money-sm" style={{ color: unbilled > 0 ? 'var(--gecko-danger-600)' : 'var(--gecko-text-secondary)' }}>{fmt(unbilled)}</td>
-                    <td><StatementStatusBadge status={s.status} /></td>
-                    <td style={{ textAlign: 'right' }}>
-                      <button
-                        onClick={() => setActiveStatement(s)}
-                        className="gecko-icon-btn-ghost"
-                        style={{ color: 'var(--gecko-primary-600)', fontSize: 16, fontWeight: 700, lineHeight: 1 }}
-                        title="Open detail"
-                      >→</button>
-                    </td>
-                  </tr>
-                );
-              })}
-            </tbody>
-          </table>
-
-          <TablePagination
-            page={page} pageSize={pageSize} totalItems={totalItems} totalPages={totalPages}
-            startRow={startRow} endRow={endRow} onPageChange={setPage} onPageSizeChange={setPageSize}
-            noun="statements"
-          />
-        </div>
-
-        {/* List-level modal (New Statement) */}
-        {modalState?.type === 'chargeDetail' && (
-          <ChargeDetailModal
-            charge={modalState.charge}
-            isNew={modalState.isNew}
-            containers={[]}
-            onClose={() => setModalState(null)}
-          />
-        )}
-      </div>
-    );
-  }
-
-  // ═══════════════════════════════════════════════════════════════════════════
-  // VIEW B — DETAIL VIEW
-  // ═══════════════════════════════════════════════════════════════════════════
-
-  const unbilledDetail = activeStatement.totalBillable - activeStatement.billedAmount;
-
-  return (
-    <div
-      className="gecko-stack gecko-stack-lg"
-      style={{ maxWidth: 'var(--gecko-container-max)', margin: '0 auto', gap: 20, paddingBottom: 40 }}
-    >
-
-      {/* Breadcrumb + back */}
-      <div className="gecko-row gecko-cell-meta">
-        <button
-          onClick={() => setActiveStatement(null)}
-          className="gecko-row gecko-icon-btn-ghost"
-          style={{ gap: 6, color: 'var(--gecko-primary-600)', fontWeight: 600 }}
-        >
-          <Icon name="arrowLeft" size={14} /> Billing Statements
-        </button>
-        <span style={{ color: 'var(--gecko-text-disabled)' }}>/</span>
-        <span className="gecko-mono-strong">{activeStatement.bookingNo}</span>
-      </div>
-
-      {/* Header Card */}
-      <div className="gecko-card gecko-card-padded">
-        <div className="gecko-row gecko-row-start gecko-stack-xl">
-
-          {/* Left */}
-          <div className="gecko-flex-1">
-            <div className="gecko-row gecko-row-wrap gecko-stack-md gecko-mb-3">
-              <span
-                className="gecko-mono"
-                style={{ fontWeight: 800, fontSize: 20, color: 'var(--gecko-text-primary)', letterSpacing: '0.02em' }}
-              >
-                {activeStatement.bookingNo}
-              </span>
-              <BookingTypeBadge type={activeStatement.bookingType} />
-              <StatementStatusBadge status={activeStatement.status} />
-            </div>
-            <div className="gecko-stack gecko-stack-xs">
-              <div className="gecko-page-subtitle">
-                <strong style={{ color: 'var(--gecko-text-primary)' }}>Agent:</strong>{' '}
-                <span className="gecko-id-link">{activeStatement.agentCode}</span>
-                {' — '}{activeStatement.agentName}
-              </div>
-              <div className="gecko-page-subtitle">
-                <strong style={{ color: 'var(--gecko-text-primary)' }}>Customer:</strong>{' '}
-                <span className="gecko-id-link">{activeStatement.customerCode}</span>
-                {' — '}{activeStatement.customerName}
-              </div>
-              <div className="gecko-page-subtitle">
-                <strong style={{ color: 'var(--gecko-text-primary)' }}>Order Type:</strong> {activeStatement.orderType}
-                {'  '}
-                <strong style={{ color: 'var(--gecko-text-primary)' }}>Vessel:</strong> {activeStatement.vesselVoyage}
-              </div>
-              <div className="gecko-page-subtitle">
-                <strong style={{ color: 'var(--gecko-text-primary)' }}>Sub-B/L:</strong>{' '}
-                <span className="gecko-mono">{activeStatement.subBlNo}</span>
-                {'  '}
-                <strong style={{ color: 'var(--gecko-text-primary)' }}>Order No:</strong>{' '}
-                <span className="gecko-mono">{activeStatement.orderNo}</span>
-              </div>
-            </div>
-          </div>
-
-          {/* Right — stat boxes */}
-          <div className="gecko-row gecko-flex-shrink-0 gecko-stack-md">
-            {[
-              { label: 'Total Billable', value: activeStatement.totalBillable, color: 'var(--gecko-primary-700)' },
-              { label: 'Billed',         value: activeStatement.billedAmount,  color: 'var(--gecko-success-700)' },
-              { label: 'Unbilled',       value: unbilledDetail,                color: unbilledDetail > 0 ? 'var(--gecko-danger-700)' : 'var(--gecko-success-700)' },
-            ].map(stat => (
-              <div
-                key={stat.label}
-                className="gecko-stat-card"
-                style={{ textAlign: 'right', minWidth: 120, padding: '10px 18px' }}
-              >
-                <div className="gecko-eyebrow">{stat.label}</div>
-                <div className="gecko-money gecko-money-lg" style={{ color: stat.color }}>{fmt(stat.value)}</div>
-              </div>
-            ))}
-          </div>
-        </div>
-      </div>
-
-      {/* Detail Toolbar */}
-      <div className="gecko-page-actions">
-        <div className="gecko-page-actions-left gecko-row gecko-stack-md">
-          <span className="gecko-card-title">Charges</span>
-          <span className="gecko-count-badge">{charges.length} lines</span>
-          {selectedRows.size > 0 && (
-            <span className="gecko-pill gecko-pill-primary">
-              {selectedRows.size} row{selectedRows.size !== 1 ? 's' : ''} selected
-            </span>
-          )}
-        </div>
-        <div className="gecko-toolbar">
-          <GroupedSelectMenu
-            charges={charges}
-            onSetSelection={ids => setSelectedRows(new Set(ids))}
-            onDeselectAll={deselectAll}
-          />
-
-          <SendToInvoiceMenu
-            disabled={selectedRows.size === 0}
-            onPick={handleSendPick}
-            size="sm"
-          />
-
-          {/* Add Charge dropdown */}
-          <div style={{ position: 'relative' }} ref={actionMenuRef}>
-            <button
-              className="gecko-btn gecko-btn-outline gecko-btn-sm gecko-inline-row"
-              onClick={() => setShowActionMenu(v => !v)}
-            >
-              Add Charge <Icon name="chevronDown" size={13} />
-            </button>
-            {showActionMenu && (
-              <div
-                className="gecko-floating-card"
-                style={{ position: 'absolute', top: '100%', right: 0, marginTop: 4, zIndex: 200, minWidth: 260, overflow: 'hidden' }}
-              >
-                <button className="gecko-dropdown-item" onClick={() => { selectAll(); setShowActionMenu(false); }}>Select All</button>
-                <button className="gecko-dropdown-item" onClick={() => { deselectAll(); setShowActionMenu(false); }}>Unselect All</button>
-                <div className="gecko-dropdown-divider" />
-                <button className="gecko-dropdown-item" onClick={() => { setModalState({ type: 'bulkCharge', mode: 'add' }); setShowActionMenu(false); }}>Add Charges to All Items</button>
-                <button className="gecko-dropdown-item" onClick={() => { setModalState({ type: 'bulkCharge', mode: 'update' }); setShowActionMenu(false); }}>Update Charges to All Items</button>
-                <button
-                  className="gecko-dropdown-item"
-                  disabled={selectedRows.size === 0}
-                  onClick={() => { if (selectedRows.size > 0) { setModalState({ type: 'waive' }); setShowActionMenu(false); } }}
-                  title={selectedRows.size === 0 ? 'Select rows first' : undefined}
-                >Waive Charges to Selected Items</button>
-                <div className="gecko-dropdown-divider" />
-                <button className="gecko-dropdown-item gecko-dropdown-item-danger" onClick={() => setShowActionMenu(false)}>Clear Details</button>
-              </div>
-            )}
-          </div>
-
-          <button className="gecko-btn gecko-btn-outline gecko-btn-sm" onClick={() => setModalState({ type: 'regenerate' })}>
-            <Icon name="refreshCcw" size={13} /> Regenerate
-          </button>
-          <button className="gecko-btn gecko-btn-primary gecko-btn-sm" onClick={() => setModalState({ type: 'chargeDetail', charge: { ...EMPTY_CHARGE }, isNew: true })}>
-            <Icon name="plus" size={13} /> Manual Charge
-          </button>
-        </div>
-      </div>
-
-      {/* Charges Table */}
-      <div className="gecko-table-card">
-        {charges.length === 0 ? (
-          <div style={{ padding: '56px 24px', textAlign: 'center', color: 'var(--gecko-text-secondary)' }}>
-            <Icon name="fileText" size={32} style={{ color: 'var(--gecko-text-disabled)', display: 'block', margin: '0 auto 12px' }} />
-            <div className="gecko-card-title gecko-mb-1">No charges yet</div>
-            <div className="gecko-helper-text">Use &quot;+ Manual Charge&quot; to add the first line.</div>
-          </div>
-        ) : (
-          <>
-            <table
-              className="gecko-table gecko-table-comfortable"
-              style={{ fontSize: 12.5, tableLayout: 'fixed', width: '100%' }}
-            >
+            </section>
+          ))}
+
+          {/* Receipts */}
+          <section className="gecko-table-card">
+            <div style={{ padding: '10px 12px', fontWeight: 700, fontSize: 13 }}>Receipts · {s.receipts.length}</div>
+            <table className="gecko-table gecko-table-compact">
               <thead>
-                <tr>
-                  <th style={{ width: 36, textAlign: 'center' }}>
-                    <input type="checkbox" checked={allSelected} onChange={allSelected ? deselectAll : selectAll} style={{ cursor: 'pointer' }} />
-                  </th>
-                  <th style={{ width: 32, textAlign: 'center' }}>#</th>
-                  <th style={{ width: 95 }}>CHARGE CODE</th>
-                  <th style={{ width: 24, textAlign: 'center' }}></th>
-                  <th>DESCRIPTION</th>
-                  <th style={{ width: 115 }}>CONTAINER</th>
-                  <th style={{ width: 64, textAlign: 'center' }}>SZ/TYPE</th>
-                  <th style={{ width: 90 }}>MOVEMENT</th>
-                  <th style={{ width: 70, textAlign: 'center' }}>TERM</th>
-                  <th style={{ width: 80 }}>PAYMENT TO</th>
-                  <th style={{ width: 55, textAlign: 'right' }}>QTY</th>
-                  <th style={{ width: 90, textAlign: 'right' }}>RATE</th>
-                  <th style={{ width: 105, textAlign: 'right' }}>QUOTATION</th>
-                  <th style={{ width: 80, textAlign: 'center' }}>STATUS</th>
-                  <th style={{ width: 36 }}></th>
-                </tr>
+                <tr><th>Receipt</th><th>Time</th><th>Payer</th><th className="gecko-num">Before VAT</th><th className="gecko-num">VAT</th><th className="gecko-num">Total</th><th>Status</th></tr>
               </thead>
               <tbody>
-                {chargesPagination.pageItems.map((charge, idx) => {
-                  const isSelected = selectedRows.has(charge.id);
-                  return (
-                    <tr
-                      key={charge.id}
-                      style={{
-                        opacity: charge.isWaived ? 0.5 : 1,
-                        background: isSelected ? 'var(--gecko-primary-50)' : undefined,
-                        borderLeft: isSelected ? '3px solid var(--gecko-primary-500)' : '3px solid transparent',
-                      }}
-                    >
-                      <td style={{ textAlign: 'center' }}>
-                        <input type="checkbox" checked={isSelected} onChange={() => toggleRow(charge.id)} style={{ cursor: 'pointer' }} />
-                      </td>
-                      <td className="gecko-helper-text" style={{ textAlign: 'center', marginTop: 0 }}>{chargesPagination.startRow + idx}</td>
-                      <td>
-                        <span
-                          className="gecko-id-link"
-                          style={{ background: 'var(--gecko-primary-50)', padding: '2px 7px', borderRadius: 5, whiteSpace: 'nowrap', cursor: 'pointer' }}
-                          onClick={() => setModalState({ type: 'chargeDetail', charge, isNew: false })}
-                        >
-                          {charge.chargeCode}
-                        </span>
-                      </td>
-                      <td style={{ textAlign: 'center', background: charge.isLocked ? 'var(--gecko-warning-50)' : undefined }}>
-                        {charge.isLocked && (
-                          <span
-                            title="Rate locked — excluded from Regenerate"
-                            className="gecko-inline-row"
-                            style={{ color: 'var(--gecko-warning-600)' }}
-                          >
-                            <Icon name="lock" size={12} />
-                          </span>
-                        )}
-                      </td>
-                      <td style={{ textDecoration: charge.isWaived ? 'line-through' : undefined, color: 'var(--gecko-text-primary)' }}>{charge.chargeDesc}</td>
-                      <td className="gecko-mono gecko-cell-meta">{charge.containerNo}</td>
-                      <td className="gecko-mono-strong gecko-cell-meta" style={{ textAlign: 'center', marginTop: 0, fontFamily: 'var(--gecko-font-mono)' }}>{charge.size} {charge.ctrType}</td>
-                      <td className="gecko-cell-meta">{charge.movementCode}</td>
-                      <td style={{ textAlign: 'center' }}><PaymentTermBadge term={charge.paymentTerm} /></td>
-                      <td className="gecko-cell-meta" style={{ marginTop: 0, fontWeight: 600 }}>{charge.paymentTo}</td>
-                      <td className="gecko-num-tabular gecko-cell-meta">{charge.qty.toFixed(3)}</td>
-                      <td className="gecko-money gecko-money-sm" style={{ textDecoration: charge.isWaived ? 'line-through' : undefined }}>
-                        {fmt(charge.sellingRate)}
-                      </td>
-                      <td className="gecko-num-tabular gecko-cell-meta">
-                        {charge.quotation || <span style={{ color: 'var(--gecko-text-disabled)' }}>—</span>}
-                      </td>
-                      <td style={{ textAlign: 'center' }}><ChargeStatusBadge status={charge.status} /></td>
-                      <td style={{ textAlign: 'center' }}>
-                        <button
-                          onClick={() => setModalState({ type: 'chargeDetail', charge, isNew: false })}
-                          className="gecko-icon-btn-ghost"
-                          title="Edit charge"
-                        >
-                          <Icon name="edit" size={13} />
-                        </button>
-                      </td>
-                    </tr>
-                  );
-                })}
+                {s.receipts.length === 0 && (
+                  <tr><td colSpan={7} className="gecko-cell-meta" style={{ textAlign: 'center', padding: 12 }}>No receipt has been issued on this booking.</td></tr>
+                )}
+                {s.receipts.map(r => (
+                  <tr key={r.receiptId} style={r.status === 'VOIDED' ? { opacity: 0.6 } : undefined}>
+                    <td className="gecko-mono-strong">{r.receiptNo}</td>
+                    <td>{formatDateTime(r.receiptAt)}</td>
+                    <td className="gecko-truncate" style={{ maxWidth: 220 }}>{r.payerName}</td>
+                    <td className="gecko-num gecko-mono">{money(r.subtotal, r.currencyCode)}</td>
+                    <td className="gecko-num gecko-mono">{money(r.tax, r.currencyCode)}</td>
+                    <td className="gecko-num gecko-mono" style={{ fontWeight: 700 }}>{money(r.total, r.currencyCode)}</td>
+                    <td>
+                      <span className={`gecko-badge ${r.status === 'VOIDED' ? 'gecko-badge-gray' : 'gecko-badge-success'}`}>{r.status === 'VOIDED' ? 'Voided' : 'Issued'}</span>
+                      {r.voidReason && <div className="gecko-cell-meta">{r.voidReason}</div>}
+                      {r.replacedByReceiptNo && <div className="gecko-cell-meta">replaced by <span className="gecko-mono">{r.replacedByReceiptNo}</span></div>}
+                      {r.replacesReceiptNo && <div className="gecko-cell-meta">replaces <span className="gecko-mono">{r.replacesReceiptNo}</span></div>}
+                    </td>
+                  </tr>
+                ))}
               </tbody>
-              <tfoot>
-                <tr style={{ background: 'var(--gecko-bg-subtle)', borderTop: '2px solid var(--gecko-border)' }}>
-                  <td className="gecko-eyebrow" colSpan={11} style={{ textAlign: 'right', paddingRight: 12 }}>Subtotal (non-waived)</td>
-                  <td className="gecko-money gecko-money-md" style={{ fontWeight: 800, color: 'var(--gecko-primary-700)', paddingRight: 12 }}>{fmt(chargesSubtotal)}</td>
-                  <td colSpan={3} />
-                </tr>
-              </tfoot>
             </table>
+          </section>
 
-            <TablePagination
-              page={chargesPagination.page}
-              pageSize={chargesPagination.pageSize}
-              totalItems={chargesPagination.totalItems}
-              totalPages={chargesPagination.totalPages}
-              startRow={chargesPagination.startRow}
-              endRow={chargesPagination.endRow}
-              onPageChange={chargesPagination.setPage}
-              onPageSizeChange={chargesPagination.setPageSize}
-              noun="charges"
-            />
-          </>
-        )}
-      </div>
+          <div className="gecko-row gecko-row-wrap" style={{ gap: 8 }}>
+            <Link href="/billing/cash-window" className="gecko-btn gecko-btn-ghost gecko-btn-sm"><Icon name="arrowRight" size={13} /> Cash window</Link>
+            <Link href="/billing/service-orders" className="gecko-btn gecko-btn-ghost gecko-btn-sm"><Icon name="clipboardList" size={13} /> Service orders</Link>
+          </div>
+        </>
+      )}
+    </div>
+  );
+}
 
-      {/* Modals */}
-      {modalState?.type === 'chargeDetail' && (
-        <ChargeDetailModal
-          charge={modalState.charge}
-          isNew={modalState.isNew}
-          containers={activeStatement.containers}
-          onClose={() => setModalState(null)}
-        />
-      )}
-      {modalState?.type === 'bulkCharge' && (
-        <BulkChargeModal
-          containers={activeStatement.containers}
-          mode={modalState.mode}
-          onClose={() => setModalState(null)}
-        />
-      )}
-      {modalState?.type === 'regenerate' && (
-        <RegenerateModal
-          charges={charges}
-          onClose={() => setModalState(null)}
-        />
-      )}
-      {modalState?.type === 'waive' && (
-        <WaiveModal
-          selectedCharges={selectedCharges}
-          customerName={activeStatement.customerName}
-          onClose={() => setModalState(null)}
-        />
-      )}
-
-      {/* Send-to-Invoice modals — scoped to the selected payment term */}
-      <NewInvoiceModal
-        open={pendingSendAction?.kind === 'new'}
-        action={pendingSendAction?.kind === 'new' ? { term: pendingSendAction.term } : null}
-        lineCount={sendModalTotals.count}
-        lineLabel="charges"
-        total={sendModalTotals.total}
-        onCancel={() => setPendingSendAction(null)}
-        onConfirm={handleNewInvoiceConfirm}
-      />
-      <ExistingInvoiceModal
-        open={pendingSendAction?.kind === 'existing'}
-        action={pendingSendAction?.kind === 'existing' ? { term: pendingSendAction.term } : null}
-        lineCount={sendModalTotals.count}
-        lineLabel="charges"
-        total={sendModalTotals.total}
-        onCancel={() => setPendingSendAction(null)}
-        onConfirm={handleExistingInvoiceConfirm}
-      />
+function Totals({ totals, m, compact = false }: { totals: StatementTotals; m: (v: number) => string; compact?: boolean }) {
+  const parts = [
+    ['Paid', totals.paid, 'var(--gecko-success-700)'],
+    ['Waived', totals.waived, 'var(--gecko-text-secondary)'],
+    ['Unbilled', totals.unbilled, 'var(--gecko-warning-700)'],
+    ['Invoiced', totals.invoiced, 'var(--gecko-primary-700)'],
+    ['Cancelled', totals.cancelled, 'var(--gecko-text-disabled)'],
+  ] as const;
+  const shown = parts.filter(([label, v]) => v !== 0 || (!compact && label === 'Paid'));
+  return (
+    <div className="gecko-row gecko-row-wrap" style={{ gap: compact ? 12 : 20 }}>
+      {shown.map(([label, v, color]) => (
+        <div key={label} style={{ textAlign: 'right' }}>
+          <div className="gecko-cell-meta">{label}</div>
+          <div className="gecko-mono" style={{ fontWeight: 700, fontSize: compact ? 13 : 18, color }}>{m(v)}</div>
+        </div>
+      ))}
     </div>
   );
 }

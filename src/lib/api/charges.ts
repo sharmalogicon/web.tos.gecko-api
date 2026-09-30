@@ -103,3 +103,52 @@ export const CHARGE_SOURCE: Record<ChargeSource, string> = {
 
 export const payerLabel = (code: string | null, name: string | null) =>
   name ?? code ?? 'Walk-in (cash)';
+
+// ── one booking's statement (billing/statement) ─────────────────────────────
+
+export const statementPath = (orderNo: string) => `${CHARGES_PATH}/statement?orderNo=${encodeURIComponent(orderNo)}`;
+
+/** With VAT, by where the money is. Paid includes earned. */
+export interface StatementTotals { paid: number; waived: number; unbilled: number; invoiced: number; cancelled: number }
+
+export interface StatementLine { charge: Charge; receiptNo: string | null }
+
+export interface StatementBox {
+  /** null = lines whose box Revenue does not know on this booking. */
+  bookingContainerId: string | null;
+  containerNo: string | null;
+  equipmentTypeCode: string | null;
+  isCurrent: boolean;
+  endReason: string | null;
+  lines: StatementLine[];
+  totals: StatementTotals;
+}
+
+export interface StatementReceipt {
+  receiptId: string;
+  receiptNo: string;
+  receiptAt: string;
+  status: 'ISSUED' | 'VOIDED';
+  payerName: string;
+  currencyCode: string;
+  subtotal: number;
+  tax: number;
+  total: number;
+  voidedAt: string | null;
+  voidReason: string | null;
+  replacesReceiptNo: string | null;
+  replacedByReceiptNo: string | null;
+}
+
+export interface BookingStatement {
+  bookingId: string;
+  orderNo: string;
+  branchId: string;
+  bookingStatus: string;
+  orderTypeCode: string;
+  customerCode: string | null;
+  customerName: string | null;
+  boxes: StatementBox[];
+  receipts: StatementReceipt[];
+  totals: StatementTotals;
+}
