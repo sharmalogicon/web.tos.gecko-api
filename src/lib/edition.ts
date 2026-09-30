@@ -30,6 +30,7 @@ export const PILOT_PATHS: readonly string[] = [
   '/gate/desk',
   '/gate/stock',
   '/gate/holds',                // holds board: active, released history, release
+  '/gate/reefer-ops',           // reefer plug log, /new plug-in (power charge needs Revenue /reefer/power)
   '/billing/cash-window',
   '/tariff/plans',              // schedules, /tariff/plans/new, /tariff/plans/[id]
   '/masters/customers',
