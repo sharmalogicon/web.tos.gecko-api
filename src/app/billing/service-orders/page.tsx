@@ -22,9 +22,8 @@ import { saveBlob } from '@/lib/api/client';
 import { useSession } from '@/lib/auth/session';
 import { formatContainerNo, formatDateTime } from '@/lib/api/tos';
 import { dayBound } from '@/lib/api/reefer';
-import { money } from '@/lib/api/revenue';
 import {
-  CHARGES_PATH, CHARGE_PERMISSIONS, CHARGE_SOURCE, CHARGE_STATUS, payerLabel,
+  amount, CHARGES_PATH, CHARGE_PERMISSIONS, CHARGE_SOURCE, CHARGE_STATUS, payerLabel,
   type Charge, type ChargeSource, type ChargeStatus,
 } from '@/lib/api/charges';
 
@@ -199,7 +198,7 @@ export default function ServiceOrdersPage() {
                     <td>
                       <div className="gecko-mono-strong">{c.chargeCode}</div>
                       <div className="gecko-cell-meta">
-                        {c.chargeName ?? ''}{c.quantity !== 1 ? ` · ${c.quantity} × ${money(c.unitRate, c.currencyCode)}` : ''}
+                        {c.chargeName ?? ''}{c.quantity !== 1 ? ` · ${c.quantity} × ${amount(c.unitRate, c.currencyCode)}` : ''}
                       </div>
                       {c.scheduleNo && <div className="gecko-cell-meta" title="The tariff the price was taken from">{c.scheduleNo} v{c.scheduleVersionNo}</div>}
                     </td>
@@ -210,9 +209,9 @@ export default function ServiceOrdersPage() {
                         {c.billTo.toLowerCase()} · {c.paymentTermCode.toLowerCase()}
                       </div>
                     </td>
-                    <td className="gecko-num gecko-mono">{money(c.amount, c.currencyCode)}</td>
-                    <td className="gecko-num gecko-mono">{money(c.taxAmount, c.currencyCode)}</td>
-                    <td className="gecko-num gecko-mono" style={{ fontWeight: 700 }}>{money(c.total, c.currencyCode)}</td>
+                    <td className="gecko-num gecko-mono">{amount(c.amount, c.currencyCode)}</td>
+                    <td className="gecko-num gecko-mono">{amount(c.taxAmount, c.currencyCode)}</td>
+                    <td className="gecko-num gecko-mono" style={{ fontWeight: 700 }}>{amount(c.total, c.currencyCode)}</td>
                     <td>
                       <span className={`gecko-badge ${st.badge}`} title={st.hint}>{st.label}</span>
                       {c.creditNoteRequired && <div className="gecko-cell-meta" style={{ color: 'var(--gecko-error-700)' }}>credit note needed</div>}
@@ -228,7 +227,7 @@ export default function ServiceOrdersPage() {
                 <tr>
                   <td colSpan={7} className="gecko-cell-meta">This page, cancelled lines left out</td>
                   <td className="gecko-num gecko-mono" style={{ fontWeight: 700 }}>
-                    {Object.entries(pageTotals).map(([cur, v]) => <div key={cur}>{money(v, cur)}</div>)}
+                    {Object.entries(pageTotals).map(([cur, v]) => <div key={cur}>{amount(v, cur)}</div>)}
                   </td>
                   <td />
                 </tr>

@@ -165,9 +165,23 @@ export default function OperationalReportsPage() {
         </>
       )}
 
+      {r && r.migrated > 0 && (
+        <div className="gecko-alert gecko-alert-info">
+          <Icon name="info" size={18} />
+          <div>
+            <strong>{r.migrated.toLocaleString()} EIRs in this range came over from Vector</strong> — the gate-in of each box
+            that was still in the yard when GECKO took over. They are listed below, but they are not counted as moves:
+            Vector&apos;s other gate moves were not migrated, so counting these would show only part of the flow.
+          </div>
+        </div>
+      )}
+
       {/* The EIRs behind the numbers */}
       <div className="gecko-row gecko-row-between">
-        <div className="gecko-eyebrow">EIRs in the range · {eirs.total.toLocaleString()}</div>
+        <div className="gecko-eyebrow">
+          EIRs in the range · {eirs.total.toLocaleString()}
+          {r && r.migrated > 0 ? ` · ${r.migrated.toLocaleString()} migrated from Vector` : ''}
+        </div>
         <input className="gecko-input gecko-input-sm" value={eirs.search} placeholder="EIR, container, order or truck"
                onChange={e => eirs.setSearch(e.target.value)} style={{ width: 240 }} />
       </div>

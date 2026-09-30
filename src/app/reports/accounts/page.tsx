@@ -16,9 +16,9 @@ import { Icon } from '@/components/ui/Icon';
 import { useApi, useApiList } from '@/lib/api/use-api';
 import { useServerList } from '@/lib/api/use-server-list';
 import { saveBlob } from '@/lib/api/client';
+import { amount } from '@/lib/api/charges';
 import { useSession } from '@/lib/auth/session';
 import { formatDateTime, formatTime } from '@/lib/api/tos';
-import { money } from '@/lib/api/revenue';
 import {
   RECEIPTS_LIST_PATH, RECEIPTS_PATH, REPORT_PERMISSIONS, presetRange, reportPath, toCsv,
   type ReceiptRow, type ReceiptsReport,
@@ -45,11 +45,11 @@ export default function AccountsReportsPage() {
   const report = useApi<ReceiptsReport>(branchId ? reportPath(RECEIPTS_PATH, branchId, range.from, range.to) : null);
   const r = report.data;
   const cur = r?.currencies.length === 1 ? r.currencies[0] : 'THB';
-  const m = (v: number) => money(v, cur);
+  const m = (v: number) => amount(v, cur);
 
   const list = useServerList<ReceiptRow>(RECEIPTS_LIST_PATH, {
     branchId: branchId || undefined, from: range.from, to: range.to, status: status || undefined,
-  }, 'receipts');
+  }, 'receipts', !!branchId);
   const rows = list.rows ?? [];
   const error = report.error ?? list.error;
   const mayVoid = !!branchId && canAt(WINDOW_PERMISSIONS.voidReceipt, branchId);
@@ -218,9 +218,9 @@ export default function AccountsReportsPage() {
                 <td className="gecko-mono">{x.orderNo ?? '—'}</td>
                 <td>{x.cashierName ?? '—'}</td>
                 <td>{x.channels.map(c => CHANNEL[c] ?? c).join(' + ') || '—'}</td>
-                <td className="gecko-num gecko-mono">{money(x.subtotal, x.currencyCode)}</td>
-                <td className="gecko-num gecko-mono">{money(x.tax, x.currencyCode)}</td>
-                <td className="gecko-num gecko-mono" style={{ fontWeight: 700 }}>{money(x.total, x.currencyCode)}</td>
+                <td className="gecko-num gecko-mono">{amount(x.subtotal, x.currencyCode)}</td>
+                <td className="gecko-num gecko-mono">{amount(x.tax, x.currencyCode)}</td>
+                <td className="gecko-num gecko-mono" style={{ fontWeight: 700 }}>{amount(x.total, x.currencyCode)}</td>
                 <td>
                   <span className={`gecko-badge ${x.status === 'VOIDED' ? 'gecko-badge-gray' : 'gecko-badge-success'}`}>{x.status === 'VOIDED' ? 'Voided' : 'Issued'}</span>
                   {x.voidReason && <div className="gecko-cell-meta gecko-truncate" style={{ maxWidth: 160 }} title={x.voidReason}>{x.voidReason}</div>}

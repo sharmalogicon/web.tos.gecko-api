@@ -38,6 +38,8 @@ export interface GateMovesReport {
   to: string;
   total: GateMovesTally;
   voided: number;
+  /** EIRs a Vector migration wrote in the range — in the gate register, not counted as moves. */
+  migrated: number;
   days: { day: string; tally: GateMovesTally }[];
   movements: { movementCode: string; direction: string; fullEmpty: string; moves: number; teu: number }[];
   customers: GateMovesGroup[];

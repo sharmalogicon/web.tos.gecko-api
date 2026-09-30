@@ -19,10 +19,9 @@ import { EmptyState } from '@/components/ui/EmptyState';
 import { useApi } from '@/lib/api/use-api';
 import { saveBlob } from '@/lib/api/client';
 import { formatContainerNo, formatDateTime } from '@/lib/api/tos';
-import { money } from '@/lib/api/revenue';
 import { toCsv } from '@/lib/api/reports';
 import {
-  CHARGE_SOURCE, CHARGE_STATUS, payerLabel, statementPath,
+  amount, CHARGE_SOURCE, CHARGE_STATUS, payerLabel, statementPath,
   type BookingStatement, type StatementTotals,
 } from '@/lib/api/charges';
 
@@ -44,7 +43,7 @@ function Statement() {
   const statement = useApi<BookingStatement>(orderNo ? statementPath(orderNo) : null);
   const s = orderNo ? statement.data : null;
   const cur = s?.receipts[0]?.currencyCode ?? s?.boxes.flatMap(b => b.lines)[0]?.charge.currencyCode ?? 'THB';
-  const m = (v: number) => money(v, cur);
+  const m = (v: number) => amount(v, cur);
 
   const open = (e: React.FormEvent) => {
     e.preventDefault();
@@ -177,7 +176,7 @@ function Statement() {
                         <td>
                           <div className="gecko-mono-strong">{c.chargeCode}</div>
                           <div className="gecko-cell-meta">
-                            {c.chargeName ?? ''}{c.quantity !== 1 ? ` · ${c.quantity} × ${money(c.unitRate, c.currencyCode)}` : ''}
+                            {c.chargeName ?? ''}{c.quantity !== 1 ? ` · ${c.quantity} × ${amount(c.unitRate, c.currencyCode)}` : ''}
                           </div>
                           <div className="gecko-cell-meta">{CHARGE_SOURCE[c.source] ?? c.source} · {formatDateTime(c.createdAt)}</div>
                         </td>
@@ -185,9 +184,9 @@ function Statement() {
                           <div className="gecko-truncate" style={{ maxWidth: 200 }}>{payerLabel(c.payerCode, c.payerName)}</div>
                           <div className="gecko-cell-meta">{c.billTo.toLowerCase()} · {c.paymentTermCode.toLowerCase()}</div>
                         </td>
-                        <td className="gecko-num gecko-mono">{money(c.amount, c.currencyCode)}</td>
-                        <td className="gecko-num gecko-mono">{money(c.taxAmount, c.currencyCode)}</td>
-                        <td className="gecko-num gecko-mono" style={{ fontWeight: 700 }}>{money(c.total, c.currencyCode)}</td>
+                        <td className="gecko-num gecko-mono">{amount(c.amount, c.currencyCode)}</td>
+                        <td className="gecko-num gecko-mono">{amount(c.taxAmount, c.currencyCode)}</td>
+                        <td className="gecko-num gecko-mono" style={{ fontWeight: 700 }}>{amount(c.total, c.currencyCode)}</td>
                         <td>
                           <span className={`gecko-badge ${st.badge}`} title={st.hint}>{st.label}</span>
                           {reason && <div className="gecko-cell-meta gecko-truncate" style={{ maxWidth: 200 }} title={reason}>{reason}</div>}
@@ -217,9 +216,9 @@ function Statement() {
                     <td className="gecko-mono-strong">{r.receiptNo}</td>
                     <td>{formatDateTime(r.receiptAt)}</td>
                     <td className="gecko-truncate" style={{ maxWidth: 220 }}>{r.payerName}</td>
-                    <td className="gecko-num gecko-mono">{money(r.subtotal, r.currencyCode)}</td>
-                    <td className="gecko-num gecko-mono">{money(r.tax, r.currencyCode)}</td>
-                    <td className="gecko-num gecko-mono" style={{ fontWeight: 700 }}>{money(r.total, r.currencyCode)}</td>
+                    <td className="gecko-num gecko-mono">{amount(r.subtotal, r.currencyCode)}</td>
+                    <td className="gecko-num gecko-mono">{amount(r.tax, r.currencyCode)}</td>
+                    <td className="gecko-num gecko-mono" style={{ fontWeight: 700 }}>{amount(r.total, r.currencyCode)}</td>
                     <td>
                       <span className={`gecko-badge ${r.status === 'VOIDED' ? 'gecko-badge-gray' : 'gecko-badge-success'}`}>{r.status === 'VOIDED' ? 'Voided' : 'Issued'}</span>
                       {r.voidReason && <div className="gecko-cell-meta">{r.voidReason}</div>}

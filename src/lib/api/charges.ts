@@ -101,6 +101,15 @@ export const CHARGE_SOURCE: Record<ChargeSource, string> = {
   MANUAL: 'Manual',
 };
 
+/**
+ * Money owed or paid: always two decimals (฿160.50), never ฿160.5. The tariff
+ * pages' `money` trims zeros on purpose — it prints rates like ฿84.11 per day.
+ */
+export const amount = (value: number | null | undefined, currency = 'THB') =>
+  value === null || value === undefined
+    ? '—'
+    : `${currency === 'THB' ? '฿' : `${currency} `}${value.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+
 export const payerLabel = (code: string | null, name: string | null) =>
   name ?? code ?? 'Walk-in (cash)';
 

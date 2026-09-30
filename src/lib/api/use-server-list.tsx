@@ -18,7 +18,7 @@ function useDebounced<T>(value: T, ms = 300): T {
  * state, the page, and the pagination footer. `params` are extra query
  * parameters (filters); a change of search or filters starts again at page 1.
  */
-export function useServerList<T>(basePath: string, params: Record<string, string | boolean | undefined>, noun: string) {
+export function useServerList<T>(basePath: string, params: Record<string, string | boolean | undefined>, noun: string, enabled = true) {
   const [search, setSearch] = useState('');
   const [page, setPage] = useState(0);            // 0-based, as TablePagination counts
   const [pageSize, setPageSize] = useState(50);
@@ -36,7 +36,8 @@ export function useServerList<T>(basePath: string, params: Record<string, string
     setPage(0);
   }
 
-  const resource = useApi<Paged<T>>(`${basePath}?${q.toString()}`);
+  // enabled = false: the read needs something not known yet (a depot) — ask nothing rather than a 400.
+  const resource = useApi<Paged<T>>(enabled ? `${basePath}?${q.toString()}` : null);
   const total = resource.data?.totalCount ?? 0;
   const footer = (
     <TablePagination

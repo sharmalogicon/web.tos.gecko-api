@@ -21,9 +21,8 @@ import { useServerList } from '@/lib/api/use-server-list';
 import { saveBlob } from '@/lib/api/client';
 import { useSession } from '@/lib/auth/session';
 import { formatContainerNo, formatDateTime } from '@/lib/api/tos';
-import { money } from '@/lib/api/revenue';
 import {
-  CHARGES_PATH, CHARGE_PERMISSIONS, payerLabel, unbilledPath,
+  amount, CHARGES_PATH, CHARGE_PERMISSIONS, payerLabel, unbilledPath,
   type Charge, type Unbilled, type UnbilledPayer,
 } from '@/lib/api/charges';
 
@@ -110,9 +109,9 @@ export default function UnbilledPage() {
         <Kpi icon="users" tone="primary" label="Payers owing" value={summary.data ? payers.length.toLocaleString() : undefined} />
         <Kpi icon="clipboardList" tone="info" label="Unbilled lines" value={summary.data?.lines.toLocaleString()} />
         <Kpi icon="invoice" tone="neutral" label="Before VAT"
-             value={summary.data ? (oneCurrency ? money(summary.data.amount, oneCurrency) : 'mixed currencies') : undefined} />
+             value={summary.data ? (oneCurrency ? amount(summary.data.amount, oneCurrency) : 'mixed currencies') : undefined} />
         <Kpi icon="fileText" tone="warning" label="Total with VAT"
-             value={summary.data ? (oneCurrency ? money(summary.data.total, oneCurrency) : 'see per payer') : undefined} />
+             value={summary.data ? (oneCurrency ? amount(summary.data.total, oneCurrency) : 'see per payer') : undefined} />
       </div>
 
       {summary.data && payers.length === 0 ? (
@@ -154,9 +153,9 @@ export default function UnbilledPage() {
                       <td>{p.billTo.toLowerCase()}</td>
                       <td className="gecko-num gecko-mono">{p.lines}</td>
                       <td className="gecko-num gecko-mono">{p.boxes}</td>
-                      <td className="gecko-num gecko-mono">{money(p.amount, p.currencyCode)}</td>
-                      <td className="gecko-num gecko-mono">{money(p.tax, p.currencyCode)}</td>
-                      <td className="gecko-num gecko-mono" style={{ fontWeight: 700 }}>{money(p.total, p.currencyCode)}</td>
+                      <td className="gecko-num gecko-mono">{amount(p.amount, p.currencyCode)}</td>
+                      <td className="gecko-num gecko-mono">{amount(p.tax, p.currencyCode)}</td>
+                      <td className="gecko-num gecko-mono" style={{ fontWeight: 700 }}>{amount(p.total, p.currencyCode)}</td>
                       <td>{dayOf(p.oldest)}</td>
                     </tr>
                   );
@@ -220,9 +219,9 @@ export default function UnbilledPage() {
                       {c.chargeName && <div className="gecko-cell-meta">{c.chargeName}</div>}
                     </td>
                     {!selected && <td className="gecko-truncate" style={{ maxWidth: 200 }}>{payerLabel(c.payerCode, c.payerName)}</td>}
-                    <td className="gecko-num gecko-mono">{money(c.amount, c.currencyCode)}</td>
-                    <td className="gecko-num gecko-mono">{money(c.taxAmount, c.currencyCode)}</td>
-                    <td className="gecko-num gecko-mono" style={{ fontWeight: 700 }}>{money(c.total, c.currencyCode)}</td>
+                    <td className="gecko-num gecko-mono">{amount(c.amount, c.currencyCode)}</td>
+                    <td className="gecko-num gecko-mono">{amount(c.taxAmount, c.currencyCode)}</td>
+                    <td className="gecko-num gecko-mono" style={{ fontWeight: 700 }}>{amount(c.total, c.currencyCode)}</td>
                   </tr>
                 ))}
               </tbody>
