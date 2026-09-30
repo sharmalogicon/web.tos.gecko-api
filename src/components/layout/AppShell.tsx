@@ -273,7 +273,7 @@ function Sidebar({ collapsed, onToggle }: { collapsed: boolean, onToggle: () => 
             {/* The operator's own name, from the company the selected depot trades
                 as. Falls back to the product name while it loads, and for a branch
                 the API has no company for. */}
-            <span className="gecko-logo-text">{companyLabel(company) ?? 'GECKO'}</span>
+            <span className="gecko-logo-text" title={companyLabel(company) ?? undefined}>{companyLabel(company) ?? 'GECKO'}</span>
             <span className="gecko-brand-wordmark-line">TOS</span>
           </div>
         )}

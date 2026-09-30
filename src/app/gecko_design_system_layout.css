@@ -75,6 +75,12 @@
   font-weight: var(--gecko-font-weight-bold);
   color: var(--gecko-text-primary);
   white-space: nowrap;
+  /* The wordmark is the operator's own name now, not a fixed "GECKO". A tenant
+     with no short name falls back to its registered one — KORAKIT's is
+     "บริษัท เอ็ม.เอ็น.พี. คอนเทนเนอร์ ยาร์ด จำกัด" — which without this would
+     run straight out of the sidebar. The full name is on the title attribute. */
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
 .gecko-sidebar-nav {

@@ -6903,6 +6903,10 @@ button.gecko-toggle .gecko-toggle-thumb {
   display: flex;
   flex-direction: column;
   line-height: 1.1;
+  /* min-width:0 lets the flex child actually shrink, so the ellipsis on
+     .gecko-logo-text can take effect instead of the name overflowing. */
+  min-width: 0;
+  overflow: hidden;
 }
 .gecko-brand-wordmark-line {
   font-size: 10px;
