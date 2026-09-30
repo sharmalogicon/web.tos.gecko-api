@@ -176,12 +176,12 @@ export default function GateAppointmentsPage() {
   const dateScopeLabel = dateFilter === 'TODAY' ? 'today' : dateFilter === 'TOMORROW' ? 'tomorrow' : dateFilter === 'WEEK' ? 'this week' : 'all';
 
   const onRowClick = (id: string) => {
-    // Stash the appointment id so the EIR-In page can prefill in a real impl.
-    // Today this is one-way navigation only; the EIR-In page doesn't yet read it.
+    // Stash the appointment id so the gate desk can prefill in a real impl.
+    // Today this is one-way navigation only; the desk doesn't yet read it.
     if (typeof sessionStorage !== 'undefined') {
       sessionStorage.setItem('gecko.activeAppointmentId', id);
     }
-    router.push('/gate/eir-in');
+    router.push('/gate/desk');
   };
 
   return (

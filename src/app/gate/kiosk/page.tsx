@@ -5,7 +5,7 @@ import { useRouter } from 'next/navigation';
 import { Icon } from '@/components/ui/Icon';
 
 /* ──────────────────────────────────────────────────────────────────────────
-   Prefill handoff — kiosk → /gate/eir-in (or /gate/eir-out)
+   Prefill handoff — kiosk → /gate/desk (the one screen that records a move)
 
    Kiosk writes the scanned-appointment data to sessionStorage under
    GATE_PREFILL_KEY, then router.push()'s to the gate form. The form reads
@@ -178,8 +178,8 @@ export default function GateKioskPage() {
     if (typeof window !== 'undefined') {
       sessionStorage.setItem(GATE_PREFILL_KEY, JSON.stringify(token));
     }
-    const target = token.dir === 'IN' ? '/gate/eir-in' : '/gate/eir-out';
-    router.push(target);
+    // The desk records both directions; the registers only read.
+    router.push('/gate/desk');
   }, [clearTimers, router]);
 
   const processScan = useCallback((raw: string) => {
