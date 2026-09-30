@@ -29,6 +29,7 @@ export const PILOT_PATHS: readonly string[] = [
   '/bookings',                  // register, /bookings/new, /bookings/[id]
   '/gate/desk',
   '/gate/stock',
+  '/gate/holds',                // holds board: active, released history, release
   '/billing/cash-window',
   '/tariff/plans',              // schedules, /tariff/plans/new, /tariff/plans/[id]
   '/masters/customers',
