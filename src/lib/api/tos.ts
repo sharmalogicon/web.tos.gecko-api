@@ -8,7 +8,7 @@
 
 export type GateDirection = "IN" | "OUT";
 export type GateDecision = "ALLOWED" | "NEEDS_OVERRIDE" | "BLOCKED";
-export type GateSeverity = "INFO" | "OVERRIDE" | "BLOCK";
+export type GateSeverity = "INFO" | "WARN" | "OVERRIDE" | "BLOCK";
 
 export interface GateFinding { code: string; message: string; severity: GateSeverity }
 
@@ -97,7 +97,7 @@ export const DECISION_TONE: Record<GateDecision, { tone: string; label: string; 
   BLOCKED:        { tone: "error",   label: "Refused",        hint: "There is no override at the barrier. Fix the cause first." },
 };
 
-export const SEVERITY_TONE: Record<GateSeverity, string> = { INFO: "info", OVERRIDE: "warning", BLOCK: "error" };
+export const SEVERITY_TONE: Record<GateSeverity, string> = { INFO: "info", WARN: "warning", OVERRIDE: "warning", BLOCK: "error" };
 
 /** A container number as the yard writes it: ABCU 123456 7. */
 export function formatContainerNo(containerNo: string): string {

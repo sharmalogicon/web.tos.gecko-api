@@ -14,7 +14,7 @@ import { ApiError } from '@/lib/api/problem';
  * the row's Active switch; Delete is a separate, confirmed action.
  */
 
-export type ColumnKind = 'text' | 'code' | 'number' | 'select' | 'bool' | 'date';
+export type ColumnKind = 'text' | 'code' | 'number' | 'select' | 'bool' | 'date' | 'time';
 
 export interface Column<T> {
   key: keyof T & string;
@@ -97,6 +97,9 @@ function Cell<T>({ col, draft, set, error, isNew }: {
           min={col.min} max={col.max} step={col.step ?? 1} aria-label={col.label} {...invalid}
           onChange={e => change(e.target.value === '' ? null : Number(e.target.value))} />
       );
+      break;
+    case 'time':
+      input = <input type="time" className="gecko-input gecko-input-sm gecko-num-tabular" value={(value as string | null) ?? ''} aria-label={col.label} {...invalid} onChange={e => change(e.target.value || null)} />;
       break;
     case 'date':
       input = <input type="date" className="gecko-input gecko-input-sm" value={(value as string | null) ?? ''} aria-label={col.label} {...invalid} onChange={e => change(e.target.value || null)} />;

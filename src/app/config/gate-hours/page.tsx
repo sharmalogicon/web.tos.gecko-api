@@ -1,846 +1,154 @@
 "use client";
-import React, { useState, useMemo } from 'react';
+import React, { useCallback, useState } from 'react';
 import { Icon } from '@/components/ui/Icon';
 import { PageToolbar } from '@/components/ui/OpsPrimitives';
+import { useApi, useApiList } from '@/lib/api/use-api';
+import { useSession } from '@/lib/auth/session';
+import { ApiError } from '@/lib/api/problem';
+import { HOLIDAYS_PATH, type PublicHoliday } from '@/lib/api/logistics';
+import {
+  exceptionsPath, formatMinutes, statusPath, windowsPath,
+  type GateHoursException, type GateHoursStatus, type GateHoursWindow,
+} from '@/lib/api/gate-hours';
+import { StatusStrip } from './_components/StatusStrip';
+import { WeeklyWindows } from './_components/WeeklyWindows';
+import { OneOffDates } from './_components/OneOffDates';
+import { DepotHolidays } from './_components/DepotHolidays';
 
-// ── Types ──────────────────────────────────────────────────────────────────────
-
-interface DaySchedule {
-  day: string;
-  open: boolean;
-  openTime: string;
-  closeTime: string;
-  breakStart: string;
-  breakEnd: string;
-}
-
-type HolidayType = 'National' | 'Local' | 'Facility';
-type HolidayScope = 'All Yards' | 'Import Yard' | 'Export Yard' | 'Bonded Yard' | 'Empty Depot';
-
-interface PublicHoliday {
-  id: string;
-  date: string;
-  name: string;
-  type: HolidayType;
-  scope: HolidayScope;
-  notes: string;
-}
-
-// ── Seed data ──────────────────────────────────────────────────────────────────
-
-const SEED_SCHEDULE: DaySchedule[] = [
-  { day: 'Monday',    open: true,  openTime: '06:00', closeTime: '20:00', breakStart: '12:00', breakEnd: '13:00' },
-  { day: 'Tuesday',   open: true,  openTime: '06:00', closeTime: '20:00', breakStart: '12:00', breakEnd: '13:00' },
-  { day: 'Wednesday', open: true,  openTime: '06:00', closeTime: '20:00', breakStart: '12:00', breakEnd: '13:00' },
-  { day: 'Thursday',  open: true,  openTime: '06:00', closeTime: '20:00', breakStart: '12:00', breakEnd: '13:00' },
-  { day: 'Friday',    open: true,  openTime: '06:00', closeTime: '20:00', breakStart: '12:00', breakEnd: '13:00' },
-  { day: 'Saturday',  open: true,  openTime: '07:00', closeTime: '17:00', breakStart: '12:00', breakEnd: '13:00' },
-  { day: 'Sunday',    open: false, openTime: '06:00', closeTime: '20:00', breakStart: '12:00', breakEnd: '13:00' },
-];
-
-const SEED_HOLIDAYS: PublicHoliday[] = [
-  { id: 'h1', date: '2026-05-04', name: 'Labour Day',                  type: 'National', scope: 'All Yards',    notes: 'Compensatory day observed' },
-  { id: 'h2', date: '2026-05-11', name: 'Visakha Bucha Day',           type: 'National', scope: 'All Yards',    notes: 'Buddhist holiday' },
-  { id: 'h3', date: '2026-07-28', name: "King's Birthday",             type: 'National', scope: 'All Yards',    notes: 'HM King Vajiralongkorn' },
-  { id: 'h4', date: '2026-08-12', name: "Queen's Birthday",            type: 'National', scope: 'All Yards',    notes: "National Mother's Day" },
-  { id: 'h5', date: '2026-10-13', name: 'King Bhumibol Memorial Day',  type: 'National', scope: 'All Yards',    notes: 'Day of mourning' },
-  { id: 'h6', date: '2026-10-23', name: 'Chulalongkorn Day',           type: 'National', scope: 'All Yards',    notes: 'Chula Day (Royal Ploughing)' },
-  { id: 'h7', date: '2026-12-05', name: 'King Rama IX Birthday',       type: 'National', scope: 'All Yards',    notes: "National Father's Day" },
-  { id: 'h8', date: '2026-12-31', name: "New Year's Eve",              type: 'Local',    scope: 'Import Yard',  notes: 'Reduced hours from 12:00' },
-];
-
-const TODAY_ISO = '2026-05-04';
-
-// ── Helpers ────────────────────────────────────────────────────────────────────
-
-function parseMinutes(t: string): number {
-  const [h, m] = t.split(':').map(Number);
-  return h * 60 + m;
-}
-
-function computeTotalHours(day: DaySchedule): string {
-  if (!day.open) return '—';
-  const open  = parseMinutes(day.openTime);
-  const close = parseMinutes(day.closeTime);
-  if (close <= open) return '—';
-  const breakMins = parseMinutes(day.breakEnd) - parseMinutes(day.breakStart);
-  const total = close - open - Math.max(0, breakMins);
-  const h = Math.floor(total / 60);
-  const m = total % 60;
-  return m === 0 ? `${h} hrs` : `${h}h ${m}m`;
-}
-
-function computeTotalHoursNum(day: DaySchedule): number {
-  if (!day.open) return 0;
-  const open  = parseMinutes(day.openTime);
-  const close = parseMinutes(day.closeTime);
-  if (close <= open) return 0;
-  const breakMins = parseMinutes(day.breakEnd) - parseMinutes(day.breakStart);
-  const total = close - open - Math.max(0, breakMins);
-  return total / 60;
-}
-
-function holidayStatus(dateStr: string): { label: string; bg: string; color: string } {
-  if (dateStr === TODAY_ISO)   return { label: 'Today',    bg: 'var(--gecko-warning-50)',  color: 'var(--gecko-warning-700)' };
-  if (dateStr > TODAY_ISO)     return { label: 'Upcoming', bg: 'var(--gecko-success-50)',  color: 'var(--gecko-success-700)' };
-  return                              { label: 'Past',     bg: 'var(--gecko-bg-subtle)',   color: 'var(--gecko-text-disabled)' };
-}
-
-function formatHolidayDate(dateStr: string): string {
-  const [y, m, d] = dateStr.split('-').map(Number);
-  const MONTHS = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
-  const DAYS   = ['Sun','Mon','Tue','Wed','Thu','Fri','Sat'];
-  const dt = new Date(y, m - 1, d);
-  return `${DAYS[dt.getDay()]} ${d} ${MONTHS[m - 1]} ${y}`;
-}
-
-function nextClosureDate(holidays: PublicHoliday[], schedule: DaySchedule[]): string {
-  const upcoming = holidays
-    .filter(h => h.date >= TODAY_ISO)
-    .sort((a, b) => a.date.localeCompare(b.date));
-  if (upcoming.length === 0) {
-    const sunday = schedule.find(d => d.day === 'Sunday');
-    return sunday && !sunday.open ? 'Sun (weekly)' : 'None scheduled';
-  }
-  return formatHolidayDate(upcoming[0].date).split(' ').slice(1).join(' ');
-}
-
-// ── Sub-components ─────────────────────────────────────────────────────────────
+interface Branch { branchId: string; branchCode: string; displayName: string }
 
 function KpiCard({ label, value, sub, accent }: { label: string; value: string | number; sub?: string; accent?: string }) {
   return (
     <div
       className="gecko-card gecko-card-accent-top"
-      style={{
-        flex: 1, minWidth: 150, padding: '14px 20px',
-        ['--gecko-accent-color' as string]: accent ?? 'var(--gecko-primary-500)',
-      }}
+      style={{ flex: 1, minWidth: 150, padding: '14px 20px', ['--gecko-accent-color' as string]: accent ?? 'var(--gecko-primary-500)' }}
     >
-      <div className="gecko-eyebrow gecko-mb-2">
-        {label}
-      </div>
-      <div className="gecko-stat-num">
-        {value}
-      </div>
+      <div className="gecko-eyebrow gecko-mb-2">{label}</div>
+      <div className="gecko-stat-num">{value}</div>
       {sub && <div className="gecko-cell-meta">{sub}</div>}
     </div>
   );
 }
 
-// ── Tab 1: Weekly Schedule ─────────────────────────────────────────────────────
+type Tab = 'schedule' | 'dates' | 'holidays';
 
-function WeeklyScheduleTab() {
-  const [schedule, setSchedule] = useState<DaySchedule[]>(SEED_SCHEDULE);
-  const [savedMsg, setSavedMsg] = useState('');
-
-  const updateDay = (idx: number, patch: Partial<DaySchedule>) => {
-    setSchedule(prev => prev.map((d, i) => i === idx ? { ...d, ...patch } : d));
-  };
-
-  const copyWeekdayToWeekend = () => {
-    const ref = schedule[0]; // Monday
-    setSchedule(prev => prev.map((d, i) =>
-      i >= 5 ? { ...d, openTime: ref.openTime, closeTime: ref.closeTime, breakStart: ref.breakStart, breakEnd: ref.breakEnd } : d
-    ));
-  };
-
-  const applyToAllDays = () => {
-    const ref = schedule[0];
-    setSchedule(prev => prev.map(d => ({
-      ...d,
-      openTime: ref.openTime,
-      closeTime: ref.closeTime,
-      breakStart: ref.breakStart,
-      breakEnd: ref.breakEnd,
-    })));
-  };
-
-  const copyFromPrevious = (idx: number) => {
-    if (idx === 0) return;
-    const prev = schedule[idx - 1];
-    updateDay(idx, { openTime: prev.openTime, closeTime: prev.closeTime, breakStart: prev.breakStart, breakEnd: prev.breakEnd });
-  };
-
-  const handleSave = () => {
-    setSavedMsg('Schedule saved');
-    setTimeout(() => setSavedMsg(''), 2500);
-  };
-
-  const summary = useMemo(() => {
-    const daysOpen = schedule.filter(d => d.open).length;
-    const totalHours = schedule.reduce((acc, d) => acc + computeTotalHoursNum(d), 0);
-    const openDays = schedule.filter(d => d.open);
-    const earliest = openDays.length > 0 ? openDays.reduce((a, b) => a.openTime < b.openTime ? a : b).openTime : '—';
-    const latest   = openDays.length > 0 ? openDays.reduce((a, b) => a.closeTime > b.closeTime ? a : b).closeTime : '—';
-    return { daysOpen, totalHours, earliest, latest };
-  }, [schedule]);
-
-  return (
-    <div className="gecko-stack" style={{ gap: 16 }}>
-
-      {/* Controls bar */}
-      <div
-        className="gecko-card gecko-row gecko-row-wrap"
-        style={{ gap: 10, padding: '10px 16px' }}
-      >
-        <div className="gecko-row" style={{ gap: 7 }}>
-          <Icon name="calendar" size={14} style={{ color: 'var(--gecko-primary-500)' }} />
-          <span className="gecko-page-subtitle">Effective from:</span>
-          <span style={{ fontSize: 13, fontWeight: 700, color: 'var(--gecko-text-primary)' }}>01 May 2026</span>
-        </div>
-
-        <div style={{ width: 1, height: 24, background: 'var(--gecko-border)', margin: '0 4px' }} />
-
-        <button
-          className="gecko-btn gecko-btn-ghost gecko-btn-sm gecko-inline-row"
-          onClick={copyWeekdayToWeekend}>
-          <Icon name="copy" size={13} />
-          Copy weekday pattern to weekend
-        </button>
-
-        <button
-          className="gecko-btn gecko-btn-ghost gecko-btn-sm gecko-inline-row"
-          onClick={applyToAllDays}>
-          <Icon name="refresh" size={13} />
-          Apply to all days
-        </button>
-
-        <div className="gecko-row" style={{ marginLeft: 'auto' }}>
-          {savedMsg && (
-            <span className="gecko-inline-row" style={{ fontSize: 12, color: 'var(--gecko-success-600)', fontWeight: 600 }}>
-              <Icon name="checkCircle" size={13} /> {savedMsg}
-            </span>
-          )}
-          <button
-            className="gecko-btn gecko-btn-primary gecko-btn-sm gecko-inline-row"
-            onClick={handleSave}>
-            <Icon name="save" size={13} />
-            Save Changes
-          </button>
-        </div>
-      </div>
-
-      {/* Schedule table */}
-      <div className="gecko-card" style={{ padding: 0, overflow: 'hidden' }}>
-        <div style={{ overflowX: 'auto' }}>
-          <table style={{ width: '100%', borderCollapse: 'collapse' }}>
-            <thead>
-              <tr style={{ borderBottom: '1px solid var(--gecko-border)', background: 'var(--gecko-bg-subtle)' }}>
-                {['Day', 'Status', 'Opening Time', 'Closing Time', 'Lunch Break', 'Total Hours', 'Actions'].map(col => (
-                  <th key={col} className="gecko-eyebrow" style={{
-                    padding: '9px 14px', textAlign: 'left',
-                    whiteSpace: 'nowrap',
-                  }}>
-                    {col}
-                  </th>
-                ))}
-              </tr>
-            </thead>
-            <tbody>
-              {schedule.map((day, idx) => {
-                const isWeekend = idx >= 5;
-                const totalLabel = computeTotalHours(day);
-                return (
-                  <tr
-                    key={day.day}
-                    style={{
-                      borderBottom: idx < 6 ? '1px solid var(--gecko-border)' : 'none',
-                      background: !day.open ? 'var(--gecko-bg-subtle)' : isWeekend ? 'var(--gecko-warning-50,#fffbeb)' : '#fff',
-                    }}
-                  >
-                    {/* Day */}
-                    <td style={{ padding: '12px 14px', whiteSpace: 'nowrap' }}>
-                      <div className="gecko-row">
-                        <span style={{
-                          width: 28, height: 28, borderRadius: 6, flexShrink: 0,
-                          background: isWeekend ? 'var(--gecko-warning-100)' : 'var(--gecko-primary-100)',
-                          color: isWeekend ? 'var(--gecko-warning-700)' : 'var(--gecko-primary-700)',
-                          display: 'flex', alignItems: 'center', justifyContent: 'center',
-                          fontSize: 9, fontWeight: 800, letterSpacing: '0.04em',
-                        }}>
-                          {day.day.slice(0, 3).toUpperCase()}
-                        </span>
-                        <span style={{ fontSize: 13, fontWeight: 600, color: 'var(--gecko-text-primary)' }}>
-                          {day.day}
-                        </span>
-                      </div>
-                    </td>
-
-                    {/* Status toggle */}
-                    <td style={{ padding: '12px 14px' }}>
-                      <button
-                        onClick={() => updateDay(idx, { open: !day.open })}
-                        style={{
-                          display: 'inline-flex', alignItems: 'center', gap: 5,
-                          padding: '4px 10px', borderRadius: 20, border: 'none', cursor: 'pointer',
-                          fontFamily: 'inherit', fontSize: 11, fontWeight: 700,
-                          background: day.open ? 'var(--gecko-success-100)' : 'var(--gecko-gray-100,#f3f4f6)',
-                          color: day.open ? 'var(--gecko-success-700)' : 'var(--gecko-text-disabled)',
-                          transition: 'background 0.15s, color 0.15s',
-                        }}
-                        title={`Click to mark as ${day.open ? 'Closed' : 'Open'}`}
-                      >
-                        {day.open
-                          ? <><Icon name="checkCircle" size={12} /> Open</>
-                          : <><Icon name="x" size={12} /> Closed</>
-                        }
-                      </button>
-                    </td>
-
-                    {/* Opening time */}
-                    <td style={{ padding: '12px 14px' }}>
-                      {day.open ? (
-                        <input
-                          type="time"
-                          value={day.openTime}
-                          onChange={e => updateDay(idx, { openTime: e.target.value })}
-                          className="gecko-input gecko-input-sm"
-                          style={{ width: 110, fontVariantNumeric: 'tabular-nums' }}
-                        />
-                      ) : (
-                        <span style={{ fontSize: 12, color: 'var(--gecko-text-disabled)' }}>—</span>
-                      )}
-                    </td>
-
-                    {/* Closing time */}
-                    <td style={{ padding: '12px 14px' }}>
-                      {day.open ? (
-                        <input
-                          type="time"
-                          value={day.closeTime}
-                          onChange={e => updateDay(idx, { closeTime: e.target.value })}
-                          className="gecko-input gecko-input-sm"
-                          style={{ width: 110, fontVariantNumeric: 'tabular-nums' }}
-                        />
-                      ) : (
-                        <span style={{ fontSize: 12, color: 'var(--gecko-text-disabled)' }}>—</span>
-                      )}
-                    </td>
-
-                    {/* Lunch break */}
-                    <td style={{ padding: '12px 14px' }}>
-                      {day.open ? (
-                        <div className="gecko-row" style={{ gap: 6 }}>
-                          <input
-                            type="time"
-                            value={day.breakStart}
-                            onChange={e => updateDay(idx, { breakStart: e.target.value })}
-                            className="gecko-input gecko-input-sm"
-                            style={{ width: 100, fontVariantNumeric: 'tabular-nums' }}
-                          />
-                          <span className="gecko-cell-meta" style={{ flexShrink: 0 }}>–</span>
-                          <input
-                            type="time"
-                            value={day.breakEnd}
-                            onChange={e => updateDay(idx, { breakEnd: e.target.value })}
-                            className="gecko-input gecko-input-sm"
-                            style={{ width: 100, fontVariantNumeric: 'tabular-nums' }}
-                          />
-                        </div>
-                      ) : (
-                        <span style={{ fontSize: 12, color: 'var(--gecko-text-disabled)' }}>—</span>
-                      )}
-                    </td>
-
-                    {/* Total hours */}
-                    <td style={{ padding: '12px 14px' }}>
-                      <span style={{
-                        fontSize: 13, fontWeight: 700,
-                        color: day.open ? 'var(--gecko-text-primary)' : 'var(--gecko-text-disabled)',
-                      }}>
-                        {totalLabel}
-                      </span>
-                    </td>
-
-                    {/* Actions */}
-                    <td style={{ padding: '12px 14px' }}>
-                      <button
-                        className="gecko-btn gecko-btn-ghost gecko-btn-icon gecko-btn-sm"
-                        onClick={() => copyFromPrevious(idx)}
-                        disabled={idx === 0}
-                        title={idx === 0 ? 'No previous day' : `Copy from ${schedule[idx - 1].day}`}
-                        style={{ opacity: idx === 0 ? 0.3 : 1 }}
-                      >
-                        <Icon name="copy" size={14} />
-                      </button>
-                    </td>
-                  </tr>
-                );
-              })}
-            </tbody>
-          </table>
-        </div>
-
-        {/* Weekly summary bar */}
-        <div className="gecko-row gecko-row-wrap" style={{
-          borderTop: '2px solid var(--gecko-border)',
-          padding: '12px 16px',
-          background: 'var(--gecko-bg-subtle)',
-          gap: 28,
-        }}>
-          <div className="gecko-row" style={{ gap: 7 }}>
-            <Icon name="clock" size={14} style={{ color: 'var(--gecko-primary-500)' }} />
-            <span className="gecko-cell-meta">Total operating hours this week:</span>
-            <span style={{ fontSize: 13, fontWeight: 700, color: 'var(--gecko-text-primary)' }}>
-              {summary.totalHours % 1 === 0 ? `${summary.totalHours} hrs` : `${summary.totalHours.toFixed(1)} hrs`}
-            </span>
-          </div>
-          <div className="gecko-row" style={{ gap: 7 }}>
-            <Icon name="checkCircle" size={14} style={{ color: 'var(--gecko-success-500)' }} />
-            <span className="gecko-cell-meta">Days open:</span>
-            <span style={{ fontSize: 13, fontWeight: 700, color: 'var(--gecko-text-primary)' }}>
-              {summary.daysOpen} / 7 days
-            </span>
-          </div>
-          <div className="gecko-row" style={{ gap: 7 }}>
-            <Icon name="arrowUp" size={13} style={{ color: 'var(--gecko-success-600)' }} />
-            <span className="gecko-cell-meta">Earliest open:</span>
-            <span style={{ fontSize: 13, fontWeight: 700, color: 'var(--gecko-text-primary)' }}>{summary.earliest}</span>
-          </div>
-          <div className="gecko-row" style={{ gap: 7 }}>
-            <Icon name="arrowDown" size={13} style={{ color: 'var(--gecko-warning-600)' }} />
-            <span className="gecko-cell-meta">Latest close:</span>
-            <span style={{ fontSize: 13, fontWeight: 700, color: 'var(--gecko-text-primary)' }}>{summary.latest}</span>
-          </div>
-        </div>
-      </div>
-    </div>
-  );
-}
-
-// ── Tab 2: Public Holidays ─────────────────────────────────────────────────────
-
-const EMPTY_HOLIDAY: Omit<PublicHoliday, 'id'> = {
-  date: '',
-  name: '',
-  type: 'National',
-  scope: 'All Yards',
-  notes: '',
-};
-
-function PublicHolidaysTab() {
-  const [holidays, setHolidays] = useState<PublicHoliday[]>(SEED_HOLIDAYS);
-  const [showAddForm, setShowAddForm] = useState(false);
-  const [draft, setDraft] = useState<Omit<PublicHoliday, 'id'>>(EMPTY_HOLIDAY);
-  const [editId, setEditId] = useState<string | null>(null);
-  const [editDraft, setEditDraft] = useState<Partial<PublicHoliday>>({});
-
-  const handleAddSubmit = () => {
-    if (!draft.date || !draft.name) return;
-    const newHoliday: PublicHoliday = { ...draft, id: `h${Date.now()}` };
-    setHolidays(prev => [...prev, newHoliday].sort((a, b) => a.date.localeCompare(b.date)));
-    setDraft(EMPTY_HOLIDAY);
-    setShowAddForm(false);
-  };
-
-  const handleDelete = (id: string) => {
-    setHolidays(prev => prev.filter(h => h.id !== id));
-  };
-
-  const handleEditStart = (h: PublicHoliday) => {
-    setEditId(h.id);
-    setEditDraft({ ...h });
-  };
-
-  const handleEditSave = () => {
-    setHolidays(prev => prev.map(h => h.id === editId ? { ...h, ...editDraft } as PublicHoliday : h));
-    setEditId(null);
-    setEditDraft({});
-  };
-
-  const TYPE_OPTIONS: HolidayType[] = ['National', 'Local', 'Facility'];
-  const SCOPE_OPTIONS: HolidayScope[] = ['All Yards', 'Import Yard', 'Export Yard', 'Bonded Yard', 'Empty Depot'];
-
-  const typeBadge = (t: HolidayType) => {
-    const cfg: Record<HolidayType, { bg: string; color: string }> = {
-      National: { bg: 'var(--gecko-primary-50)', color: 'var(--gecko-primary-700)' },
-      Local:    { bg: 'var(--gecko-warning-50)', color: 'var(--gecko-warning-700)' },
-      Facility: { bg: 'var(--gecko-bg-subtle)',  color: 'var(--gecko-text-secondary)' },
-    };
-    return cfg[t];
-  };
-
-  return (
-    <div className="gecko-stack" style={{ gap: 16 }}>
-
-      {/* Table card */}
-      <div className="gecko-card" style={{ padding: 0, overflow: 'hidden' }}>
-        {/* Table header */}
-        <div className="gecko-row gecko-row-between" style={{
-          padding: '12px 16px',
-          borderBottom: '1px solid var(--gecko-border)',
-        }}>
-          <div className="gecko-row" style={{ fontSize: 13, fontWeight: 700, color: 'var(--gecko-text-primary)' }}>
-            <Icon name="calendar" size={15} style={{ color: 'var(--gecko-primary-500)' }} />
-            Public Holidays — Laem Chabang ICD
-            <span className="gecko-badge gecko-badge-gray" style={{ fontSize: 10 }}>{holidays.length} holidays</span>
-          </div>
-          <button
-            className="gecko-btn gecko-btn-primary gecko-btn-sm gecko-inline-row"
-            onClick={() => { setShowAddForm(s => !s); setEditId(null); }}>
-            <Icon name="plus" size={13} />
-            Add Holiday
-          </button>
-        </div>
-
-        {/* Inline add form */}
-        {showAddForm && (
-          <div style={{
-            padding: '14px 16px',
-            background: 'var(--gecko-primary-50)',
-            borderBottom: '1px solid var(--gecko-primary-100)',
-          }}>
-            <div className="gecko-row" style={{ fontSize: 12, fontWeight: 700, color: 'var(--gecko-primary-700)', marginBottom: 10, gap: 6 }}>
-              <Icon name="plus" size={13} /> New Holiday
-            </div>
-            <div className="gecko-row gecko-row-wrap gecko-row-end" style={{ gap: 10 }}>
-              <label className="gecko-stack" style={{ gap: 4 }}>
-                <span className="gecko-eyebrow">Date *</span>
-                <input
-                  type="date"
-                  value={draft.date}
-                  onChange={e => setDraft(d => ({ ...d, date: e.target.value }))}
-                  className="gecko-input gecko-input-sm"
-                  style={{ width: 150 }}
-                />
-              </label>
-              <label className="gecko-stack" style={{ gap: 4, flex: '1 1 180px' }}>
-                <span className="gecko-eyebrow">Holiday Name *</span>
-                <input
-                  type="text"
-                  value={draft.name}
-                  onChange={e => setDraft(d => ({ ...d, name: e.target.value }))}
-                  placeholder="e.g. Songkran"
-                  className="gecko-input gecko-input-sm"
-                  style={{ minWidth: 180 }}
-                />
-              </label>
-              <label className="gecko-stack" style={{ gap: 4 }}>
-                <span className="gecko-eyebrow">Type</span>
-                <select
-                  value={draft.type}
-                  onChange={e => setDraft(d => ({ ...d, type: e.target.value as HolidayType }))}
-                  className="gecko-input gecko-input-sm"
-                  style={{ width: 120 }}>
-                  {TYPE_OPTIONS.map(t => <option key={t}>{t}</option>)}
-                </select>
-              </label>
-              <label className="gecko-stack" style={{ gap: 4 }}>
-                <span className="gecko-eyebrow">Scope</span>
-                <select
-                  value={draft.scope}
-                  onChange={e => setDraft(d => ({ ...d, scope: e.target.value as HolidayScope }))}
-                  className="gecko-input gecko-input-sm"
-                  style={{ width: 140 }}>
-                  {SCOPE_OPTIONS.map(s => <option key={s}>{s}</option>)}
-                </select>
-              </label>
-              <label className="gecko-stack" style={{ gap: 4, flex: '1 1 160px' }}>
-                <span className="gecko-eyebrow">Notes</span>
-                <input
-                  type="text"
-                  value={draft.notes}
-                  onChange={e => setDraft(d => ({ ...d, notes: e.target.value }))}
-                  placeholder="Optional notes"
-                  className="gecko-input gecko-input-sm"
-                  style={{ minWidth: 160 }}
-                />
-              </label>
-              <div className="gecko-row" style={{ gap: 6, paddingBottom: 1 }}>
-                <button
-                  className="gecko-btn gecko-btn-primary gecko-btn-sm gecko-inline-row"
-                  onClick={handleAddSubmit}>
-                  <Icon name="check" size={13} /> Add
-                </button>
-                <button
-                  className="gecko-btn gecko-btn-ghost gecko-btn-sm"
-                  onClick={() => { setShowAddForm(false); setDraft(EMPTY_HOLIDAY); }}>
-                  Cancel
-                </button>
-              </div>
-            </div>
-          </div>
-        )}
-
-        {/* Holiday rows */}
-        <div style={{ overflowX: 'auto' }}>
-          <table style={{ width: '100%', borderCollapse: 'collapse' }}>
-            <thead>
-              <tr style={{ borderBottom: '1px solid var(--gecko-border)', background: 'var(--gecko-bg-subtle)' }}>
-                {['Date', 'Holiday Name', 'Type', 'Scope', 'Notes', 'Status', 'Actions'].map(col => (
-                  <th key={col} className="gecko-eyebrow" style={{
-                    padding: '9px 14px', textAlign: 'left',
-                    whiteSpace: 'nowrap',
-                  }}>
-                    {col}
-                  </th>
-                ))}
-              </tr>
-            </thead>
-            <tbody>
-              {holidays.map((h, idx) => {
-                const st = holidayStatus(h.date);
-                const isEdit = editId === h.id;
-                return (
-                  <tr
-                    key={h.id}
-                    style={{
-                      borderBottom: idx < holidays.length - 1 ? '1px solid var(--gecko-border)' : 'none',
-                      background: h.date === TODAY_ISO ? 'var(--gecko-warning-50)' : '#fff',
-                    }}
-                  >
-                    {/* Date */}
-                    <td style={{ padding: '11px 14px', whiteSpace: 'nowrap' }}>
-                      {isEdit ? (
-                        <input
-                          type="date"
-                          value={editDraft.date ?? h.date}
-                          onChange={e => setEditDraft(d => ({ ...d, date: e.target.value }))}
-                          className="gecko-input gecko-input-sm"
-                          style={{ width: 150 }}
-                        />
-                      ) : (
-                        <div>
-                          <div className="gecko-cell-primary">
-                            {formatHolidayDate(h.date)}
-                          </div>
-                        </div>
-                      )}
-                    </td>
-
-                    {/* Name */}
-                    <td style={{ padding: '11px 14px' }}>
-                      {isEdit ? (
-                        <input
-                          type="text"
-                          value={editDraft.name ?? h.name}
-                          onChange={e => setEditDraft(d => ({ ...d, name: e.target.value }))}
-                          className="gecko-input gecko-input-sm"
-                          style={{ minWidth: 180 }}
-                        />
-                      ) : (
-                        <span style={{ fontSize: 13, fontWeight: 600, color: 'var(--gecko-text-primary)' }}>{h.name}</span>
-                      )}
-                    </td>
-
-                    {/* Type */}
-                    <td style={{ padding: '11px 14px' }}>
-                      {isEdit ? (
-                        <select
-                          value={editDraft.type ?? h.type}
-                          onChange={e => setEditDraft(d => ({ ...d, type: e.target.value as HolidayType }))}
-                          className="gecko-input gecko-input-sm"
-                          style={{ width: 120 }}>
-                          {TYPE_OPTIONS.map(t => <option key={t}>{t}</option>)}
-                        </select>
-                      ) : (
-                        <span style={{
-                          fontSize: 10, fontWeight: 700, letterSpacing: '0.05em', textTransform: 'uppercase',
-                          padding: '2px 7px', borderRadius: 4,
-                          background: typeBadge(h.type).bg, color: typeBadge(h.type).color,
-                        }}>
-                          {h.type}
-                        </span>
-                      )}
-                    </td>
-
-                    {/* Scope */}
-                    <td style={{ padding: '11px 14px' }}>
-                      {isEdit ? (
-                        <select
-                          value={editDraft.scope ?? h.scope}
-                          onChange={e => setEditDraft(d => ({ ...d, scope: e.target.value as HolidayScope }))}
-                          className="gecko-input gecko-input-sm"
-                          style={{ width: 140 }}>
-                          {SCOPE_OPTIONS.map(s => <option key={s}>{s}</option>)}
-                        </select>
-                      ) : (
-                        <div className="gecko-row" style={{ gap: 5 }}>
-                          {h.scope === 'All Yards'
-                            ? <Icon name="globe" size={12} style={{ color: 'var(--gecko-primary-500)' }} />
-                            : <Icon name="settings" size={12} style={{ color: 'var(--gecko-text-secondary)' }} />
-                          }
-                          <span className="gecko-page-subtitle">{h.scope}</span>
-                        </div>
-                      )}
-                    </td>
-
-                    {/* Notes */}
-                    <td style={{ padding: '11px 14px', maxWidth: 200 }}>
-                      {isEdit ? (
-                        <input
-                          type="text"
-                          value={editDraft.notes ?? h.notes}
-                          onChange={e => setEditDraft(d => ({ ...d, notes: e.target.value }))}
-                          className="gecko-input gecko-input-sm"
-                          style={{ width: '100%' }}
-                        />
-                      ) : (
-                        <span style={{ fontSize: 12, color: 'var(--gecko-text-secondary)', fontStyle: h.notes ? 'normal' : 'italic' }}>
-                          {h.notes || 'No notes'}
-                        </span>
-                      )}
-                    </td>
-
-                    {/* Status */}
-                    <td style={{ padding: '11px 14px' }}>
-                      <span style={{
-                        fontSize: 10, fontWeight: 700, letterSpacing: '0.05em', textTransform: 'uppercase',
-                        padding: '2px 7px', borderRadius: 4,
-                        background: st.bg, color: st.color,
-                      }}>
-                        {st.label}
-                      </span>
-                    </td>
-
-                    {/* Actions */}
-                    <td style={{ padding: '11px 14px' }}>
-                      {isEdit ? (
-                        <div className="gecko-row" style={{ gap: 5 }}>
-                          <button
-                            className="gecko-btn gecko-btn-primary gecko-btn-sm gecko-inline-row"
-                            onClick={handleEditSave}
-                            style={{ gap: 4 }}>
-                            <Icon name="check" size={12} /> Save
-                          </button>
-                          <button
-                            className="gecko-btn gecko-btn-ghost gecko-btn-sm"
-                            onClick={() => { setEditId(null); setEditDraft({}); }}>
-                            Cancel
-                          </button>
-                        </div>
-                      ) : (
-                        <div className="gecko-row" style={{ gap: 4 }}>
-                          <button
-                            className="gecko-btn gecko-btn-ghost gecko-btn-icon gecko-btn-sm"
-                            onClick={() => handleEditStart(h)}
-                            title="Edit">
-                            <Icon name="edit" size={13} />
-                          </button>
-                          <button
-                            className="gecko-btn gecko-btn-ghost gecko-btn-icon gecko-btn-sm"
-                            onClick={() => handleDelete(h.id)}
-                            title="Delete"
-                            style={{ color: 'var(--gecko-error-500)' }}>
-                            <Icon name="trash" size={13} />
-                          </button>
-                        </div>
-                      )}
-                    </td>
-                  </tr>
-                );
-              })}
-              {holidays.length === 0 && (
-                <tr>
-                  <td colSpan={7} style={{ padding: '32px 14px', textAlign: 'center', color: 'var(--gecko-text-disabled)', fontSize: 13 }}>
-                    No public holidays configured. Click &quot;Add Holiday&quot; to get started.
-                  </td>
-                </tr>
-              )}
-            </tbody>
-          </table>
-        </div>
-      </div>
-    </div>
-  );
-}
-
-// ── Main page ──────────────────────────────────────────────────────────────────
-
+/**
+ * LIVE against gecko_master org.gate_hours_window / org.gate_hours_exception —
+ * when a depot's gate is open. The barrier asks GET /gate-hours/status: a depot
+ * with no windows is not checked at all. Order of precedence for a day: a
+ * one-off date, else a public holiday (a half day keeps the hours up to 12:00),
+ * else the weekly windows. Reads need mdm.org.view; writes mdm.org.manage AT
+ * the depot.
+ */
 export default function GateHoursPage() {
-  const [activeTab, setActiveTab] = useState<'schedule' | 'holidays'>('schedule');
+  const { canAt } = useSession();
+  const { data: branches, error: branchError } = useApiList<Branch>('/api/branches?pageSize=100');
+  const [picked, setPicked] = useState('');
+  const branchId = picked || branches?.[0]?.branchId || '';
+  const thisYear = new Date().getFullYear();
+  const [year, setYear] = useState(thisYear);
+  const [tab, setTab] = useState<Tab>('schedule');
 
-  const kpiData = useMemo(() => {
-    const openDays = SEED_SCHEDULE.filter(d => d.open).length;
-    const totalHours = SEED_SCHEDULE.reduce((acc, d) => acc + computeTotalHoursNum(d), 0);
-    const upcomingHolidays = SEED_HOLIDAYS.filter(h => h.date >= TODAY_ISO).length;
-    const nextClosure = nextClosureDate(SEED_HOLIDAYS, SEED_SCHEDULE);
-    return { openDays, totalHours, upcomingHolidays, nextClosure };
-  }, []);
+  const windows = useApi<GateHoursWindow[]>(branchId ? windowsPath(branchId) : null);
+  const dates = useApi<GateHoursException[]>(branchId ? exceptionsPath(branchId, year) : null);
+  const status = useApi<GateHoursStatus>(branchId ? statusPath(branchId) : null);
+  const holidays = useApi<PublicHoliday[]>(branchId ? `${HOLIDAYS_PATH}?year=${year}&branchId=${encodeURIComponent(branchId)}` : null);
+
+  const canManage = canAt('mdm.org.manage', branchId);
+
+  const { reload: reloadWindows } = windows;
+  const { reload: reloadDates } = dates;
+  const { reload: reloadStatus } = status;
+
+  /** Reload after every write — and after a 409, so the stale row is replaced before the user retries. */
+  const guardWith = useCallback((reloadList: () => void) => async (write: () => Promise<unknown>) => {
+    try {
+      await write();
+    } catch (e) {
+      if (e instanceof ApiError && e.status === 409) { reloadList(); reloadStatus(); }
+      throw e;
+    }
+    reloadList();
+    reloadStatus();
+  }, [reloadStatus]);
+
+  const rows = windows.data ?? [];
+  const openDays = new Set(rows.map(w => w.isoWeekday)).size;
+  const weeklyMinutes = rows.reduce((sum, w) => sum + (w.minutes ?? 0), 0);
+  const halfDays = (holidays.data ?? []).filter(h => h.isHalfDay).length;
+  const closedDates = (dates.data ?? []).filter(x => x.isClosed).length;
 
   return (
     <div className="gecko-stack" style={{ gap: 'var(--gecko-space-4)' }}>
-
-      {/* Toolbar */}
       <PageToolbar
         title="Gate Operating Hours"
-        subtitle="Define weekly gate schedules, public holidays, and special event closures"
+        subtitle="When the gate is open at each depot — the weekly windows, one-off dates, and the public holidays that close it"
         badges={[{ label: 'Config', kind: 'info' }]}
         actions={
           <>
-            <button className="gecko-btn gecko-btn-outline gecko-btn-sm gecko-inline-row">
-              <Icon name="download" size={13} /> Export Schedule
-            </button>
-            <button className="gecko-btn gecko-btn-outline gecko-btn-sm gecko-inline-row">
-              <Icon name="copy" size={13} /> Clone to Next Period
-            </button>
+            <select className="gecko-input gecko-input-sm" style={{ width: 240 }} value={branchId} aria-label="Depot" onChange={e => setPicked(e.target.value)}>
+              {(branches ?? []).map(b => <option key={b.branchId} value={b.branchId}>{b.branchCode} · {b.displayName}</option>)}
+            </select>
+            <select className="gecko-input gecko-input-sm" style={{ width: 100 }} value={year} aria-label="Year" onChange={e => setYear(Number(e.target.value))}>
+              {[thisYear - 1, thisYear, thisYear + 1, thisYear + 2].map(y => <option key={y} value={y}>{y}</option>)}
+            </select>
           </>
         }
       />
 
-      {/* KPI strip */}
+      {branchError && (
+        <div role="alert" className="gecko-alert gecko-alert-error gecko-row" style={{ gap: 10 }}>
+          <Icon name="alertCircle" size={16} /><span>{branchError.explanation ?? branchError.message}</span>
+        </div>
+      )}
+
+      <StatusStrip status={status.data} error={status.error} loading={status.loading} />
+
       <div className="gecko-row gecko-row-wrap" style={{ gap: 12 }}>
-        <KpiCard
-          label="Operating Days / Week"
-          value={`${kpiData.openDays} / 7`}
-          sub="Current weekly schedule"
-          accent="var(--gecko-primary-500)"
-        />
-        <KpiCard
-          label="Total Weekly Hours"
-          value={`${kpiData.totalHours % 1 === 0 ? kpiData.totalHours : kpiData.totalHours.toFixed(1)} hrs`}
-          sub="Excl. lunch breaks"
-          accent="var(--gecko-success-500)"
-        />
-        <KpiCard
-          label="Public Holidays This Year"
-          value={kpiData.upcomingHolidays}
-          sub="Upcoming from today"
-          accent="var(--gecko-warning-500)"
-        />
-        <KpiCard
-          label="Next Closure Date"
-          value={kpiData.nextClosure}
-          sub="Nearest public holiday"
-          accent="var(--gecko-error-500)"
-        />
+        <KpiCard label="Open Days / Week" value={windows.data ? `${openDays} / 7` : '—'} sub="Days with at least one window" />
+        <KpiCard label="Weekly Gate Hours" value={windows.data ? formatMinutes(weeklyMinutes) : '—'} sub="Sum of all windows" accent="var(--gecko-success-500)" />
+        <KpiCard label={`One-off Dates ${year}`} value={dates.data ? dates.data.length : '—'} sub={dates.data ? `${closedDates} closed all day` : undefined} accent="var(--gecko-warning-500)" />
+        <KpiCard label={`Public Holidays ${year}`} value={holidays.data ? holidays.data.length : '—'} sub={holidays.data ? `${halfDays} half day` : undefined} accent="var(--gecko-error-500)" />
       </div>
 
-      {/* Tabs */}
+      {branchId && !canManage && (
+        <div className="gecko-cell-meta">You can view this depot&apos;s gate hours; changing them needs Manage organisation at this depot.</div>
+      )}
+
       <div>
         <div className="gecko-tab-bar gecko-mb-4">
           {([
             { key: 'schedule', label: 'Weekly Schedule', icon: 'clock' },
-            { key: 'holidays', label: 'Public Holidays',  icon: 'calendar' },
-          ] as const).map(tab => (
-            <button
-              key={tab.key}
-              onClick={() => setActiveTab(tab.key)}
-              className={`gecko-tab-item${activeTab === tab.key ? ' gecko-tab-item-active' : ''}`}
-            >
-              <Icon
-                name={tab.icon}
-                size={14}
-                style={{ color: activeTab === tab.key ? 'var(--gecko-primary-600)' : 'var(--gecko-text-disabled)' }}
-              />
-              {tab.label}
+            { key: 'dates', label: 'One-off Dates', icon: 'calendar' },
+            { key: 'holidays', label: 'Public Holidays', icon: 'calendar' },
+          ] as const).map(t => (
+            <button key={t.key} onClick={() => setTab(t.key)} className={`gecko-tab-item${tab === t.key ? ' gecko-tab-item-active' : ''}`}>
+              <Icon name={t.icon} size={14} style={{ color: tab === t.key ? 'var(--gecko-primary-600)' : 'var(--gecko-text-disabled)' }} />
+              {t.label}
             </button>
           ))}
         </div>
 
-        {activeTab === 'schedule' && <WeeklyScheduleTab />}
-        {activeTab === 'holidays' && <PublicHolidaysTab />}
+        {branchId && tab === 'schedule' && (
+          <WeeklyWindows key={branchId} branchId={branchId} rows={windows.data} loading={windows.loading} error={windows.error}
+            canManage={canManage} guard={guardWith(reloadWindows)} />
+        )}
+        {branchId && tab === 'dates' && (
+          <OneOffDates key={`${branchId}:${year}`} branchId={branchId} year={year} rows={dates.data} loading={dates.loading} error={dates.error}
+            canManage={canManage} guard={guardWith(reloadDates)} />
+        )}
+        {branchId && tab === 'holidays' && (
+          <DepotHolidays year={year} rows={holidays.data} loading={holidays.loading} error={holidays.error} />
+        )}
       </div>
 
-      {/* Info footer */}
       <div className="gecko-banner gecko-banner-info">
         <Icon name="info" size={16} className="gecko-banner-icon" />
         <div style={{ lineHeight: 1.6 }}>
-          <strong>How gate hours work:</strong> The weekly schedule defines the default operating window
-          for all gate lanes at Laem Chabang ICD. Public holidays automatically override the weekly
-          schedule and close all gates for the configured scope. Changes take effect on the next
-          appointment booking refresh. To schedule partial-day closures or special events, use the
-          <strong> Gate Slot Capacity</strong> page to set individual time-window statuses.
+          <strong>How gate hours work:</strong> for any day the barrier looks first for a one-off date, then a public
+          holiday (closed; a half day keeps the weekday&apos;s hours up to 12:00), then the weekly windows. Outside those
+          hours the barrier warns the clerk. A depot with no weekly windows has no gate hours, and the barrier does not
+          check hours there.
         </div>
       </div>
     </div>

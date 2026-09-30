@@ -49,6 +49,7 @@ export const PILOT_PATHS: readonly string[] = [
   '/masters/seal-series',
   '/masters/countries',
   '/masters/public-holidays',
+  '/config/gate-hours',         // weekly windows, one-off dates, holidays read-only
 ];
 
 /**
