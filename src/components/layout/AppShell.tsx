@@ -4,9 +4,11 @@ import React, { useState, useEffect, useMemo } from 'react';
 import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
 import { useSession } from '@/lib/auth/session';
+import { companyLabel } from '@/lib/api/org';
+import { FacilityProvider, useFacility } from '@/lib/api/facility';
 import { Icon } from '../ui/Icon';
 import { ToastProvider } from '../ui/Toast';
-import { AskGeckoProvider, AskGeckoTrigger } from '../ai/AskGeckoWidget';
+import { AskGeckoProvider } from '../ai/AskGeckoWidget';
 import { autoSeedIfEmpty, seedDemoData } from '@/lib/demo-seed';
 import { IS_PILOT, PILOT_PATHS } from '@/lib/edition';
 
@@ -64,26 +66,40 @@ function useNavMatch(pathname: string | null) {
   }, [pathname]);
 }
 
+/**
+ * Dashboards taken out of the menu on 2026-09-29.
+ *
+ * Every one of them renders fixture numbers, and none has an aggregate endpoint
+ * behind it (ui-page-inventory group B: the KPI/accounts/billing dashboards all
+ * need new API work). A menu full of convincing invented figures is worse than a
+ * short menu, so only Overview and Gate & Traffic stay.
+ *
+ * The page files and routes are untouched — type a URL and you still get them,
+ * which is what we want while reviewing. Move an entry back into NAV the day its
+ * endpoint exists, and into PILOT_PATHS once it is actually live.
+ *
+ * Note this is NOT a permissions decision: see the comment on VISIBLE_NAV.
+ *
+ *   yard-glance    Yard at a Glance        /dashboard/yard-glance
+ *   voyage-dash    Voyage & Vessel         /dashboard/voyage
+ *   dwell-time     Container Dwell Time    /dashboard/dwell-time    (already retired 2026-05-13)
+ *   accounts-dash  Accounts & Revenue      /dashboard/accounts
+ *   billing-health Billing Health          /dashboard/billing-health
+ *   edi-dash       EDI & Partners          /dashboard/edi
+ *   cfs-ops        CFS Operations          /dashboard/cfs-ops
+ *   special-cargo  Reefer & Special Cargo  /dashboard/special-cargo
+ *   customs-dash   Customs & Holds         /dashboard/customs
+ *   kpi            Productivity & KPI      /dashboard/kpi
+ */
+
 const NAV = [
   { id: 'dashboard', icon: 'home', label: 'Dashboard',
+    // Only the two dashboards we intend to make real (his call, 2026-09-29).
+    // Both still read fixture data; neither has an aggregate endpoint yet, so
+    // neither is in PILOT_PATHS. The other ten are in HIDDEN_DASHBOARDS below.
     children: [
       { id: 'overview',       label: 'Overview',               path: '/dashboard/overview' },
-      { id: 'yard-glance',    label: 'Yard at a Glance',       path: '/dashboard/yard-glance' },
       { id: 'gate-traffic',   label: 'Gate & Traffic',         path: '/dashboard/gate-traffic' },
-      { id: 'voyage-dash',    label: 'Voyage & Vessel',        path: '/dashboard/voyage' },
-      // HIDDEN 2026-05-13 — dwell-time as a standalone page is being retired.
-      // Operational dwell still lives in /dashboard/yard-glance + /units/unit-inquiry.
-      // Money side moves to laden/empty storage under Billing in Phase 2/3.
-      // Page file kept on disk for reference; will be deleted or folded during Phase 2.
-      // See docs/modules/tos.md (api.gecko-api repo) for the storage model.
-      // { id: 'dwell-time',     label: 'Container Dwell Time',   path: '/dashboard/dwell-time' },
-      { id: 'accounts-dash',  label: 'Accounts & Revenue',     path: '/dashboard/accounts' },
-      { id: 'billing-health', label: 'Billing Health',         path: '/dashboard/billing-health' },
-      { id: 'edi-dash',       label: 'EDI & Partners',         path: '/dashboard/edi' },
-      { id: 'cfs-ops',        label: 'CFS Operations',         path: '/dashboard/cfs-ops' },
-      { id: 'special-cargo',  label: 'Reefer & Special Cargo', path: '/dashboard/special-cargo' },
-      { id: 'customs-dash',   label: 'Customs & Holds',        path: '/dashboard/customs' },
-      { id: 'kpi',            label: 'Productivity & KPI',     path: '/dashboard/kpi' },
     ]
   },
   { id: 'bookings', icon: 'clipboardList', label: 'Bookings',
@@ -189,6 +205,23 @@ const NAV = [
 
 // Pilot edition: only the API-bound screens (src/lib/edition.ts). Modules left empty drop out.
 // Full edition: NAV unchanged.
+//
+// WHY THE MENU IS NOT FILTERED BY PERMISSION. The obvious idea is to hang a
+// required permission off each entry and let roles hide the rest. It does not
+// work here, for two reasons:
+//
+//   1. The platform defines 57 permissions and not one of them is about a
+//      dashboard — the closest is tos.report.view. Gating a screen on a
+//      permission invented for the menu would be a lie about what the API
+//      enforces.
+//   2. The people looking at these screens are TENANT_OWNER (admin@korakit.com)
+//      and hold nearly every permission, so a permission filter would hide
+//      nothing from exactly the person we are trying to keep out of mock data.
+//
+// What decides whether a screen ships is whether the API can back it, which is
+// the edition list — not who is signed in. Permission-gating belongs on the
+// ACTIONS inside a page (can()/canAt() already do that: the cash window hides
+// waive behind revenue.charge.waive), not on the navigation.
 const isPilotEntry = (path: string) => PILOT_PATHS.some(p => path === p || path.startsWith(p + '/'));
 const VISIBLE_NAV = IS_PILOT
   ? NAV.map(m => ({ ...m, children: m.children.filter(c => isPilotEntry(c.path)) }))
@@ -199,6 +232,7 @@ function Sidebar({ collapsed, onToggle }: { collapsed: boolean, onToggle: () => 
   const pathname = usePathname();
   const router = useRouter();
   const { user, status, signOut } = useSession();
+  const { company } = useFacility();
   // The token carries no display name, so the card shows what it does carry: the role and the depots.
   const who = status === 'authenticated' && user
     ? { name: (user.roles[0] ?? user.userType ?? 'Signed in').replace(/_/g, ' '),
@@ -236,8 +270,11 @@ function Sidebar({ collapsed, onToggle }: { collapsed: boolean, onToggle: () => 
         </div>
         {!collapsed && (
           <div className="gecko-brand-wordmark">
-            <span className="gecko-logo-text">GECKO</span>
-            <span className="gecko-brand-wordmark-line">TOS · ICD + CFS</span>
+            {/* The operator's own name, from the company the selected depot trades
+                as. Falls back to the product name while it loads, and for a branch
+                the API has no company for. */}
+            <span className="gecko-logo-text">{companyLabel(company) ?? 'GECKO'}</span>
+            <span className="gecko-brand-wordmark-line">TOS</span>
           </div>
         )}
       </div>
@@ -346,6 +383,105 @@ function Sidebar({ collapsed, onToggle }: { collapsed: boolean, onToggle: () => 
 
 type HeaderProps = { collapsed: boolean; onToggleSidebar: () => void; pageTitle?: string; breadcrumbs?: string[] };
 
+/**
+ * Depot → company → yard, as the header shows it.
+ *
+ * The depot row only appears for a tenant with more than one — KORAKIT has a
+ * single depot, and a picker with one entry is furniture. The yard list may
+ * legitimately be empty (a depot that has never had yards defined), which says
+ * so rather than showing an empty picker.
+ */
+function FacilitySwitcher() {
+  const { branches, branch, selectBranch, company, yards, yard, selectYard, loading } = useFacility();
+  const [open, setOpen] = useState(false);
+
+  const label = companyLabel(company);
+  const mark = (label ?? branch?.branchCode ?? '—').trim().slice(0, 2).toUpperCase();
+
+  if (!branch) {
+    return (
+      <button className="gecko-facility-switcher" disabled>
+        <div className="gecko-facility-switcher-mark">—</div>
+        <div className="gecko-facility-switcher-text">
+          <div className="gecko-facility-switcher-line">
+            <span>{loading ? 'Loading…' : 'No depot assigned'}</span>
+          </div>
+        </div>
+      </button>
+    );
+  }
+
+  return (
+    <div className="gecko-dropdown">
+      <button
+        className="gecko-facility-switcher"
+        onClick={() => setOpen(o => !o)}
+        aria-expanded={open}
+        aria-haspopup="menu"
+        title={`${branch.branchCode} — ${branch.displayName}`}
+      >
+        <div className="gecko-facility-switcher-mark">{mark}</div>
+        <div className="gecko-facility-switcher-text">
+          {label && <span className="gecko-facility-switcher-eyebrow">{label}</span>}
+          <div className="gecko-facility-switcher-line">
+            <span>{branch.displayName}</span>
+            {yard && <>
+              <span className="gecko-facility-switcher-sep">/</span>
+              <span className="gecko-facility-switcher-sub">{yard.nameEn}</span>
+            </>}
+          </div>
+        </div>
+        <Icon name="chevronDown" size={12} className="gecko-text-secondary-icon" />
+      </button>
+
+      {open && <>
+        <div className="gecko-dropdown-backdrop" onClick={() => setOpen(false)} />
+        <div className="gecko-dropdown-menu gecko-dropdown-menu-right gecko-facility-menu" role="menu">
+          {branches.length > 1 && <>
+            <div className="gecko-dropdown-label">Depot</div>
+            {branches.map(b => (
+              <button
+                key={b.branchId}
+                className={`gecko-dropdown-item ${b.branchId === branch.branchId ? 'gecko-dropdown-item-active' : ''}`}
+                onClick={() => { selectBranch(b.branchId); setOpen(false); }}
+              >
+                <span className="gecko-facility-menu-code">{b.branchCode}</span>
+                <span className="gecko-facility-menu-name">{b.displayName}</span>
+              </button>
+            ))}
+            <div className="gecko-dropdown-divider" />
+          </>}
+
+          <div className="gecko-dropdown-label">Yard</div>
+          {yards.length === 0
+            ? <div className="gecko-dropdown-item gecko-dropdown-item-disabled">
+                {loading ? 'Loading…' : 'No yards defined for this depot'}
+              </div>
+            : <>
+                <button
+                  className={`gecko-dropdown-item ${yard === null ? 'gecko-dropdown-item-active' : ''}`}
+                  onClick={() => { selectYard(null); setOpen(false); }}
+                >
+                  <span className="gecko-facility-menu-name">All yards</span>
+                </button>
+                {yards.map(y => (
+                  <button
+                    key={y.yardId}
+                    className={`gecko-dropdown-item ${y.yardId === yard?.yardId ? 'gecko-dropdown-item-active' : ''}`}
+                    onClick={() => { selectYard(y.yardId); setOpen(false); }}
+                  >
+                    <span className="gecko-facility-menu-code">{y.yardCode}</span>
+                    <span className="gecko-facility-menu-name">{y.nameEn}</span>
+                    <span className="gecko-facility-menu-meta">{y.yardType}</span>
+                  </button>
+                ))}
+              </>}
+        </div>
+      </>}
+    </div>
+  );
+}
+
 function Header({ onToggleSidebar, pageTitle = "Dashboard", breadcrumbs = ["Workspace", "Overview"] }: HeaderProps) {
   const [theme, setTheme] = useState('light');
 
@@ -376,29 +512,11 @@ function Header({ onToggleSidebar, pageTitle = "Dashboard", breadcrumbs = ["Work
         <div className="gecko-header-page-title">{pageTitle}</div>
       </div>
 
-      {/* Search */}
-      <div className="gecko-header-search">
-        <Icon name="search" size={16} className="gecko-header-search-icon" />
-        <input className="gecko-input gecko-input-sm gecko-header-search-input" placeholder="Search unit, booking, EDO, invoice…" />
-        <kbd className="gecko-kbd gecko-header-search-kbd">⌘K</kbd>
-      </div>
+      {/* Global search and Ask Gecko are hidden until they are backed by the API
+          (there is no search endpoint yet, and Ask Gecko answers from mock data). */}
 
       <div className="gecko-ml-auto gecko-row" style={{ gap: 6 }}>
-        <AskGeckoTrigger />
-
-        {/* Tenant → Facility → Yard switcher */}
-        <button className="gecko-facility-switcher">
-          <div className="gecko-facility-switcher-mark">GK</div>
-          <div className="gecko-facility-switcher-text">
-            <span className="gecko-facility-switcher-eyebrow">GECKO</span>
-            <div className="gecko-facility-switcher-line">
-              <span>Laem Chabang ICD</span>
-              <span className="gecko-facility-switcher-sep">/</span>
-              <span className="gecko-facility-switcher-sub">Import Yard</span>
-            </div>
-          </div>
-          <Icon name="chevronDown" size={12} className="gecko-text-secondary-icon" />
-        </button>
+        <FacilitySwitcher />
 
         {/* Locale */}
         <button className="gecko-btn gecko-btn-ghost gecko-btn-sm gecko-header-locale-btn" title="Language">
@@ -448,6 +566,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
   return (
     <ToastProvider>
       <AskGeckoProvider>
+       <FacilityProvider>
         <div className="gecko-app" style={{ position: 'relative', minHeight: '100vh', background: 'var(--gecko-bg-subtle)' }}>
           <Sidebar
             collapsed={collapsed}
@@ -470,6 +589,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
             </main>
           </div>
         </div>
+       </FacilityProvider>
       </AskGeckoProvider>
     </ToastProvider>
   );

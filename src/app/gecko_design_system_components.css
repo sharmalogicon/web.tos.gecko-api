@@ -1919,6 +1919,21 @@
   color: var(--gecko-text-disabled);
 }
 
+/* The current choice in a menu that picks one of a set. */
+.gecko-dropdown-item-active {
+  background: var(--gecko-primary-50);
+  color: var(--gecko-primary-700);
+  font-weight: 600;
+}
+.gecko-dropdown-item-active:hover { background: var(--gecko-primary-100); }
+
+/* Closes an open menu on any outside click, without a document listener. */
+.gecko-dropdown-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: calc(var(--gecko-z-dropdown) - 1);
+}
+
 [data-theme="dark"] .gecko-dropdown-menu {
   box-shadow: 0 8px 24px rgba(0,0,0,0.4);
 }
@@ -6998,6 +7013,32 @@ button.gecko-toggle .gecko-toggle-thumb {
   font-weight: 500;
 }
 
+/* Depot / yard menu under the facility switcher. Wider than the default
+   dropdown because a depot's registered name is long. */
+.gecko-facility-menu { min-width: 260px; }
+.gecko-facility-menu .gecko-dropdown-item { gap: 10px; }
+.gecko-facility-menu-code {
+  flex: none;
+  min-width: 52px;
+  font-family: var(--gecko-font-mono);
+  font-size: 11px;
+  color: var(--gecko-text-secondary);
+}
+.gecko-facility-menu-name {
+  flex: 1;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.gecko-facility-menu-meta {
+  flex: none;
+  font-size: 10px;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  color: var(--gecko-text-disabled);
+}
+.gecko-dropdown-item-active .gecko-facility-menu-code { color: inherit; }
+
 /* §11.5 — Header search input wrapper */
 .gecko-header-search {
   flex: 1;
@@ -7489,5 +7530,313 @@ label.gecko-toggle.gecko-toggle-sm input:checked ~ .gecko-toggle-track .gecko-to
   .gecko-form-section { grid-template-columns: 1fr; gap: 16px; }
   .gecko-form-section-cols-2,
   .gecko-form-section-cols-3 { grid-template-columns: 1fr; }
+}
+
+/* ═══════════════════════════════════════════════════════════════════════════
+   §17 — OPERATIONS DASHBOARDS
+   Shared by /dashboard/overview and /dashboard/gate-traffic. Each page reads a
+   single aggregate endpoint, so most of what is styled here is a small chart or
+   a "nothing recorded yet" state — which, for a depot that has not started
+   gating on GECKO, is the state that shows most often and must look deliberate.
+   ═══════════════════════════════════════════════════════════════════════════ */
+
+.gecko-progress-accent { background: var(--gecko-accent-500); }
+
+.gecko-dash-page { gap: 20px; }
+.gecko-dash-grid { gap: 14px; }
+
+/* Wide chart beside a narrow summary; stacks on a small screen. */
+.gecko-dash-row-2-1 {
+  display: grid;
+  grid-template-columns: 2fr 1fr;
+  gap: 14px;
+}
+@media (max-width: 1100px) {
+  .gecko-dash-row-2-1 { grid-template-columns: 1fr; }
+}
+
+.gecko-dash-panel-head { margin-bottom: 16px; }
+
+/* Loading, empty and error share one calm centred block. */
+.gecko-dash-placeholder {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 4px;
+  min-height: 96px;
+  padding: 20px;
+  text-align: center;
+  font-size: var(--gecko-text-sm);
+  color: var(--gecko-text-secondary);
+}
+.gecko-dash-placeholder-error { color: var(--gecko-error-600); }
+.gecko-dash-placeholder-detail {
+  font-size: var(--gecko-text-xs);
+  color: var(--gecko-text-secondary);
+}
+
+/* KPI cards */
+.gecko-dash-kpi-label {
+  font-size: 12px;
+  font-weight: 500;
+  color: var(--gecko-text-secondary);
+}
+.gecko-dash-kpi-sublabel { letter-spacing: 0.04em; }
+.gecko-dash-kpi-value { font-size: 28px; }
+.gecko-dash-kpi-delta {
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+  margin-top: 8px;
+  font-size: 11px;
+  font-weight: 600;
+}
+.gecko-dash-kpi-delta-up { color: var(--gecko-success-600); }
+.gecko-dash-kpi-delta-down { color: var(--gecko-error-600); }
+.gecko-dash-kpi-delta-note {
+  margin-left: 4px;
+  font-weight: 400;
+  color: var(--gecko-text-secondary);
+}
+.gecko-sparkline { display: block; }
+
+/* Monthly bar chart */
+.gecko-dash-bars {
+  display: flex;
+  align-items: flex-end;
+  gap: 6px;
+  height: 180px;
+}
+.gecko-dash-bar-col {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  height: 100%;
+  min-width: 0;
+}
+.gecko-dash-bar-track {
+  flex: 1;
+  display: flex;
+  align-items: flex-end;
+  border-bottom: 1px solid var(--gecko-border-strong);
+}
+.gecko-dash-bar {
+  position: relative;
+  width: 100%;
+  min-height: 2px;
+  background: var(--gecko-primary-200);
+  border-radius: 4px 4px 0 0;
+}
+.gecko-dash-bar-current { background: var(--gecko-primary-600); }
+.gecko-dash-bar-value {
+  position: absolute;
+  top: -22px;
+  left: 50%;
+  transform: translateX(-50%);
+  padding: 3px 6px;
+  border-radius: 4px;
+  background: var(--gecko-gray-900);
+  color: #fff;
+  font-size: 10px;
+  font-weight: 600;
+  white-space: nowrap;
+}
+.gecko-dash-bar-label { text-align: center; font-weight: 500; }
+
+/* Whole-day summary */
+.gecko-dash-summary-row { margin-bottom: 14px; }
+.gecko-dash-summary-head { margin-bottom: 5px; }
+.gecko-dash-summary-label {
+  font-size: 12px;
+  font-weight: 500;
+  color: var(--gecko-text-secondary);
+}
+.gecko-dash-summary-value {
+  font-size: 15px;
+  font-weight: 700;
+  color: var(--gecko-text-primary);
+}
+.gecko-dash-summary-total {
+  margin-top: 4px;
+  padding-top: 10px;
+  border-top: 1px solid var(--gecko-border);
+  font-size: 11px;
+}
+.gecko-dash-summary-total-value {
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--gecko-text-primary);
+}
+.gecko-dash-summary-capacity {
+  font-weight: 500;
+  color: var(--gecko-text-secondary);
+}
+
+/* Shipping-line breakdown */
+.gecko-dash-line-row {
+  display: grid;
+  grid-template-columns: 40px 1fr 64px;
+  gap: 10px;
+  align-items: center;
+  padding: 10px 0;
+  border-bottom: 1px solid var(--gecko-border);
+}
+.gecko-dash-line-code {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  height: 32px;
+  border-radius: 6px;
+  background: var(--gecko-primary-600);
+  color: #fff;
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+}
+.gecko-dash-line-name {
+  margin-bottom: 4px;
+  font-size: 12px;
+  font-weight: 600;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.gecko-dash-line-count {
+  text-align: right;
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--gecko-text-primary);
+}
+.gecko-dash-line-unit {
+  font-size: 9px;
+  font-weight: 500;
+  letter-spacing: 0.04em;
+  color: var(--gecko-text-secondary);
+}
+
+/* Closing voyages */
+.gecko-dash-voyage { padding: 12px 0; border-bottom: 1px solid var(--gecko-border); }
+.gecko-dash-voyage-head { margin-bottom: 6px; }
+.gecko-dash-voyage-no {
+  font-size: 12px;
+  font-weight: 700;
+  font-family: var(--gecko-font-mono);
+}
+.gecko-dash-voyage-eta { gap: 6px; font-size: 11px; font-weight: 600; }
+.gecko-dash-voyage-eta-high { color: var(--gecko-error-600); }
+.gecko-dash-voyage-eta-med { color: var(--gecko-warning-600); }
+.gecko-dash-voyage-eta-low { color: var(--gecko-success-600); }
+.gecko-dash-voyage-bars { gap: 10px; margin-top: 6px; }
+.gecko-dash-voyage-bar-head { font-size: 10px; margin-bottom: 2px; font-weight: 700; }
+
+/* Gate move direction — shared by both dashboards. Never derived from the
+   movement code: tenants name their own moves (FULL_IN here, GIE there). */
+.gecko-dash-move {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  font-size: 12px;
+  font-family: var(--gecko-font-mono);
+  font-weight: 600;
+}
+.gecko-dash-move-in { color: var(--gecko-success-600); }
+.gecko-dash-move-out { color: var(--gecko-accent-600); }
+.gecko-dash-move-code {
+  font-size: 10px;
+  font-weight: 500;
+  color: var(--gecko-text-secondary);
+}
+
+/* Recent-activity tables */
+.gecko-dash-table-head { padding: 20px; border-bottom: 1px solid var(--gecko-border); }
+.gecko-dash-table-wrapper {
+  border: none;
+  border-radius: 0;
+  box-shadow: none;
+  overflow-x: auto;
+}
+.gecko-dash-table { width: 100%; text-align: left; border-collapse: collapse; }
+.gecko-dash-table td { padding: 12px 16px; }
+.gecko-dash-cell-unit { font-weight: 600; font-size: 12px; }
+.gecko-dash-cell-line { font-size: 12px; font-weight: 600; }
+.gecko-dash-cell-time { font-size: 11px; }
+/* A voided move stays visible — it happened — but reads as withdrawn. */
+.gecko-dash-row-voided { opacity: 0.55; }
+.gecko-dash-row-voided .gecko-dash-cell-unit { text-decoration: line-through; }
+
+/* Gate & Traffic */
+.gecko-gate-kpi { gap: 6px; border-top: 3px solid var(--gecko-primary-400); }
+.gecko-gate-kpi-primary { border-top-color: var(--gecko-primary-400); }
+.gecko-gate-kpi-success { border-top-color: var(--gecko-success-400); }
+.gecko-gate-kpi-info    { border-top-color: var(--gecko-info-400); }
+.gecko-gate-kpi-value {
+  font-family: var(--gecko-font-mono);
+  font-weight: 800;
+  font-size: 28px;
+}
+.gecko-gate-kpi-sub { font-size: 12px; color: var(--gecko-text-secondary); }
+
+.gecko-gate-grid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 16px;
+}
+.gecko-gate-widget-wide { grid-column: span 2; }
+@media (max-width: 900px) {
+  .gecko-gate-grid { grid-template-columns: 1fr; }
+  .gecko-gate-widget-wide { grid-column: auto; }
+}
+.gecko-gate-widget-head {
+  padding: 13px 20px;
+  border-bottom: 1px solid var(--gecko-border);
+  background: var(--gecko-bg-subtle);
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--gecko-text-primary);
+}
+.gecko-gate-widget-body { padding: 16px 20px; }
+.gecko-gate-widget .gecko-dash-table-wrapper { margin: -16px -20px; }
+
+/* 24 hourly buckets. Every hour keeps its slot, so a quiet night reads as
+   quiet rather than as missing data. */
+.gecko-gate-hours {
+  display: flex;
+  align-items: flex-end;
+  gap: 4px;
+  height: 140px;
+}
+.gecko-gate-hour {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  height: 100%;
+  min-width: 0;
+}
+.gecko-gate-hour-track {
+  flex: 1;
+  display: flex;
+  align-items: flex-end;
+  justify-content: center;
+}
+.gecko-gate-hour-bar {
+  width: 100%;
+  min-height: 3px;
+  background: var(--gecko-primary-400);
+  border-radius: 3px 3px 0 0;
+}
+.gecko-gate-hour-bar-peak { background: var(--gecko-primary-600); }
+.gecko-gate-hour-zero {
+  width: 100%;
+  height: 2px;
+  background: var(--gecko-border);
+  border-radius: 1px;
+}
+.gecko-gate-hour-label {
+  font-size: 9px;
+  text-align: center;
+  color: var(--gecko-text-secondary);
 }
 

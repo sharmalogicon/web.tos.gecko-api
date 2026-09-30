@@ -1,239 +1,206 @@
 "use client";
 
-import React, { useState } from 'react';
+import React from 'react';
 import { Icon } from '@/components/ui/Icon';
-import { ExportButton } from '@/components/ui/ExportButton';
 import { RefreshButton } from '@/components/ui/RefreshButton';
+import { useFacility } from '@/lib/api/facility';
+import {
+  deltaPct, longDate, orDash, timeOfDay,
+  useGateTrafficDashboard,
+  type HourBucket, type RecentMove,
+} from '@/lib/api/dashboard';
+import { ApiError } from '@/lib/api/problem';
 
-function KpiCard({ label, value, sub, accent, trend }: { label: string; value: string; sub?: string; accent?: string; trend?: 'up' | 'down' | 'neutral' }) {
+/**
+ * GATE & TRAFFIC — live against /api/tos/dashboard/gate-traffic.
+ *
+ * WHAT THIS PAGE NO LONGER SHOWS, and why. It used to carry four panels with
+ * no data model behind them anywhere in the platform:
+ *
+ *   - Appointment compliance (KPI and per-hour bars) — there is no appointment
+ *     table in gecko_tos; /gate/appointments is still a mock screen.
+ *   - "Lanes Active 4 / 6" and the live lane table — the gate has no concept of
+ *     a lane: gate.gate_transaction records the move, not the booth it passed.
+ *   - "Gate Queue — Next 10 Trucks" with driver and haulier names — nothing
+ *     records a truck before it reaches the gate.
+ *   - Turn-time distribution buckets — the API averages turnaround; it does not
+ *     return the per-visit spread, and inventing buckets from an average is a
+ *     lie with a chart around it.
+ *
+ * Each was invented fixture data. If any of them should exist, it is a piece of
+ * platform work, not a UI change.
+ */
+
+function KpiCard({ label, value, sub, tone }: {
+  label: string; value: string; sub?: React.ReactNode; tone: 'primary' | 'success' | 'info';
+}) {
   return (
-    <div className="gecko-card gecko-card-padded gecko-stack" style={{ gap: 6, borderTop: `3px solid ${accent ?? 'var(--gecko-primary-400)'}` }}>
+    <div className={`gecko-card gecko-card-padded gecko-stack gecko-gate-kpi gecko-gate-kpi-${tone}`}>
       <div className="gecko-stat-label">{label}</div>
-      <div className="gecko-stat-num" style={{ fontFamily: 'var(--gecko-font-mono)', fontWeight: 800, fontSize: 28 }}>{value}</div>
-      {sub && <div style={{ fontSize: 12, color: trend === 'up' ? 'var(--gecko-success-600)' : trend === 'down' ? 'var(--gecko-error-600)' : 'var(--gecko-text-secondary)' }}>{sub}</div>}
+      <div className="gecko-stat-num gecko-gate-kpi-value">{value}</div>
+      {sub && <div className="gecko-gate-kpi-sub">{sub}</div>}
     </div>
   );
 }
 
-function Widget({ title, children, col }: { title: string; children: React.ReactNode; col?: number }) {
+function Widget({ title, wide, children }: { title: string; wide?: boolean; children: React.ReactNode }) {
   return (
-    <div style={{ background: 'var(--gecko-bg-surface)', border: '1px solid var(--gecko-border)', borderRadius: 12, boxShadow: 'var(--gecko-shadow-sm)', gridColumn: col ? `span ${col}` : undefined, overflow: 'hidden' }}>
-      <div style={{ padding: '13px 20px', borderBottom: '1px solid var(--gecko-border)', background: 'var(--gecko-bg-subtle)', fontSize: 13, fontWeight: 700, color: 'var(--gecko-text-primary)' }}>{title}</div>
-      <div style={{ padding: '16px 20px' }}>{children}</div>
+    <div className={`gecko-card gecko-card-flush gecko-gate-widget ${wide ? 'gecko-gate-widget-wide' : ''}`}>
+      <div className="gecko-gate-widget-head">{title}</div>
+      <div className="gecko-gate-widget-body">{children}</div>
     </div>
   );
 }
 
-const HOURLY_DATA = [0, 0, 0, 0, 0, 0, 18, 24, 28, 22, 14, 12, 16, 19, 21, 18, 15, 10, 8, 4, 0, 0, 0, 0];
-const CURRENT_HOUR = 14;
-const BAR_W = 18;
-const BAR_GAP = 5;
-const CHART_H = 100;
-const MAX_VAL = Math.max(...HOURLY_DATA);
-
-const LANES = [
-  { id: 1, status: 'Active', queue: '3 trucks', last: 'BKKO-4829 · 2min ago' },
-  { id: 2, status: 'Active', queue: '1 truck', last: 'BKKO-3311 · 5min ago' },
-  { id: 3, status: 'Active', queue: '0 trucks', last: 'BKKO-5521 · 12min ago' },
-  { id: 4, status: 'Active', queue: '5 trucks', last: 'BKKO-1102 · 1min ago' },
-  { id: 5, status: 'Closed', queue: '—', last: '—' },
-  { id: 6, status: 'Closed', queue: '—', last: '—' },
-];
-
-const COMPLIANCE_HOURS = [
-  { hour: '07:00', pct: 92 },
-  { hour: '08:00', pct: 84 },
-  { hour: '09:00', pct: 78 },
-  { hour: '10:00', pct: 91 },
-  { hour: '11:00', pct: 95 },
-  { hour: '12:00', pct: 88 },
-];
-
-const QUEUE_TRUCKS = [
-  { n: 1, plate: 'GBB-8821', driver: 'Somchai P.', haulier: 'Siam Haulage', container: 'MSKU 744218-3', status: 'FULL IN', appt: '14:30', wait: '8 min' },
-  { n: 2, plate: 'KNK-4419', driver: 'Prasit W.', haulier: 'Thai Truck', container: 'OOLU 551928-1', status: 'FULL IN', appt: '14:45', wait: '4 min' },
-  { n: 3, plate: 'BSK-3312', driver: 'Wichit S.', haulier: 'A1 Transport', container: '—', status: 'EMPTY IN', appt: '15:00', wait: '1 min' },
-  { n: 4, plate: 'GBK-9902', driver: 'Somsak T.', haulier: 'Laem Chabang Log.', container: 'CMAU 883212-0', status: 'FULL OUT', appt: '15:00', wait: '0 min' },
-  { n: 5, plate: 'KNB-7781', driver: 'Niran K.', haulier: 'Siam Haulage', container: '—', status: 'EMPTY OUT', appt: '15:15', wait: '—' },
-  { n: 6, plate: 'BKK-2241', driver: 'Surin W.', haulier: 'Thai Truck', container: 'MSCU 221099-7', status: 'FULL IN', appt: '15:15', wait: '—' },
-  { n: 7, plate: 'PKN-8832', driver: 'Taworn C.', haulier: 'Fast Cargo', container: '—', status: 'EMPTY IN', appt: '15:30', wait: '—' },
-  { n: 8, plate: 'NKP-5519', driver: 'Vuthi P.', haulier: 'A1 Transport', container: 'TCNU 441820-3', status: 'FULL OUT', appt: '15:30', wait: '—' },
-  { n: 9, plate: 'CNX-3301', driver: 'Anont S.', haulier: 'Laem Chabang Log.', container: '—', status: 'EMPTY OUT', appt: '15:45', wait: '—' },
-  { n: 10, plate: 'LPH-9920', driver: 'Krit M.', haulier: 'Siam Haulage', container: 'HLCU 774412-9', status: 'FULL IN', appt: '15:45', wait: '—' },
-];
-
-function statusBadgeStyle(status: string) {
-  if (status === 'FULL IN') return { background: 'var(--gecko-info-50)', color: 'var(--gecko-info-600)', border: '1px solid var(--gecko-info-600)' };
-  if (status === 'FULL OUT') return { background: 'var(--gecko-success-50)', color: 'var(--gecko-success-600)', border: '1px solid var(--gecko-success-600)' };
-  return { background: 'var(--gecko-bg-subtle)', color: 'var(--gecko-text-secondary)', border: '1px solid var(--gecko-border)' };
+function PanelError({ error }: { error: ApiError }) {
+  return (
+    <div className="gecko-dash-placeholder gecko-dash-placeholder-error">
+      <Icon name="alertCircle" size={14} />
+      <span>{error.title}</span>
+      {error.explanation && <span className="gecko-dash-placeholder-detail">{error.explanation}</span>}
+    </div>
+  );
 }
 
-function complianceBarColor(pct: number) {
-  if (pct >= 90) return 'var(--gecko-success-600)';
-  if (pct >= 75) return 'var(--gecko-warning-600)';
-  return 'var(--gecko-error-600)';
+function HourlyChart({ hourly, peakHour }: { hourly: HourBucket[]; peakHour: string | null }) {
+  const max = Math.max(...hourly.map(h => h.moves), 1);
+  const peak = peakHour ? Number(peakHour.slice(0, 2)) : null;
+  return (
+    <div className="gecko-gate-hours">
+      {hourly.map(bucket => (
+        <div key={bucket.hour} className="gecko-gate-hour" title={`${String(bucket.hour).padStart(2, '0')}:00 — ${bucket.moves} moves`}>
+          <div className="gecko-gate-hour-track">
+            {bucket.moves > 0
+              ? <div
+                  className={`gecko-gate-hour-bar ${bucket.hour === peak ? 'gecko-gate-hour-bar-peak' : ''}`}
+                  style={{ height: `${(bucket.moves / max) * 100}%` }}
+                />
+              : <div className="gecko-gate-hour-zero" />}
+          </div>
+          {bucket.hour % 3 === 0 && <div className="gecko-gate-hour-label">{String(bucket.hour).padStart(2, '0')}</div>}
+        </div>
+      ))}
+    </div>
+  );
+}
+
+function ActivityTable({ moves }: { moves: RecentMove[] }) {
+  return (
+    <div className="gecko-table-wrapper gecko-dash-table-wrapper">
+      <table className="gecko-table gecko-dash-table">
+        <thead>
+          <tr><th>Unit</th><th>Move</th><th>Truck</th><th>Time</th><th>Status</th></tr>
+        </thead>
+        <tbody>
+          {moves.map(move => (
+            <tr key={move.gateTransactionId} className={move.status === 'VOIDED' ? 'gecko-dash-row-voided' : ''}>
+              <td className="gecko-mono gecko-dash-cell-unit">{move.containerNo}</td>
+              <td>
+                <span className={`gecko-dash-move ${move.direction === 'IN' ? 'gecko-dash-move-in' : 'gecko-dash-move-out'}`}>
+                  <Icon name={move.direction === 'IN' ? 'arrowDown' : 'arrowUp'} size={12} stroke={2} />
+                  {move.direction}
+                  <span className="gecko-dash-move-code">{move.movementCode}</span>
+                </span>
+              </td>
+              <td className="gecko-cell-meta gecko-mono">{move.truckPlate ?? '—'}</td>
+              <td className="gecko-mono gecko-dash-cell-time">{timeOfDay(move.at)}</td>
+              <td>
+                {move.status === 'VOIDED'
+                  ? <span className="gecko-badge gecko-badge-gray gecko-badge-xs">Voided</span>
+                  : <span className="gecko-badge gecko-badge-success gecko-badge-xs">Complete</span>}
+              </td>
+            </tr>
+          ))}
+        </tbody>
+      </table>
+    </div>
+  );
 }
 
 export default function GateTrafficDashboardPage() {
-  return (
-    <div className="gecko-stack" style={{ gap: 24, paddingBottom: 40 }}>
-      <nav className="gecko-breadcrumb">
-        <span className="gecko-breadcrumb-item">Masters</span>
-        <span className="gecko-breadcrumb-sep">/</span>
-        <span className="gecko-breadcrumb-item">Dashboard</span>
-        <span className="gecko-breadcrumb-sep">/</span>
-        <span className="gecko-breadcrumb-current">Gate &amp; Traffic</span>
-      </nav>
+  const { branch, loading: facilityLoading } = useFacility();
+  const { data, error, loading, reload } = useGateTrafficDashboard(branch?.branchId ?? null);
 
+  const busy = loading || facilityLoading;
+  const noDepot = !facilityLoading && !branch;
+  const k = data?.kpis;
+  const trucksChange = deltaPct(k?.trucksIn.today ?? null, k?.trucksIn.previousDay ?? null);
+  const turnChange = deltaPct(k?.avgTurnMinutes.today ?? null, k?.avgTurnMinutes.previousDay ?? null);
+  const quiet = data && data.hourly.every(h => h.moves === 0);
+
+  return (
+    <div className="gecko-stack gecko-dash-page">
       <div className="gecko-page-header">
         <div className="gecko-page-header-left">
-          <h1 className="gecko-page-title-lg">Gate &amp; Traffic Dashboard</h1>
-          <p className="gecko-page-subtitle">Real-time gate throughput, truck queue, and lane performance</p>
+          <h1 className="gecko-page-title-lg">Gate &amp; Traffic</h1>
+          <p className="gecko-page-subtitle">
+            {data ? longDate(data.date) : '—'}
+            {branch && <> · {branch.displayName}</>}
+          </p>
         </div>
         <div className="gecko-page-header-actions">
-          <RefreshButton resource="Gate traffic" iconSize={14} />
-          <ExportButton resource="Gate traffic" variant="primary" iconSize={14} />
+          <RefreshButton resource="Gate traffic" iconSize={14} onRefresh={reload} />
         </div>
       </div>
 
-      <div className="gecko-grid-5" style={{ gap: 14 }}>
-        <KpiCard label="Trucks In Today" value="124" sub="↑ 12% vs yesterday" accent="var(--gecko-primary-400)" trend="up" />
-        <KpiCard label="Avg Turn Time" value="18 min" sub="Target: 20 min ✓" accent="var(--gecko-success-400)" trend="neutral" />
-        <KpiCard label="Gate Throughput" value="14 / hr" sub="Peak hour: 08:00–09:00" accent="var(--gecko-info-400)" />
-        <KpiCard label="Appt. Compliance" value="87%" sub="↓ 3% vs last week" accent="var(--gecko-warning-400)" trend="down" />
-        <KpiCard label="Lanes Active" value="4 / 6" sub="Lanes 5 & 6 closed" accent="var(--gecko-error-400)" />
-      </div>
+      {noDepot && (
+        <div className="gecko-card gecko-card-padded gecko-dash-placeholder">
+          No depot is assigned to this account, so there is nothing to report on.
+        </div>
+      )}
 
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 16 }}>
-        <Widget title="Hourly Gate Throughput" col={2}>
-          <svg viewBox="0 0 560 120" width="100%" style={{ display: 'block', overflow: 'visible' }}>
-            {HOURLY_DATA.map((val, hour) => {
-              const barH = val > 0 ? (val / MAX_VAL) * 80 : 0;
-              const x = hour * (BAR_W + BAR_GAP) + 2;
-              const y = CHART_H - barH;
-              const isCurrent = hour === CURRENT_HOUR;
-              return (
-                <g key={hour}>
-                  {val > 0 && (
-                    <rect
-                      x={x}
-                      y={y}
-                      width={BAR_W}
-                      height={barH}
-                      rx={3}
-                      fill={isCurrent ? 'var(--gecko-primary-600)' : 'var(--gecko-primary-400)'}
-                      opacity={val === 0 ? 0.2 : 1}
-                    />
-                  )}
-                  {val === 0 && (
-                    <rect x={x} y={CHART_H - 2} width={BAR_W} height={2} rx={1} fill="var(--gecko-border)" />
-                  )}
-                  {[6, 9, 12, 15, 18].includes(hour) && (
-                    <text x={x + BAR_W / 2} y={CHART_H + 14} textAnchor="middle" fontSize={9} fill="var(--gecko-text-secondary)">{String(hour).padStart(2, '0')}</text>
-                  )}
-                </g>
-              );
-            })}
-            <line x1={2} y1={CHART_H} x2={558} y2={CHART_H} stroke="var(--gecko-border)" strokeWidth={1} />
-          </svg>
-        </Widget>
+      {error && !busy && <div className="gecko-card gecko-card-padded"><PanelError error={error} /></div>}
 
-        <Widget title="Live Lane Status">
-          <table className="gecko-table" style={{ width: '100%', borderCollapse: 'collapse', fontSize: 12 }}>
-            <thead>
-              <tr>
-                <th className="gecko-cell-meta" style={{ padding: '6px 8px', textAlign: 'left', fontWeight: 600 }}>Lane</th>
-                <th className="gecko-cell-meta" style={{ padding: '6px 8px', textAlign: 'left', fontWeight: 600 }}>Status</th>
-                <th className="gecko-cell-meta" style={{ padding: '6px 8px', textAlign: 'left', fontWeight: 600 }}>Queue</th>
-                <th className="gecko-cell-meta" style={{ padding: '6px 8px', textAlign: 'left', fontWeight: 600 }}>Last Truck</th>
-              </tr>
-            </thead>
-            <tbody>
-              {LANES.map(lane => (
-                <tr key={lane.id} style={{ opacity: lane.status === 'Closed' ? 0.5 : 1, borderBottom: '1px solid var(--gecko-border)' }}>
-                  <td style={{ padding: '7px 8px', fontWeight: 700, fontFamily: 'var(--gecko-font-mono)' }}>L{lane.id}</td>
-                  <td style={{ padding: '7px 8px' }}>
-                    <span style={{ display: 'inline-flex', alignItems: 'center', gap: 4 }}>
-                      <span style={{ fontSize: 10 }}>{lane.status === 'Active' ? '🟢' : '🔴'}</span>
-                      <span style={{ fontSize: 11, fontWeight: 600, color: lane.status === 'Active' ? 'var(--gecko-success-600)' : 'var(--gecko-error-600)' }}>{lane.status}</span>
-                    </span>
-                  </td>
-                  <td className="gecko-cell-meta" style={{ padding: '7px 8px' }}>{lane.queue}</td>
-                  <td className="gecko-cell-sub" style={{ padding: '7px 8px' }}>{lane.last}</td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </Widget>
-
-        <Widget title="Appointment Compliance by Hour">
-          <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
-            {COMPLIANCE_HOURS.map(row => (
-              <div key={row.hour} style={{ display: 'grid', gridTemplateColumns: '44px 1fr 36px', gap: 8, alignItems: 'center' }}>
-                <span className="gecko-cell-meta" style={{ fontFamily: 'var(--gecko-font-mono)', textAlign: 'right' }}>{row.hour}</span>
-                <div style={{ height: 14, background: 'var(--gecko-bg-subtle)', borderRadius: 4, overflow: 'hidden' }}>
-                  <div style={{ height: '100%', width: `${row.pct}%`, background: complianceBarColor(row.pct), borderRadius: 4, transition: 'width 0.3s' }} />
-                </div>
-                <span style={{ fontSize: 11, fontWeight: 700, color: complianceBarColor(row.pct), textAlign: 'right' }}>{row.pct}%</span>
-              </div>
-            ))}
+      {!noDepot && !error && (
+        <>
+          <div className="gecko-grid-3 gecko-dash-grid">
+            <KpiCard
+              label="Trucks In Today"
+              value={busy ? '—' : orDash(k?.trucksIn.today ?? null)}
+              tone="primary"
+              sub={trucksChange !== null
+                ? <span className={trucksChange >= 0 ? 'gecko-dash-kpi-delta-up' : 'gecko-dash-kpi-delta-down'}>
+                    {trucksChange >= 0 ? '↑' : '↓'} {Math.abs(trucksChange)}% vs yesterday
+                  </span>
+                : 'No comparison for yesterday'}
+            />
+            <KpiCard
+              label="Avg Turn Time"
+              value={busy ? '—' : k?.avgTurnMinutes.today === null || k?.avgTurnMinutes.today === undefined ? '—' : `${k.avgTurnMinutes.today} min`}
+              tone="success"
+              sub={turnChange !== null
+                ? <span className={turnChange <= 0 ? 'gecko-dash-kpi-delta-up' : 'gecko-dash-kpi-delta-down'}>
+                    {turnChange <= 0 ? '↓' : '↑'} {Math.abs(turnChange)}% vs yesterday
+                  </span>
+                : 'No trucks completed today'}
+            />
+            <KpiCard
+              label="Gate Throughput"
+              value={busy ? '—' : `${(k?.throughputPerHour ?? 0).toLocaleString('en-US')} / hr`}
+              tone="info"
+              sub={k?.peakHour ? `Peak hour: ${k.peakHour}` : 'No peak hour yet'}
+            />
           </div>
-        </Widget>
 
-        <Widget title="Gate Queue — Next 10 Trucks" col={2}>
-          <div style={{ overflowX: 'auto' }}>
-            <table className="gecko-table" style={{ width: '100%', borderCollapse: 'collapse', fontSize: 12 }}>
-              <thead>
-                <tr>
-                  {['#', 'Plate No.', 'Driver', 'Haulier', 'Container', 'Status', 'Appt. Time', 'Wait'].map(h => (
-                    <th key={h} className="gecko-cell-meta" style={{ padding: '7px 10px', textAlign: 'left', fontWeight: 600, whiteSpace: 'nowrap', borderBottom: '1px solid var(--gecko-border)' }}>{h}</th>
-                  ))}
-                </tr>
-              </thead>
-              <tbody>
-                {QUEUE_TRUCKS.map(row => (
-                  <tr key={row.n} style={{ borderBottom: '1px solid var(--gecko-border)' }}>
-                    <td className="gecko-cell-meta" style={{ padding: '8px 10px', fontWeight: 600 }}>{row.n}</td>
-                    <td style={{ padding: '8px 10px', fontFamily: 'var(--gecko-font-mono)', fontWeight: 700, fontSize: 12 }}>{row.plate}</td>
-                    <td style={{ padding: '8px 10px', fontSize: 12 }}>{row.driver}</td>
-                    <td className="gecko-cell-meta" style={{ padding: '8px 10px' }}>{row.haulier}</td>
-                    <td style={{ padding: '8px 10px', fontFamily: 'var(--gecko-font-mono)', fontSize: 11 }}>{row.container}</td>
-                    <td style={{ padding: '8px 10px' }}>
-                      <span className="gecko-badge gecko-badge-sm" style={{ ...statusBadgeStyle(row.status), fontSize: 10, padding: '2px 7px', borderRadius: 4, fontWeight: 700, whiteSpace: 'nowrap' }}>{row.status}</span>
-                    </td>
-                    <td style={{ padding: '8px 10px', fontFamily: 'var(--gecko-font-mono)', fontSize: 11 }}>{row.appt}</td>
-                    <td className="gecko-cell-meta" style={{ padding: '8px 10px' }}>{row.wait}</td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-        </Widget>
+          <div className="gecko-gate-grid">
+            <Widget title="Hourly Gate Throughput" wide>
+              {busy
+                ? <div className="gecko-dash-placeholder">Loading…</div>
+                : quiet
+                  ? <div className="gecko-dash-placeholder">No gate activity recorded yet today.</div>
+                  : data && <HourlyChart hourly={data.hourly} peakHour={data.kpis.peakHour} />}
+            </Widget>
 
-        <Widget title="Turn Time Distribution">
-          <div className="gecko-stack gecko-stack-sm">
-            {[
-              { range: '< 10 min', count: 8, pct: 15, color: 'var(--gecko-success-600)' },
-              { range: '10–15 min', count: 22, pct: 41, color: 'var(--gecko-success-600)' },
-              { range: '15–20 min', count: 16, pct: 30, color: 'var(--gecko-warning-600)' },
-              { range: '20–30 min', count: 6, pct: 11, color: 'var(--gecko-warning-600)' },
-              { range: '> 30 min', count: 2, pct: 4, color: 'var(--gecko-error-600)' },
-            ].map(r => (
-              <div key={r.range} style={{ display: 'grid', gridTemplateColumns: '72px 1fr 28px', gap: 8, alignItems: 'center' }}>
-                <span className="gecko-cell-meta">{r.range}</span>
-                <div style={{ height: 12, background: 'var(--gecko-bg-subtle)', borderRadius: 3, overflow: 'hidden' }}>
-                  <div style={{ height: '100%', width: `${r.pct}%`, background: r.color, borderRadius: 3 }} />
-                </div>
-                <span className="gecko-cell-meta" style={{ fontWeight: 700, textAlign: 'right' }}>{r.count}</span>
-              </div>
-            ))}
-            <div className="gecko-cell-meta" style={{ marginTop: 8, paddingTop: 8, borderTop: '1px solid var(--gecko-border)', display: 'flex', justifyContent: 'space-between' }}>
-              <span>Avg turn time today</span>
-              <span style={{ fontWeight: 800, fontFamily: 'var(--gecko-font-mono)', color: 'var(--gecko-text-primary)' }}>18 min</span>
-            </div>
+            <Widget title="Recent Gate Activity" wide>
+              {busy
+                ? <div className="gecko-dash-placeholder">Loading…</div>
+                : data && data.recentActivity.length === 0
+                  ? <div className="gecko-dash-placeholder">No gate activity recorded yet.</div>
+                  : data && <ActivityTable moves={data.recentActivity} />}
+            </Widget>
           </div>
-        </Widget>
-      </div>
+        </>
+      )}
     </div>
   );
 }
