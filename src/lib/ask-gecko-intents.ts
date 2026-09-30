@@ -164,7 +164,7 @@ const INTENTS: Intent[] = [
           `**Booking ${id}** — ${b.customer}, ${b.type} via ${b.agent}.\n\n` +
           `Order Type: ${b.orderType}. Vessel: ${b.vessel} / ${b.voyage}. ETD: ${b.etd}.\n` +
           `Status: ${b.status} · ${b.containers.gatedIn} of ${b.containers.total} containers gated-in.`,
-        ctas: [{ label: 'Open booking', href: `/bookings/${id}` }],
+        ctas: [{ label: 'Open booking register', href: '/bookings' }],
         followUps: ['Show containers in this booking', 'Show pending billing for this customer'],
       };
     },

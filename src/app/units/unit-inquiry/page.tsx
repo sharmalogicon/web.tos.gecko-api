@@ -288,7 +288,7 @@ export default function UnitInquiryPage() {
               </div>
               <div className="gecko-flex-1" />
               <div className="gecko-row">
-                <Link href={`/bookings/${unit.bookingNo}`} className="gecko-btn gecko-btn-outline gecko-btn-sm" style={{ textDecoration: 'none' }}>
+                <Link href="/bookings" className="gecko-btn gecko-btn-outline gecko-btn-sm" style={{ textDecoration: 'none' }}>
                   <Icon name="clipboardList" size={13} /> Open Booking
                 </Link>
                 <button onClick={() => window.print()} className="gecko-btn gecko-btn-ghost gecko-btn-sm">

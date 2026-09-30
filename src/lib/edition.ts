@@ -59,7 +59,6 @@ export const PILOT_PATHS: readonly string[] = [
  * bound to the API.
  */
 export const PILOT_BLOCKED: readonly string[] = [
-  '/bookings/EGLV149602390729',
 ];
 
 /**

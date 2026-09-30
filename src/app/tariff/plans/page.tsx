@@ -3,7 +3,6 @@ import React, { useMemo, useState } from 'react';
 import Link from 'next/link';
 import { Icon } from '@/components/ui/Icon';
 import { FilterPopover, FilterField, SortOption } from '@/components/ui/FilterPopover';
-import { ExportButton } from '@/components/ui/ExportButton';
 import { EmptyState } from '@/components/ui/EmptyState';
 import { useApiList } from '@/lib/api/use-api';
 import {
@@ -99,7 +98,6 @@ export default function TariffPlansPage() {
           </p>
         </div>
         <div className="gecko-toolbar">
-          <ExportButton resource="Tariff schedules" iconSize={16} />
           <button className="gecko-btn gecko-btn-outline gecko-btn-sm" onClick={reload}>
             <Icon name="refreshCcw" size={16} /> Refresh
           </button>

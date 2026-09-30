@@ -393,7 +393,7 @@ function BookingCard({ view }: { view: GatePreflight }) {
     <Card title="Why it is here" empty="No open booking carries this box.">
       {b && (
         <div>
-          <Line label="Order" value={<Link href={`/bookings`} className="gecko-link">{b.orderNo}</Link>} />
+          <Line label="Order" value={<Link href={`/bookings/${b.bookingId}`} className="gecko-link">{b.orderNo}</Link>} />
           <Line label="Order type" value={b.orderTypeCode} />
           <Line label="Line" value={b.lineCode} />
           <Line label="Customer" value={b.customerCode ?? '—'} />

@@ -2,7 +2,6 @@
 import React, { useState, useMemo } from 'react';
 import Link from 'next/link';
 import { Icon } from '@/components/ui/Icon';
-import { ExportButton } from '@/components/ui/ExportButton';
 import { usePagination, TablePagination } from '@/components/ui/TablePagination';
 import { useApiList } from '@/lib/api/use-api';
 
@@ -19,7 +18,8 @@ import { useApiList } from '@/lib/api/use-api';
  *    and copies nothing (D-2); the call ref + voyage link there instead.
  *  - "Full in" / "Loaded" counters — steps are done by the gate (Phase 5);
  *    what exists now is boxes assigned / completed of the quantity asked for.
- *  - bulk transfer / bulk cancel buttons that only raised toasts.
+ *  - bulk transfer / bulk cancel buttons and an Export button that only raised
+ *    toasts (there is no export endpoint).
  *  - customer NAMES and commodity text — the booking stores party codes.
  */
 
@@ -132,7 +132,6 @@ export default function BookingRegisterPage() {
           </p>
         </div>
         <div className="gecko-page-header-actions gecko-row">
-          <ExportButton resource="Bookings" iconSize={14} />
           <button className="gecko-btn gecko-btn-outline gecko-btn-sm" onClick={reload}><Icon name="refreshCcw" size={14} /> Refresh</button>
           <Link href="/bookings/new" className="gecko-btn gecko-btn-primary gecko-btn-sm gecko-inline-row" style={{ textDecoration: 'none' }}>
             <Icon name="plus" size={14} /> New Booking
