@@ -33,7 +33,9 @@ export const PILOT_PATHS: readonly string[] = [
   '/gate/eir-out',               // EIR-out register, /gate/eir-out/[id] detail
   '/gate/holds',                // holds board: active, released history, release
   '/gate/reefer-ops',           // reefer plug log, /new plug-in (power charge needs Revenue /reefer/power)
+  '/gate/yard-view',            // yard-level fill, areas, stock by type / customer / dwell (/api/tos/yard/stock)
   '/units/unit-inquiry',        // one box's story (?no=); /gate/container-status redirects here
+  '/units/equipment-pool',      // stock pools: type × line × grade × condition
   '/billing/cash-window',
   '/tariff/plans',              // schedules, /tariff/plans/new, /tariff/plans/[id]
   '/masters/customers',

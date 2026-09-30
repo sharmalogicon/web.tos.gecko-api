@@ -1,150 +1,41 @@
 "use client";
-import React, { useState, useEffect, useMemo } from 'react';
+
+/**
+ * YARD VIEW — live against gecko_tos `yard.vw_container_in_yard`, counted by
+ * GET /api/tos/yard/stock, with the yards (name, capacity) from MDM org.yard.
+ *
+ * KORAKIT locates boxes at yard level: a yard and an area code (the position
+ * text the gate wrote — Vector's YardLocation), no blocks, bays, rows or tiers.
+ * So this is a yard-level view: each yard's fill against its declared capacity,
+ * its areas, and the stock by type, customer and dwell. The box-by-box list is
+ * the stock list (/gate/stock); one box's story is the unit inquiry.
+ */
+
+import React, { useState } from 'react';
 import Link from 'next/link';
 import { Icon } from '@/components/ui/Icon';
+import { EmptyState } from '@/components/ui/EmptyState';
+import { useApi, useApiList } from '@/lib/api/use-api';
+import { useSession } from '@/lib/auth/session';
+import { formatDateTime } from '@/lib/api/tos';
+import { yardsPath, type Yard } from '@/lib/api/yards';
+import {
+  YARD_STOCK_PERMISSIONS, occupancy, teuLabel, yardStockPath,
+  type StockLoad, type YardStock, type YardStockGroup, type YardStockTally, type YardStockYard,
+} from '@/lib/api/yard-stock';
 
-// ─── Shared types (must match /config/yard-zones) ──────────────────────────────
+interface Branch { branchId: string; branchCode: string; displayName: string }
 
-type BlockType  = 'IMPORT' | 'EXPORT' | 'EMPTY' | 'REEFER' | 'DAMAGE' | 'HAZ' | 'OOG' | 'TRANSHIPMENT';
-type Allocation = 'OPEN' | 'LINE_RESERVED' | 'AGENT_RESERVED' | 'CUSTOMER_RESERVED';
-
-interface YardBlock {
-  id: string;
-  code: string;
-  type: BlockType;
-  bays: number;
-  rows: number;
-  tiers: number;
-  x: number;
-  y: number;
-  allocation: Allocation;
-  reservedParty: string;
-  isoAccepted: string[];
-  reeferPlugCount: number;
-}
-
-interface YardTemplate {
-  version: 1;
-  yardId: string;
-  name: string;
-  savedAt: string;
-  canvas: { width: number; height: number; gridPx: number };
-  blocks: YardBlock[];
-}
-
-const STORAGE_KEY = 'gecko.yardTemplate.lcb.import-yard';
-const CANVAS_W = 1400;
-const CANVAS_H = 900;
-const GRID_PX = 20;
-
-const BLOCK_TYPES: Record<BlockType, { label: string; fill: string; stroke: string; text: string }> = {
-  IMPORT:       { label: 'Import',  fill: '#dbeafe', stroke: '#2563eb', text: '#1e3a8a' },
-  EXPORT:       { label: 'Export',  fill: '#d1fae5', stroke: '#059669', text: '#064e3b' },
-  EMPTY:        { label: 'Empty',   fill: '#f3f4f6', stroke: '#6b7280', text: '#374151' },
-  REEFER:       { label: 'Reefer',  fill: '#cffafe', stroke: '#0891b2', text: '#155e75' },
-  DAMAGE:       { label: 'Damage',  fill: '#fee2e2', stroke: '#dc2626', text: '#7f1d1d' },
-  HAZ:          { label: 'HAZ',     fill: '#ffedd5', stroke: '#ea580c', text: '#7c2d12' },
-  OOG:          { label: 'OOG',     fill: '#ede9fe', stroke: '#7c3aed', text: '#4c1d95' },
-  TRANSHIPMENT: { label: 'T/S',     fill: '#fef3c7', stroke: '#d97706', text: '#78350f' },
-};
-
-const ALLOCATION_LABEL: Record<Allocation, string> = {
-  OPEN:               'Open to all',
-  LINE_RESERVED:      'Reserved to line',
-  AGENT_RESERVED:     'Reserved to agent',
-  CUSTOMER_RESERVED:  'Reserved to customer',
-};
-
-const ZOOM_LEVELS = [0.5, 0.75, 1, 1.25, 1.5, 1.75, 2];
-
-// ─── Mock data — deterministic from (blockId, bay, row, tier) ─────────────────
-
-function hashKey(key: string): number {
-  let h = 0;
-  for (let i = 0; i < key.length; i++) h = (h * 31 + key.charCodeAt(i)) >>> 0;
-  return h;
-}
-
-interface CellData {
-  filledTiers: number;
-}
-
-function mockCell(blockId: string, bay: number, row: number, maxTiers: number): CellData {
-  const h = hashKey(`${blockId}-${bay}-${row}`);
-  // Skew toward "some filled" — bias the distribution so most stacks are 1–maxTiers, with ~15% empty
-  const r = h % 100;
-  if (r < 15) return { filledTiers: 0 };
-  return { filledTiers: 1 + (h % maxTiers) };
-}
-
-// Block-level average occupancy for the heatmap bands
-function blockAvgOccupancy(b: YardBlock): { occupiedTeu: number; capacity: number; pct: number } {
-  let occ = 0;
-  for (let bay = 0; bay < b.bays; bay++) {
-    for (let row = 0; row < b.rows; row++) {
-      occ += mockCell(b.id, bay, row, b.tiers).filledTiers;
-    }
-  }
-  const cap = b.bays * b.rows * b.tiers;
-  return { occupiedTeu: occ, capacity: cap, pct: cap > 0 ? occ / cap : 0 };
-}
-
-interface ContainerData {
-  no: string;
-  iso: string;
-  customer: string;
-  cargoClass: 'NONE' | 'EMPTY' | 'REEFER' | 'HAZ' | 'OOG';
-  condition: 'SOUND' | 'DAMAGED';
-  weightKg: number;
-}
-
-const LINE_PREFIXES = ['MAEU', 'COSU', 'EGHU', 'TGHU', 'YMLU', 'CMAU', 'HLBU', 'APLU', 'MSCU', 'OOLU'];
-const CUSTOMERS    = ['TCL Electronics', 'Thai Union Group', 'PTT Global Chemical', 'Siam Cement (SCG)', 'CP Group', 'Central Retail', 'Bangkok Glass', 'Indorama Ventures', 'Minor Intl.', 'AEON (Thailand)', 'Bangchak Corp.'];
-
-// All tiers in one stack share an ISO size — you can't stack 20' on top of 40' in real terminals
-function stackIsoSize(blockId: string, blockType: BlockType, bay: number, row: number): string {
-  const h = hashKey(`${blockId}-${bay}-${row}-iso`);
-  switch (blockType) {
-    case 'REEFER': return h % 2 === 0 ? '40RF' : '20RF';
-    case 'EMPTY':  return h % 2 === 0 ? '40HC' : '20GP';
-    case 'HAZ':    return '20GP';
-    case 'OOG':    return '40HC';
-    default:       return h % 3 === 0 ? '40HC' : '20GP';
-  }
-}
-
-function mockContainer(blockId: string, blockType: BlockType, iso: string, bay: number, row: number, tier: number): ContainerData {
-  const h = hashKey(`${blockId}-${bay}-${row}-${tier}`);
-  const linePrefix = LINE_PREFIXES[h % LINE_PREFIXES.length];
-  const serial = (1000000 + (h % 9000000)).toString().padStart(7, '0');
-
-  const cargoClass: ContainerData['cargoClass'] =
-    blockType === 'EMPTY'  ? 'EMPTY'  :
-    blockType === 'REEFER' ? 'REEFER' :
-    blockType === 'HAZ'    ? 'HAZ'    :
-    blockType === 'OOG'    ? 'OOG'    : 'NONE';
-
-  const customer = blockType === 'EMPTY' ? '—' : CUSTOMERS[(h >>> 8) % CUSTOMERS.length];
-  const condition: 'SOUND' | 'DAMAGED' = (h >>> 16) % 25 === 0 ? 'DAMAGED' : 'SOUND';
-
-  let weightKg: number;
-  if (blockType === 'EMPTY') {
-    weightKg = (iso === '40HC' || iso === '40RF') ? 3800 : 2200;
-  } else {
-    weightKg = 5000 + (h % 17000);  // 5–22 t
-  }
-
-  return { no: `${linePrefix}${serial}`, iso, customer, cargoClass, condition, weightKg };
-}
+const TOP_CUSTOMERS = 10;
 
 // ─── Occupancy color bands ────────────────────────────────────────────────────
 
 function occupancyColor(pct: number) {
-  if (pct >= 0.85) return { fill: '#fee2e2', stroke: '#dc2626' }; // critical
-  if (pct >= 0.60) return { fill: '#fef3c7', stroke: '#d97706' }; // high
-  if (pct >= 0.30) return { fill: '#d1fae5', stroke: '#059669' }; // moderate
-  if (pct > 0)     return { fill: '#e0f2fe', stroke: '#0284c7' }; // low
-  return                  { fill: '#f9fafb', stroke: '#9ca3af' }; // empty
+  if (pct >= 0.85) return { fill: '#fee2e2', stroke: '#dc2626', text: '#7f1d1d' }; // critical
+  if (pct >= 0.60) return { fill: '#fef3c7', stroke: '#d97706', text: '#78350f' }; // high
+  if (pct >= 0.30) return { fill: '#d1fae5', stroke: '#059669', text: '#064e3b' }; // moderate
+  if (pct > 0)     return { fill: '#e0f2fe', stroke: '#0284c7', text: '#0c4a6e' }; // low
+  return                  { fill: '#f9fafb', stroke: '#9ca3af', text: '#374151' }; // empty
 }
 
 function occupancyLabel(pct: number) {
@@ -155,90 +46,55 @@ function occupancyLabel(pct: number) {
   return                  'Empty';
 }
 
-function rowLabel(rowIdx: number) {
-  return String.fromCharCode(65 + rowIdx);
-}
-
-function bayLabel(bayIdx: number) {
-  return String(bayIdx + 1).padStart(2, '0');
-}
+const pct = (n: number) => `${Math.round(n * 100)}%`;
 
 // ─── Page ─────────────────────────────────────────────────────────────────────
 
-type ColorMode = 'occupancy' | 'type';
-interface CellSelection { blockId: string; bay: number; row: number; }
-
 export default function YardViewPage() {
-  const [template, setTemplate] = useState<YardTemplate | null>(null);
-  const [loaded, setLoaded]     = useState(false);
-  const [selectedCell, setSelectedCell] = useState<CellSelection | null>(null);
-  const [hoveredCell,  setHoveredCell]  = useState<CellSelection | null>(null);
-  const [zoom, setZoom] = useState(1.5);                    // default 1.5× so internal grid is visible
-  const [colorMode, setColorMode] = useState<ColorMode>('occupancy');
+  const { can, branchesFor } = useSession();
+  const [pickedBranch, setPickedBranch] = useState('');
+  const [load, setLoad] = useState<StockLoad>('');
+  const [selectedYard, setSelectedYard] = useState<string | null>(null);
 
-  useEffect(() => {
-    try {
-      const raw = localStorage.getItem(STORAGE_KEY);
-      if (raw) setTemplate(JSON.parse(raw));
-    } catch { /* ignore */ }
-    setLoaded(true);
-  }, []);
+  const { data: branchRows } = useApiList<Branch>('/api/branches?pageSize=100');
+  const mine = new Set(branchesFor(YARD_STOCK_PERMISSIONS.view));
+  const depots = (branchRows ?? []).filter(b => mine.size === 0 || mine.has(b.branchId));
+  // A yard belongs to one depot, so the view is always for one.
+  const branchId = pickedBranch || depots[0]?.branchId || '';
 
-  const blocks = template?.blocks ?? [];
-  const showInternalGrid = zoom >= 0.75;
+  const mayView = can(YARD_STOCK_PERMISSIONS.view) || mine.size > 0;
+  const stock = useApi<YardStock>(branchId && mayView ? yardStockPath({ branchId, fullEmpty: load }) : null);
+  const yardDetail = useApi<YardStock>(branchId && selectedYard && selectedYard !== 'none'
+    ? yardStockPath({ branchId, yardId: selectedYard, fullEmpty: load }) : null);
+  const yards = useApiList<Yard>(branchId ? yardsPath(branchId) : null);
 
-  // ── Aggregate stats (cell-level) ────────────────────────────────────────────
-  const stats = useMemo(() => {
-    let totalCap = 0, totalOccupied = 0, totalCells = 0;
-    const cellBands = { empty: 0, low: 0, moderate: 0, high: 0, critical: 0 };
+  const data = stock.data;
+  const yardById = new Map((yards.data ?? []).map(y => [y.yardId, y]));
 
-    blocks.forEach(b => {
-      for (let bay = 0; bay < b.bays; bay++) {
-        for (let row = 0; row < b.rows; row++) {
-          totalCells++;
-          const cell = mockCell(b.id, bay, row, b.tiers);
-          totalCap += b.tiers;
-          totalOccupied += cell.filledTiers;
-          const pct = cell.filledTiers / b.tiers;
-          if (pct >= 0.85)      cellBands.critical++;
-          else if (pct >= 0.60) cellBands.high++;
-          else if (pct >= 0.30) cellBands.moderate++;
-          else if (pct > 0)     cellBands.low++;
-          else                  cellBands.empty++;
-        }
-      }
-    });
+  // Every active yard of the depot, stocked or not, then any stock outside a known yard.
+  const stockedById = new Map((data?.yards ?? []).map(y => [y.yardId ?? 'none', y]));
+  const cards: { key: string; yard: Yard | null; stock: YardStockYard | null }[] = [
+    ...(yards.data ?? [])
+      .filter(y => y.isActive || stockedById.has(y.yardId))
+      .map(y => ({ key: y.yardId, yard: y, stock: stockedById.get(y.yardId) ?? null })),
+    ...(data?.yards ?? [])
+      .filter(y => !y.yardId || !yardById.has(y.yardId))
+      .map(y => ({ key: y.yardId ?? 'none', yard: null, stock: y })),
+  ].sort((a, b) => (b.stock?.tally.boxes ?? 0) - (a.stock?.tally.boxes ?? 0));
 
-    return {
-      totalCap, totalOccupied, totalCells,
-      pct: totalCap ? totalOccupied / totalCap : 0,
-      cellBands,
-    };
-  }, [blocks]);
+  const capacity = (yards.data ?? []).filter(y => y.isActive).reduce((n, y) => n + (y.capacityTeu ?? 0), 0);
+  const fill = data ? occupancy(data.total.teu, capacity) : null;
 
-  const selectedBlock = useMemo(
-    () => selectedCell ? blocks.find(b => b.id === selectedCell.blockId) ?? null : null,
-    [blocks, selectedCell]
-  );
+  // The breakdown panel reads the selected yard, or the whole depot.
+  const focus = selectedYard === 'none'
+    ? null
+    : selectedYard ? yardDetail.data : data;
+  const focusName = selectedYard
+    ? (selectedYard === 'none' ? 'Not in a yard' : yardById.get(selectedYard)?.nameEn ?? 'Yard')
+    : 'All yards';
 
-  if (!loaded) return null;
-
-  if (blocks.length === 0) {
-    return (
-      <div style={{ maxWidth: 'var(--gecko-container-max)', margin: '0 auto', padding: '60px 24px', textAlign: 'center' }}>
-        <div className="gecko-mini-icon gecko-mini-icon-primary" style={{ width: 64, height: 64, borderRadius: 16, marginBottom: 18 }}>
-          <Icon name="grid" size={32} />
-        </div>
-        <h2 className="gecko-page-title gecko-mb-2">No yard layout configured</h2>
-        <p className="gecko-page-subtitle" style={{ maxWidth: 480, margin: '0 auto 24px' }}>
-          Build the yard layout in Configuration first. Drop blocks on the canvas, set their type and capacity, and they&apos;ll appear here with live occupancy.
-        </p>
-        <Link href="/config/yard-zones" className="gecko-btn gecko-btn-primary gecko-btn-sm gecko-inline-row">
-          <Icon name="settings" size={13} />Open Yard Configuration
-        </Link>
-      </div>
-    );
-  }
+  const reload = () => { stock.reload(); yards.reload(); yardDetail.reload(); };
+  const error = stock.error;
 
   return (
     <div className="gecko-stack">
@@ -247,142 +103,117 @@ export default function YardViewPage() {
       <div className="gecko-page-header">
         <div className="gecko-page-header-left">
           <div className="gecko-row gecko-row-wrap">
-            <h1 className="gecko-page-title">Yard Plan</h1>
-            <span style={{ fontSize: 10.5, fontWeight: 600, padding: '2px 8px', borderRadius: 20, background: 'var(--gecko-primary-50)', color: 'var(--gecko-primary-700)', border: '1px solid var(--gecko-primary-200)' }}>
-              {blocks.length} blocks · {stats.totalCells} stacks · {stats.totalCap} TEU
-            </span>
-            <span style={{
-              fontSize: 10.5, fontWeight: 600, padding: '2px 8px', borderRadius: 20,
-              background: stats.pct >= 0.85 ? '#fee2e2' : stats.pct >= 0.60 ? '#fef3c7' : '#d1fae5',
-              color: stats.pct >= 0.85 ? '#7f1d1d' : stats.pct >= 0.60 ? '#78350f' : '#064e3b',
-              border: `1px solid ${stats.pct >= 0.85 ? '#fca5a5' : stats.pct >= 0.60 ? '#fcd34d' : '#86efac'}`,
-            }}>
-              {Math.round(stats.pct * 100)}% · {stats.totalOccupied} / {stats.totalCap} TEU
-            </span>
+            <h1 className="gecko-page-title">Yard View</h1>
+            <span className="gecko-badge gecko-badge-success">LIVE</span>
+            {data && (
+              <span style={{ fontSize: 10.5, fontWeight: 600, padding: '2px 8px', borderRadius: 20, background: 'var(--gecko-primary-50)', color: 'var(--gecko-primary-700)', border: '1px solid var(--gecko-primary-200)' }}>
+                {cards.length} {cards.length === 1 ? 'yard' : 'yards'} · {data.total.boxes.toLocaleString()} boxes · {teuLabel(data.total.teu)} TEU
+              </span>
+            )}
+            {fill !== null && (
+              <span style={{
+                fontSize: 10.5, fontWeight: 600, padding: '2px 8px', borderRadius: 20,
+                background: occupancyColor(fill).fill, color: occupancyColor(fill).text, border: `1px solid ${occupancyColor(fill).stroke}`,
+              }}>
+                {pct(fill)} of {capacity.toLocaleString()} TEU capacity
+              </span>
+            )}
           </div>
           <p className="gecko-page-subtitle">
-            Live yard occupancy — Laem Chabang ICD · Import Yard · {template?.savedAt ? `template saved ${new Date(template.savedAt).toLocaleString()}` : ''}
+            What is in each yard now — boxes are located at yard level, by the area the gate wrote
+            {data ? ` · as at ${formatDateTime(data.asAt)}` : ''}
           </p>
         </div>
 
         <div className="gecko-page-header-actions">
+          <select className="gecko-input gecko-input-sm" aria-label="Depot" value={branchId}
+            onChange={e => { setPickedBranch(e.target.value); setSelectedYard(null); }} style={{ minWidth: 170 }}>
+            {depots.length === 0 && <option value="">No depot</option>}
+            {depots.map(b => <option key={b.branchId} value={b.branchId}>{b.branchCode} · {b.displayName}</option>)}
+          </select>
           <div className="gecko-segctrl">
-            {(['occupancy', 'type'] as const).map(m => (
-              <button key={m} onClick={() => setColorMode(m)} className={`gecko-segctrl-btn${colorMode === m ? ' gecko-segctrl-btn-active' : ''}`}>
-                {m === 'occupancy' ? 'Heatmap' : 'By type'}
+            {([['', 'All'], ['FULL', 'Full'], ['EMPTY', 'Empty']] as const).map(([v, label]) => (
+              <button key={v} onClick={() => setLoad(v)} className={`gecko-segctrl-btn${load === v ? ' gecko-segctrl-btn-active' : ''}`}>
+                {label}
               </button>
             ))}
           </div>
-          <ZoomControl zoom={zoom} setZoom={setZoom} />
-          <Link href="/config/yard-zones" className="gecko-btn gecko-btn-outline gecko-btn-sm gecko-inline-row">
-            <Icon name="edit" size={13} />Edit layout
+          <button className="gecko-btn gecko-btn-outline gecko-btn-sm" onClick={reload}>
+            <Icon name="refreshCcw" size={13} /> Refresh
+          </button>
+          <Link href="/gate/stock" className="gecko-btn gecko-btn-outline gecko-btn-sm gecko-inline-row">
+            <Icon name="clipboardList" size={13} />Stock list
           </Link>
         </div>
       </div>
 
-      {/* KPI strip — cell-level bands */}
-      <div className="gecko-grid-5">
-        <KpiCard label="Empty (0%)"        value={stats.cellBands.empty}    tone="neutral" />
-        <KpiCard label="Low (1–30%)"       value={stats.cellBands.low}      tone="info" />
-        <KpiCard label="Moderate (30–60%)" value={stats.cellBands.moderate} tone="success" />
-        <KpiCard label="High (60–85%)"     value={stats.cellBands.high}     tone="warning" />
-        <KpiCard label="Critical (>85%)"   value={stats.cellBands.critical} tone="danger" />
-      </div>
-
-      {/* Workspace */}
-      <div style={{ display: 'grid', gridTemplateColumns: selectedCell ? '1fr 360px' : '1fr', gap: 12, alignItems: 'flex-start' }}>
-
-        {/* Canvas (read-only with cell-level grid) */}
-        <section className="gecko-card gecko-card-flush" style={{ overflow: 'hidden' }}>
-          <div style={{ overflow: 'auto', maxHeight: '72vh', background: '#f9fafb' }}>
-            <svg
-              width={CANVAS_W * zoom}
-              height={CANVAS_H * zoom}
-              viewBox={`0 0 ${CANVAS_W} ${CANVAS_H}`}
-              style={{ display: 'block', userSelect: 'none', background: '#fafafa' }}
-              onClick={e => { if (e.target === e.currentTarget) setSelectedCell(null); }}
-            >
-              <rect x={0} y={0} width={CANVAS_W} height={CANVAS_H} fill="#fcfcfd" />
-
-              {/* Background dot grid */}
-              {Array.from({ length: Math.floor(CANVAS_W / GRID_PX) + 1 }).map((_, i) =>
-                Array.from({ length: Math.floor(CANVAS_H / GRID_PX) + 1 }).map((__, j) => (
-                  <circle key={`d-${i}-${j}`} cx={i * GRID_PX} cy={j * GRID_PX} r={0.6} fill="#d1d5db" />
-                ))
-              )}
-
-              <rect x={0} y={0} width={CANVAS_W} height={CANVAS_H} fill="none" stroke="#d1d5db" strokeWidth={1.5} />
-              <text x={14} y={28} fill="#9ca3af" fontSize={14} fontFamily="ui-monospace, monospace" fontWeight={600}>
-                LCB · IMPORT YARD · LIVE OCCUPANCY
-              </text>
-
-              {/* Blocks */}
-              {blocks.map(b => (
-                <BlockNodeView
-                  key={b.id}
-                  block={b}
-                  colorMode={colorMode}
-                  showInternalGrid={showInternalGrid}
-                  selectedCell={selectedCell}
-                  hoveredCell={hoveredCell}
-                  onCellSelect={(bay, row) => {
-                    setSelectedCell(cur =>
-                      cur && cur.blockId === b.id && cur.bay === bay && cur.row === row
-                        ? null
-                        : { blockId: b.id, bay, row }
-                    );
-                  }}
-                  onCellHover={(bay, row) => setHoveredCell({ blockId: b.id, bay, row })}
-                  onCellLeave={() => setHoveredCell(null)}
-                />
-              ))}
-
-              {/* Hover tooltip */}
-              {hoveredCell && (() => {
-                const b = blocks.find(x => x.id === hoveredCell.blockId);
-                if (!b) return null;
-                const cell = mockCell(b.id, hoveredCell.bay, hoveredCell.row, b.tiers);
-                const pct  = cell.filledTiers / b.tiers;
-                const tipX = Math.min(b.x + b.bays * GRID_PX + 8, CANVAS_W - 230);
-                const tipY = Math.max(b.y, 36);
-                return (
-                  <g transform={`translate(${tipX}, ${tipY})`} pointerEvents="none">
-                    <rect width={220} height={80} rx={6} fill="#0f172a" opacity={0.94} />
-                    <text x={10} y={18} fill="#fff" fontSize={12} fontWeight={700} fontFamily="ui-monospace, monospace">
-                      {b.code} · Bay {bayLabel(hoveredCell.bay)} · Row {rowLabel(hoveredCell.row)}
-                    </text>
-                    <text x={10} y={36} fill="#cbd5e1" fontSize={10}>
-                      Block: {BLOCK_TYPES[b.type].label} · {ALLOCATION_LABEL[b.allocation]}
-                    </text>
-                    <text x={10} y={54} fill="#fff" fontSize={11}>
-                      <tspan fontFamily="ui-monospace, monospace" fontWeight={700}>{cell.filledTiers}</tspan>
-                      <tspan fontSize={10} fill="#cbd5e1"> / {b.tiers}</tspan>
-                      <tspan fontSize={10}> tiers · </tspan>
-                      <tspan fontWeight={700}>{Math.round(pct * 100)}%</tspan>
-                    </text>
-                    <text x={10} y={70} fill="#94a3b8" fontSize={10}>
-                      {occupancyLabel(pct)} · click for stack detail
-                    </text>
-                  </g>
-                );
-              })()}
-            </svg>
+      {error && (
+        <div className="gecko-alert gecko-alert-error">
+          <Icon name="alertCircle" size={18} />
+          <div>
+            <div style={{ fontWeight: 600 }}>{error.title}</div>
+            {error.explanation && <div>{error.explanation}</div>}
           </div>
-        </section>
+        </div>
+      )}
 
-        {/* Cell detail drawer */}
-        {selectedCell && selectedBlock && (
-          <CellDetail
-            block={selectedBlock}
-            bay={selectedCell.bay}
-            row={selectedCell.row}
-            onClose={() => setSelectedCell(null)}
-          />
-        )}
+      {/* KPI strip */}
+      <div className="gecko-grid-5">
+        <KpiCard label="Boxes in the yard" value={data?.total.boxes} sub={data ? `${teuLabel(data.total.teu)} TEU` : ''} tone="primary" />
+        <KpiCard label="Full" value={data?.total.full} sub="laden" tone="info" />
+        <KpiCard label="Empty" value={data?.total.empty} sub="MTY" tone="neutral" />
+        <KpiCard label="On hold" value={data?.total.held} sub="cannot leave" tone="warning" />
+        <KpiCard label="Over 30 days" value={data?.total.daysOver30} sub={data ? `longest ${data.total.maxDays} days` : ''} tone="danger" />
       </div>
+
+      {/* Yards */}
+      {data && cards.length === 0 && (
+        <section className="gecko-card">
+          <EmptyState icon="grid" title="Nothing in the yard"
+            description={load ? `No ${load === 'FULL' ? 'full' : 'empty'} boxes at this depot right now.` : 'No boxes at this depot right now, and no yard is set up.'} />
+        </section>
+      )}
+      <div className="gecko-grid-2" style={{ alignItems: 'stretch' }}>
+        {cards.map(c => (
+          <YardCard
+            key={c.key}
+            yard={c.yard}
+            stock={c.stock}
+            selected={selectedYard === c.key}
+            onSelect={() => setSelectedYard(cur => (cur === c.key ? null : c.key))}
+          />
+        ))}
+      </div>
+
+      {/* Breakdown */}
+      {data && data.total.boxes > 0 && (
+        <>
+          <div className="gecko-row gecko-row-between">
+            <div className="gecko-eyebrow">Breakdown · {focusName}</div>
+            {selectedYard && (
+              <button className="gecko-btn gecko-btn-ghost gecko-btn-sm" onClick={() => setSelectedYard(null)}>
+                <Icon name="x" size={12} /> All yards
+              </button>
+            )}
+          </div>
+          {selectedYard === 'none' && (
+            <div className="gecko-helper-text">Boxes not placed in a yard cannot be narrowed further — see the stock list.</div>
+          )}
+          {focus && (
+            <div className="gecko-grid-3" style={{ alignItems: 'flex-start' }}>
+              <GroupTable title="By type" noun="Type" groups={focus.types} total={focus.total.boxes} />
+              <GroupTable title="By customer" noun="Customer" groups={focus.customers} total={focus.total.boxes} named limit={TOP_CUSTOMERS} />
+              <DwellCard tally={focus.total} />
+            </div>
+          )}
+          {selectedYard && selectedYard !== 'none' && yardDetail.loading && !yardDetail.data && (
+            <div className="gecko-helper-text">Loading the yard…</div>
+          )}
+        </>
+      )}
 
       <div className="gecko-helper-text" style={{ textAlign: 'center' }}>
-        Hover any stack for quick stats · click for the cross-section (vertical tier view) · all occupancy data is mocked for demo (real-time feed wires up in Phase 2)
+        Fill is TEU against the capacity set on each yard (Masters · Yards) · a box whose type is not in Container Types adds no TEU · click a yard for its breakdown
       </div>
     </div>
   );
@@ -390,313 +221,177 @@ export default function YardViewPage() {
 
 // ─── KPI card ─────────────────────────────────────────────────────────────────
 
-function KpiCard({ label, value, tone }: { label: string; value: number; tone: 'primary' | 'success' | 'warning' | 'danger' | 'info' | 'neutral' }) {
+function KpiCard({ label, value, sub, tone }: {
+  label: string; value: number | undefined; sub: string;
+  tone: 'primary' | 'success' | 'warning' | 'danger' | 'info' | 'neutral';
+}) {
   return (
     <div className="gecko-kpi-tile">
-      <div className={`gecko-kpi-tile-icon gecko-kpi-tile-icon-${tone}`} style={{ fontSize: 16, fontWeight: 800, fontFamily: 'var(--gecko-font-mono)' }}>
-        {value}
+      <div className={`gecko-kpi-tile-icon gecko-kpi-tile-icon-${tone}`} style={{ fontSize: 14, fontWeight: 800, fontFamily: 'var(--gecko-font-mono)', minWidth: 44, width: 'auto', padding: '0 8px' }}>
+        {value === undefined ? '…' : value.toLocaleString()}
       </div>
       <div>
         <div className="gecko-cell-primary">{label}</div>
-        <div className="gecko-kpi-tile-label" style={{ fontSize: 10 }}>stacks in this band</div>
+        <div className="gecko-kpi-tile-label" style={{ fontSize: 10 }}>{sub}</div>
       </div>
     </div>
   );
 }
 
-// ─── Zoom control ─────────────────────────────────────────────────────────────
+// ─── One yard ─────────────────────────────────────────────────────────────────
 
-function ZoomControl({ zoom, setZoom }: { zoom: number; setZoom: (z: number) => void }) {
-  const idx = ZOOM_LEVELS.indexOf(zoom);
-  return (
-    <div style={{ display: 'flex', alignItems: 'center', gap: 4, padding: '2px 4px', background: 'var(--gecko-bg-subtle)', borderRadius: 6, border: '1px solid var(--gecko-border)' }}>
-      <button
-        className="gecko-btn gecko-btn-ghost gecko-btn-icon gecko-btn-sm"
-        onClick={() => idx > 0 && setZoom(ZOOM_LEVELS[idx - 1])}
-        disabled={idx <= 0}
-        title="Zoom out"
-        style={{ height: 26, width: 26, fontSize: 14 }}
-      >−</button>
-      <span style={{ fontSize: 11, fontFamily: 'var(--gecko-font-mono)', fontWeight: 600, minWidth: 36, textAlign: 'center', color: 'var(--gecko-text-primary)' }}>
-        {Math.round(zoom * 100)}%
-      </span>
-      <button
-        className="gecko-btn gecko-btn-ghost gecko-btn-icon gecko-btn-sm"
-        onClick={() => idx < ZOOM_LEVELS.length - 1 && setZoom(ZOOM_LEVELS[idx + 1])}
-        disabled={idx >= ZOOM_LEVELS.length - 1}
-        title="Zoom in"
-        style={{ height: 26, width: 26, fontSize: 14 }}
-      >+</button>
-    </div>
-  );
-}
-
-// ─── Block render (read-only, with internal grid + per-cell cells) ────────────
-
-function BlockNodeView({ block, colorMode, showInternalGrid, selectedCell, hoveredCell, onCellSelect, onCellHover, onCellLeave }: {
-  block: YardBlock;
-  colorMode: ColorMode;
-  showInternalGrid: boolean;
-  selectedCell: CellSelection | null;
-  hoveredCell: CellSelection | null;
-  onCellSelect: (bay: number, row: number) => void;
-  onCellHover: (bay: number, row: number) => void;
-  onCellLeave: () => void;
+function YardCard({ yard, stock, selected, onSelect }: {
+  yard: Yard | null; stock: YardStockYard | null; selected: boolean; onSelect: () => void;
 }) {
-  const typeMeta = BLOCK_TYPES[block.type];
-  const w = block.bays * GRID_PX;
-  const h = block.rows * GRID_PX;
-  const avg = blockAvgOccupancy(block);
-
-  const baseFill = colorMode === 'occupancy' ? occupancyColor(avg.pct).fill : typeMeta.fill;
-
-  return (
-    <g transform={`translate(${block.x},${block.y})`}>
-      {/* Outer block fill (low-zoom fallback OR base for internal cells) */}
-      <rect x={0} y={0} width={w} height={h} fill={baseFill} stroke={typeMeta.stroke} strokeWidth={1.5} />
-
-      {/* Type stripe at top */}
-      <rect x={0} y={0} width={w} height={3} fill={typeMeta.stroke} opacity={0.7} />
-
-      {/* Internal grid + per-cell rects (only when zoomed enough to read) */}
-      {showInternalGrid && Array.from({ length: block.bays }).map((_, bay) =>
-        Array.from({ length: block.rows }).map((__, row) => {
-          const cellX = bay * GRID_PX;
-          const cellY = row * GRID_PX;
-          const cell = mockCell(block.id, bay, row, block.tiers);
-          const pct  = cell.filledTiers / block.tiers;
-          const fill = colorMode === 'occupancy' ? occupancyColor(pct).fill : typeMeta.fill;
-          const isHovered  = hoveredCell?.blockId === block.id && hoveredCell.bay === bay && hoveredCell.row === row;
-          const isSelected = selectedCell?.blockId === block.id && selectedCell.bay === bay && selectedCell.row === row;
-          return (
-            <rect
-              key={`${bay}-${row}`}
-              x={cellX} y={cellY}
-              width={GRID_PX} height={GRID_PX}
-              fill={fill}
-              stroke={isSelected ? '#0ea5e9' : (isHovered ? '#0ea5e9' : `${typeMeta.stroke}55`)}
-              strokeWidth={isSelected ? 2 : (isHovered ? 1.5 : 0.5)}
-              style={{ cursor: 'pointer' }}
-              onClick={(e) => { e.stopPropagation(); onCellSelect(bay, row); }}
-              onMouseEnter={() => onCellHover(bay, row)}
-              onMouseLeave={onCellLeave}
-            />
-          );
-        })
-      )}
-
-      {/* Code (top-left) */}
-      <text x={6} y={17} fill={typeMeta.text} fontSize={Math.min(15, Math.max(10, w / 6))} fontWeight={700} fontFamily="ui-monospace, monospace" pointerEvents="none">
-        {block.code}
-      </text>
-
-      {/* Block avg % (top-right) */}
-      {w >= 80 && colorMode === 'occupancy' && (
-        <text x={w - 6} y={15} textAnchor="end" fill={typeMeta.text} fontSize={10} fontWeight={700} fontFamily="ui-monospace, monospace" pointerEvents="none">
-          {Math.round(avg.pct * 100)}%
-        </text>
-      )}
-
-      {/* Type label (bottom-center) — only if block big enough */}
-      {h >= 60 && (
-        <text x={w / 2} y={h - 6} textAnchor="middle" fill={typeMeta.text} fontSize={9} opacity={0.75} fontWeight={700} letterSpacing="0.04em" pointerEvents="none">
-          {typeMeta.label.toUpperCase()} · {avg.occupiedTeu}/{avg.capacity} TEU
-        </text>
-      )}
-    </g>
-  );
-}
-
-// ─── Cell detail (cross-section / stack view) ─────────────────────────────────
-
-function CellDetail({ block, bay, row, onClose }: {
-  block: YardBlock; bay: number; row: number; onClose: () => void;
-}) {
-  const meta     = BLOCK_TYPES[block.type];
-  const stackIso = stackIsoSize(block.id, block.type, bay, row);
-  const cell     = mockCell(block.id, bay, row, block.tiers);
-  const pct      = cell.filledTiers / block.tiers;
-
-  // Tiers rendered top → bottom (tier=tiers at top, tier=1 at bottom = ground)
-  const tierRows = Array.from({ length: block.tiers }).map((_, idx) => {
-    const tierNum = block.tiers - idx;
-    const isFilled = tierNum <= cell.filledTiers;
-    const container = isFilled ? mockContainer(block.id, block.type, stackIso, bay, row, tierNum) : null;
-    return { tierNum, isFilled, container };
-  });
-
-  // Container width depends on ISO length
-  const isoWidth = (() => {
-    if (stackIso.startsWith('20')) return 150;
-    if (stackIso.startsWith('45')) return 260;
-    return 240;                          // 40' default
-  })();
-
-  const positionStart = `${block.code}-${bayLabel(bay)}-${rowLabel(row)}-01`;
-  const positionEnd   = `${block.code}-${bayLabel(bay)}-${rowLabel(row)}-${String(block.tiers).padStart(2, '0')}`;
+  const t = stock?.tally;
+  const fill = occupancy(t?.teu ?? 0, yard?.capacityTeu);
+  const band = occupancyColor(fill ?? 0);
+  const areas = stock?.areas ?? [];
+  const biggest = areas.reduce((n, a) => Math.max(n, a.tally.boxes), 0);
 
   return (
-    <section className="gecko-card gecko-card-tight gecko-stack" style={{ position: 'sticky', top: 80, alignSelf: 'flex-start' }}>
-
-      {/* Header */}
+    <section
+      className="gecko-card gecko-card-tight gecko-stack"
+      onClick={onSelect}
+      style={{ cursor: 'pointer', outline: selected ? '2px solid var(--gecko-primary-500)' : undefined, outlineOffset: -1 }}
+    >
       <div className="gecko-row gecko-row-between gecko-row-start">
         <div>
-          <div className="gecko-eyebrow">Stack cross-section</div>
-          <div className="gecko-row gecko-mt-1" style={{ fontSize: 18, fontWeight: 700, color: 'var(--gecko-text-primary)', fontFamily: 'var(--gecko-font-mono)' }}>
-            <span style={{ width: 12, height: 12, borderRadius: 3, background: meta.stroke }} />
-            {block.code}-{bayLabel(bay)}-{rowLabel(row)}
+          <div className="gecko-row" style={{ gap: 8 }}>
+            <span style={{ width: 12, height: 12, borderRadius: 3, background: band.stroke }} />
+            <span style={{ fontSize: 16, fontWeight: 700, color: 'var(--gecko-text-primary)' }}>
+              {yard ? yard.nameEn : 'Not in a yard'}
+            </span>
+            {yard && <span className="gecko-mono" style={{ fontSize: 11, color: 'var(--gecko-text-secondary)' }}>{yard.yardCode}</span>}
+            {yard && !yard.isActive && <span className="gecko-badge gecko-badge-gray">Inactive</span>}
           </div>
           <div className="gecko-cell-meta">
-            <span style={{ color: meta.stroke, fontWeight: 600 }}>{meta.label}</span> · {ALLOCATION_LABEL[block.allocation]}{block.reservedParty ? ` · ${block.reservedParty}` : ''}
+            {yard ? `${yard.yardType} · ${yard.fullEmpty === 'BOTH' ? 'full and empty' : yard.fullEmpty.toLowerCase() + ' only'}` : 'Gated in without a yard'}
           </div>
         </div>
-        <button onClick={onClose} className="gecko-btn gecko-btn-ghost gecko-btn-icon gecko-btn-sm" title="Close" style={{ height: 28, width: 28 }}>
-          <Icon name="x" size={14} />
-        </button>
+        <div style={{ textAlign: 'right' }}>
+          <div className="gecko-mono" style={{ fontSize: 20, fontWeight: 700, color: 'var(--gecko-text-primary)' }}>{(t?.boxes ?? 0).toLocaleString()}</div>
+          <div className="gecko-cell-meta">boxes · {teuLabel(t?.teu ?? 0)} TEU</div>
+        </div>
       </div>
 
-      {/* Stack summary */}
-      <div className="gecko-row gecko-row-between gecko-row-baseline" style={{ padding: 10, background: 'var(--gecko-bg-subtle)', borderRadius: 6 }}>
-        <span className="gecko-cell-meta">Stack height</span>
-        <span>
-          <span style={{ fontSize: 20, fontWeight: 700, fontFamily: 'var(--gecko-font-mono)', color: 'var(--gecko-text-primary)' }}>{cell.filledTiers}</span>
-          <span className="gecko-page-subtitle"> / {block.tiers}</span>
-          <span style={{ fontSize: 11, color: occupancyColor(pct).stroke, fontWeight: 700, marginLeft: 10 }}>{Math.round(pct * 100)}% · {occupancyLabel(pct)}</span>
-        </span>
+      {/* Fill against capacity */}
+      <div>
+        <div className="gecko-row gecko-row-between" style={{ fontSize: 11, marginBottom: 4 }}>
+          <span className="gecko-cell-meta">
+            {yard?.capacityTeu ? `Capacity ${yard.capacityTeu.toLocaleString()} TEU` : 'No capacity set'}
+          </span>
+          {fill !== null && (
+            <span style={{ fontWeight: 700, color: band.stroke }}>{pct(fill)} · {occupancyLabel(fill)}</span>
+          )}
+        </div>
+        <div className="gecko-progress">
+          <div className="gecko-progress-bar" style={{ width: `${Math.min(100, Math.round((fill ?? 0) * 100))}%`, background: band.stroke }} />
+        </div>
       </div>
 
-      {/* Cross-section view */}
-      <div style={{ background: 'linear-gradient(180deg, #fafafa 0%, #f3f4f6 100%)', border: '1px solid var(--gecko-border)', borderRadius: 6, padding: 10 }}>
-        <div className="gecko-stack gecko-stack-xs" style={{ alignItems: 'center' }}>
-          {tierRows.map(({ tierNum, isFilled, container }) => (
-            <TierRow
-              key={tierNum}
-              tierNum={tierNum}
-              isFilled={isFilled}
-              container={container}
-              isoWidth={isoWidth}
-              stackIso={stackIso}
-            />
-          ))}
-          {/* Ground indicator */}
-          <div className="gecko-row gecko-mt-1" style={{ width: '100%', justifyContent: 'center', gap: 6, fontSize: 9, color: 'var(--gecko-text-disabled)', letterSpacing: '0.08em', fontWeight: 700 }}>
-            <span style={{ flex: 1, height: 1, background: '#9ca3af' }} />
-            <span>GROUND · YARD SURFACE</span>
-            <span style={{ flex: 1, height: 1, background: '#9ca3af' }} />
+      {t && (
+        <div className="gecko-row gecko-row-wrap" style={{ gap: 12, fontSize: 11 }}>
+          <span><strong className="gecko-mono">{t.full}</strong> <span className="gecko-cell-meta">full</span></span>
+          <span><strong className="gecko-mono">{t.empty}</strong> <span className="gecko-cell-meta">empty</span></span>
+          <span><strong className="gecko-mono">{t.reefer}</strong> <span className="gecko-cell-meta">reefer</span></span>
+          <span style={{ color: t.held ? 'var(--gecko-warning-700)' : undefined }}><strong className="gecko-mono">{t.held}</strong> <span className="gecko-cell-meta">on hold</span></span>
+          <span style={{ color: t.daysOver30 ? 'var(--gecko-error-700)' : undefined }}><strong className="gecko-mono">{t.daysOver30}</strong> <span className="gecko-cell-meta">over 30 days</span></span>
+        </div>
+      )}
+
+      {/* Areas — the position text the gate wrote */}
+      {areas.length > 0 && (
+        <div>
+          <div className="gecko-eyebrow gecko-mb-1">Areas</div>
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(64px, 1fr))', gap: 4 }}>
+            {areas.map(a => {
+              const share = biggest ? a.tally.boxes / biggest : 0;
+              const c = occupancyColor(share);
+              return (
+                <div key={a.code ?? '—'}
+                  title={`${a.code ?? 'No area'}: ${a.tally.boxes} boxes · ${teuLabel(a.tally.teu)} TEU · ${a.tally.full} full / ${a.tally.empty} empty`}
+                  style={{ padding: '4px 6px', borderRadius: 4, background: c.fill, border: `1px solid ${c.stroke}55`, color: c.text }}>
+                  <div className="gecko-mono gecko-truncate" style={{ fontSize: 11, fontWeight: 700 }}>{a.code ?? '—'}</div>
+                  <div className="gecko-mono" style={{ fontSize: 10 }}>{a.tally.boxes}</div>
+                </div>
+              );
+            })}
           </div>
         </div>
-      </div>
-
-      {/* Position footer */}
-      <div style={{ padding: '8px 10px', background: 'var(--gecko-bg-subtle)', borderRadius: 6, fontSize: 11 }}>
-        <div className="gecko-eyebrow gecko-mb-1">Position</div>
-        <div className="gecko-row gecko-row-baseline" style={{ gap: 6, fontFamily: 'var(--gecko-font-mono)' }}>
-          <span style={{ color: 'var(--gecko-text-primary)', fontWeight: 700 }}>{positionStart}</span>
-          <span style={{ color: 'var(--gecko-text-disabled)' }}>→</span>
-          <span style={{ color: 'var(--gecko-text-primary)', fontWeight: 700 }}>{positionEnd}</span>
-        </div>
-        <div className="gecko-cell-meta">
-          Block <strong>{block.code}</strong> · Bay <strong>{bayLabel(bay)}</strong> · Row <strong>{rowLabel(row)}</strong> · tiers 01–{String(block.tiers).padStart(2, '0')}
-        </div>
-      </div>
+      )}
     </section>
   );
 }
 
-// ─── Single tier row in the cross-section ─────────────────────────────────────
+// ─── Breakdown tables ─────────────────────────────────────────────────────────
 
-function TierRow({ tierNum, isFilled, container, isoWidth, stackIso }: {
-  tierNum: number; isFilled: boolean; container: ContainerData | null;
-  isoWidth: number; stackIso: string;
+function GroupTable({ title, noun, groups, total, named = false, limit }: {
+  title: string; noun: string; groups: YardStockGroup[]; total: number; named?: boolean; limit?: number;
 }) {
-  // Solid container — filled tier
-  if (isFilled && container) {
-    const isReefer = container.cargoClass === 'REEFER';
-    const isHaz    = container.cargoClass === 'HAZ';
-    const isEmpty  = container.cargoClass === 'EMPTY';
-    const isDamaged = container.condition === 'DAMAGED';
+  const shown = limit ? groups.slice(0, limit) : groups;
+  const rest = groups.length - shown.length;
+  return (
+    <section className="gecko-table-card">
+      <div style={{ padding: '10px 12px', fontWeight: 700, fontSize: 13 }}>{title}</div>
+      <table className="gecko-table">
+        <thead>
+          <tr>
+            <th>{noun}</th>
+            <th style={{ textAlign: 'right', width: 60 }}>Full</th>
+            <th style={{ textAlign: 'right', width: 60 }}>Empty</th>
+            <th style={{ textAlign: 'right', width: 70 }}>Boxes</th>
+          </tr>
+        </thead>
+        <tbody>
+          {shown.map(g => (
+            <tr key={g.code ?? '—'}>
+              <td>
+                {named && g.name
+                  ? <><div className="gecko-cell-primary gecko-truncate" style={{ maxWidth: 180 }}>{g.name}</div><div className="gecko-cell-meta gecko-mono">{g.code}</div></>
+                  : <span className="gecko-mono-strong">{g.code ?? '—'}</span>}
+              </td>
+              <td className="gecko-num-tabular">{g.tally.full}</td>
+              <td className="gecko-num-tabular">{g.tally.empty}</td>
+              <td className="gecko-num-tabular" style={{ fontWeight: 700 }}>
+                {g.tally.boxes}
+                <div className="gecko-cell-meta">{total ? pct(g.tally.boxes / total) : ''}</div>
+              </td>
+            </tr>
+          ))}
+        </tbody>
+      </table>
+      {rest > 0 && (
+        <div className="gecko-cell-meta" style={{ padding: '8px 12px' }}>
+          and {rest} more ({groups.slice(shown.length).reduce((n, g) => n + g.tally.boxes, 0).toLocaleString()} boxes)
+        </div>
+      )}
+    </section>
+  );
+}
 
-    const ctrFill = isDamaged ? '#fee2e2' :
-                    isHaz     ? '#ffedd5' :
-                    isReefer  ? '#cffafe' :
-                    isEmpty   ? '#f3f4f6' :
-                                '#dbeafe';
-    const ctrStroke = isDamaged ? '#dc2626' :
-                      isHaz     ? '#ea580c' :
-                      isReefer  ? '#0891b2' :
-                      isEmpty   ? '#6b7280' :
-                                  '#2563eb';
-    const ctrText   = isDamaged ? '#7f1d1d' :
-                      isHaz     ? '#7c2d12' :
-                      isReefer  ? '#155e75' :
-                      isEmpty   ? '#374151' :
-                                  '#1e3a8a';
-
-    return (
-      <div style={{ display: 'flex', alignItems: 'center', gap: 8, width: '100%' }}>
-        <span className="gecko-money" style={{ fontSize: 9, color: 'var(--gecko-text-disabled)', minWidth: 32 }}>
-          T-{String(tierNum).padStart(2, '0')}
-        </span>
-        <div
-          style={{
-            width: isoWidth,
-            padding: '6px 10px',
-            background: ctrFill,
-            border: `1.5px solid ${ctrStroke}`,
-            borderRadius: 3,
-            color: ctrText,
-            position: 'relative',
-            boxShadow: '0 1px 0 rgba(0,0,0,0.04)',
-            display: 'flex',
-            flexDirection: 'column',
-            gap: 1,
-          }}
-        >
-          {/* Corner casting marks */}
-          <span style={{ position: 'absolute', top: 1, left: 1, width: 5, height: 5, background: ctrStroke, opacity: 0.4 }} />
-          <span style={{ position: 'absolute', top: 1, right: 1, width: 5, height: 5, background: ctrStroke, opacity: 0.4 }} />
-          <span style={{ position: 'absolute', bottom: 1, left: 1, width: 5, height: 5, background: ctrStroke, opacity: 0.4 }} />
-          <span style={{ position: 'absolute', bottom: 1, right: 1, width: 5, height: 5, background: ctrStroke, opacity: 0.4 }} />
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', gap: 8 }}>
-            <span style={{ fontFamily: 'var(--gecko-font-mono)', fontWeight: 700, fontSize: 11 }}>{container.no}</span>
-            <span style={{ fontFamily: 'var(--gecko-font-mono)', fontWeight: 700, fontSize: 9, opacity: 0.75 }}>{stackIso}</span>
+function DwellCard({ tally }: { tally: YardStockTally }) {
+  const bands = [
+    { label: '0–7 days', n: tally.days0To7, color: '#0284c7' },
+    { label: '8–14 days', n: tally.days8To14, color: '#059669' },
+    { label: '15–30 days', n: tally.days15To30, color: '#d97706' },
+    { label: 'Over 30 days', n: tally.daysOver30, color: '#dc2626' },
+  ];
+  return (
+    <section className="gecko-card gecko-card-tight gecko-stack">
+      <div style={{ fontWeight: 700, fontSize: 13 }}>Dwell</div>
+      {bands.map(b => (
+        <div key={b.label}>
+          <div className="gecko-row gecko-row-between" style={{ fontSize: 11, marginBottom: 3 }}>
+            <span className="gecko-cell-meta">{b.label}</span>
+            <span className="gecko-mono" style={{ fontWeight: 700 }}>{b.n.toLocaleString()}{tally.boxes ? ` · ${pct(b.n / tally.boxes)}` : ''}</span>
           </div>
-          <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 10, opacity: 0.85, gap: 6 }}>
-            <span className="gecko-truncate">{container.customer}</span>
-            <span style={{ fontFamily: 'var(--gecko-font-mono)', flexShrink: 0 }}>
-              {(container.weightKg / 1000).toFixed(1)}t
-              {isDamaged && <span style={{ marginLeft: 6, color: '#dc2626', fontWeight: 700 }}> · DMG</span>}
-            </span>
+          <div className="gecko-progress">
+            <div className="gecko-progress-bar" style={{ width: `${tally.boxes ? Math.round((b.n / tally.boxes) * 100) : 0}%`, background: b.color }} />
           </div>
         </div>
-      </div>
-    );
-  }
-
-  // Empty tier — dotted outline
-  return (
-    <div style={{ display: 'flex', alignItems: 'center', gap: 8, width: '100%' }}>
-      <span className="gecko-money" style={{ fontSize: 9, color: 'var(--gecko-text-disabled)', minWidth: 32 }}>
-        T-{String(tierNum).padStart(2, '0')}
-      </span>
-      <div
-        style={{
-          width: isoWidth,
-          padding: '6px 10px',
-          background: 'transparent',
-          border: '1.5px dashed #cbd5e1',
-          borderRadius: 3,
-          color: '#94a3b8',
-          display: 'flex',
-          justifyContent: 'space-between',
-          alignItems: 'center',
-          fontSize: 10,
-          fontStyle: 'italic',
-        }}
-      >
-        <span>vacant</span>
-        <span style={{ fontFamily: 'var(--gecko-font-mono)', fontSize: 9, opacity: 0.7 }}>{stackIso}</span>
-      </div>
-    </div>
+      ))}
+      <div className="gecko-cell-meta">Longest in the yard: <strong>{tally.maxDays}</strong> days · <strong>{tally.reefer}</strong> reefers</div>
+    </section>
   );
 }

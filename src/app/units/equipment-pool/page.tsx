@@ -1,209 +1,187 @@
 "use client";
-import React, { useState, useMemo } from 'react';
+
+/**
+ * EQUIPMENT POOL — live against gecko_tos `yard.vw_container_in_yard`, counted by
+ * GET /api/tos/yard/stock into pools of type × line × grade × condition.
+ *
+ * Stock on hand only: the boxes in the yard now. Reservations, boxes outside the
+ * depot, survey-pending counts and inter-depot transfers have no model, so they
+ * are not on this screen. The box-by-box list is the stock list (/gate/stock).
+ */
+
+import React, { useMemo, useState } from 'react';
 import Link from 'next/link';
 import { Icon } from '@/components/ui/Icon';
 import { FilterPopover, FilterField, SortOption } from '@/components/ui/FilterPopover';
 import { usePagination, TablePagination } from '@/components/ui/TablePagination';
-import { ExportButton } from '@/components/ui/ExportButton';
-import { RefreshButton } from '@/components/ui/RefreshButton';
 import { EmptyState } from '@/components/ui/EmptyState';
-import { useToast } from '@/components/ui/Toast';
+import { useApi, useApiList } from '@/lib/api/use-api';
+import { saveBlob } from '@/lib/api/client';
+import { useSession } from '@/lib/auth/session';
+import { formatDateTime } from '@/lib/api/tos';
+import {
+  YARD_STOCK_PERMISSIONS, teuLabel, yardStockPath,
+  type StockLoad, type YardStock, type YardStockPool,
+} from '@/lib/api/yard-stock';
 
-// ─── Types ────────────────────────────────────────────────────────────────────
+interface Branch { branchId: string; branchCode: string; displayName: string }
 
-type Grade = 'A' | 'B' | 'C' | 'NEW';
+const EMPTY_FILTERS = { query: '', line: '', type: '', grade: '', condition: '' };
 
-interface PoolRow {
-  line: string;
-  size: string;
-  type: string;
-  grade: Grade;
-  available: number;
-  damaged: number;
-  surveyPending: number;
-  reserved: number;
-  outsideDepot: number;
-}
-
-// ─── Mock Data ────────────────────────────────────────────────────────────────
-
-const POOLS: PoolRow[] = [
-  { line: 'EVERGREEN', size: '20', type: 'GP', grade: 'A',   available: 142, damaged: 4, surveyPending: 6, reserved: 18,  outsideDepot: 22 },
-  { line: 'EVERGREEN', size: '40', type: 'GP', grade: 'A',   available: 88,  damaged: 2, surveyPending: 3, reserved: 12,  outsideDepot: 16 },
-  { line: 'EVERGREEN', size: '40', type: 'HC', grade: 'A',   available: 204, damaged: 6, surveyPending: 5, reserved: 28,  outsideDepot: 31 },
-  { line: 'EVERGREEN', size: '45', type: 'HC', grade: 'A',   available: 14,  damaged: 0, surveyPending: 0, reserved: 2,   outsideDepot: 1  },
-  { line: 'EVERGREEN', size: '20', type: 'RF', grade: 'A',   available: 12,  damaged: 1, surveyPending: 2, reserved: 4,   outsideDepot: 3  },
-  { line: 'EVERGREEN', size: '40', type: 'RH', grade: 'A',   available: 22,  damaged: 0, surveyPending: 1, reserved: 6,   outsideDepot: 5  },
-  { line: 'COSCO',     size: '20', type: 'GP', grade: 'A',   available: 96,  damaged: 3, surveyPending: 2, reserved: 14,  outsideDepot: 18 },
-  { line: 'COSCO',     size: '40', type: 'HC', grade: 'A',   available: 156, damaged: 4, surveyPending: 4, reserved: 22,  outsideDepot: 26 },
-  { line: 'COSCO',     size: '40', type: 'RH', grade: 'A',   available: 18,  damaged: 0, surveyPending: 1, reserved: 4,   outsideDepot: 4  },
-  { line: 'MAERSK',    size: '20', type: 'GP', grade: 'A',   available: 110, damaged: 5, surveyPending: 4, reserved: 16,  outsideDepot: 20 },
-  { line: 'MAERSK',    size: '40', type: 'GP', grade: 'A',   available: 72,  damaged: 1, surveyPending: 2, reserved: 9,   outsideDepot: 12 },
-  { line: 'MAERSK',    size: '40', type: 'HC', grade: 'A',   available: 188, damaged: 8, surveyPending: 6, reserved: 24,  outsideDepot: 30 },
-  { line: 'MAERSK',    size: '20', type: 'RF', grade: 'A',   available: 16,  damaged: 1, surveyPending: 3, reserved: 5,   outsideDepot: 4  },
-  { line: 'MSC',       size: '40', type: 'HC', grade: 'A',   available: 134, damaged: 3, surveyPending: 2, reserved: 19,  outsideDepot: 22 },
-  { line: 'MSC',       size: '40', type: 'OT', grade: 'A',   available: 6,   damaged: 0, surveyPending: 0, reserved: 1,   outsideDepot: 0  },
-  { line: 'OOIL',      size: '40', type: 'HC', grade: 'A',   available: 92,  damaged: 2, surveyPending: 3, reserved: 11,  outsideDepot: 14 },
-  { line: 'OOIL',      size: '20', type: 'GP', grade: 'B',   available: 28,  damaged: 1, surveyPending: 1, reserved: 3,   outsideDepot: 5  },
-  { line: 'YML',       size: '40', type: 'HC', grade: 'A',   available: 78,  damaged: 2, surveyPending: 2, reserved: 9,   outsideDepot: 11 },
-  { line: 'HAPAG',     size: '40', type: 'HC', grade: 'A',   available: 64,  damaged: 1, surveyPending: 1, reserved: 8,   outsideDepot: 9  },
-  { line: 'APL',       size: '40', type: 'GP', grade: 'A',   available: 40,  damaged: 0, surveyPending: 1, reserved: 5,   outsideDepot: 7  },
-];
-
-// ─── Helpers ──────────────────────────────────────────────────────────────────
-
-function totalOf(p: PoolRow) {
-  return p.available + p.damaged + p.surveyPending + p.reserved + p.outsideDepot;
-}
-
-function utilisation(p: PoolRow) {
-  const t = totalOf(p);
-  if (t === 0) return 0;
-  return Math.round(((p.reserved + p.outsideDepot) / t) * 100);
-}
-
-const TYPE_META: Record<string, { label: string; color: string }> = {
-  GP: { label: 'General Purpose', color: 'var(--gecko-primary-700)' },
-  HC: { label: 'High-Cube',       color: 'var(--gecko-primary-700)' },
-  RF: { label: 'Reefer',          color: 'var(--gecko-info-700)'    },
-  RH: { label: 'Reefer HC',       color: 'var(--gecko-info-700)'    },
-  OT: { label: 'Open Top',        color: 'var(--gecko-warning-700)' },
-  FR: { label: 'Flat Rack',       color: 'var(--gecko-warning-700)' },
-  TK: { label: 'Tank',            color: 'var(--gecko-warning-700)' },
-};
-
-// ─── Page ─────────────────────────────────────────────────────────────────────
+const opt = (v: string | null) => v ?? '';
+const distinct = (rows: YardStockPool[], pick: (p: YardStockPool) => string | null) =>
+  Array.from(new Set(rows.map(pick).filter((v): v is string => !!v))).sort();
 
 export default function EquipmentPoolPage() {
-  const [filters, setFilters] = useState<Record<string, string>>({
-    query: '', line: '', size: '', type: '', grade: '',
-  });
-  const [sortBy, setSortBy] = useState('line_asc');
-  const { toast } = useToast();
+  const { can, branchesFor } = useSession();
+  const [branchId, setBranchId] = useState('');
+  const [load, setLoad] = useState<StockLoad>('EMPTY');
+  const [filters, setFilters] = useState<Record<string, string>>(EMPTY_FILTERS);
+  const [sortBy, setSortBy] = useState('boxes_desc');
 
-  // Filter & sort
+  const { data: branchRows } = useApiList<Branch>('/api/branches?pageSize=100');
+  const mine = new Set(branchesFor(YARD_STOCK_PERMISSIONS.view));
+  const depots = (branchRows ?? []).filter(b => mine.size === 0 || mine.has(b.branchId));
+  const mayView = can(YARD_STOCK_PERMISSIONS.view) || mine.size > 0;
+
+  const stock = useApi<YardStock>(mayView ? yardStockPath({ branchId, fullEmpty: load }) : null);
+  const pools = useMemo(() => stock.data?.pools ?? [], [stock.data]);
+
   const filtered = useMemo(() => {
-    let rows = POOLS.filter(p => {
+    const rows = pools.filter(p => {
       if (filters.query) {
         const q = filters.query.toLowerCase();
-        if (!p.line.toLowerCase().includes(q) && !p.type.toLowerCase().includes(q)) return false;
+        const hay = [p.lineCode, p.lineName, p.equipmentTypeCode, p.gradeCode, p.conditionCode].filter(Boolean).join(' ').toLowerCase();
+        if (!hay.includes(q)) return false;
       }
-      if (filters.line  && p.line  !== filters.line)  return false;
-      if (filters.size  && p.size  !== filters.size)  return false;
-      if (filters.type  && p.type  !== filters.type)  return false;
-      if (filters.grade && p.grade !== filters.grade) return false;
+      if (filters.line && p.lineCode !== filters.line) return false;
+      if (filters.type && opt(p.equipmentTypeCode) !== filters.type) return false;
+      if (filters.grade && opt(p.gradeCode) !== filters.grade) return false;
+      if (filters.condition && opt(p.conditionCode) !== filters.condition) return false;
       return true;
     });
-    rows = [...rows].sort((a, b) => {
+    return [...rows].sort((a, b) => {
       switch (sortBy) {
-        case 'line_asc':       return a.line.localeCompare(b.line);
-        case 'available_desc': return b.available - a.available;
-        case 'damaged_desc':   return b.damaged - a.damaged;
-        case 'utilisation_desc': return utilisation(b) - utilisation(a);
-        default: return 0;
+        case 'line_asc':  return a.lineCode.localeCompare(b.lineCode) || opt(a.equipmentTypeCode).localeCompare(opt(b.equipmentTypeCode));
+        case 'type_asc':  return opt(a.equipmentTypeCode).localeCompare(opt(b.equipmentTypeCode)) || a.lineCode.localeCompare(b.lineCode);
+        case 'held_desc': return b.tally.held - a.tally.held;
+        case 'aged_desc': return b.tally.daysOver30 - a.tally.daysOver30;
+        default:          return b.tally.boxes - a.tally.boxes;
       }
     });
-    return rows;
-  }, [filters, sortBy]);
+  }, [pools, filters, sortBy]);
 
   const { page, setPage, pageSize, setPageSize, totalPages, pageItems, totalItems, startRow, endRow } = usePagination(filtered, 15);
 
-  // KPI totals
-  const kpi = useMemo(() => {
-    const t = filtered.reduce((acc, p) => {
-      acc.available += p.available;
-      acc.damaged += p.damaged;
-      acc.surveyPending += p.surveyPending;
-      acc.reserved += p.reserved;
-      acc.outsideDepot += p.outsideDepot;
-      return acc;
-    }, { available: 0, damaged: 0, surveyPending: 0, reserved: 0, outsideDepot: 0 });
-    return { ...t, total: t.available + t.damaged + t.surveyPending + t.reserved + t.outsideDepot };
-  }, [filtered]);
+  // KPI totals over the filtered pools
+  const kpi = useMemo(() => filtered.reduce((acc, p) => {
+    acc.boxes += p.tally.boxes; acc.teu += p.tally.teu; acc.full += p.tally.full; acc.empty += p.tally.empty;
+    acc.held += p.tally.held; acc.aged += p.tally.daysOver30;
+    return acc;
+  }, { boxes: 0, teu: 0, full: 0, empty: 0, held: 0, aged: 0 }), [filtered]);
 
   const filterFields: FilterField[] = [
-    { type: 'search', key: 'query',  placeholder: 'Search line or type…' },
-    { type: 'select', key: 'line',   label: 'Line', options: [
+    { type: 'search', key: 'query', placeholder: 'Search line, type, grade…' },
+    { type: 'select', key: 'line', label: 'Line', options: [
         { value: '', label: 'All lines' },
-        ...Array.from(new Set(POOLS.map(p => p.line))).sort().map(l => ({ value: l, label: l })),
+        ...distinct(pools, p => p.lineCode).map(l => ({ value: l, label: pools.find(p => p.lineCode === l)?.lineName ? `${l} — ${pools.find(p => p.lineCode === l)?.lineName}` : l })),
     ] },
-    { type: 'select', key: 'size',   label: 'Size', options: [
-        { value: '', label: 'All sizes' }, { value: '20', label: '20\'' }, { value: '40', label: '40\'' }, { value: '45', label: '45\'' },
+    { type: 'select', key: 'type', label: 'Type', options: [
+        { value: '', label: 'All types' }, ...distinct(pools, p => p.equipmentTypeCode).map(t => ({ value: t, label: t })),
     ] },
-    { type: 'select', key: 'type',   label: 'Type', options: [
-        { value: '', label: 'All types' },
-        ...Object.entries(TYPE_META).map(([k, v]) => ({ value: k, label: `${k} — ${v.label}` })),
+    { type: 'select', key: 'grade', label: 'Grade', options: [
+        { value: '', label: 'All grades' }, ...distinct(pools, p => p.gradeCode).map(g => ({ value: g, label: `Grade ${g}` })),
     ] },
-    { type: 'select', key: 'grade',  label: 'Grade', options: [
-        { value: '', label: 'All grades' }, { value: 'A', label: 'Grade A' }, { value: 'B', label: 'Grade B' }, { value: 'C', label: 'Grade C' }, { value: 'NEW', label: 'New' },
+    { type: 'select', key: 'condition', label: 'Condition', options: [
+        { value: '', label: 'All conditions' }, ...distinct(pools, p => p.conditionCode).map(c => ({ value: c, label: c })),
     ] },
   ];
 
   const sortOptions: SortOption[] = [
-    { value: 'line_asc',         label: 'Line (A → Z)' },
-    { value: 'available_desc',   label: 'Available (high → low)' },
-    { value: 'damaged_desc',     label: 'Damaged (high → low)' },
-    { value: 'utilisation_desc', label: 'Utilisation (high → low)' },
+    { value: 'boxes_desc', label: 'Boxes (high → low)' },
+    { value: 'line_asc',   label: 'Line (A → Z)' },
+    { value: 'type_asc',   label: 'Type (A → Z)' },
+    { value: 'held_desc',  label: 'On hold (high → low)' },
+    { value: 'aged_desc',  label: 'Over 30 days (high → low)' },
   ];
+
+  const exportCsv = () => {
+    const head = ['Line', 'Line name', 'Type', 'Size', 'Grade', 'Condition', 'Full', 'Empty', 'Boxes', 'TEU', 'Reefer', 'On hold', 'Over 30 days', 'Longest days'];
+    const cell = (v: string | number | null) => `"${String(v ?? '').replace(/"/g, '""')}"`;
+    const lines = filtered.map(p => [p.lineCode, p.lineName, p.equipmentTypeCode, p.sizeCode, p.gradeCode, p.conditionCode,
+      p.tally.full, p.tally.empty, p.tally.boxes, p.tally.teu, p.tally.reefer, p.tally.held, p.tally.daysOver30, p.tally.maxDays].map(cell).join(','));
+    saveBlob(new Blob([[head.join(','), ...lines].join('\r\n')], { type: 'text/csv;charset=utf-8' }), 'equipment-pool.csv');
+  };
+
+  const loadLabel = load === 'EMPTY' ? 'Empty' : load === 'FULL' ? 'Full' : 'All';
+  const error = stock.error;
 
   return (
     <div className="gecko-stack">
-      {/* Yard state — how many boxes are HERE, damaged, or awaiting survey — is
-          TOS's, and TOS has no API yet (Phase 5: yard.container_visit +
-          gate transactions). gecko_master only knows the registry: which boxes
-          exist and who owns them. Binding this screen to the registry would
-          report a fleet as if it were stock on hand, so it stays on sample data
-          until the TOS yard endpoints exist. */}
-      <div role="note" className="gecko-alert gecko-alert-info gecko-row" style={{ gap: 10 }}>
-        <Icon name="info" size={16} />
-        <span>
-          <strong>Sample data.</strong> Pool counts come from yard state, which arrives with the TOS
-          gate and yard module. The container <em>registry</em> is live under{' '}
-          <Link href="/masters/container-types" className="gecko-link">Container Types</Link>.
-        </span>
-      </div>
-
 
       {/* ── Header ── */}
       <div className="gecko-page-header">
         <div className="gecko-page-header-left">
           <div className="gecko-row gecko-row-baseline">
             <h1 className="gecko-page-title">Equipment Pool</h1>
+            <span className="gecko-badge gecko-badge-success">LIVE</span>
             <span className="gecko-count-badge">
-              {filtered.length} of {POOLS.length} pools
+              {stock.loading && !stock.data ? '…' : `${filtered.length} of ${pools.length} pools`}
             </span>
           </div>
           <p className="gecko-page-subtitle">
-            Empty container inventory by line × size × type × grade — Laem Chabang ICD
+            {loadLabel === 'All' ? 'Stock' : `${loadLabel} stock`} on hand by type × line × grade × condition
+            {stock.data ? ` · as at ${formatDateTime(stock.data.asAt)}` : ''}
           </p>
         </div>
         <div className="gecko-page-header-actions">
-          <ExportButton resource="Equipment pool" iconSize={13} />
-          <RefreshButton resource="Equipment pool" iconSize={13} />
-          <button
-            onClick={() => toast({ variant: 'info', title: 'Inter-depot transfer', message: 'Transfer workflow coming soon.' })}
-            className="gecko-btn gecko-btn-primary gecko-btn-sm"
-          >
-            <Icon name="transferH" size={13} /> Inter-depot Transfer
+          <select className="gecko-input gecko-input-sm" aria-label="Depot" value={branchId} onChange={e => setBranchId(e.target.value)} style={{ minWidth: 170 }}>
+            <option value="">All my depots</option>
+            {depots.map(b => <option key={b.branchId} value={b.branchId}>{b.branchCode} · {b.displayName}</option>)}
+          </select>
+          <div className="gecko-segctrl">
+            {([['EMPTY', 'Empty'], ['FULL', 'Full'], ['', 'All']] as const).map(([v, label]) => (
+              <button key={v} onClick={() => { setLoad(v); setPage(1); }} className={`gecko-segctrl-btn${load === v ? ' gecko-segctrl-btn-active' : ''}`}>
+                {label}
+              </button>
+            ))}
+          </div>
+          <button className="gecko-btn gecko-btn-outline gecko-btn-sm" onClick={exportCsv} disabled={filtered.length === 0}>
+            <Icon name="download" size={13} /> Export
+          </button>
+          <button className="gecko-btn gecko-btn-outline gecko-btn-sm" onClick={stock.reload}>
+            <Icon name="refreshCcw" size={13} /> Refresh
           </button>
         </div>
       </div>
 
+      {error && (
+        <div className="gecko-alert gecko-alert-error">
+          <Icon name="alertCircle" size={18} />
+          <div>
+            <div style={{ fontWeight: 600 }}>{error.title}</div>
+            {error.explanation && <div>{error.explanation}</div>}
+          </div>
+        </div>
+      )}
+
       {/* ── KPI Strip ── */}
       <div className="gecko-grid-5">
         {[
-          { label: 'Available',      value: kpi.available,      icon: 'check',         tone: 'success' as const },
-          { label: 'Damaged',        value: kpi.damaged,        icon: 'alertTriangle', tone: 'error'   as const },
-          { label: 'Survey Pending', value: kpi.surveyPending,  icon: 'clock',         tone: 'warning' as const },
-          { label: 'Reserved',       value: kpi.reserved,       icon: 'lock',          tone: 'info'    as const },
-          { label: 'Outside Depot',  value: kpi.outsideDepot,   icon: 'truck',         tone: 'neutral' as const },
+          { label: 'Boxes',        value: kpi.boxes.toLocaleString(), icon: 'box',           tone: 'primary' as const },
+          { label: 'TEU',          value: teuLabel(kpi.teu),          icon: 'layers',        tone: 'info'    as const },
+          { label: load === '' ? 'Full · Empty' : load === 'FULL' ? 'Full' : 'Empty',
+            value: load === '' ? `${kpi.full.toLocaleString()} · ${kpi.empty.toLocaleString()}` : (load === 'FULL' ? kpi.full : kpi.empty).toLocaleString(),
+            icon: 'packageOpen', tone: 'success' as const },
+          { label: 'On hold',      value: kpi.held.toLocaleString(),  icon: 'lock',          tone: 'warning' as const },
+          { label: 'Over 30 days', value: kpi.aged.toLocaleString(),  icon: 'clock',         tone: 'error'   as const },
         ].map(k => (
           <div key={k.label} className="gecko-card gecko-card-tight gecko-row">
             <div className={`gecko-mini-icon gecko-mini-icon-lg gecko-mini-icon-${k.tone}`}>
               <Icon name={k.icon} size={17} />
             </div>
             <div>
-              <div className="gecko-stat-num gecko-stat-num-sm gecko-mono">{k.value.toLocaleString()}</div>
+              <div className="gecko-stat-num gecko-stat-num-sm gecko-mono">{stock.data ? k.value : '…'}</div>
               <div className="gecko-cell-meta">{k.label}</div>
             </div>
           </div>
@@ -216,7 +194,7 @@ export default function EquipmentPoolPage() {
         values={filters}
         onChange={setFilters}
         onApply={setFilters}
-        onClear={() => setFilters({ query: '', line: '', size: '', type: '', grade: '' })}
+        onClear={() => setFilters(EMPTY_FILTERS)}
         sortOptions={sortOptions}
         sortValue={sortBy}
         onSortChange={setSortBy}
@@ -229,73 +207,60 @@ export default function EquipmentPoolPage() {
             <tr>
               <th>Line</th>
               <th>Size · Type</th>
-              <th style={{ width: 110 }}>Grade</th>
-              <th style={{ width: 110, textAlign: 'right' }}>Available</th>
-              <th style={{ width: 100, textAlign: 'right' }}>Damaged</th>
-              <th style={{ width: 120, textAlign: 'right' }}>Survey Pending</th>
-              <th style={{ width: 100, textAlign: 'right' }}>Reserved</th>
-              <th style={{ width: 130, textAlign: 'right' }}>Outside Depot</th>
-              <th style={{ width: 90,  textAlign: 'right' }}>Total</th>
-              <th style={{ width: 130 }}>Utilisation</th>
+              <th style={{ width: 100 }}>Grade</th>
+              <th style={{ width: 110 }}>Condition</th>
+              <th style={{ width: 80, textAlign: 'right' }}>Full</th>
+              <th style={{ width: 80, textAlign: 'right' }}>Empty</th>
+              <th style={{ width: 90, textAlign: 'right' }}>Boxes</th>
+              <th style={{ width: 80, textAlign: 'right' }}>TEU</th>
+              <th style={{ width: 90, textAlign: 'right' }}>On hold</th>
+              <th style={{ width: 110, textAlign: 'right' }}>Over 30 days</th>
+              <th style={{ width: 90, textAlign: 'right' }}>Longest</th>
               <th style={{ width: 50 }}></th>
             </tr>
           </thead>
           <tbody>
-            {filtered.length === 0 && (
+            {stock.data && filtered.length === 0 && (
               <tr>
-                <td colSpan={11}>
+                <td colSpan={12}>
                   <EmptyState
                     icon="search"
-                    title="No pools match the current filters"
-                    description="Try clearing the search or adjusting line / size / type / grade filters."
+                    title={pools.length === 0 ? `No ${load === '' ? '' : loadLabel.toLowerCase() + ' '}boxes in the yard` : 'No pools match the current filters'}
+                    description={pools.length === 0 ? 'Pools appear here as boxes are gated in.' : 'Try clearing the search or adjusting line / type / grade / condition.'}
                   />
                 </td>
               </tr>
             )}
-            {pageItems.map((p, i) => {
-              const t = totalOf(p);
-              const util = utilisation(p);
-              return (
-                <tr key={`${p.line}-${p.size}${p.type}-${p.grade}-${i}`}>
-                  <td>
-                    <div className="gecko-mono-strong">{p.line}</div>
-                  </td>
-                  <td>
-                    <div className="gecko-row gecko-stack-sm">
-                      <span className="gecko-mono-strong">{p.size}{p.type}</span>
-                      <span style={{ fontSize: 11, color: TYPE_META[p.type]?.color ?? 'var(--gecko-text-secondary)' }}>{TYPE_META[p.type]?.label ?? p.type}</span>
-                    </div>
-                  </td>
-                  <td>
-                    <span className={`gecko-badge ${p.grade === 'NEW' ? 'gecko-badge-success' : p.grade === 'A' ? 'gecko-badge-primary' : 'gecko-badge-gray'}`}>
-                      {p.grade === 'NEW' ? 'New' : `Grade ${p.grade}`}
-                    </span>
-                  </td>
-                  <td className="gecko-num-tabular" style={{ fontWeight: 700, color: 'var(--gecko-success-700)' }}>{p.available}</td>
-                  <td className="gecko-num-tabular" style={{ color: p.damaged > 0 ? 'var(--gecko-error-700)' : 'var(--gecko-text-disabled)' }}>{p.damaged}</td>
-                  <td className="gecko-num-tabular" style={{ color: p.surveyPending > 0 ? 'var(--gecko-warning-700)' : 'var(--gecko-text-disabled)' }}>{p.surveyPending}</td>
-                  <td className="gecko-num-tabular">{p.reserved}</td>
-                  <td className="gecko-num-tabular">{p.outsideDepot}</td>
-                  <td className="gecko-num-tabular" style={{ fontWeight: 700 }}>{t}</td>
-                  <td>
-                    <div className="gecko-row gecko-stack-sm">
-                      <div className="gecko-progress gecko-flex-1">
-                        <div
-                          className={`gecko-progress-bar ${util > 80 ? 'gecko-progress-error' : util > 60 ? 'gecko-progress-warning' : 'gecko-progress-success'}`}
-                          style={{ width: `${util}%` }}
-                        />
-                      </div>
-                      <span className="gecko-mono" style={{ fontSize: 11, fontWeight: 600, minWidth: 28, textAlign: 'right' }}>{util}%</span>
-                    </div>
-                  </td>
-                  <td>
-                    <Link href="/units/unit-inquiry" className="gecko-btn gecko-btn-ghost gecko-btn-icon gecko-btn-sm" title="Drill into containers">
-                      <Icon name="arrowRight" size={13} />
-                    </Link>
-                  </td>
-                </tr>
-              );
-            })}
+            {pageItems.map(p => (
+              <tr key={`${p.lineCode}|${p.equipmentTypeCode}|${p.gradeCode}|${p.conditionCode}`}>
+                <td>
+                  <div className="gecko-mono-strong">{p.lineCode}</div>
+                  {p.lineName && <div className="gecko-cell-meta gecko-truncate" style={{ maxWidth: 200 }}>{p.lineName}</div>}
+                </td>
+                <td>
+                  <span className="gecko-mono-strong">{p.equipmentTypeCode ?? '—'}</span>
+                  {p.tally.reefer > 0 && <span style={{ fontSize: 11, marginLeft: 6, color: 'var(--gecko-info-700)' }}>Reefer</span>}
+                </td>
+                <td>
+                  {p.gradeCode
+                    ? <span className={`gecko-badge ${p.gradeCode === 'A' ? 'gecko-badge-primary' : 'gecko-badge-gray'}`}>Grade {p.gradeCode}</span>
+                    : <span className="gecko-cell-meta">—</span>}
+                </td>
+                <td><span className="gecko-mono">{p.conditionCode ?? '—'}</span></td>
+                <td className="gecko-num-tabular">{p.tally.full}</td>
+                <td className="gecko-num-tabular">{p.tally.empty}</td>
+                <td className="gecko-num-tabular" style={{ fontWeight: 700 }}>{p.tally.boxes}</td>
+                <td className="gecko-num-tabular">{teuLabel(p.tally.teu)}</td>
+                <td className="gecko-num-tabular" style={{ color: p.tally.held > 0 ? 'var(--gecko-warning-700)' : 'var(--gecko-text-disabled)' }}>{p.tally.held}</td>
+                <td className="gecko-num-tabular" style={{ color: p.tally.daysOver30 > 0 ? 'var(--gecko-error-700)' : 'var(--gecko-text-disabled)' }}>{p.tally.daysOver30}</td>
+                <td className="gecko-num-tabular">{p.tally.maxDays}d</td>
+                <td>
+                  <Link href="/gate/stock" className="gecko-btn gecko-btn-ghost gecko-btn-icon gecko-btn-sm" title="The boxes, one by one">
+                    <Icon name="arrowRight" size={13} />
+                  </Link>
+                </td>
+              </tr>
+            ))}
           </tbody>
         </table>
 
