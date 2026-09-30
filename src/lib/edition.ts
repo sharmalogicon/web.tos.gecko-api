@@ -37,6 +37,8 @@ export const PILOT_PATHS: readonly string[] = [
   '/units/unit-inquiry',        // one box's story (?no=); /gate/container-status redirects here
   '/units/equipment-pool',      // stock pools: type × line × grade × condition
   '/billing/cash-window',
+  '/billing/service-orders',     // the charge register (billing.charge), /api/revenue/charges
+  '/billing/unbilled',          // credit lines not yet invoiced, per payer (empty for a cash depot)
   '/tariff/plans',              // schedules, /tariff/plans/new, /tariff/plans/[id]
   '/masters/customers',
   '/masters/vessels',           // list, /new, /[code], and the schedule
