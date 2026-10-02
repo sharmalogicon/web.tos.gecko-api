@@ -9,6 +9,7 @@ import { apiDownload, apiSend, saveBlob } from '@/lib/api/client';
 import { ApiError } from '@/lib/api/problem';
 import { useSession } from '@/lib/auth/session';
 import { TOS_PERMISSIONS, formatContainerNo, formatDateTime, type TruckVisit } from '@/lib/api/tos';
+import { WINDOW_PERMISSIONS, formatBaht, visitQuotePath, type VisitQuote } from '@/lib/api/window';
 import {
   GATE_API, attachmentsPath, eirPath, formatBytes, formatKg,
   type ContainerHolds, type EirDetail, type GateAttachment, type Survey,
@@ -30,6 +31,10 @@ export function EirDetailView({ id }: { id: string }) {
   const photos = useApi<GateAttachment[]>(e ? attachmentsPath('GATE_TRANSACTION', e.gateTransactionId) : null);
   const visit = useApi<TruckVisit>(e ? `${GATE_API}/visits/${e.truckVisitId}` : null);
   const holds = useApi<ContainerHolds>(e && can(TOS_PERMISSIONS.holdView) ? `/api/tos/containers/${e.containerNo}/holds` : null);
+  // What the whole truck visit was charged — cash taken at the window against
+  // credit on an account. 404 simply means the visit's moves cost nothing.
+  const charges = useApi<VisitQuote>(
+    e && canAt(WINDOW_PERMISSIONS.collect, e.branchId) ? visitQuotePath(e.truckVisitId) : null);
   const [voiding, setVoiding] = useState(false);
   const [printing, setPrinting] = useState(false);
 
@@ -120,14 +125,34 @@ export function EirDetailView({ id }: { id: string }) {
           <Line label="Gross" value={formatKg(e.grossWeightKg)} />
           <Line label="Tare" value={formatKg(e.tareWeightKg)} />
           <Line label="VGM" value={e.vgmKg == null ? '—' : `${formatKg(e.vgmKg)}${e.vgmMethod ? ` (${e.vgmMethod})` : ''}`} />
+          <Line label="Max gross" value={formatKg(e.maxGrossWeightKg)} />
+          <Line label="Cargo" value={formatKg(e.cargoWeightKg)} />
           <Line label="Weight source" value={e.weightSource ?? '—'} />
-          <Line label="Condition / grade" value={[e.conditionCode, e.gradeCode].filter(Boolean).join(' / ') || '—'} />
+          {/* Container class IS the grade — there is no separate field. */}
+          <Line label="Condition / class" value={[e.conditionCode, e.gradeCode].filter(Boolean).join(' / ') || '—'} />
+          <Line label="Material" value={e.materialCode ?? '—'} />
           {e.tempObservedC != null && <Line label="Temperature seen" value={`${e.tempObservedC} °C`} />}
+          {(e.ventSetting || e.humidityPct != null || e.gensetNo || e.clipOnNo) && (
+            <Line label="Reefer" value={[
+              e.ventSetting && `vent ${e.ventSetting}`,
+              e.humidityPct != null && `${e.humidityPct}% RH`,
+              e.gensetNo && `genset ${e.gensetNo}`,
+              e.clipOnNo && `clip-on ${e.clipOnNo}`,
+            ].filter(Boolean).join(' · ')} />
+          )}
+        </Section>
+
+        <Section title="Documents">
+          <Line label="Customs permit" value={e.customsPermitNo ?? '—'} />
+          <Line label="Paperless code" value={e.paperlessCode ?? '—'} />
+          <Line label="Next location" value={e.nextLocationCode ?? '—'} />
         </Section>
 
         <Section title="Truck">
           <Line label="Plate" value={e.truckPlate} />
           <Line label="Visit" value={e.visitNo} />
+          <Line label="Trip" value={e.tripType === 'PICK_UP_CONT' ? 'Pick-up' : 'Drop-off'} />
+          <Line label="Category" value={e.truckCategoryCode ?? '—'} />
           {visit.data && (
             <>
               {visit.data.trailerPlate && <Line label="Trailer" value={visit.data.trailerPlate} />}
@@ -142,6 +167,40 @@ export function EirDetailView({ id }: { id: string }) {
           )}
         </Section>
       </div>
+
+      {charges.data && (
+        <Section title="What this truck visit was charged">
+          <table className="gecko-table">
+            <thead>
+              <tr><th>Box</th><th>Charge</th><th className="gecko-num">Amount</th><th className="gecko-num">VAT</th><th className="gecko-num">Total</th><th>Term</th><th>Receipt</th></tr>
+            </thead>
+            <tbody>
+              {charges.data.boxes.flatMap(box => box.lines.map((l, i) => (
+                <tr key={`${box.gateTransactionId}-${l.chargeCode}-${i}`}>
+                  <td className="gecko-mono">{i === 0 ? formatContainerNo(box.containerNo ?? '') : ''}</td>
+                  <td>
+                    {l.description || l.chargeCode}
+                    {l.isGateCharge && <span className="gecko-badge gecko-badge-xs gecko-badge-gray"> per trip</span>}
+                  </td>
+                  <td className="gecko-num">{formatBaht(l.amount)}</td>
+                  <td className="gecko-num">{formatBaht(l.taxAmount)}</td>
+                  <td className="gecko-num">{formatBaht(l.sellingAmount)}</td>
+                  <td>
+                    <span className={`gecko-badge gecko-badge-xs ${l.paymentTerm === 'CASH' ? 'gecko-badge-success' : 'gecko-badge-warning'}`}>
+                      {l.paymentTerm}
+                    </span>
+                  </td>
+                  <td className="gecko-cell-meta">{l.receiptNo ?? l.status}</td>
+                </tr>
+              )))}
+            </tbody>
+          </table>
+          <div className="gecko-row gecko-row-between" style={{ marginTop: 10 }}>
+            <Line label="Paid at the window" value={formatBaht(charges.data.paidNow.total)} />
+            <Line label="Billed later" value={formatBaht(charges.data.billedLater.total)} />
+          </div>
+        </Section>
+      )}
 
       <div className="gecko-grid-2" style={{ gap: 20 }}>
         <Section title={`Seals (${e.seals.length})`}>

@@ -41,6 +41,8 @@ interface VesselCall {
   eta: string;
   etb: string | null;
   etd: string;
+  /** Before this, a full export box cannot be gated out. Null = no restriction. */
+  ladenReleaseAt: string | null;
   ata: string | null;
   atb: string | null;
   atd: string | null;
@@ -479,6 +481,11 @@ export default function VesselCallDetailPage() {
           <TimeCell label="ATB" value={call.atb} />
           <TimeCell label="ATD" value={call.atd} strong />
         </div>
+        {call.ladenReleaseAt && (
+          <div className="gecko-cell-meta" style={{ padding: '0 20px 14px' }}>
+            Laden release {fmt(call.ladenReleaseAt)} — a full export box is refused at the gate before this.
+          </div>
+        )}
         {call.remarks && <div className="gecko-cell-meta" style={{ padding: '0 20px 14px' }}>{call.remarks}</div>}
       </div>
 

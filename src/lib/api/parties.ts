@@ -96,6 +96,12 @@ export interface PartyDetail extends PartySummary {
   remarks: string | null;
   /** Company registration number (DBD), when it differs from the tax id. */
   registrationNo?: string | null;
+  /**
+   * How long this customer's boxes may stand before the depot calls them
+   * long-standing. Recorded only — nothing at the gate enforces it yet.
+   * Null = none set.
+   */
+  longStandingDays?: number | null;
   aliases: PartyAlias[];
   contacts: PartyContact[];
   createdAt: string;
@@ -132,6 +138,11 @@ export interface SavePartyRequest {
   website?: string | null;
   /** max 1000 */
   remarks?: string | null;
+  /**
+   * 0–3650, CUSTOMER only (400 `longStandingDays` on any other role).
+   * Omit to leave as is; 0 clears it.
+   */
+  longStandingDays?: number | null;
   /** max 100 */
   registrationNo?: string | null;
   /** 3-letter ISO 4217 code; unknown → 400. */

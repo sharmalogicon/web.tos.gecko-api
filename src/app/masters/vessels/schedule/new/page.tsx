@@ -42,7 +42,7 @@ interface CutoffRow { kind: string; lineCode: string; at: string; remarks: strin
 interface Header {
   vesselCode: string; portCode: string; terminalCode: string; callRef: string;
   operatorVoyageIn: string; operatorVoyageOut: string;
-  eta: string; etb: string; etd: string; remarks: string;
+  eta: string; etb: string; etd: string; ladenReleaseAt: string; remarks: string;
 }
 
 interface CallSummary { vesselCode: string; vesselName: string | null; portCode: string; terminalCode: string | null; lines: string[] }
@@ -63,7 +63,7 @@ const BLANK_LINE: LineRow = { lineCode: '', voyageIn: '', voyageOut: '', agentCo
 const BLANK_CUTOFF: CutoffRow = { kind: 'PORT_DRY', lineCode: '', at: '', remarks: '' };
 const INITIAL: Header = {
   vesselCode: '', portCode: 'THLCH', terminalCode: '', callRef: '',
-  operatorVoyageIn: '', operatorVoyageOut: '', eta: '', etb: '', etd: '', remarks: '',
+  operatorVoyageIn: '', operatorVoyageOut: '', eta: '', etb: '', etd: '', ladenReleaseAt: '', remarks: '',
 };
 
 const upper = (v: string) => v.toUpperCase();
@@ -252,6 +252,9 @@ export default function NewVesselCallPage() {
       eta: iso(header.eta),
       etb: iso(header.etb),
       etd: iso(header.etd),
+      // Before this moment a full export box may not leave the depot
+      // (BEFORE_LADEN_RELEASE at the gate). Empty = no restriction.
+      ladenReleaseAt: iso(header.ladenReleaseAt),
       remarks: header.remarks.trim() || null,
       lines: lines.filter(l => l.lineCode.trim() !== '').map(l => ({
         lineCode: clean(l.lineCode),
@@ -353,6 +356,11 @@ export default function NewVesselCallPage() {
               <input type="datetime-local" className={`gecko-input${fieldError('etd') || etdBeforeEta ? ' gecko-input-error' : ''}`} value={header.etd} onChange={e => set({ etd: e.target.value })} />
             </Field>
           </div>
+          <Field label="Laden release" error={fieldError('ladenReleaseAt')}
+                 hint="A full export box cannot be gated out before this. Leave empty for no restriction.">
+            <input type="datetime-local" className={`gecko-input${fieldError('ladenReleaseAt') ? ' gecko-input-error' : ''}`}
+                   value={header.ladenReleaseAt} onChange={e => set({ ladenReleaseAt: e.target.value })} />
+          </Field>
           <Field label="Remarks" error={fieldError('remarks')}>
             <input className="gecko-input" maxLength={500} placeholder="optional" value={header.remarks} onChange={e => set({ remarks: e.target.value })} />
           </Field>

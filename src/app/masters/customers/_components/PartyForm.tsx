@@ -22,6 +22,8 @@ export interface PartyFormValue {
   /** '' = let the API choose (the company's currency) on create; unchanged on edit. */
   defaultCurrency: string;
   remarks: string;
+  /** '' = not set. Only meaningful for a CUSTOMER. */
+  longStandingDays: string;
   roles: PartyRole[];
   isActive: boolean;
 }
@@ -29,7 +31,7 @@ export interface PartyFormValue {
 export const EMPTY_PARTY: PartyFormValue = {
   nameEn: '', nameLocal: '', shortName: '', taxId: '', branchNo: '00000',
   address: '', address2: '', city: '', state: '', postcode: '', phone: '', email: '',
-  website: '', registrationNo: '', defaultCurrency: '', remarks: '',
+  website: '', registrationNo: '', defaultCurrency: '', remarks: '', longStandingDays: '',
   roles: ['CUSTOMER'], isActive: true,
 };
 
@@ -41,6 +43,7 @@ export function formFromParty(p: PartyDetail): PartyFormValue {
     postcode: p.postcode ?? '', phone: p.phone ?? '', email: p.email ?? '',
     website: p.website ?? '', registrationNo: p.registrationNo ?? '', defaultCurrency: p.defaultCurrency ?? '',
     remarks: p.remarks ?? '',
+    longStandingDays: p.longStandingDays == null ? '' : String(p.longStandingDays),
     roles: p.roles, isActive: p.isActive,
   };
 }
@@ -68,6 +71,10 @@ export function requestFromForm(f: PartyFormValue, rowVersion?: string): SavePar
     registrationNo: f.registrationNo.trim(),
     remarks: f.remarks.trim(),
     defaultCurrency: f.defaultCurrency.trim() ? f.defaultCurrency.trim().toUpperCase() : undefined,
+    // Only sent for a customer — the API 400s it on any other role. Omitted
+    // when blank so an existing value is left alone; 0 is how it is cleared.
+    longStandingDays: f.roles.includes('CUSTOMER') && f.longStandingDays.trim()
+      ? Number(f.longStandingDays) : undefined,
     roles: f.roles,
     isActive: f.isActive,
     rowVersion,
@@ -211,6 +218,12 @@ export function PartyForm({ value, original, onChange, showErrors, apiError, mod
           <Field label="Phone" error={err('phone')}>{input('phone', { maxLength: 50, type: 'tel' })}</Field>
           <Field label="E-mail" error={err('email')}>{input('email', { maxLength: 255, type: 'email' })}</Field>
           <Field label="Website" error={err('website')}>{input('website', { maxLength: 500, type: 'url', placeholder: 'https://' })}</Field>
+          {/* Recorded only — nothing at the gate acts on it yet. */}
+          {value.roles.includes('CUSTOMER') && (
+            <Field label="Long-standing after (days)" hint="Recorded for reporting; the gate does not enforce it" error={err('longStandingDays')}>
+              {input('longStandingDays', { type: 'number', min: 0, max: 3650, placeholder: 'none' })}
+            </Field>
+          )}
         </div>
       </div>
 
