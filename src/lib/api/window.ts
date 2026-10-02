@@ -30,6 +30,7 @@ export const CHANNEL_LABEL: Record<PaymentChannel, string> = {
 // ── the quote ───────────────────────────────────────────────────────────────
 
 export interface QuoteLine {
+  /** MOVEMENT, STORAGE … and now VAS — a service the clerk ticked. */
   kind: string;
   chargeCode: string;
   chargeName: string;
@@ -45,6 +46,34 @@ export interface QuoteLine {
   serviceFrom: string | null;
   serviceTo: string | null;
   scheduleNo: string | null;
+  /** CASH lines are paid here; CREDIT lines appear under `billedLater`. */
+  paymentTermCode?: string | null;
+  /** PER_TRIP is the gate charge — levied once per truck, not per box. */
+  billingUnitCode?: string | null;
+  /** True when the haulier's own term moved this line out of the cash total. */
+  byHaulierTerm?: boolean;
+}
+
+/** Cash and credit totals are kept apart: `total` above is cash only. */
+export interface BilledLaterTotals {
+  subtotal: number;
+  tax: number;
+  total: number;
+  currencyCode: string | null;
+}
+
+/**
+ * Thai withholding tax, offered only when the server says it may be applied —
+ * a cash total over ฿1,000, and the tenant switch on.
+ *
+ * It does NOT change the invoice: the tax invoice still totals `total`, and
+ * the customer hands over `nett` instead. So `expectedTotal` stays the quote's
+ * total while the payments must add up to `nett`.
+ */
+export interface WithholdingTax {
+  rate: number;
+  amount: number;
+  nett: number;
 }
 
 export interface SettledCharge {
@@ -57,11 +86,20 @@ export interface SettledCharge {
   waiveReason: string | null;
 }
 
+/**
+ * A charge the server considered and did not put on the cash total, with the
+ * reason. Showing these is what stops a cashier arguing with the number:
+ * PER_TRIP_ON_OTHER_BOX (the gate charge is on another box of this truck),
+ * HAULIER_CREDIT (billed to the haulier instead), GATE_CHARGE_ONLY, UNPRICED.
+ */
 export interface TriedVariant {
   chargeCode: string;
   billTo: string;
   outcome: string;
   amount: number | null;
+  paymentTermCode?: string | null;
+  /** The server's own sentence for this outcome — prefer it to inventing one. */
+  note?: string | null;
 }
 
 export interface WindowBox {
@@ -79,6 +117,10 @@ export interface WindowBox {
   total: number;
   /** Why nothing is due, when nothing is. */
   note: string | null;
+  /** Lines this box will be invoiced for later, not paid for here. */
+  billedLater?: QuoteLine[] | null;
+  /** The gate may offer VAS on this box — an empty drop-off or a pick-up. */
+  vasOffered?: boolean;
 }
 
 export interface WindowBooking {
@@ -96,8 +138,22 @@ export interface WindowBooking {
   boxes: WindowBox[];
   subtotal: number;
   tax: number;
+  /** CASH only. What is billed later is in `billedLater`, never added in. */
   total: number;
   currencyCode: string | null;
+  /** The truck category actually priced on — the tenant default when none was sent. */
+  truckCategoryCode?: string | null;
+  /** The haulier actually priced on — the booking's when none was sent. */
+  haulierCode?: string | null;
+  billedLater?: BilledLaterTotals | null;
+  /** Non-null when withholding tax may be applied to this quote. */
+  withholdingTax?: WithholdingTax | null;
+  /**
+   * Set when another booking on the same truck already carries the PER_TRIP
+   * gate charge — "ZZKU1234565 on BK-…". The charge is levied once per truck,
+   * so this booking is quoted without it.
+   */
+  gateChargeCarriedBy?: string | null;
   /** This booking's voided receipts that nothing replaces yet — a new payment may name one. */
   voidedReceipts?: VoidedReceipt[] | null;
 }
@@ -195,7 +251,100 @@ export interface CreateReceiptRequest {
   expectedTotal: number;
   /** Paying again after a void: the voided receipt of this booking this one replaces. */
   replacesReceiptId?: string | null;
+  /**
+   * Send exactly what the quote used. These three are what the price was
+   * worked out from, so a different value here is a different total — and a
+   * 409 rather than a silent overcharge.
+   */
+  truckCategoryCode?: string | null;
+  haulierCode?: string | null;
+  vas?: string[];
+  /** The truck's OTHER bookings — same list the quote used, or the total moves. */
+  sameTruckAs?: string[];
+  /** Apply withholding tax. Payments must then add up to the quote's `nett`. */
+  withholdingTax?: boolean;
 }
+
+/** The quote and the receipt must agree, so both are built from one object. */
+export interface QuoteTerms {
+  truckCategoryCode: string;
+  haulierCode: string;
+  vas: string[];
+  /** Other order numbers on this truck — the gate charge is levied once. */
+  sameTruckAs: string[];
+}
+
+export const NO_TERMS: QuoteTerms = { truckCategoryCode: '', haulierCode: '', vas: [], sameTruckAs: [] };
+
+/** `/api/revenue/window/bookings` for one truck: its category, haulier, VAS and other bookings. */
+export function windowQuotePath(
+  orderNo: string,
+  terms: QuoteTerms,
+  paidUntil?: string | null,
+  bookingContainerIds?: string[],
+): string {
+  const query = new URLSearchParams({ orderNo });
+  if (paidUntil) query.set('paidUntil', paidUntil);
+  if (terms.truckCategoryCode) query.set('truckCategoryCode', terms.truckCategoryCode);
+  if (terms.haulierCode) query.set('haulierCode', terms.haulierCode);
+  for (const code of terms.vas) query.append('vas', code);
+  for (const order of terms.sameTruckAs) query.append('sameTruckAs', order);
+  for (const id of bookingContainerIds ?? []) query.append('bookingContainerIds', id);
+  return `/api/revenue/window/bookings?${query}`;
+}
+
+// ── what one truck visit was charged (after the gate) ───────────────────────
+
+export interface VisitMoney { amount: number; vat: number; total: number }
+
+export interface VisitQuoteLine {
+  chargeCode: string;
+  description: string | null;
+  sellRate: number | null;
+  qty: number | null;
+  vatRate: number | null;
+  amount: number;
+  taxAmount: number;
+  /** Vector's convention: rate x qty PLUS tax. */
+  sellingAmount: number;
+  paymentTerm: string;
+  paymentTo: string;
+  payerCode: string | null;
+  status: string;
+  billingUnitCode: string | null;
+  /** The once-per-truck PER_TRIP line. */
+  isGateCharge: boolean;
+  receiptNo: string | null;
+}
+
+export interface VisitQuoteBox {
+  containerNo: string | null;
+  orderNo: string | null;
+  movementCode: string | null;
+  eirNo: string | null;
+  gateTransactionId: string | null;
+  lines: VisitQuoteLine[];
+}
+
+/**
+ * What a truck visit ended up costing, read after its boxes were gated —
+ * cash taken at the window against credit going on an account.
+ *
+ * NOT a pre-payment quote: cash is paid before the barrier, when no visit
+ * exists yet. That is the booking quote. 404 means nothing was charged on the
+ * visit at all, which is a legitimate answer, not an error.
+ */
+export interface VisitQuote {
+  truckVisitId: string;
+  branchId: string;
+  boxes: VisitQuoteBox[];
+  paidNow: VisitMoney;
+  billedLater: VisitMoney;
+  currencyCode: string | null;
+}
+
+export const visitQuotePath = (truckVisitId: string) =>
+  `/api/revenue/window/quote-visit?truckVisitId=${encodeURIComponent(truckVisitId)}`;
 
 export interface ReceiptLine {
   lineNo: number;
@@ -275,6 +424,14 @@ export interface Receipt {
   /** The voided receipt this one replaces, and the receipt that replaced this one (when voided). */
   replacesReceiptNo?: string | null;
   replacedByReceiptNo?: string | null;
+  /**
+   * Withholding tax, when the clerk applied it. `total` above is still the tax
+   * invoice's total; `nettAmount` is what the customer actually handed over,
+   * and what the drawer expects. Null/0 rate = none applied.
+   */
+  withholdingTaxRate?: number | null;
+  withholdingTaxAmount?: number | null;
+  nettAmount?: number | null;
 }
 
 // ── waiving ─────────────────────────────────────────────────────────────────

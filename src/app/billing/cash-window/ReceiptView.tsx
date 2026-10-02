@@ -90,8 +90,8 @@ export function ReceiptView({ receipt, depot, onPrint, onNext, onVoid }: {
             )}
           </div>
           <div style={{ textAlign: 'right' }}>
-            <div className="gecko-text-muted" style={{ fontSize: 12 }}>Total paid</div>
-            <div style={{ fontSize: 22, fontWeight: 800 }}>{formatBaht(receipt.total)}</div>
+            <div className="gecko-text-muted" style={{ fontSize: 12 }}>{receipt.withholdingTaxRate ? 'Net paid' : 'Total paid'}</div>
+            <div style={{ fontSize: 22, fontWeight: 800 }}>{formatBaht(receipt.nettAmount ?? receipt.total)}</div>
           </div>
           {receipt.change > 0 && (
             <div style={{ textAlign: 'right', padding: '6px 14px', borderRadius: 8, background: 'var(--gecko-warning-50, #fffbeb)' }}>
@@ -181,6 +181,14 @@ export function ReceiptView({ receipt, depot, onPrint, onNext, onVoid }: {
         <div className="row"><span>Subtotal</span><span>{formatBaht(receipt.subtotal)}</span></div>
         <div className="row"><span>VAT 7%</span><span>{formatBaht(receipt.tax)}</span></div>
         <div className="row total"><span>TOTAL</span><span>{formatBaht(receipt.total)}</span></div>
+        {/* Withholding does not change the invoice total — it is deducted from
+            what the customer hands over, and the drawer expects the net. */}
+        {!!receipt.withholdingTaxRate && (
+          <>
+            <div className="row"><span>Withholding tax {receipt.withholdingTaxRate}%</span><span>-{formatBaht(receipt.withholdingTaxAmount ?? 0)}</span></div>
+            <div className="row total"><span>NET PAID</span><span>{formatBaht(receipt.nettAmount ?? receipt.total)}</span></div>
+          </>
+        )}
         {receipt.payments.map((p, i) => (
           <div key={i}>
             <div className="row"><span>{channelLabel(p.channel)}{p.referenceNo ? ` ${p.referenceNo}` : ''}</span><span>{formatBaht(p.amount)}</span></div>

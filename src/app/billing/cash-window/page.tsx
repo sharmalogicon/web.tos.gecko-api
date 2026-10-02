@@ -6,13 +6,14 @@ import { useToast } from '@/components/ui/Toast';
 import { apiGet, apiSend } from '@/lib/api/client';
 import { ApiError } from '@/lib/api/problem';
 import { ProblemAlert, problemOf, type Problem } from './ProblemAlert';
-import { useApiList } from '@/lib/api/use-api';
+import { useApi, useApiList } from '@/lib/api/use-api';
 import { useSession } from '@/lib/auth/session';
 import {
-  CHANNEL_LABEL, PAYMENT_CHANNELS, WINDOW_PERMISSIONS, formatBaht, isPayable, partyName, toSatang,
+  CHANNEL_LABEL, PAYMENT_CHANNELS, WINDOW_PERMISSIONS, formatBaht, isPayable, partyName, toSatang, windowQuotePath,
   type CreateReceiptRequest, type PartyLookup, type PaymentChannel, type QuoteLine, type Receipt, type Shift,
-  type WaiveRequest, type WindowBooking, type WindowBox,
+  type QuoteTerms, type WaiveRequest, type WindowBooking, type WindowBox,
 } from '@/lib/api/window';
+import { useSetting, useTruckCategories } from '@/lib/api/lookups';
 import { DrawerBar } from './DrawerBar';
 import { ShiftReceipts } from './ShiftReceipts';
 import { VoidReceiptModal } from '../_components/VoidReceiptModal';
@@ -32,6 +33,15 @@ import { ReceiptView, usePrintReceipt } from './ReceiptView';
  */
 
 interface Branch { branchId: string; branchCode: string; displayName: string; isActive: boolean }
+
+/** Just the charge flags this screen needs off the order type. */
+interface OrderTypeChargeRow {
+  chargeCode: string;
+  chargeDescription: string | null;
+  isValueAddedService: boolean;
+  raiseAtGateIn: boolean;
+}
+interface OrderTypeDetail { charges: OrderTypeChargeRow[] }
 
 interface PaymentRow {
   channel: PaymentChannel;
@@ -113,15 +123,42 @@ export default function CashWindowPage() {
   const orderInput = useRef<HTMLInputElement>(null);
   const tenderedInput = useRef<HTMLInputElement>(null);
 
-  const quote = useCallback(async (order: string, until: string, keepSelection: boolean) => {
+  // ── the truck this quote is for ──────────────────────────────────────────
+  const { categories } = useTruckCategories();
+  const { value: defaultTruckCategory } = useSetting('gate.default_truck_category');
+  const [truckCategory, setTruckCategory] = useState('');
+  const [haulierCode, setHaulierCode] = useState('');
+  const [vas, setVas] = useState<string[]>([]);
+  // The truck's other booking(s). The gate charge is levied once per truck, so
+  // naming the booking that already carries it keeps it off this one.
+  const [sameTruckAs, setSameTruckAs] = useState('');
+  // Withholding tax is the clerk's choice, offered only when the quote says so.
+  const [applyWithholding, setApplyWithholding] = useState(false);
+  const terms: QuoteTerms = useMemo(() => ({
+    truckCategoryCode: truckCategory || defaultTruckCategory || '',
+    haulierCode: haulierCode.trim(),
+    vas,
+    sameTruckAs: sameTruckAs.trim() ? [sameTruckAs.trim().toUpperCase()] : [],
+  }), [truckCategory, defaultTruckCategory, haulierCode, vas, sameTruckAs]);
+  // `quote` is a useCallback the Enter handler and the effects share; reading
+  // the terms through a ref keeps it from being rebuilt on every keystroke.
+  const termsRef = useRef(terms);
+  termsRef.current = terms;
+
+  const quote = useCallback(async (order: string, until: string, keepSelection: boolean, terms?: QuoteTerms) => {
     const no = order.trim().toUpperCase();
     if (!no) return;
     setQuoting(true); setQuoteError(null); setPayError(null);
     try {
+      // The truck is part of the price: its category is a tariff axis and its
+      // haulier may carry a credit term. Quote and receipt must use the same
+      // three, or the receipt is a 409.
       const answer = await apiGet<WindowBooking>(
-        `/api/revenue/window/bookings?orderNo=${encodeURIComponent(no)}${until ? `&paidUntil=${until}` : ''}`);
+        windowQuotePath(no, terms ?? termsRef.current, until || null));
       setBooking(answer);
       setOrderNo(answer.orderNo);
+      // A re-quote may no longer allow withholding (total fell under the floor).
+      if (!answer.withholdingTax) setApplyWithholding(false);
       // The latest unreplaced void of this booking is what a new payment most likely replaces.
       setReplaces(prev => {
         const open = answer.voidedReceipts ?? [];
@@ -163,17 +200,48 @@ export default function CashWindowPage() {
   const subtotal = toSatang(chosen.flatMap(b => b.due).reduce((s, l) => s + l.amount, 0));
   const vat = toSatang(chosen.flatMap(b => b.due).reduce((s, l) => s + l.taxAmount, 0));
   const total = toSatang(chosen.reduce((s, b) => s + b.total, 0));
+  // Credit lines for the boxes actually selected. The server's booking-level
+  // `billedLater` covers every box, so the lines are summed from the selection
+  // and the header total is used only when the whole booking is taken.
+  const laterLines = useMemo(() => chosen.flatMap(b => b.billedLater ?? []), [chosen]);
+  const billedLater = useMemo(() => {
+    if (!laterLines.length) return null;
+    const subtotal = toSatang(laterLines.reduce((s, l) => s + l.amount, 0));
+    const tax = toSatang(laterLines.reduce((s, l) => s + l.taxAmount, 0));
+    return { subtotal, tax, total: toSatang(subtotal + tax), currencyCode: booking?.currencyCode ?? null };
+  }, [laterLines, booking]);
+  /** VAS may only be offered when the server says a box takes it. */
+  const vasAllowed = chosen.some(b => b.vasOffered);
+  /**
+   * Which services this order type lets the gate add. The flags are already in
+   * master data (migrated from Vector's OrderTypeChargesVAS), so there is no
+   * separate VAS catalogue to keep in step.
+   */
+  const { data: orderType } = useApi<OrderTypeDetail>(
+    booking?.orderTypeCode ? `/api/master/order-types/${encodeURIComponent(booking.orderTypeCode)}` : null);
+  const vasOptions = useMemo(
+    () => (orderType?.charges ?? []).filter(c => c.isValueAddedService && c.raiseAtGateIn),
+    [orderType],
+  );
 
   // A single payment row is always the whole amount; a split is typed.
-  const rows: PaymentRow[] = payments.length === 1 ? [{ ...payments[0], amount: total.toFixed(2) }] : payments;
+  const rows: PaymentRow[] = payments.length === 1
+    ? [{ ...payments[0], amount: (booking?.withholdingTax && applyWithholding ? toSatang(booking.withholdingTax.nett) : total).toFixed(2) }]
+    : payments;
   const paid = toSatang(rows.reduce((s, r) => s + (num(r.amount) || 0), 0));
   const cashRow = rows.find(r => r.channel === 'CASH');
   const change = cashRow && !Number.isNaN(num(cashRow.tendered)) ? toSatang(num(cashRow.tendered) - (num(cashRow.amount) || 0)) : 0;
 
+  // Withholding tax never changes the invoice; it changes what is handed over.
+  // The tax invoice still totals `total`; the drawer expects `nett`.
+  const withholding = booking?.withholdingTax ?? null;
+  const applied = !!withholding && applyWithholding;
+  const payable = applied ? toSatang(withholding!.nett) : total;
+
   const payProblem = (() => {
     if (!chosen.length) return 'Pick at least one box to pay for.';
     if (total <= 0) return 'Nothing to pay.';
-    if (paid !== total) return `Payments add up to ${formatBaht(paid)}; the receipt is ${formatBaht(total)}.`;
+    if (paid !== payable) return `Payments add up to ${formatBaht(paid)}; ${applied ? 'the net to collect' : 'the receipt'} is ${formatBaht(payable)}.`;
     for (const r of rows) {
       if (!(num(r.amount) > 0)) return 'Every payment must be more than zero.';
       if (r.channel !== 'CASH' && !r.referenceNo.trim()) return `${CHANNEL_LABEL[r.channel]} needs its reference (slip, cheque or approval number).`;
@@ -209,6 +277,13 @@ export default function CashWindowPage() {
         })),
         expectedTotal: total,
         replacesReceiptId: replaces || null,
+        // Exactly what the shown quote was priced with — the API re-prices on
+        // these and answers 409 if the total moved.
+        truckCategoryCode: booking.truckCategoryCode ?? terms.truckCategoryCode ?? null,
+        haulierCode: booking.haulierCode ?? (terms.haulierCode || null),
+        vas: terms.vas,
+        sameTruckAs: terms.sameTruckAs,
+        withholdingTax: applied,
       };
       const issued = await apiSend<Receipt>('POST', '/api/revenue/window/receipts', body);
       setReceipt(issued);
@@ -326,11 +401,73 @@ export default function CashWindowPage() {
                     if (booking && v) void quote(booking.orderNo, v, true);
                   }} />
               </div>
+              {/* The truck is part of the price: category is a tariff axis and
+                  the haulier may carry a credit term that moves lines off the
+                  cash total. Changing either re-quotes. */}
+              <div className="gecko-form-group">
+                <label className="gecko-form-label" htmlFor="truckCategory">Truck</label>
+                <select
+                  id="truckCategory" className="gecko-select" value={terms.truckCategoryCode}
+                  onChange={e => {
+                    setTruckCategory(e.target.value);
+                    if (booking) void quote(booking.orderNo, paidUntil, true, { ...terms, truckCategoryCode: e.target.value });
+                  }}
+                >
+                  <option value="">Any truck</option>
+                  {categories.filter(c => c.isActive).map(c => <option key={c.code} value={c.code}>{c.descriptionEn}</option>)}
+                </select>
+              </div>
+              <div className="gecko-form-group">
+                <label className="gecko-form-label" htmlFor="haulierCode">Haulier</label>
+                <input
+                  id="haulierCode" className="gecko-input" style={{ width: 140 }}
+                  placeholder={booking?.haulierCode ?? 'From booking'}
+                  value={haulierCode}
+                  onChange={e => setHaulierCode(e.target.value.toUpperCase())}
+                  onBlur={() => { if (booking) void quote(booking.orderNo, paidUntil, true); }}
+                />
+              </div>
+              <div className="gecko-form-group">
+                <label className="gecko-form-label" htmlFor="sameTruckAs">Also on this truck</label>
+                <input
+                  id="sameTruckAs" className="gecko-input" style={{ width: 190 }}
+                  placeholder="Other order no."
+                  title="The truck's other booking. The gate charge is taken once per truck, so naming it keeps the charge off this one."
+                  value={sameTruckAs}
+                  onChange={e => setSameTruckAs(e.target.value.toUpperCase())}
+                  onBlur={() => { if (booking) void quote(booking.orderNo, paidUntil, true); }}
+                />
+              </div>
               <button type="submit" className="gecko-btn gecko-btn-primary" disabled={quoting || !orderNo.trim() || !activeBranch}>
                 <Icon name="search" size={16} /> {quoting ? 'Quoting…' : 'Load'}
               </button>
               {booking && <button type="button" className="gecko-btn gecko-btn-outline" onClick={nextDriver}>Clear</button>}
             </div>
+
+            {/* VAS is offered only where the server says a box takes it — an
+                empty drop-off or a pick-up. */}
+            {booking && vasAllowed && vasOptions.length > 0 && (
+              <div className="gecko-cw-vas">
+                <div className="gecko-form-label" style={{ margin: 0 }}>Services at the gate</div>
+                {vasOptions.map(option => (
+                  <label key={option.chargeCode} className="gecko-cw-vas-option">
+                    <input
+                      type="checkbox"
+                      checked={terms.vas.includes(option.chargeCode)}
+                      onChange={e => {
+                        const next = e.target.checked
+                          ? [...terms.vas, option.chargeCode]
+                          : terms.vas.filter(c => c !== option.chargeCode);
+                        setVas(next);
+                        if (booking) void quote(booking.orderNo, paidUntil, true, { ...terms, vas: next });
+                      }}
+                    />
+                    <span>{option.chargeDescription || option.chargeCode}</span>
+                    <span className="gecko-cell-meta">{option.chargeCode}</span>
+                  </label>
+                ))}
+              </div>
+            )}
             {quoteError && <ProblemAlert problem={quoteError} style={{ marginTop: 12 }} />}
           </form>
 
@@ -470,6 +607,57 @@ export default function CashWindowPage() {
                       <strong>Total</strong>
                       <span style={{ fontSize: 30, fontWeight: 800, fontVariantNumeric: 'tabular-nums' }}>{formatBaht(total)}</span>
                     </div>
+                    {/* Withholding tax leaves the invoice alone and lowers what
+                        is handed over: the tax invoice still totals the above. */}
+                    {withholding && (
+                      <label className="gecko-cw-wht">
+                        <input type="checkbox" checked={applyWithholding} onChange={e => setApplyWithholding(e.target.checked)} />
+                        <span>
+                          Withholding tax {withholding.rate}% — <strong>{formatBaht(withholding.amount)}</strong>
+                          <div className="gecko-cell-meta">
+                            Invoice stays {formatBaht(total)}; the customer pays {formatBaht(withholding.nett)}.
+                          </div>
+                        </span>
+                      </label>
+                    )}
+                    {applied && (
+                      <div className="gecko-row gecko-row-between gecko-cw-nett">
+                        <strong>Net to collect</strong>
+                        <span className="gecko-cw-nett-value">{formatBaht(withholding!.nett)}</span>
+                      </div>
+                    )}
+
+                    {/* The gate charge belongs to the truck, not the booking —
+                        when another booking carries it, say which. */}
+                    {booking?.gateChargeCarriedBy && (
+                      <div className="gecko-cell-meta gecko-cw-carried">
+                        Gate charge is on {booking.gateChargeCarriedBy}.
+                      </div>
+                    )}
+
+                    {/* Billed later is NOT part of the total — the driver pays
+                        the cash above; the rest goes on someone's statement. */}
+                    {billedLater && billedLater.total > 0 && (
+                      <div className="gecko-cw-later">
+                        <div className="gecko-row gecko-row-between">
+                          <strong>Billed later</strong>
+                          <span className="gecko-cw-later-total">{formatBaht(billedLater.total)}</span>
+                        </div>
+                        <div className="gecko-cell-meta">
+                          {formatBaht(billedLater.subtotal)} + {formatBaht(billedLater.tax)} VAT ·
+                          {' '}on account, not collected here
+                        </div>
+                        {laterLines.map((line, i) => (
+                          <div key={`${line.chargeCode}-${i}`} className="gecko-row gecko-row-between gecko-cw-later-line">
+                            <span>
+                              {line.chargeName || line.chargeCode}
+                              {line.byHaulierTerm && <span className="gecko-badge gecko-badge-xs gecko-badge-gray"> haulier term</span>}
+                            </span>
+                            <span>{formatBaht(line.total)}</span>
+                          </div>
+                        ))}
+                      </div>
+                    )}
                     {change > 0 && (
                       <div className="gecko-row" style={{ justifyContent: 'space-between', alignItems: 'baseline', marginTop: 4 }}>
                         <span>Change</span>
@@ -478,7 +666,7 @@ export default function CashWindowPage() {
                     )}
                     <button type="submit" className="gecko-btn gecko-btn-primary" style={{ width: '100%', marginTop: 14, fontSize: 18, padding: '12px 0' }}
                       disabled={!!payProblem || paying || !shift || !mayCollect || wrongDepot || quoting}>
-                      <Icon name="check" size={18} /> {paying ? 'Issuing receipt…' : `Take ${formatBaht(total)}`}
+                      <Icon name="check" size={18} /> {paying ? 'Issuing receipt…' : `Take ${formatBaht(payable)}`}
                     </button>
                     <div className="gecko-text-muted" style={{ fontSize: 12, marginTop: 6, minHeight: 16 }}>
                       {!shift ? 'Open the drawer first.' : !mayCollect ? `You need ${WINDOW_PERMISSIONS.collect} at this depot.` : payProblem ?? ''}
@@ -583,11 +771,22 @@ function BoxCard({ box, selected, onToggle, mayWaive, onWaive }: {
         </div>
       )}
 
-      {!payable && box.tried.length > 0 && (
+      {/* The gate charge sitting on another box of the same truck, or a line
+          the haulier's term moved to credit, are the usual reasons a total
+          looks light. They apply to a payable box too, so this is no longer
+          hidden behind "nothing is due" — and the server's own sentence is
+          shown rather than a code the cashier has to decode. */}
+      {box.tried.length > 0 && (
         <details style={{ marginTop: 6, fontSize: 12 }}>
-          <summary className="gecko-text-muted">Why nothing is due ({box.tried.length} tariff checks)</summary>
+          <summary className="gecko-text-muted">
+            {payable ? `What was not charged here (${box.tried.length})` : `Why nothing is due (${box.tried.length} tariff checks)`}
+          </summary>
           {box.tried.map((t, i) => (
-            <div key={i}>{t.chargeCode} · {t.billTo} · {t.outcome}{t.amount != null ? ` · ${formatBaht(t.amount)}` : ''}</div>
+            <div key={i}>
+              {/* `||`, not `??`: the server sends "" for an outcome it has no
+                  sentence for (UNPRICED), and a blank row explains nothing. */}
+              {t.note?.trim() || `${t.chargeCode} · ${t.billTo} · ${t.outcome}${t.amount != null ? ` · ${formatBaht(t.amount)}` : ''}`}
+            </div>
           ))}
         </details>
       )}
