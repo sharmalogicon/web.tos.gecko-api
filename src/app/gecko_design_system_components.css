@@ -7844,3 +7844,157 @@ label.gecko-toggle.gecko-toggle-sm input:checked ~ .gecko-toggle-track .gecko-to
   color: var(--gecko-text-secondary);
 }
 
+/* ═══════════════════════════════════════════════════════════════════════════
+   §18 — GATE IN (EIR capture)
+   One screen: the clerk writes the box down and the EIR is recorded, raising
+   the blind gate-in order behind it when the box is not already on one. There
+   is no barrier here, so nothing in this block is a stop/go indicator — the
+   findings strip reports what the SERVER said, after the fact.
+   ═══════════════════════════════════════════════════════════════════════════ */
+
+.gecko-eirin-page { gap: 20px; padding-bottom: 48px; }
+
+.gecko-eirin-box-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+.gecko-eirin-box-row .gecko-input { flex: 1; min-width: 0; }
+.gecko-eirin-hint { white-space: nowrap; }
+
+/* A value the API already decided — shown, not editable. */
+.gecko-eirin-readback {
+  display: flex;
+  align-items: center;
+  height: 36px;
+  padding: 0 10px;
+  border: 1px solid var(--gecko-border);
+  border-radius: var(--gecko-radius-md);
+  background: var(--gecko-bg-subtle);
+  font-size: var(--gecko-text-sm);
+  font-weight: 600;
+  color: var(--gecko-text-primary);
+}
+
+.gecko-eirin-seal-row {
+  display: grid;
+  grid-template-columns: 1fr 150px auto auto;
+  gap: 10px;
+  align-items: center;
+}
+@media (max-width: 760px) {
+  .gecko-eirin-seal-row { grid-template-columns: 1fr 1fr; }
+}
+.gecko-eirin-intact {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: var(--gecko-text-sm);
+  color: var(--gecko-text-secondary);
+  white-space: nowrap;
+}
+
+/* What the server said about this box. Severity is the server's word, not a
+   judgement made here. */
+.gecko-eirin-findings {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+.gecko-eirin-finding {
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+  padding: 8px 12px;
+  border-radius: var(--gecko-radius-md);
+  font-size: var(--gecko-text-sm);
+  line-height: 1.45;
+}
+.gecko-eirin-finding-info     { background: var(--gecko-info-50);    color: var(--gecko-info-700); }
+.gecko-eirin-finding-override { background: var(--gecko-warning-50); color: var(--gecko-warning-700); }
+.gecko-eirin-finding-block    { background: var(--gecko-error-50);   color: var(--gecko-error-700); }
+
+.gecko-eirin-error {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  padding: 12px 14px;
+  border: 1px solid var(--gecko-error-200);
+  border-radius: var(--gecko-radius-md);
+  background: var(--gecko-error-50);
+  color: var(--gecko-error-700);
+}
+.gecko-eirin-error-title { font-weight: 600; font-size: var(--gecko-text-sm); }
+.gecko-eirin-error-detail { margin-top: 2px; font-size: var(--gecko-text-xs); line-height: 1.5; }
+
+.gecko-eirin-done {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  border-left: 3px solid var(--gecko-success-500);
+  color: var(--gecko-success-700);
+}
+.gecko-eirin-done > div:first-of-type { flex: 1; }
+.gecko-eirin-done-title { font-weight: 600; font-size: var(--gecko-text-sm); }
+
+.gecko-eirin-actions {
+  padding-top: 4px;
+  border-top: 1px solid var(--gecko-border);
+}
+.gecko-eirin-register { margin-top: 8px; }
+
+/* Reefer detail folds away — it is dead weight on a dry box. */
+.gecko-eirin-reefer { margin-top: 14px; }
+.gecko-eirin-reefer > summary {
+  cursor: pointer;
+  margin: 0;
+  user-select: none;
+}
+
+/* ═══════════════════════════════════════════════════════════════════════════
+   §19 — CASH WINDOW: what is NOT being paid here
+   The gate charge sits on one box per truck, and a haulier's own term moves
+   lines onto an account. Both make the cash total look light, so the window
+   shows them beside it — quiet, and never added into the total.
+   ═══════════════════════════════════════════════════════════════════════════ */
+
+.gecko-cw-later {
+  margin-top: 12px;
+  padding: 10px 12px;
+  border: 1px dashed var(--gecko-border-strong);
+  border-radius: var(--gecko-radius-md);
+  background: var(--gecko-bg-subtle);
+  font-size: var(--gecko-text-sm);
+}
+.gecko-cw-later-total {
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+  color: var(--gecko-text-secondary);
+}
+.gecko-cw-later-line {
+  margin-top: 6px;
+  font-size: var(--gecko-text-xs);
+  color: var(--gecko-text-secondary);
+  gap: 10px;
+}
+
+/* Services the clerk may add at the gate, offered only where the order type
+   and the move allow it. */
+.gecko-cw-vas {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 14px;
+  margin-top: 12px;
+  padding-top: 12px;
+  border-top: 1px solid var(--gecko-border);
+}
+.gecko-cw-vas-option {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: var(--gecko-text-sm);
+  cursor: pointer;
+}
+.gecko-cw-vas-option .gecko-cell-meta { font-family: var(--gecko-font-mono); }
+
