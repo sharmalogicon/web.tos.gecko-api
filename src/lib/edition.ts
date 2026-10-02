@@ -27,9 +27,15 @@ export const IS_PILOT = MENU_MODE === 'pilot';
 /** Live (API-bound) screens. A path and everything under it (detail pages, /new) is allowed. */
 export const PILOT_PATHS: readonly string[] = [
   '/bookings',                  // register, /bookings/new, /bookings/[id]
+  // Kept reachable by URL though it is no longer in the menu (2026-10-01): the
+  // depot has no barrier, so EIR-In replaced it as the way a gate-in is
+  // recorded. Dropping it from here as well would make it 404 for the pilot,
+  // and it is worth keeping as a fallback until the new screen has run a week.
   '/gate/desk',
   '/gate/stock',
   '/gate/eir-in',                // EIR-in register, /gate/eir-in/[id] detail (PDF, void)
+  '/gate/eir-in-sept',           // the API-bound gate-in, while the June design is wired
+  '/bookings/new-sept',          // the API-bound new booking, likewise
   '/gate/eir-out',               // EIR-out register, /gate/eir-out/[id] detail
   '/gate/holds',                // holds board: active, released history, release
   '/gate/reefer-ops',           // reefer plug log, /new plug-in (power charge needs Revenue /reefer/power)
@@ -48,6 +54,7 @@ export const PILOT_PATHS: readonly string[] = [
   '/masters/container-types',
   '/masters/order-types',
   '/masters/charge-codes',
+  '/masters/haulier-charge-terms',   // a haulier's CASH/CREDIT term, read by the window
   '/masters/holds',
   '/masters/lines',
   '/masters/lookups',
@@ -69,6 +76,13 @@ export const PILOT_PATHS: readonly string[] = [
  * bound to the API.
  */
 export const PILOT_BLOCKED: readonly string[] = [
+  // 2026-10-02 — the June design took these two routes and is still on MOCK
+  // data. Blocking them keeps fixture screens off the pilot KORAKIT uses, which
+  // is the one rule this file exists to enforce. The API-bound September
+  // versions still work at /gate/eir-in-sept and /bookings/new-sept.
+  // REMOVE BOTH LINES the moment the June pages are bound to the API.
+  '/gate/eir-in',
+  '/bookings/new',
 ];
 
 /**
@@ -98,4 +112,6 @@ export function isPathAvailable(path: string): boolean {
 }
 
 /** Where a signed-in user lands. Pilot: a live screen, never a mock dashboard. */
-export const LANDING_PATH = IS_PILOT ? '/gate/desk' : '/dashboard/overview';
+// The pilot lands on the bound gate-in, not the June mock that currently holds
+// /gate/eir-in. Point this back when the June page is wired.
+export const LANDING_PATH = IS_PILOT ? '/gate/eir-in-sept' : '/dashboard/overview';

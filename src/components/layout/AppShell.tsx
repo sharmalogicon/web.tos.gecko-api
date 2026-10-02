@@ -111,12 +111,14 @@ const NAV = [
   { id: 'gate', icon: 'truck', label: 'Gate & Yard',
     children: [
       // Live against gecko_tos (Phase 5). The screens below them are still mock.
-      { id: 'gate-desk', label: 'Gate Desk (live)', path: '/gate/desk' },
+      // Gate Desk is out of the menu (2026-10-01): KORAKIT has no barrier, so a
+      // preflight-then-admit screen models a gate they do not operate. Recording
+      // a gate-in now lives on EIR-In below. The route still resolves for anyone
+      // who has it bookmarked, and nothing about it was deleted.
       { id: 'gate-stock', label: 'Yard Stock (live)', path: '/gate/stock' },
       { id: 'appointments', label: 'Gate Appointments', path: '/gate/appointments' },
       { id: 'kiosk', label: 'Gate Kiosk', path: '/gate/kiosk' },
-      { id: 'eir-in', label: 'EIR-In', path: '/gate/eir-in' },
-      { id: 'eir-in-v2', label: 'EIR-In V2 (HUD)', path: '/gate/eir-in-v2' },
+      { id: 'eir-in', label: 'Gate In (EIR)', path: '/gate/eir-in' },
       { id: 'eir-out', label: 'EIR-Out', path: '/gate/eir-out' },
       { id: 'yard-view', label: 'Yard Plan', path: '/gate/yard-view' },
       { id: 'reefer-ops', label: 'Reefer Operations', path: '/gate/reefer-ops' },
@@ -179,6 +181,16 @@ const NAV = [
       { id: 'system-params',  label: 'System Parameters',    path: '/config/system-params' },
     ]
   },
+  // TEMPORARY (2026-10-02) — the June screens beside today's, while the booking
+  // and gate pages are redesigned. Not in PILOT_PATHS, so an empty children list
+  // drops the whole group from the pilot menu on its own. Delete this entry and
+  // src/app/compare/ when the redesign is settled.
+  { id: 'compare', icon: 'layers', label: 'Compare (June)',
+    children: [
+      { id: 'compare-june', label: 'June vs today', path: '/compare/june' },
+    ]
+  },
+
   { id: 'masters', icon: 'database', label: 'Master Data',
     children: [
       { id: 'masters-hub', label: 'Masters Overview', path: '/masters' },
@@ -189,6 +201,7 @@ const NAV = [
       { id: 'container-types', label: 'ISO Container Types', path: '/masters/container-types' },
       { id: 'order-types', label: 'Work Order Types', path: '/masters/order-types' },
       { id: 'charge-codes', label: 'Charge Codes', path: '/masters/charge-codes' },
+      { id: 'haulier-charge-terms', label: 'Haulier Charge Terms', path: '/masters/haulier-charge-terms' },
       { id: 'seal-series', label: 'Seal Series', path: '/masters/seal-series' },
       // HIDDEN 2026-05-13 — facility & yard hierarchy is now owned by the
       // visual editor at Configuration → Yard Zones & Blocks, which covers
