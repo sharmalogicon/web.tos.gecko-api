@@ -10,6 +10,7 @@
  * stale one answers 409. Codes may hold '/', so URLs are built with codePath().
  */
 import { apiSend } from './client';
+import { useApi } from './use-api';
 
 export const codePath = (base: string, code: string) => `${base}/${encodeURIComponent(code)}`;
 export const withVersion = (url: string, rowVersion: string) =>
@@ -167,3 +168,37 @@ export const TAX_TYPES = opts(['VAT', 'GST', 'SST', 'SALES_TAX', 'WITHHOLDING', 
 export const MAPPING_TYPES = opts(['CODE_LIST', 'CARGO_CLASS', 'PARTY', 'VESSEL', 'PORT', 'ORDER_TYPE', 'CHARGE_CODE', 'MOVEMENT', 'HOLD', 'REPAIR_CODE', 'DAMAGE_CODE', 'CONTAINER_CONDITION', 'EQUIPMENT_TYPE']);
 export const CHANNELS = opts(['ANY', 'EDI_CODECO', 'EDI_COPARN', 'EDI_COARRI', 'EDI_BAPLIE', 'EDI_CUSCAR', 'API', 'EXCEL', 'LEGACY_VECTOR']);
 export const MAPPING_DIRECTIONS = opts(['INBOUND', 'OUTBOUND', 'BOTH']);
+
+// ── truck categories at the gate and the window ─────────────────────────────
+
+export const TRUCK_CATEGORY_PATH = `${CODE_LISTS_PATH}/TRUCK_CATEGORY`;
+
+/**
+ * The truck sizes this tenant prices by. TRUCK_CATEGORY is a tariff axis, so
+ * the value picked here decides what the move costs — it is not decoration.
+ */
+export function useTruckCategories(): { categories: CodeListValue[]; loading: boolean } {
+  const { data, loading } = useApi<CodeListValue[]>(TRUCK_CATEGORY_PATH);
+  return { categories: data ?? NO_CODES, loading };
+}
+
+const NO_CODES: CodeListValue[] = [];
+
+export interface ResolvedSetting {
+  settingKey: string;
+  value: string | null;
+  valueType: string;
+  resolvedFrom: string;
+}
+
+/**
+ * One declared setting, already resolved for this branch. Used for
+ * `gate.default_truck_category` — the depot's usual truck, which the gate and
+ * the window both start from. The server applies the same default when the UI
+ * sends nothing, so this only saves the clerk a click; it never invents a value.
+ */
+export function useSetting(settingKey: string): { value: string | null; loading: boolean } {
+  const { data, loading } = useApi<ResolvedSetting[]>('/api/master/settings');
+  const row = (data ?? []).find(s => s.settingKey === settingKey);
+  return { value: row?.value ?? null, loading };
+}

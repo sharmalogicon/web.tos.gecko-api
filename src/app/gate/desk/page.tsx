@@ -7,10 +7,11 @@ import { apiGet, apiSend } from '@/lib/api/client';
 import { ApiError } from '@/lib/api/problem';
 import { useSession } from '@/lib/auth/session';
 import {
-  DECISION_TONE, SEVERITY_TONE, TOS_PERMISSIONS,
-  formatContainerNo, formatDateTime, type GateDirection, type GateFinding,
-  type GatePreflight, type GateTransaction,
+  DECISION_TONE, SEAL_TYPES, SEVERITY_TONE, TOS_PERMISSIONS, TRIP_TYPES,
+  directionOfTrip, formatContainerNo, formatDateTime, numberOrNull, preflightPath, requiredGateFields, textOrNull,
+  type GateFinding, type GatePreflight, type GateTransaction, type GateTransactionRequest, type TripType,
 } from '@/lib/api/tos';
+import { useSetting, useTruckCategories } from '@/lib/api/lookups';
 
 /**
  * THE GATE DESK — live against gecko_tos (PLAN §5.2–§5.5, Phase 5).
@@ -42,22 +43,54 @@ export default function GateDeskPage() {
 
   const branchId = user?.branches?.[0] ?? null;
   const [containerNo, setContainerNo] = useState('');
-  const [direction, setDirection] = useState<GateDirection>('IN');
+  // Trip type is what the server asks for; direction follows from it, so the
+  // two can never disagree (the API 400s on `tripType` if they do).
+  const [tripType, setTripType] = useState<TripType>('DROP_OFF_CONT');
+  const direction = directionOfTrip(tripType);
   const [view, setView] = useState<GatePreflight | null>(null);
   const [checking, setChecking] = useState(false);
   const [recording, setRecording] = useState(false);
   const [eir, setEir] = useState<GateTransaction | null>(null);
-  const [error, setError] = useState<string | null>(null);
+  const [error, setError] = useState<ApiError | null>(null);
 
   // what the clerk observed
   const [plate, setPlate] = useState('');
   const [driver, setDriver] = useState('');
   const [haulier, setHaulier] = useState('');
+  const [truckCategory, setTruckCategory] = useState('');
   const [grossWeight, setGrossWeight] = useState('');
+  const [tareWeight, setTareWeight] = useState('');
+  const [maxGrossWeight, setMaxGrossWeight] = useState('');
+  const [cargoWeight, setCargoWeight] = useState('');
+  const [gradeCode, setGradeCode] = useState('');
+  const [materialCode, setMaterialCode] = useState('');
+  const [customsPermitNo, setCustomsPermitNo] = useState('');
+  const [paperlessCode, setPaperlessCode] = useState('');
+  const [nextLocationCode, setNextLocationCode] = useState('');
+  const [ventSetting, setVentSetting] = useState('');
+  const [humidityPct, setHumidityPct] = useState('');
+  const [gensetNo, setGensetNo] = useState('');
+  const [clipOnNo, setClipOnNo] = useState('');
   const [position, setPosition] = useState('');
   const [seals, setSeals] = useState<SealRow[]>([EMPTY_SEAL]);
   const [lateReason, setLateReason] = useState('');
   const [digitReason, setDigitReason] = useState('');
+
+  const { categories } = useTruckCategories();
+  const { value: defaultTruckCategory } = useSetting('gate.default_truck_category');
+  const effectiveTruckCategory = truckCategory || defaultTruckCategory || '';
+
+  /**
+   * What this trip will need, mirrored from the server so the clerk sees it on
+   * the label rather than in a 400. FULL/EMPTY is the booking step's load
+   * state, never a guess.
+   */
+  const required = useMemo(
+    () => requiredGateFields(tripType, view?.nextStep?.fullEmpty ?? null, view?.booking?.directionCode === 'EXPORT'),
+    [tripType, view],
+  );
+  const needs = (field: string) => required.includes(field);
+  const fieldError = (field: string) => error?.forField(field);
 
   const mayRecord = canAt(TOS_PERMISSIONS.gateCreate, branchId);
   const mayOverrideLate = canAt(TOS_PERMISSIONS.cutoffOverride, branchId);
@@ -78,8 +111,13 @@ export default function GateDeskPage() {
     if (!box || !branchId) return;
     setChecking(true); setError(null); setEir(null);
     try {
-      const answer = await apiGet<GatePreflight>(
-        `/api/tos/gate/preflight?branchId=${branchId}&containerNo=${encodeURIComponent(box)}&direction=${direction}`);
+      // Sending the truck lets the barrier say whether it is the one the coupon
+      // was priced for. It never blocks on that — it only tells the clerk.
+      const answer = await apiGet<GatePreflight>(preflightPath({
+        branchId, containerNo: box, direction,
+        truckCategoryCode: effectiveTruckCategory || null,
+        haulierCode: haulier.trim() || null,
+      }));
       setView(answer);
       setContainerNo(answer.containerNo);
       // The declared seal is what the paperwork says; the gate records what it sees.
@@ -87,7 +125,7 @@ export default function GateDeskPage() {
         setSeals([{ ...EMPTY_SEAL, sealNo: answer.booking.declaredSealNo }]);
     } catch (err) {
       setView(null);
-      setError(err instanceof ApiError ? err.message : 'The barrier could not be reached.');
+      setError(err instanceof ApiError ? err : new ApiError(0, 'The barrier could not be reached.'));
     } finally {
       setChecking(false);
     }
@@ -97,24 +135,44 @@ export default function GateDeskPage() {
     if (!view || !branchId) return;
     setRecording(true); setError(null);
     try {
-      const body = {
+      const body: GateTransactionRequest = {
         branchId,
         containerNo: view.containerNo,
         direction,
-        truck: { plate: plate.trim() || 'UNKNOWN', driverName: driver.trim() || null, haulierCode: haulier.trim() || null },
-        grossWeightKg: grossWeight ? Number(grossWeight) : null,
-        weightSource: grossWeight ? 'WEIGHBRIDGE' : null,
-        positionText: position.trim() || null,
-        seals: seals.filter(s => s.sealNo.trim()).map(s => ({ sealNo: s.sealNo.trim(), sealType: s.sealType, isIntact: s.isIntact })),
-        lateOverrideReason: needsLate ? lateReason.trim() : null,
-        checkDigitOverrideReason: needsDigit ? digitReason.trim() : null,
+        tripType,
+        truck: {
+          plate: plate.trim() || 'UNKNOWN',
+          driverName: textOrNull(driver),
+          haulierCode: textOrNull(haulier),
+          // Only read when this POST opens a new visit, and the axis the gate
+          // charge is priced on — so send the truck that is actually here.
+          truckCategoryCode: effectiveTruckCategory || null,
+        },
+        grossWeightKg: numberOrNull(grossWeight),
+        tareWeightKg: numberOrNull(tareWeight),
+        maxGrossWeightKg: numberOrNull(maxGrossWeight),
+        cargoWeightKg: numberOrNull(cargoWeight),
+        weightSource: grossWeight.trim() ? 'WEIGHBRIDGE' : null,
+        gradeCode: textOrNull(gradeCode),
+        materialCode: textOrNull(materialCode),
+        customsPermitNo: textOrNull(customsPermitNo),
+        paperlessCode: textOrNull(paperlessCode),
+        nextLocationCode: textOrNull(nextLocationCode),
+        ventSetting: textOrNull(ventSetting),
+        humidityPct: numberOrNull(humidityPct),
+        gensetNo: textOrNull(gensetNo),
+        clipOnNo: textOrNull(clipOnNo),
+        positionText: textOrNull(position),
+        seals: seals.filter(s => s.sealNo.trim()).map(s => ({ sealNo: s.sealNo.trim().toUpperCase(), sealType: s.sealType, isIntact: s.isIntact })),
+        lateOverrideReason: needsLate ? textOrNull(lateReason) : null,
+        checkDigitOverrideReason: needsDigit ? textOrNull(digitReason) : null,
       };
       const written = await apiSend<GateTransaction>('POST', '/api/tos/gate/transactions', body);
       setEir(written);
       setView(null);
       toast.toast({ variant: 'success', title: written.eirNo, message: `${written.movementCode} recorded` });
     } catch (err) {
-      setError(err instanceof ApiError ? err.message : 'The move could not be recorded.');
+      setError(err instanceof ApiError ? err : new ApiError(0, 'The move could not be recorded.'));
     } finally {
       setRecording(false);
     }
@@ -173,20 +231,22 @@ export default function GateDeskPage() {
           </div>
 
           <div className="gecko-form-group">
-            <label className="gecko-form-label">Direction</label>
+            <label className="gecko-form-label">Trip type</label>
             <div className="gecko-row" style={{ gap: 0 }}>
-              {(['IN', 'OUT'] as GateDirection[]).map(way => (
+              {TRIP_TYPES.map((trip, i) => (
                 <button
-                  key={way}
+                  key={trip.value}
                   type="button"
-                  className={`gecko-btn gecko-btn-sm ${direction === way ? 'gecko-btn-primary' : 'gecko-btn-outline'}`}
-                  style={{ borderRadius: way === 'IN' ? '6px 0 0 6px' : '0 6px 6px 0', minWidth: 74 }}
-                  onClick={() => { setDirection(way); if (view || eir) reset(); }}
+                  className={`gecko-btn gecko-btn-sm ${tripType === trip.value ? 'gecko-btn-primary' : 'gecko-btn-outline'}`}
+                  style={{ borderRadius: i === 0 ? '6px 0 0 6px' : '0 6px 6px 0', minWidth: 86 }}
+                  title={`${trip.hint} · gate ${trip.direction.toLowerCase()}`}
+                  onClick={() => { setTripType(trip.value); if (view || eir) reset(); }}
                 >
-                  {way === 'IN' ? 'Gate in' : 'Gate out'}
+                  {trip.label}
                 </button>
               ))}
             </div>
+            {fieldError('tripType') && <div className="gecko-field-error">{fieldError('tripType')}</div>}
           </div>
 
           <button type="submit" className="gecko-btn gecko-btn-primary" disabled={checking || !containerNo.trim() || !branchId}>
@@ -198,10 +258,17 @@ export default function GateDeskPage() {
         </div>
       </form>
 
+      {/* A 400 is shown on the field it names (below); this carries the rest —
+          the heading plus anything the server said that is not field-specific. */}
       {error && (
         <div className="gecko-alert gecko-alert-error">
           <Icon name="alertCircle" size={18} />
-          <div>{error}</div>
+          <div>
+            <div>{error.title}</div>
+            {error.status !== 400 && error.explanation && (
+              <div className="gecko-cell-meta">{error.explanation}</div>
+            )}
+          </div>
         </div>
       )}
 
@@ -226,15 +293,61 @@ export default function GateDeskPage() {
           </div>
 
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: 14, marginTop: 14 }}>
-            <Field label="Truck plate" value={plate} onChange={setPlate} placeholder="70-1234" />
+            <Field label="Truck plate" value={plate} onChange={setPlate} placeholder="70-1234" error={fieldError('truck.plate')} />
             <Field label="Driver" value={driver} onChange={setDriver} placeholder="Name on the licence" />
-            <Field label="Haulier code" value={haulier} onChange={setHaulier} placeholder="HAU-LCH" />
+            <Field label="Haulier code" value={haulier} onChange={setHaulier} placeholder="HAU-LCH" error={fieldError('truck.haulierCode')} />
+            <div className="gecko-form-group">
+              <label className="gecko-form-label">Truck category</label>
+              <select className="gecko-select" value={effectiveTruckCategory} onChange={e => setTruckCategory(e.target.value)}>
+                <option value="">Any truck</option>
+                {categories.filter(c => c.isActive).map(c => (
+                  <option key={c.code} value={c.code}>{c.descriptionEn}</option>
+                ))}
+              </select>
+              {fieldError('truck.truckCategoryCode') && <div className="gecko-field-error">{fieldError('truck.truckCategoryCode')}</div>}
+            </div>
             <Field
               label={view.nextStep?.checkGrossWeight ? 'Gross weight (kg) — required' : 'Gross weight (kg)'}
               value={grossWeight} onChange={setGrossWeight} placeholder="22150" type="number"
+              error={fieldError('grossWeightKg')}
             />
-            <Field label="Yard position" value={position} onChange={setPosition} placeholder="A-03-2" />
+            <Field
+              label={`Tare weight (kg)${needs('tareWeightKg') ? ' — required' : ''}`}
+              value={tareWeight} onChange={setTareWeight} placeholder="2200" type="number"
+              error={fieldError('tareWeightKg')}
+            />
+            <Field
+              label={`Max gross (kg)${needs('maxGrossWeightKg') ? ' — required' : ''}`}
+              value={maxGrossWeight} onChange={setMaxGrossWeight} placeholder="30480" type="number"
+              error={fieldError('maxGrossWeightKg')}
+            />
+            <Field
+              label={`Cargo weight (kg)${needs('cargoWeightKg') ? ' — required' : ''}`}
+              value={cargoWeight} onChange={setCargoWeight} placeholder="18000" type="number"
+              error={fieldError('cargoWeightKg')}
+            />
+            {/* Container class IS gradeCode — there is no separate field. */}
+            <Field label="Container class" value={gradeCode} onChange={setGradeCode} placeholder="A" error={fieldError('gradeCode')} />
+            <Field label="Material" value={materialCode} onChange={setMaterialCode} placeholder="STL" error={fieldError('materialCode')} />
+            <Field
+              label={`Customs permit no.${needs('customsPermitNo') ? ' — required' : ''}`}
+              value={customsPermitNo} onChange={setCustomsPermitNo} error={fieldError('customsPermitNo')}
+            />
+            <Field label="Paperless code" value={paperlessCode} onChange={setPaperlessCode} error={fieldError('paperlessCode')} />
+            <Field label="Next location" value={nextLocationCode} onChange={setNextLocationCode} error={fieldError('nextLocationCode')} />
+            <Field label="Yard position" value={position} onChange={setPosition} placeholder="A-03-2" error={fieldError('positionText')} />
           </div>
+
+          {/* Reefer detail — only worth the clerk's eyes on a reefer box. */}
+          <details className="gecko-eirin-reefer">
+            <summary className="gecko-form-label">Reefer detail</summary>
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: 14, marginTop: 10 }}>
+              <Field label="Vent setting" value={ventSetting} onChange={setVentSetting} error={fieldError('ventSetting')} />
+              <Field label="Humidity (%)" value={humidityPct} onChange={setHumidityPct} type="number" error={fieldError('humidityPct')} />
+              <Field label="Genset no." value={gensetNo} onChange={setGensetNo} error={fieldError('gensetNo')} />
+              <Field label="Clip-on no." value={clipOnNo} onChange={setClipOnNo} error={fieldError('clipOnNo')} />
+            </div>
+          </details>
 
           {/* Seals: the step's MDM rule decides whether one is required. */}
           <div className="gecko-stack gecko-stack-md" style={{ marginTop: 18 }}>
@@ -258,7 +371,7 @@ export default function GateDeskPage() {
                   value={seal.sealType}
                   onChange={e => setSeals(seals.map((s, j) => j === i ? { ...s, sealType: e.target.value } : s))}
                 >
-                  {['LINE', 'CUSTOMS', 'SHIPPER', 'TERMINAL', 'OTHER'].map(t => <option key={t} value={t}>{t}</option>)}
+                  {SEAL_TYPES.map(t => <option key={t} value={t}>{t}</option>)}
                 </select>
                 <label className="gecko-row gecko-row-start" style={{ gap: 6 }}>
                   <input
@@ -478,13 +591,20 @@ function ContextCard({ view }: { view: GatePreflight }) {
   );
 }
 
-function Field({ label, value, onChange, placeholder, type = 'text' }: {
+function Field({ label, value, onChange, placeholder, type = 'text', error }: {
   label: string; value: string; onChange: (v: string) => void; placeholder?: string; type?: string;
+  /** The server's message for THIS field, when a 400 named it. */
+  error?: string;
 }) {
   return (
     <div className="gecko-form-group">
       <label className="gecko-form-label">{label}</label>
-      <input className="gecko-input" value={value} type={type} placeholder={placeholder} onChange={e => onChange(e.target.value)} />
+      <input
+        className={`gecko-input${error ? ' gecko-input-error' : ''}`}
+        value={value} type={type} placeholder={placeholder}
+        onChange={e => onChange(e.target.value)}
+      />
+      {error && <div className="gecko-field-error">{error}</div>}
     </div>
   );
 }
@@ -541,7 +661,23 @@ function Receipt({ eir, onNext }: { eir: GateTransaction; onNext: () => void }) 
         <Line label="Gross weight" value={eir.grossWeightKg ? `${eir.grossWeightKg.toLocaleString()} kg` : '—'} />
         <Line label="Seals" value={eir.seals.length ? eir.seals.map(s => s.sealNo).join(', ') : '—'} />
         <Line label="Booking finished" value={eir.bookingContainerCompleted ? 'yes, the box is off it' : 'more steps to come'} />
+        <Line label="Trip" value={eir.tripType === 'PICK_UP_CONT' ? 'Pick-up' : 'Drop-off'} />
+        <Line label="Truck category" value={eir.truckCategoryCode ?? '—'} />
       </div>
+
+      {/* What the barrier said as this move was written — the truck differing
+          from the one paid for, gate hours, a warning-only coupon. The server
+          does not keep these, so this is the only place they appear. */}
+      {!!eir.findings?.length && (
+        <div className="gecko-eirin-findings" style={{ marginTop: 14 }}>
+          {eir.findings.map((f, i) => (
+            <div key={i} className={`gecko-eirin-finding gecko-eirin-finding-${f.severity.toLowerCase()}`}>
+              <Icon name={f.severity === 'BLOCK' ? 'alertCircle' : f.severity === 'OVERRIDE' || f.severity === 'WARN' ? 'warning' : 'info'} size={13} />
+              <span>{f.message}</span>
+            </div>
+          ))}
+        </div>
+      )}
 
       <div className="gecko-cell-meta" style={{ marginTop: 14 }}>
         Written in one transaction: the EIR, the step, the yard row, the visit journal

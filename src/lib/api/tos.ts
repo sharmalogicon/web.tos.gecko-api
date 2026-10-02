@@ -10,6 +10,48 @@ export type GateDirection = "IN" | "OUT";
 export type GateDecision = "ALLOWED" | "NEEDS_OVERRIDE" | "BLOCKED";
 export type GateSeverity = "INFO" | "WARN" | "OVERRIDE" | "BLOCK";
 
+/**
+ * The leg of the truck's trip, as Vector's clerks name it. REQUIRED on every
+ * gate transaction, and the server checks it agrees with `direction`: a
+ * drop-off is an IN, a pick-up is an OUT (400 on `tripType` otherwise).
+ *
+ * It is not a synonym for direction — it decides which fields the server then
+ * insists on (see TRIP_TYPE_RULES).
+ */
+export type TripType = "DROP_OFF_CONT" | "PICK_UP_CONT";
+
+export const TRIP_TYPES: { value: TripType; label: string; direction: GateDirection; hint: string }[] = [
+  { value: "DROP_OFF_CONT", label: "Drop-off", direction: "IN", hint: "the truck leaves a box here" },
+  { value: "PICK_UP_CONT", label: "Pick-up", direction: "OUT", hint: "the truck takes a box away" },
+];
+
+export const directionOfTrip = (trip: TripType): GateDirection =>
+  trip === "DROP_OFF_CONT" ? "IN" : "OUT";
+
+/**
+ * What the server will demand, so the clerk is told before the POST rather than
+ * by a 400 afterwards. The server remains the authority — this only mirrors it.
+ *
+ * FULL/EMPTY is the booking step's load state (preflight `nextStep.fullEmpty`),
+ * never what the clerk picked.
+ */
+export function requiredGateFields(
+  trip: TripType,
+  fullEmpty: "FULL" | "EMPTY" | null,
+  isExportBooking: boolean,
+): string[] {
+  if (trip === "PICK_UP_CONT") return [];
+  const required = ["tareWeightKg", "maxGrossWeightKg"];
+  if (fullEmpty === "FULL") {
+    required.push("cargoWeightKg", "seals");
+    if (isExportBooking) required.push("customsPermitNo");
+  }
+  return required;
+}
+
+/** Seal types the gate accepts. AGENT/CUSTOMER are Vector's "Agent Seal" / "Cust. Seal". */
+export const SEAL_TYPES = ["LINE", "SHIPPER", "CUSTOMS", "TERMINAL", "AGENT", "CUSTOMER"] as const;
+
 export interface GateFinding { code: string; message: string; severity: GateSeverity }
 
 export interface GateBooking {
@@ -57,6 +99,19 @@ export interface GateTransaction {
   cutoffKindApplied: string | null; cutoffAtApplied: string | null; isLate: boolean;
   cutoffExceptionId: string | null; lateOverrideReason: string | null; checkDigitOverrideReason: string | null;
   gateAuthorizationId: string | null;
+  // Vector parity (2026-10-01). `gradeCode` above doubles as the container
+  // class — there is deliberately no separate containerClassCode field.
+  /**
+   * Everything non-blocking the barrier said as the move was recorded — the
+   * truck not matching the one paid for, gate hours, a warning-only missing
+   * coupon. It is NOT stored: a later GET of this EIR returns null.
+   */
+  findings: GateFinding[] | null;
+  tripType: TripType; truckCategoryCode: string | null; materialCode: string | null;
+  maxGrossWeightKg: number | null; cargoWeightKg: number | null;
+  ventSetting: string | null; humidityPct: number | null;
+  gensetNo: string | null; clipOnNo: string | null;
+  customsPermitNo: string | null; paperlessCode: string | null; nextLocationCode: string | null;
   transactionAt: string; recordedAt: string; status: "COMPLETED" | "VOIDED";
   containerVisitId: string | null; bookingContainerCompleted: boolean; rowVersion: string;
 }
@@ -121,4 +176,101 @@ export function formatTime(value: string | null | undefined): string {
 export function dwellLabel(days: number): string {
   if (days <= 0) return "today";
   return days === 1 ? "1 day" : `${days} days`;
+}
+
+// ── the gate transaction request ────────────────────────────────────────────
+
+export interface GateTruckRequest {
+  plate: string;
+  trailerPlate?: string | null;
+  haulierCode?: string | null;
+  driverName?: string | null;
+  driverLicence?: string | null;
+  laneCode?: string | null;
+  /** Only stored when this POST opens a NEW visit; ignored alongside truckVisitId. */
+  truckCategoryCode?: string | null;
+}
+
+export interface GateSealRequest { sealNo: string; sealType: string; isIntact: boolean }
+
+/**
+ * Everything the gate POST accepts. Built in one place so the desk and the
+ * EIR-In screen cannot drift apart — they post the same contract.
+ */
+export interface GateTransactionRequest {
+  branchId: string;
+  containerNo: string;
+  direction: GateDirection;
+  tripType: TripType;
+  truckVisitId?: string | null;
+  truck?: GateTruckRequest | null;
+  transactionAt?: string | null;
+  grossWeightKg?: number | null;
+  tareWeightKg?: number | null;
+  vgmKg?: number | null;
+  vgmMethod?: string | null;
+  weightSource?: string | null;
+  /** The container class. There is no separate containerClassCode. */
+  gradeCode?: string | null;
+  conditionCode?: string | null;
+  temperatureC?: number | null;
+  isoCode?: string | null;
+  seals?: GateSealRequest[];
+  yardId?: string | null;
+  yardSlotId?: string | null;
+  positionText?: string | null;
+  checkDigitOverrideReason?: string | null;
+  lateOverrideReason?: string | null;
+  remarks?: string | null;
+  materialCode?: string | null;
+  maxGrossWeightKg?: number | null;
+  cargoWeightKg?: number | null;
+  ventSetting?: string | null;
+  humidityPct?: number | null;
+  gensetNo?: string | null;
+  clipOnNo?: string | null;
+  customsPermitNo?: string | null;
+  paperlessCode?: string | null;
+  nextLocationCode?: string | null;
+}
+
+/** "" → null, so an untouched optional field is absent rather than empty. */
+export const textOrNull = (value: string): string | null => {
+  const trimmed = value.trim();
+  return trimmed === "" ? null : trimmed;
+};
+
+/** "" → null, otherwise a number. Keeps 0 as 0 — a zero cargo weight is a value. */
+export const numberOrNull = (value: string): number | null => {
+  const trimmed = value.trim();
+  if (trimmed === "") return null;
+  const parsed = Number(trimmed);
+  return Number.isFinite(parsed) ? parsed : null;
+};
+
+/**
+ * Preflight for a truck the clerk has already keyed. Passing the truck lets the
+ * barrier compare it with the one the coupon was priced for — it never blocks,
+ * it just says so (TRUCK_CATEGORY_NOT_AS_PAID, HAULIER_NOT_AS_PAID). Send
+ * `truckVisitId` instead when a second box joins an open visit.
+ */
+export function preflightPath(params: {
+  branchId: string;
+  containerNo: string;
+  direction: GateDirection;
+  truckVisitId?: string | null;
+  truckCategoryCode?: string | null;
+  haulierCode?: string | null;
+}): string {
+  const query = new URLSearchParams({
+    branchId: params.branchId,
+    containerNo: params.containerNo,
+    direction: params.direction,
+  });
+  if (params.truckVisitId) query.set("truckVisitId", params.truckVisitId);
+  else {
+    if (params.truckCategoryCode) query.set("truckCategoryCode", params.truckCategoryCode);
+    if (params.haulierCode) query.set("haulierCode", params.haulierCode);
+  }
+  return `/api/tos/gate/preflight?${query}`;
 }

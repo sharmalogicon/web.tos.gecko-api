@@ -22,9 +22,17 @@ export class ApiError extends Error {
   readonly title: string;
   /** The ProblemDetails detail — the explanation; null when the server sent none. */
   readonly detail: string | null;
+  /**
+   * The whole problem body as the server sent it, for the extensions RFC 7807
+   * allows beyond title/detail/errors. The gate refusal is the one that matters
+   * today: a 409 from /api/tos/gate/transactions carries `decision` and a
+   * `findings[]` array naming every reason, and a clerk who cannot see those
+   * cannot act on the refusal.
+   */
+  readonly body: Record<string, unknown> | null;
 
   constructor(status: number, message: string, fieldErrors: FieldErrors = {}, code?: string,
-    title?: string, detail?: string | null) {
+    title?: string, detail?: string | null, body?: Record<string, unknown> | null) {
     super(message);
     this.name = "ApiError";
     this.status = status;
@@ -32,6 +40,13 @@ export class ApiError extends Error {
     this.code = code;
     this.title = title ?? message;
     this.detail = detail ?? null;
+    this.body = body ?? null;
+  }
+
+  /** A typed extension off the problem body, or undefined when absent. */
+  extension<T>(name: string): T | undefined {
+    const value = this.body?.[name];
+    return value === undefined ? undefined : (value as T);
   }
 
   /**
@@ -67,11 +82,13 @@ export async function toApiError(response: Response): Promise<ApiError> {
   let code: string | undefined;
   let title: string | undefined;
   let detail: string | null = null;
+  let raw: Record<string, unknown> | null = null;
 
   try {
     const body = await response.json();
     if (body && typeof body === "object") {
       const problem = body as Record<string, unknown>;
+      raw = problem;
       if (typeof problem.detail === "string" && problem.detail) message = problem.detail;
       else if (typeof problem.title === "string" && problem.title) message = problem.title;
       if (typeof problem.title === "string" && problem.title) title = problem.title;
@@ -87,5 +104,5 @@ export async function toApiError(response: Response): Promise<ApiError> {
     // A non-JSON body (a proxy error page, say) leaves the fallback message.
   }
 
-  return new ApiError(response.status, message, fieldErrors, code, title ?? fallback, detail);
+  return new ApiError(response.status, message, fieldErrors, code, title ?? fallback, detail, raw);
 }
