@@ -7998,3 +7998,139 @@ label.gecko-toggle.gecko-toggle-sm input:checked ~ .gecko-toggle-track .gecko-to
 }
 .gecko-cw-vas-option .gecko-cell-meta { font-family: var(--gecko-font-mono); }
 
+/* ═══════════════════════════════════════════════════════════════════════════
+   §20 — NEW BOOKING
+   The June 2026 layout, kept as classes. The order-type tiles replace what was
+   a hardcoded EXPORT/IMPORT × CY-CFS matrix: in Gecko the work order type is
+   the key and direction, service, cargo class and booking type are its
+   attributes, so one tile set driven by master data serves any depot.
+   ═══════════════════════════════════════════════════════════════════════════ */
+
+.gecko-newbk-page { max-width: 1040px; margin: 0 auto; padding-bottom: 60px; }
+
+.gecko-newbk-back {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 34px;
+  height: 34px;
+  border-radius: 8px;
+  border: 1px solid var(--gecko-border);
+  background: var(--gecko-bg-surface);
+  color: var(--gecko-text-secondary);
+  text-decoration: none;
+  flex: none;
+}
+
+/* The four steps. Only the first is a form; the rest are where the booking is
+   enriched afterwards, each on its own screen and its own transaction. */
+.gecko-newbk-steps {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 1px;
+  margin-bottom: 18px;
+  border: 1px solid var(--gecko-border);
+  border-radius: var(--gecko-radius-lg);
+  background: var(--gecko-border);
+  overflow: hidden;
+}
+@media (max-width: 760px) {
+  .gecko-newbk-steps { grid-template-columns: repeat(2, 1fr); }
+}
+.gecko-newbk-step {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 14px 18px;
+  background: var(--gecko-bg-surface);
+  font-size: var(--gecko-text-sm);
+  color: var(--gecko-text-disabled);
+}
+.gecko-newbk-step-on { background: var(--gecko-primary-600); color: #fff; font-weight: 600; }
+.gecko-newbk-step-n {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 22px;
+  height: 22px;
+  border-radius: 50%;
+  background: var(--gecko-bg-subtle);
+  color: var(--gecko-text-secondary);
+  font-size: 11px;
+  font-weight: 700;
+  flex: none;
+}
+.gecko-newbk-step-on .gecko-newbk-step-n { background: rgba(255,255,255,0.22); color: #fff; }
+
+.gecko-newbk-card { padding: 0; overflow: hidden; }
+.gecko-newbk-head {
+  padding: 20px 28px;
+  background: var(--gecko-bg-subtle);
+  border-bottom: 1px solid var(--gecko-border);
+}
+.gecko-newbk-filters { gap: 8px; }
+.gecko-newbk-body {
+  padding: 24px 28px;
+  display: flex;
+  flex-direction: column;
+  gap: 24px;
+}
+.gecko-newbk-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+  gap: 18px;
+}
+.gecko-newbk-addfwd { justify-content: flex-end; }
+
+.gecko-newbk-tiles {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(230px, 1fr));
+  gap: 10px;
+  margin-top: 12px;
+}
+.gecko-newbk-tile {
+  padding: 12px 14px;
+  border: 2px solid var(--gecko-border);
+  border-radius: 10px;
+  background: var(--gecko-bg-surface);
+  text-align: left;
+  cursor: pointer;
+  font-family: inherit;
+  transition: border-color var(--gecko-transition-fast) var(--gecko-ease-in-out),
+              background var(--gecko-transition-fast) var(--gecko-ease-in-out);
+}
+.gecko-newbk-tile:hover { border-color: var(--gecko-primary-300); }
+.gecko-newbk-tile-on {
+  border-color: var(--gecko-primary-600);
+  background: var(--gecko-primary-50);
+}
+.gecko-newbk-tile-code {
+  font-family: var(--gecko-font-mono);
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--gecko-text-primary);
+}
+.gecko-newbk-tile-desc {
+  margin-top: 2px;
+  font-size: 12px;
+  color: var(--gecko-text-secondary);
+}
+.gecko-newbk-tile-meta {
+  margin-top: 6px;
+  font-size: 10px;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--gecko-text-disabled);
+}
+
+.gecko-newbk-foot {
+  padding: 16px 28px;
+  border-top: 1px solid var(--gecko-border);
+  background: var(--gecko-bg-subtle);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+

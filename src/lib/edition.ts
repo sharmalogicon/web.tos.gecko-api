@@ -76,13 +76,14 @@ export const PILOT_PATHS: readonly string[] = [
  * bound to the API.
  */
 export const PILOT_BLOCKED: readonly string[] = [
-  // 2026-10-02 — the June design took these two routes and is still on MOCK
-  // data. Blocking them keeps fixture screens off the pilot KORAKIT uses, which
-  // is the one rule this file exists to enforce. The API-bound September
-  // versions still work at /gate/eir-in-sept and /bookings/new-sept.
-  // REMOVE BOTH LINES the moment the June pages are bound to the API.
+  // 2026-10-02 — the June design took this route and is still on MOCK data.
+  // Blocking it keeps fixture screens off the pilot KORAKIT uses, which is the
+  // one rule this file exists to enforce. The API-bound September version is
+  // still served at /gate/eir-in-sept, and LANDING_PATH points there.
+  // REMOVE THIS LINE the moment the June Gate In is bound to the API.
   '/gate/eir-in',
-  '/bookings/new',
+  // /bookings/new came off this list on 2026-10-03: it is bound now — real
+  // order types, real parties, a real POST — so the pilot serves it again.
 ];
 
 /**

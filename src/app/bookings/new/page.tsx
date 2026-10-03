@@ -1,264 +1,396 @@
 "use client";
 /**
- * NEW BOOKING — the June 2026 design, restored 2026-10-02 as the page to build on.
+ * NEW BOOKING — the June 2026 layout, live against Gecko.Api.
  *
- * STATE: copied unedited from commit 5f82606 and still on MOCK DATA — Save
- * writes nothing. The API binding is the next pass.
+ * WHAT A BOOKING IS, AT CREATION. The header plus at least one REQUIREMENT:
+ * what equipment, how many. The API refuses anything less ("A booking needs at
+ * least one requirement line"), and rightly — a booking with no equipment line
+ * cannot be gated against or priced.
  *
- * The September version that WAS bound to the API is kept at
- * /bookings/new-sept — hidden from the menu, not deleted. It already does the
- * real POST /api/tos/bookings with requirements and container assignment.
+ * It does NOT need containers. The requirement is the promise (20 x 40HC); the
+ * containers are what actually turned up, assigned later on the detail page,
+ * each in its own transaction. For KORAKIT that gap is the normal case: 99.7%
+ * of their bookings are raised at the gate as the truck arrives. A booking
+ * sitting with a requirement and no boxes is business as usual, not an orphan.
+ *
+ * So this screen creates and hands over — create-then-enrich, as Navis, SAP and
+ * Oracle TM do it. Lose the connection while assigning the 60th box and the
+ * first 59 are safely on; save-it-all-at-the-end would lose the lot.
+ *
+ * NOTHING HERE IS HARDCODED. The order types, the booking types used as
+ * filters, the lines, parties and equipment all come from master data, because
+ * the next depot's list will not look like this one's.
  */
-
-import React, { useState } from 'react';
+import React, { useMemo, useState } from 'react';
 import Link from 'next/link';
+import { useRouter } from 'next/navigation';
 import { Icon } from '@/components/ui/Icon';
-import { EntitySearch, type EntityOption } from '@/components/ui/EntitySearch';
 import { DateField } from '@/components/ui/DateField';
+import { PartyPicker } from '@/app/tariff/_components/PartyPicker';
+import { apiSend, newIdempotencyKey } from '@/lib/api/client';
+import { ApiError } from '@/lib/api/problem';
+import { useApiList } from '@/lib/api/use-api';
+import { useFacility } from '@/lib/api/facility';
+import { useCodeList, codeLabel } from '@/lib/api/lookups';
 
-const ORDER_TYPES: Record<string, { code: string; label: string; desc: string; movements: string[] }[]> = {
-  EXPORT: [
-    { code: 'EXP CY/CY',   label: 'CY / CY',   desc: 'FCL — full container, yard to yard',                movements: ['FULL IN', 'LOAD'] },
-    { code: 'EXP CY/CFS',  label: 'CY / CFS',  desc: 'FCL origin → CFS stuffing at destination',          movements: ['FULL IN', 'LOAD', 'DISCHARGE', 'STRIP'] },
-    { code: 'EXP CFS/CY',  label: 'CFS / CY',  desc: 'LCL stuffed at origin CFS → FCL to destination',   movements: ['EMPTY IN', 'STUFF', 'FULL IN', 'LOAD'] },
-    { code: 'EXP CFS/CFS', label: 'CFS / CFS', desc: 'LCL both ends — CFS stuffing and stripping',        movements: ['EMPTY IN', 'STUFF', 'FULL IN', 'LOAD', 'DISCHARGE', 'STRIP'] },
-    { code: 'EXP DOOR/CY', label: 'DOOR / CY', desc: "Merchant haulage from shipper's premises",          movements: ['GATE-IN', 'LOAD'] },
-  ],
-  IMPORT: [
-    { code: 'IMP CY/CY',   label: 'CY / CY',   desc: 'FCL — full container, yard to yard',                movements: ['DISCHARGE', 'FULL OUT'] },
-    { code: 'IMP CY/CFS',  label: 'CY / CFS',  desc: 'FCL discharged → stripped at destination CFS',      movements: ['DISCHARGE', 'FULL IN', 'STRIP', 'EMPTY OUT'] },
-    { code: 'IMP CFS/CY',  label: 'CFS / CY',  desc: 'LCL at origin CFS → FCL discharge at destination', movements: ['DISCHARGE', 'FULL OUT'] },
-    { code: 'IMP CY/DOOR', label: 'CY / DOOR', desc: "CY discharge → carrier delivers to consignee",      movements: ['DISCHARGE', 'FULL OUT'] },
-  ],
-};
+interface OrderTypeRow {
+  orderTypeCode: string;
+  descriptionEn: string;
+  directionCode: string | null;
+  serviceCode: string | null;
+  cargoClassCode: string | null;
+  bookingTypeCode: string | null;
+  isActive: boolean;
+}
 
-function FieldGroup({ label, required, children, hint }: { label: string; required?: boolean; children: React.ReactNode; hint?: string }) {
+interface EquipmentTypeRow {
+  equipmentTypeId: string;
+  typeCode: string;
+  descriptionEn: string;
+  isActive: boolean;
+}
+
+interface CreatedBooking { bookingId: string; orderNo: string }
+
+/**
+ * The 409 when this depot already has a live booking on the same carrier
+ * reference. It names the one that exists, so the answer is to open it rather
+ * than to raise a second — which is the whole point of the guard.
+ */
+interface DuplicateBooking { existingOrderNo: string; existingBookingId: string; carrierRef: string }
+
+/** Tiles are only worth filtering once there are enough to hunt through. */
+const FILTER_THRESHOLD = 6;
+
+function FieldGroup({ label, required, children, hint, error }: {
+  label: string; required?: boolean; children: React.ReactNode; hint?: string; error?: string;
+}) {
   return (
     <div className="gecko-form-group">
-      <label className={`gecko-label${required ? ' gecko-label-required' : ''}`}>{label}</label>
+      <label className={`gecko-form-label${required ? ' gecko-form-label-required' : ''}`}>{label}</label>
       {children}
-      {hint && <div className="gecko-helper-text" style={{ fontSize: 10.5 }}>{hint}</div>}
+      {error
+        ? <div className="gecko-field-error">{error}</div>
+        : hint && <div className="gecko-cell-meta gecko-mt-1">{hint}</div>}
     </div>
   );
 }
 
-
 export default function NewBookingPage() {
-  const [bookingType, setBookingType] = useState<'EXPORT' | 'IMPORT'>('EXPORT');
-  const [orderType, setOrderType]     = useState('EXP CY/CY');
-  const [bookingNo, setBookingNo]     = useState('');
-  const [subBLNo, setSubBLNo]         = useState('');
-  const [bookingDate, setBookingDate] = useState('2026-04-26');
-  const [agent,   setAgent]   = useState<EntityOption | null>(null);
-  const [shipper, setShipper] = useState<EntityOption | null>(null);
-  const [fwd,     setFwd]     = useState<EntityOption | null>(null);
-  const [showFwd, setShowFwd] = useState(false);
+  const router = useRouter();
+  const { branch } = useFacility();
 
-  const handleTypeChange = (type: 'EXPORT' | 'IMPORT') => {
-    setBookingType(type);
-    setOrderType(ORDER_TYPES[type][0].code);
-  };
+  // ── master data ───────────────────────────────────────────────────────────
+  const { data: orderTypes, loading: loadingTypes } = useApiList<OrderTypeRow>('/api/master/order-types?pageSize=200');
+  const { data: equipment } = useApiList<EquipmentTypeRow>('/api/master/equipment-types?pageSize=200');
+  const bookingTypes = useCodeList('BOOKING_TYPE');
 
-  const orderTypes   = ORDER_TYPES[bookingType];
-  const selectedOT   = orderTypes.find(t => t.code === orderType) ?? orderTypes[0];
-  const isLCL        = orderType.includes('CFS');
-  const blLabel      = bookingType === 'IMPORT' ? 'B/L No' : 'Booking No';
-  const subLabel     = bookingType === 'IMPORT' ? 'Sub-B/L No' : 'Sub-Booking No';
-  const custLabel    = bookingType === 'EXPORT' ? 'Shipper' : 'Consignee';
+  // ── filters over the order types ──────────────────────────────────────────
+  const [direction, setDirection] = useState('');
+  const [bookingTypeFilter, setBookingTypeFilter] = useState('');
 
-  const canCreate = bookingNo && agent && shipper && orderType;
+  const active = useMemo(() => (orderTypes ?? []).filter(t => t.isActive), [orderTypes]);
+  const directions = useMemo(
+    () => Array.from(new Set(active.map(t => t.directionCode).filter(Boolean) as string[])).sort(),
+    [active],
+  );
+  /** Only the booking types this depot's order types actually use. */
+  const usedBookingTypes = useMemo(
+    () => Array.from(new Set(active.map(t => t.bookingTypeCode).filter(Boolean) as string[])).sort(),
+    [active],
+  );
+  const shown = useMemo(() => active.filter(t =>
+    (!direction || t.directionCode === direction)
+    && (!bookingTypeFilter || t.bookingTypeCode === bookingTypeFilter)), [active, direction, bookingTypeFilter]);
+  const showFilters = active.length >= FILTER_THRESHOLD;
+
+  // ── the booking ───────────────────────────────────────────────────────────
+  const [orderTypeCode, setOrderTypeCode] = useState('');
+  const [carrierRef, setCarrierRef] = useState('');
+  const [customerRef, setCustomerRef] = useState('');
+  const [validFrom, setValidFrom] = useState('');
+  const [validTo, setValidTo] = useState('');
+  const [lineCode, setLineCode] = useState<string | null>(null);
+  const [agentCode, setAgentCode] = useState<string | null>(null);
+  const [customerCode, setCustomerCode] = useState<string | null>(null);
+  const [forwarderCode, setForwarderCode] = useState<string | null>(null);
+  const [showForwarder, setShowForwarder] = useState(false);
+  const [equipmentTypeCode, setEquipmentTypeCode] = useState('');
+  const [qty, setQty] = useState('1');
+  const [remarks, setRemarks] = useState('');
+
+  const [saving, setSaving] = useState(false);
+  const [error, setError] = useState<ApiError | null>(null);
+  const fieldError = (name: string) => error?.forField(name);
+  // 409 with the existing booking named — offer it rather than a dead end.
+  const duplicate = error?.status === 409 && error.extension<string>('existingOrderNo')
+    ? {
+        existingOrderNo: error.extension<string>('existingOrderNo')!,
+        existingBookingId: error.extension<string>('existingBookingId')!,
+        carrierRef: error.extension<string>('carrierRef') ?? carrierRef,
+      } satisfies DuplicateBooking
+    : null;
+
+  /**
+   * One key for this form, minted when it opens and kept for every retry.
+   * A failed POST does not spend it, so correcting a field and pressing Save
+   * again reuses it — which is exactly what stops a lost response becoming a
+   * second booking. It is only replaced when the clerk starts a NEW booking.
+   */
+  const [idempotencyKey] = useState(newIdempotencyKey);
+
+  const selected = shown.find(t => t.orderTypeCode === orderTypeCode)
+    ?? active.find(t => t.orderTypeCode === orderTypeCode)
+    ?? null;
+
+  // The API's three: branch, order type, line. Plus one requirement, or it refuses.
+  const canCreate = !!branch && !!orderTypeCode && !!lineCode && !!equipmentTypeCode
+    && Number(qty) > 0 && !saving;
+
+  const missing = !branch ? 'No depot is assigned to this account.'
+    : !orderTypeCode ? 'Choose a work order type.'
+    : !lineCode ? 'Choose the shipping line.'
+    : !equipmentTypeCode ? 'Choose the equipment and how many.'
+    : Number(qty) > 0 ? null : 'How many boxes?';
+
+  async function create() {
+    if (!canCreate || !branch) return;
+    setSaving(true);
+    setError(null);
+    try {
+      const made = await apiSend<CreatedBooking>('POST', '/api/tos/bookings', {
+        branchId: branch.branchId,
+        orderTypeCode,
+        lineCode,
+        agentCode,
+        customerCode,
+        forwarderCode,
+        carrierRef: carrierRef.trim() || null,
+        customerRef: customerRef.trim() || null,
+        validFrom: validFrom || null,
+        validTo: validTo || null,
+        remarks: remarks.trim() || null,
+        // The promise. The boxes themselves are assigned on the detail page,
+        // one transaction each, which is what survives a dropped connection.
+        requirements: [{ equipmentTypeCode, qty: Number(qty) }],
+      }, idempotencyKey);
+      router.push(`/bookings/${made.bookingId}`);
+    } catch (e) {
+      setError(e instanceof ApiError ? e : new ApiError(0, 'The booking could not be created.'));
+      setSaving(false);
+    }
+  }
 
   return (
-    <div style={{ maxWidth: 1040, margin: '0 auto', paddingBottom: 60 }}>
-
-      {/* Page header */}
+    <div className="gecko-newbk-page">
       <div className="gecko-row gecko-mb-5" style={{ gap: 14 }}>
-        <Link href="/bookings" style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', width: 34, height: 34, borderRadius: 8, border: '1px solid var(--gecko-border)', background: 'var(--gecko-bg-surface)', color: 'var(--gecko-text-secondary)', textDecoration: 'none' }}>
+        <Link href="/bookings" className="gecko-newbk-back" aria-label="Back to bookings">
           <Icon name="arrowLeft" size={16} />
         </Link>
         <div>
           <h1 className="gecko-page-title">New Booking</h1>
-          <div className="gecko-page-subtitle gecko-mt-1" style={{ fontSize: 12 }}>Create the booking shell first — containers and voyage details can be added after.</div>
+          <div className="gecko-page-subtitle">
+            Create the booking and what it asks for; containers and voyage are added after.
+            {branch && <> · {branch.displayName}</>}
+          </div>
         </div>
       </div>
 
-      {/* ── Step indicator ── */}
-      <div style={{ display: 'flex', gap: 0, marginBottom: 28, border: '1px solid var(--gecko-border)', borderRadius: 10, overflow: 'hidden', background: 'var(--gecko-bg-surface)' }}>
+      <div className="gecko-newbk-steps">
         {[
-          { n: 1, label: 'Booking Identity',  active: true  },
-          { n: 2, label: 'Voyage & Ports',    active: false },
-          { n: 3, label: 'Containers',        active: false },
-          { n: 4, label: 'Cargo & Docs',      active: false },
-        ].map((s, i, arr) => (
-          <div key={s.n} style={{ flex: 1, padding: '12px 16px', background: s.active ? 'var(--gecko-primary-600)' : 'transparent', borderRight: i < arr.length - 1 ? '1px solid var(--gecko-border)' : 'none', display: 'flex', alignItems: 'center', gap: 10, opacity: s.active ? 1 : 0.5 }}>
-            <div style={{ width: 24, height: 24, borderRadius: '50%', background: s.active ? '#fff' : 'var(--gecko-bg-subtle)', color: s.active ? 'var(--gecko-primary-600)' : 'var(--gecko-text-disabled)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 11, fontWeight: 800, flexShrink: 0 }}>{s.n}</div>
-            <span style={{ fontSize: 12, fontWeight: 600, color: s.active ? '#fff' : 'var(--gecko-text-secondary)', whiteSpace: 'nowrap' }}>{s.label}</span>
+          { n: 1, label: 'Booking Identity', active: true },
+          { n: 2, label: 'Voyage & Ports', active: false },
+          { n: 3, label: 'Containers', active: false },
+          { n: 4, label: 'Cargo & Docs', active: false },
+        ].map(s => (
+          <div key={s.n} className={`gecko-newbk-step ${s.active ? 'gecko-newbk-step-on' : ''}`}>
+            <span className="gecko-newbk-step-n">{s.n}</span>
+            <span>{s.label}</span>
           </div>
         ))}
       </div>
 
-      {/* ── Main form card ── */}
-      <div className="gecko-card" style={{ padding: 0, overflow: 'hidden' }}>
+      <div className="gecko-card gecko-newbk-card">
 
-        {/* Booking type toggle */}
-        <div style={{ padding: '20px 28px', background: 'var(--gecko-bg-subtle)', borderBottom: '1px solid var(--gecko-border)' }}>
-          <div className="gecko-eyebrow" style={{ marginBottom: 12 }}>Booking Type</div>
-          <div style={{ display: 'flex', gap: 12 }}>
-            {(['EXPORT', 'IMPORT'] as const).map(t => (
-              <button
-                key={t}
-                onClick={() => handleTypeChange(t)}
-                style={{
-                  flex: 1, padding: '16px 20px', borderRadius: 10, border: '2px solid',
-                  borderColor: bookingType === t ? 'var(--gecko-primary-600)' : 'var(--gecko-border)',
-                  background: bookingType === t ? 'var(--gecko-primary-600)' : 'var(--gecko-bg-surface)',
-                  color: bookingType === t ? '#fff' : 'var(--gecko-text-secondary)',
-                  cursor: 'pointer', fontFamily: 'inherit', textAlign: 'left', transition: 'all 120ms',
-                }}
-              >
-                <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-                  <Icon name={t === 'EXPORT' ? 'arrowRight' : 'arrowLeft'} size={20} />
-                  <div>
-                    <div style={{ fontSize: 15, fontWeight: 800, letterSpacing: '0.04em' }}>{t}</div>
-                    <div style={{ fontSize: 11, marginTop: 2, opacity: 0.8 }}>
-                      {t === 'EXPORT' ? 'Outbound — loading onto vessel' : 'Inbound — discharge from vessel'}
-                    </div>
-                  </div>
+        {/* ── the work order type: everything else follows from it ─────────── */}
+        <div className="gecko-newbk-head">
+          <div className="gecko-row gecko-row-between gecko-row-baseline">
+            <div className="gecko-eyebrow">Work order type</div>
+            {showFilters && (
+              <div className="gecko-row gecko-newbk-filters">
+                <select className="gecko-select" aria-label="Direction"
+                  value={direction} onChange={e => setDirection(e.target.value)}>
+                  <option value="">Any direction</option>
+                  {directions.map(d => <option key={d} value={d}>{d}</option>)}
+                </select>
+                <select className="gecko-select" aria-label="Booking type"
+                  value={bookingTypeFilter} onChange={e => setBookingTypeFilter(e.target.value)}>
+                  <option value="">Any booking type</option>
+                  {usedBookingTypes.map(b => (
+                    <option key={b} value={b}>{codeLabel(bookingTypes.values, b)}</option>
+                  ))}
+                </select>
+              </div>
+            )}
+          </div>
+
+          {loadingTypes
+            ? <div className="gecko-dash-placeholder">Loading…</div>
+            : shown.length === 0
+              ? <div className="gecko-dash-placeholder">
+                  {active.length === 0
+                    ? 'This depot has no active work order types. One is needed before a booking can be raised.'
+                    : 'No order type matches these filters.'}
                 </div>
-              </button>
-            ))}
-          </div>
+              : (
+                <div className="gecko-newbk-tiles">
+                  {shown.map(t => (
+                    <button
+                      key={t.orderTypeCode}
+                      type="button"
+                      className={`gecko-newbk-tile ${orderTypeCode === t.orderTypeCode ? 'gecko-newbk-tile-on' : ''}`}
+                      onClick={() => setOrderTypeCode(t.orderTypeCode)}
+                    >
+                      <div className="gecko-newbk-tile-code">{t.orderTypeCode}</div>
+                      <div className="gecko-newbk-tile-desc">{t.descriptionEn}</div>
+                      <div className="gecko-newbk-tile-meta">
+                        {[t.directionCode, t.serviceCode, t.cargoClassCode].filter(Boolean).join(' · ')}
+                        {t.bookingTypeCode && <> · {codeLabel(bookingTypes.values, t.bookingTypeCode)}</>}
+                      </div>
+                    </button>
+                  ))}
+                </div>
+              )}
+          {fieldError('orderTypeCode') && <div className="gecko-field-error">{fieldError('orderTypeCode')}</div>}
         </div>
 
-        <div style={{ padding: '24px 28px', display: 'flex', flexDirection: 'column', gap: 24 }}>
+        <div className="gecko-newbk-body">
 
-          {/* Order Type */}
-          <div>
-            <div className="gecko-eyebrow" style={{ marginBottom: 12 }}>Order Type — Container Mode</div>
-            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 8 }}>
-              {orderTypes.map(ot => (
-                <button
-                  key={ot.code}
-                  onClick={() => { setOrderType(ot.code); setShowFwd(ot.code.includes('CFS')); }}
-                  style={{
-                    padding: '12px 14px', borderRadius: 8, border: '1.5px solid',
-                    borderColor: orderType === ot.code ? 'var(--gecko-primary-400)' : 'var(--gecko-border)',
-                    background: orderType === ot.code ? 'var(--gecko-primary-50)' : 'var(--gecko-bg-surface)',
-                    cursor: 'pointer', fontFamily: 'inherit', textAlign: 'left', transition: 'all 100ms',
-                  }}
-                >
-                  <div style={{ fontSize: 13, fontWeight: 700, color: orderType === ot.code ? 'var(--gecko-primary-700)' : 'var(--gecko-text-primary)', fontFamily: 'var(--gecko-font-mono)' }}>{ot.label}</div>
-                  <div className="gecko-cell-meta" style={{ lineHeight: 1.4 }}>{ot.desc}</div>
+          {/* ── who ───────────────────────────────────────────────────────── */}
+          <div className="gecko-newbk-grid">
+            <FieldGroup label="Shipping line" required
+              hint="Whose box it is. The gate and the tariff both resolve through it."
+              error={fieldError('lineCode')}>
+              <PartyPicker role="SHIPPING_LINE" value={lineCode} onChange={setLineCode}
+                placeholder="Search line code or name…" error={fieldError('lineCode')} />
+            </FieldGroup>
+
+            <FieldGroup label="Agent" hint="The line's agent, when one acts for them."
+              error={fieldError('agentCode')}>
+              <PartyPicker role="SHIPPING_LINE" value={agentCode} onChange={setAgentCode}
+                placeholder="Search agent…" error={fieldError('agentCode')} />
+            </FieldGroup>
+
+            <FieldGroup label="Customer" hint="Who the depot bills."
+              error={fieldError('customerCode')}>
+              <PartyPicker role="CUSTOMER" value={customerCode} onChange={setCustomerCode}
+                placeholder="Search customer…" error={fieldError('customerCode')} />
+            </FieldGroup>
+
+            {showForwarder || forwarderCode ? (
+              <FieldGroup label="Freight forwarder" error={fieldError('forwarderCode')}>
+                <PartyPicker role="FORWARDER" value={forwarderCode} onChange={setForwarderCode}
+                  placeholder="Search forwarder…" error={fieldError('forwarderCode')} />
+              </FieldGroup>
+            ) : (
+              <div className="gecko-form-group gecko-newbk-addfwd">
+                <button type="button" className="gecko-btn gecko-btn-outline gecko-btn-sm"
+                  onClick={() => setShowForwarder(true)}>
+                  <Icon name="plus" size={13} /> Add freight forwarder
                 </button>
-              ))}
-            </div>
-            {/* Movement preview */}
-            <div style={{ marginTop: 10, padding: '10px 14px', background: 'var(--gecko-bg-subtle)', borderRadius: 8, display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
-              <span className="gecko-eyebrow" style={{ color: 'var(--gecko-text-disabled)', marginRight: 4 }}>Movements:</span>
-              {selectedOT.movements.map((m, i) => (
-                <React.Fragment key={m}>
-                  <span style={{ fontSize: 11, fontWeight: 700, fontFamily: 'var(--gecko-font-mono)', color: 'var(--gecko-primary-700)', background: 'var(--gecko-primary-100)', padding: '2px 7px', borderRadius: 4 }}>{m}</span>
-                  {i < selectedOT.movements.length - 1 && <Icon name="arrowRight" size={11} style={{ color: 'var(--gecko-text-disabled)' }} />}
-                </React.Fragment>
-              ))}
-            </div>
+              </div>
+            )}
           </div>
 
-          {/* Divider */}
-          <div style={{ height: 1, background: 'var(--gecko-border)' }} />
-
-          {/* Booking Reference */}
+          {/* ── what it asks for ──────────────────────────────────────────── */}
           <div>
-            <div className="gecko-eyebrow" style={{ marginBottom: 12 }}>Booking Reference</div>
-            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 180px', gap: 14 }}>
-              <FieldGroup label={blLabel} required>
-                <input className="gecko-input gecko-text-mono" placeholder="e.g. EGLV149602390729" value={bookingNo} onChange={e => setBookingNo(e.target.value)} />
+            <div className="gecko-eyebrow gecko-mb-3">What this booking asks for</div>
+            <div className="gecko-newbk-grid">
+              <FieldGroup label="Equipment" required error={fieldError('requirements[0].equipmentTypeCode')}>
+                <select className="gecko-select" value={equipmentTypeCode}
+                  onChange={e => setEquipmentTypeCode(e.target.value)}>
+                  <option value="">Choose…</option>
+                  {(equipment ?? []).filter(t => t.isActive).map(t => (
+                    <option key={t.equipmentTypeId} value={t.typeCode}>{t.typeCode} — {t.descriptionEn}</option>
+                  ))}
+                </select>
               </FieldGroup>
-              <FieldGroup label={subLabel}>
-                <input className="gecko-input gecko-text-mono" placeholder="Optional" value={subBLNo} onChange={e => setSubBLNo(e.target.value)} />
-              </FieldGroup>
-              <FieldGroup label="Booking Date" required>
-                <DateField value={bookingDate} onChange={setBookingDate} />
+              <FieldGroup label="How many" required
+                hint="The boxes themselves are assigned later — they need not be known now."
+                error={fieldError('requirements[0].qty')}>
+                <input className="gecko-input" type="number" min={1} value={qty}
+                  onChange={e => setQty(e.target.value)} />
               </FieldGroup>
             </div>
+            {fieldError('requirements') && <div className="gecko-field-error">{fieldError('requirements')}</div>}
           </div>
 
-          {/* Divider */}
-          <div style={{ height: 1, background: 'var(--gecko-border)' }} />
+          {/* ── references and validity ───────────────────────────────────── */}
+          <div className="gecko-newbk-grid">
+            <FieldGroup label="Carrier reference" hint="The line's booking or B/L number."
+              error={fieldError('carrierRef')}>
+              <input className="gecko-input gecko-mono" value={carrierRef} placeholder="e.g. EGLV149602390729"
+                onChange={e => setCarrierRef(e.target.value.toUpperCase())} />
+            </FieldGroup>
+            <FieldGroup label="Customer reference" error={fieldError('customerRef')}>
+              <input className="gecko-input" value={customerRef} placeholder="Optional"
+                onChange={e => setCustomerRef(e.target.value)} />
+            </FieldGroup>
+            <FieldGroup label="Valid from" error={fieldError('validFrom')}>
+              <DateField value={validFrom} onChange={setValidFrom} />
+            </FieldGroup>
+            <FieldGroup label="Valid to" hint="After this the gate refuses the move."
+              error={fieldError('validTo')}>
+              <DateField value={validTo} onChange={setValidTo} />
+            </FieldGroup>
+          </div>
 
-          {/* Parties */}
-          <div>
-            <div className="gecko-eyebrow" style={{ marginBottom: 12 }}>Parties</div>
-            <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
+          <FieldGroup label="Remarks" error={fieldError('remarks')}>
+            <input className="gecko-input" value={remarks} placeholder="Optional"
+              onChange={e => setRemarks(e.target.value)} />
+          </FieldGroup>
 
-              <FieldGroup label="Shipping Agent / Line" required hint="Line operator — drives EDO linkage and container ownership">
-                <EntitySearch
-                  entityType="agent"
-                  value={agent}
-                  onChange={setAgent}
-                  placeholder="Search agent code or line name…"
-                  required
-                />
-              </FieldGroup>
-
-              <FieldGroup label={custLabel} required>
-                <EntitySearch
-                  entityType={bookingType === 'EXPORT' ? 'shipper' : 'consignee'}
-                  value={shipper}
-                  onChange={setShipper}
-                  placeholder={`Search ${custLabel.toLowerCase()} code or name…`}
-                  required
-                />
-              </FieldGroup>
-
-              {(showFwd || isLCL) && (
-                <FieldGroup label="Freight Forwarder" hint="Required for LCL / CFS order types">
-                  <EntitySearch
-                    entityType="forwarder"
-                    value={fwd}
-                    onChange={setFwd}
-                    placeholder="Search forwarder code or name…"
-                  />
-                </FieldGroup>
-              )}
-
-              {!showFwd && !isLCL && (
-                <button
-                  onClick={() => setShowFwd(true)}
-                  style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '8px 12px', background: 'none', border: '1px dashed var(--gecko-border)', borderRadius: 8, color: 'var(--gecko-text-secondary)', cursor: 'pointer', fontSize: 12, fontFamily: 'inherit', width: 'fit-content' }}
-                >
-                  <Icon name="plus" size={13} /> Add Freight Forwarder
-                </button>
-              )}
+          {duplicate ? (
+            <div className="gecko-alert gecko-alert-warning gecko-row" style={{ gap: 10 }}>
+              <Icon name="alertCircle" size={18} />
+              <div>
+                <div>That booking already exists: <strong>{duplicate.existingOrderNo}</strong></div>
+                <div className="gecko-cell-meta">
+                  Carrier reference {duplicate.carrierRef} is already on it at this depot.
+                </div>
+                <Link href={`/bookings/${duplicate.existingBookingId}`} className="gecko-link">
+                  Open {duplicate.existingOrderNo} →
+                </Link>
+              </div>
             </div>
-          </div>
+          ) : error && !error.forField('orderTypeCode') && (
+            <div className="gecko-alert gecko-alert-error gecko-row" style={{ gap: 10 }}>
+              <Icon name="alertCircle" size={18} />
+              <div>
+                <div>{error.title}</div>
+                {error.status !== 400 && error.explanation && (
+                  <div className="gecko-cell-meta">{error.explanation}</div>
+                )}
+              </div>
+            </div>
+          )}
         </div>
 
-        {/* Footer */}
-        <div style={{ padding: '16px 28px', borderTop: '1px solid var(--gecko-border)', background: 'var(--gecko-bg-subtle)', display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12 }}>
+        <div className="gecko-newbk-foot">
           <div className="gecko-page-subtitle">
-            {canCreate
-              ? <span style={{ display: 'flex', alignItems: 'center', gap: 6, color: 'var(--gecko-success-700)' }}><Icon name="checkCircle" size={14} /> Ready to create — voyage, containers and cargo added in next steps</span>
-              : `Fill in Booking No${!agent ? ', Shipping Agent' : ''}${!shipper ? ` and ${custLabel}` : ''} to continue`}
+            {selected
+              ? <>Creates a <strong>{selected.orderTypeCode}</strong> booking at {branch?.displayName ?? 'this depot'} — containers and voyage are added next.</>
+              : missing}
           </div>
-          <div style={{ display: 'flex', gap: 10 }}>
-            <Link href="/bookings" className="gecko-btn gecko-btn-outline gecko-btn-sm" style={{ textDecoration: 'none' }}>Cancel</Link>
-            <Link
-              href={canCreate ? '/bookings/EGLV149602390729' : '#'}
-              className={`gecko-btn gecko-btn-sm ${canCreate ? 'gecko-btn-primary' : 'gecko-btn-outline'}`}
-              style={{ textDecoration: 'none', opacity: canCreate ? 1 : 0.5, pointerEvents: canCreate ? 'auto' : 'none', display: 'flex', alignItems: 'center', gap: 6 }}
-            >
-              Create Booking <Icon name="arrowRight" size={14} />
-            </Link>
+          <div className="gecko-row" style={{ gap: 10 }}>
+            <Link href="/bookings" className="gecko-btn gecko-btn-outline gecko-btn-sm">Cancel</Link>
+            {/* Disabled while in flight: the API has no idempotency key yet, so a
+                second click would raise a second booking. */}
+            <button type="button" className="gecko-btn gecko-btn-primary gecko-btn-sm"
+              onClick={create} disabled={!canCreate}>
+              {saving ? 'Creating…' : <>Create booking <Icon name="arrowRight" size={14} /></>}
+            </button>
           </div>
-        </div>
-      </div>
-
-      {/* Info callout */}
-      <div style={{ marginTop: 16, padding: '12px 16px', background: 'var(--gecko-info-50)', border: '1px solid var(--gecko-info-200)', borderRadius: 8, display: 'flex', gap: 10, alignItems: 'flex-start' }}>
-        <Icon name="info" size={15} style={{ color: 'var(--gecko-info-600)', flexShrink: 0, marginTop: 1 }} />
-        <div style={{ fontSize: 12, color: 'var(--gecko-info-800)', lineHeight: 1.6 }}>
-          <strong>Booking created immediately on save.</strong> You can safely close the browser after this step — your booking is in the system with an Order No. Add vessel details, containers, and cargo at any time before cut-off.
         </div>
       </div>
     </div>
