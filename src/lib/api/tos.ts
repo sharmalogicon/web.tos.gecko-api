@@ -134,7 +134,18 @@ export interface TruckVisit {
   haulierCode: string | null; driverName: string | null; laneCode: string | null;
   arrivedAt: string; gateInAt: string | null; gateOutAt: string | null; dwellMinutes: number | null;
   status: "ARRIVED" | "ON_SITE" | "DEPARTED"; source: string; transactions: GateTransactionSummary[];
+  truckCategoryCode?: string | null;
+  /**
+   * What the truck did on this visit, DERIVED by the server from the moves that
+   * stand — a voided EIR never happened, so re-read the visit after voiding one.
+   * Never sent and never stored: `tripType` is the move's, this is the visit's.
+   * Do not recompute it here by counting transactions.
+   */
+  pickupDropoffMode?: PickupDropoffMode | null;
 }
+
+/** The `PICKUP_DROPOFF_MODE` code list; labels come from it, not from here. */
+export type PickupDropoffMode = "PICKUP" | "DROPOFF" | "PICKUP_DROPOFF" | "NONE";
 
 // ─── display helpers ─────────────────────────────────────────────────────────
 
@@ -273,4 +284,75 @@ export function preflightPath(params: {
     if (params.haulierCode) query.set("haulierCode", params.haulierCode);
   }
   return `/api/tos/gate/preflight?${query}`;
+}
+
+// ── how a booked box is collected or delivered ──────────────────────────────
+
+/**
+ * Vector's "P/U Mode" / "D/O Mode", per booked container. Who collects or
+ * delivers it.
+ *
+ * NOT the visit's `pickupDropoffMode` (that is derived, per truck) and NOT the
+ * order-type step's `pudoMode`. Three different things with similar names; this
+ * one is the booking's.
+ *
+ * The ten values are fixed in the API — there is no code list behind them, so
+ * unlike BOOKING_TYPE or PICKUP_DROPOFF_MODE a tenant cannot add an eleventh.
+ */
+export type HandoverMode =
+  | "DO_OWN" | "DO_OTHER" | "DO_ONLY" | "DO_CUS"
+  | "PU_OWN" | "PU_OTHER" | "PU_ONLY" | "PU_PORT"
+  | "REPO_OWN" | "REPO_OTHER";
+
+export interface HandoverModeOption { value: HandoverMode; label: string }
+
+/** Labels as Vector prints them, so a clerk reads what they already know. */
+const HANDOVER_MODES: Record<"IMPORT" | "EXPORT" | "OTHER", HandoverModeOption[]> = {
+  IMPORT: [
+    { value: "DO_OWN", label: "D/O OWN" },
+    { value: "DO_OTHER", label: "D/O OTHER" },
+    { value: "DO_ONLY", label: "D/O ONLY" },
+    { value: "DO_CUS", label: "D/O CUS" },
+  ],
+  EXPORT: [
+    { value: "PU_OWN", label: "P/U OWN" },
+    { value: "PU_OTHER", label: "P/U OTHER" },
+    { value: "PU_ONLY", label: "P/U ONLY" },
+    { value: "PU_PORT", label: "P/U PORT" },
+  ],
+  OTHER: [
+    { value: "REPO_OWN", label: "OWN" },
+    { value: "REPO_OTHER", label: "OTHER" },
+  ],
+};
+
+/**
+ * The modes a booking may use. Sending one from another direction's list is a
+ * 400 on `containers[i].handoverMode`, so the picker only ever offers these.
+ */
+export function handoverModesFor(directionCode: string | null | undefined): HandoverModeOption[] {
+  if (directionCode === "IMPORT") return HANDOVER_MODES.IMPORT;
+  if (directionCode === "EXPORT") return HANDOVER_MODES.EXPORT;
+  return HANDOVER_MODES.OTHER;
+}
+
+/** What the column is called: Vector says "D/O Mode" inbound, "P/U Mode" outbound. */
+export function handoverModeLabel(directionCode: string | null | undefined): string {
+  if (directionCode === "IMPORT") return "D/O Mode";
+  if (directionCode === "EXPORT") return "P/U Mode";
+  return "Handover";
+}
+
+/** The `…_OWN` of the booking's list — the default Vector offers. */
+export const defaultHandoverMode = (directionCode: string | null | undefined): HandoverMode =>
+  handoverModesFor(directionCode)[0].value;
+
+/** The printed label for a stored value, whichever list it came from. */
+export function handoverModeText(mode: string | null | undefined): string {
+  if (!mode) return "—";
+  for (const list of Object.values(HANDOVER_MODES)) {
+    const found = list.find(o => o.value === mode);
+    if (found) return found.label;
+  }
+  return mode;
 }

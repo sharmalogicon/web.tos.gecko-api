@@ -10,6 +10,7 @@ import { ApiError } from '@/lib/api/problem';
 import { useSession } from '@/lib/auth/session';
 import { TOS_PERMISSIONS, formatContainerNo, formatDateTime, type TruckVisit } from '@/lib/api/tos';
 import { WINDOW_PERMISSIONS, formatBaht, visitQuotePath, type VisitQuote } from '@/lib/api/window';
+import { codeLabel, useCodeList } from '@/lib/api/lookups';
 import {
   GATE_API, attachmentsPath, eirPath, formatBytes, formatKg,
   type ContainerHolds, type EirDetail, type GateAttachment, type Survey,
@@ -33,6 +34,8 @@ export function EirDetailView({ id }: { id: string }) {
   const holds = useApi<ContainerHolds>(e && can(TOS_PERMISSIONS.holdView) ? `/api/tos/containers/${e.containerNo}/holds` : null);
   // What the whole truck visit was charged — cash taken at the window against
   // credit on an account. 404 simply means the visit's moves cost nothing.
+  // Labels for the derived visit mode, as the tenant worded them.
+  const pudoModes = useCodeList('PICKUP_DROPOFF_MODE');
   const charges = useApi<VisitQuote>(
     e && canAt(WINDOW_PERMISSIONS.collect, e.branchId) ? visitQuotePath(e.truckVisitId) : null);
   const [voiding, setVoiding] = useState(false);
@@ -153,6 +156,11 @@ export function EirDetailView({ id }: { id: string }) {
           <Line label="Visit" value={e.visitNo} />
           <Line label="Trip" value={e.tripType === 'PICK_UP_CONT' ? 'Pick-up' : 'Drop-off'} />
           <Line label="Category" value={e.truckCategoryCode ?? '—'} />
+          {/* The VISIT's mode, derived by the server from the moves that stand.
+              A voided EIR changes it, which is why it is read, never counted here. */}
+          {visit.data?.pickupDropoffMode && (
+            <Line label="Visit mode" value={codeLabel(pudoModes.values, visit.data.pickupDropoffMode)} />
+          )}
           {visit.data && (
             <>
               {visit.data.trailerPlate && <Line label="Trailer" value={visit.data.trailerPlate} />}

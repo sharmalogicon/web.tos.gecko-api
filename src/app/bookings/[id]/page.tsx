@@ -7,6 +7,7 @@ import { useToast } from '@/components/ui/Toast';
 import { useApi } from '@/lib/api/use-api';
 import { apiSend } from '@/lib/api/client';
 import { ApiError } from '@/lib/api/problem';
+import { defaultHandoverMode, handoverModeLabel, handoverModeText, handoverModesFor } from '@/lib/api/tos';
 
 /**
  * LIVE against gecko_tos (booking.booking + equipment_requirement +
@@ -53,6 +54,8 @@ interface Step { movementPlanId: string; sequenceNo: number; movementCode: strin
 interface Box {
   bookingContainerId: string; equipmentRequirementId: string; lineNo: number; containerNo: string; inRegistry: boolean; isCheckDigitValid: boolean;
   source: string; declaredSealNo: string | null; declaredVgmKg: number | null; assignedAt: string; endedAt: string | null; endReason: string | null;
+  /** Vector's P/U or D/O mode. Fixed at assignment — unassign and assign again to change it. */
+  handoverMode: string | null;
   steps: Step[];
 }
 interface Detail {
@@ -155,11 +158,15 @@ function Section({ title, icon, right, children }: { title: string; icon: string
 
 // ── assign form ──────────────────────────────────────────────────────────────
 
-interface AssignRow { containerNo: string; lineNo: string; declaredSealNo: string; declaredVgmKg: string }
-const EMPTY_ASSIGN: AssignRow = { containerNo: '', lineNo: '', declaredSealNo: '', declaredVgmKg: '' };
+interface AssignRow { containerNo: string; lineNo: string; declaredSealNo: string; declaredVgmKg: string; handoverMode: string }
+const EMPTY_ASSIGN: AssignRow = { containerNo: '', lineNo: '', declaredSealNo: '', declaredVgmKg: '', handoverMode: '' };
 
 function AssignForm({ detail, onDone }: { detail: Detail; onDone: () => void }) {
-  const [rows, setRows] = useState<AssignRow[]>([{ ...EMPTY_ASSIGN }]);
+  // Vector's P/U or D/O mode, per box. The list depends on the booking's
+  // direction — a value from another direction's list is a 400.
+  const modes = handoverModesFor(detail.booking.directionCode);
+  const blankRow = (): AssignRow => ({ ...EMPTY_ASSIGN, handoverMode: defaultHandoverMode(detail.booking.directionCode) });
+  const [rows, setRows] = useState<AssignRow[]>([blankRow()]);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<ApiError | null>(null);
   const { toast } = useToast();
@@ -171,13 +178,16 @@ function AssignForm({ detail, onDone }: { detail: Detail; onDone: () => void }) 
       lineNo: r.lineNo ? Number(r.lineNo) : null,
       declaredSealNo: r.declaredSealNo.trim() || null,
       declaredVgmKg: r.declaredVgmKg ? Number(r.declaredVgmKg) : null,
+      // Omitted when blank: no mode means today's behaviour and no extra
+      // yard check, which is what an operator who does not use it expects.
+      handoverMode: r.handoverMode || null,
     }));
     if (containers.length === 0) return;
     setBusy(true); setError(null);
     try {
       await apiSend('POST', `/api/tos/bookings/${detail.booking.bookingId}/containers`, { containers });
       toast({ variant: 'success', title: 'Boxes assigned', message: `${containers.length} box(es) on ${detail.booking.orderNo}` });
-      setRows([{ ...EMPTY_ASSIGN }]);
+      setRows([blankRow()]);
       onDone();
     } catch (e) { setError(errorOf(e)); } finally { setBusy(false); }
   };
@@ -188,7 +198,7 @@ function AssignForm({ detail, onDone }: { detail: Detail; onDone: () => void }) 
       {rows.map((r, i) => {
         const fe = (f: string) => error?.forField(`containers[${i}].${f}`);
         return (
-          <div key={i} style={{ display: 'grid', gridTemplateColumns: '1.3fr 0.9fr 1fr 0.8fr auto', gap: 8, alignItems: 'start' }}>
+          <div key={i} style={{ display: 'grid', gridTemplateColumns: '1.3fr 0.9fr 1fr 0.8fr 0.9fr auto', gap: 8, alignItems: 'start' }}>
             <div>
               <input className="gecko-input gecko-input-sm gecko-text-mono" placeholder="Container no, e.g. MSKU1234565" aria-label="Container number"
                 value={r.containerNo} onChange={e => set(i, { containerNo: e.target.value.toUpperCase() })} maxLength={13} />
@@ -205,13 +215,21 @@ function AssignForm({ detail, onDone }: { detail: Detail; onDone: () => void }) 
               value={r.declaredSealNo} onChange={e => set(i, { declaredSealNo: e.target.value.toUpperCase() })} />
             <input className="gecko-input gecko-input-sm" type="number" min={1} placeholder="VGM kg" aria-label="Declared VGM kg"
               value={r.declaredVgmKg} onChange={e => set(i, { declaredVgmKg: e.target.value })} />
+            <div>
+              <select className="gecko-input gecko-input-sm" aria-label={handoverModeLabel(detail.booking.directionCode)}
+                value={r.handoverMode} onChange={e => set(i, { handoverMode: e.target.value })}>
+                <option value="">{handoverModeLabel(detail.booking.directionCode)}: none</option>
+                {modes.map(m => <option key={m.value} value={m.value}>{m.label}</option>)}
+              </select>
+              {fe('handoverMode') && <div style={{ fontSize: 11, color: 'var(--gecko-error-600)', marginTop: 2 }}>{fe('handoverMode')}</div>}
+            </div>
             <button type="button" className="gecko-btn gecko-btn-ghost gecko-btn-sm" aria-label="Remove row" disabled={rows.length === 1}
               onClick={() => setRows(rs => rs.filter((_, j) => j !== i))}><Icon name="x" size={14} /></button>
           </div>
         );
       })}
       <div className="gecko-row" style={{ gap: 8 }}>
-        <button type="button" className="gecko-btn gecko-btn-outline gecko-btn-sm" onClick={() => setRows(rs => [...rs, { ...EMPTY_ASSIGN }])}>
+        <button type="button" className="gecko-btn gecko-btn-outline gecko-btn-sm" onClick={() => setRows(rs => [...rs, blankRow()])}>
           <Icon name="plus" size={14} /> Another box
         </button>
         <span className="gecko-cell-meta" style={{ flex: 1 }}>
@@ -547,6 +565,7 @@ export default function BookingDetailPage() {
           <table className="gecko-table gecko-table-compact" style={{ fontSize: 12.5 }}>
             <thead>
               <tr><th style={{ width: 50 }}>Line</th><th style={{ width: 150 }}>Container</th><th style={{ width: 100 }}>Source</th>
+                <th style={{ width: 110 }}>{handoverModeLabel(data.booking.directionCode)}</th>
                 <th style={{ width: 130 }}>Declared</th><th style={{ width: 140 }}>Assigned</th><th>Steps</th><th style={{ width: 130 }}>Ended</th><th style={{ width: 44 }} /></tr>
             </thead>
             <tbody>
@@ -561,6 +580,8 @@ export default function BookingDetailPage() {
                     </div>
                   </td>
                   <td className="gecko-cell-meta">{humanize(x.source)}</td>
+                  {/* Set when the box was assigned; it cannot be edited here. */}
+                  <td className="gecko-cell-meta">{handoverModeText(x.handoverMode)}</td>
                   <td className="gecko-cell-meta">
                     {x.declaredSealNo ? <>seal <span className="gecko-text-mono">{x.declaredSealNo}</span></> : '—'}
                     {x.declaredVgmKg != null && <div>VGM {x.declaredVgmKg.toLocaleString()} kg</div>}

@@ -202,3 +202,15 @@ export function useSetting(settingKey: string): { value: string | null; loading:
   const row = (data ?? []).find(s => s.settingKey === settingKey);
   return { value: row?.value ?? null, loading };
 }
+
+/** Any code list, by category — labels for a code the API hands back. */
+export function useCodeList(categoryCode: string): { values: CodeListValue[]; loading: boolean } {
+  const { data, loading } = useApi<CodeListValue[]>(`${CODE_LISTS_PATH}/${encodeURIComponent(categoryCode)}`);
+  return { values: data ?? NO_CODES, loading };
+}
+
+/** The label a tenant gave a code, falling back to the code itself. */
+export function codeLabel(values: CodeListValue[], code: string | null | undefined): string {
+  if (!code) return '—';
+  return values.find(v => v.code === code)?.descriptionEn || code;
+}
