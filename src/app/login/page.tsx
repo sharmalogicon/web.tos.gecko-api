@@ -7,16 +7,25 @@ import { useSession } from '../../lib/auth/session';
 import { ApiError } from '../../lib/api/problem';
 import { LANDING_PATH } from '../../lib/edition';
 
-// Development only: pre-fill the gecko_identity dev_02 fixture owner so a local
-// sign-in is one password away. Production starts empty and shows no hints —
-// real accounts are created by invitation (ADR-006 D3: no self-service signup).
-const DEV_EMAIL = process.env.NODE_ENV === 'development' ? 'admin@sct.co.th' : '';
+/**
+ * DEVELOPMENT ONLY — the pilot owner, pre-filled so a local sign-in is one
+ * click. `next build` replaces NODE_ENV with 'production' and tree-shakes both
+ * of these to '', so neither the address nor the password can reach a deployed
+ * bundle. That is deliberate: it needs no one to remember to take them out
+ * before publishing, which is exactly how the fixture password leaked last time.
+ *
+ * Production starts empty and shows no hints — real accounts arrive by
+ * invitation (ADR-006 D3: no self-service signup).
+ */
+const IS_DEV = process.env.NODE_ENV === 'development';
+const DEV_EMAIL = IS_DEV ? 'admin@korakit.com' : '';
+const DEV_PASSWORD = IS_DEV ? 'P@ssw0rd' : '';
 
 export default function LoginPage() {
   const router = useRouter();
   const { status, signIn } = useSession();
   const [email, setEmail] = useState(DEV_EMAIL);
-  const [password, setPassword] = useState('');
+  const [password, setPassword] = useState(DEV_PASSWORD);
   const [showPassword, setShowPassword] = useState(false);
   const [remember, setRemember] = useState(true);
   const [errors, setErrors] = useState<{ email?: string; password?: string; general?: string }>({});

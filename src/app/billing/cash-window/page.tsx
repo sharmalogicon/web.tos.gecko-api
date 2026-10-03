@@ -3,7 +3,7 @@ import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { Icon } from '@/components/ui/Icon';
 import { Modal } from '@/components/ui/Modal';
 import { useToast } from '@/components/ui/Toast';
-import { apiGet, apiSend } from '@/lib/api/client';
+import { apiGet, apiSend, newIdempotencyKey } from '@/lib/api/client';
 import { ApiError } from '@/lib/api/problem';
 import { ProblemAlert, problemOf, type Problem } from './ProblemAlert';
 import { useApi, useApiList } from '@/lib/api/use-api';
@@ -119,6 +119,14 @@ export default function CashWindowPage() {
   // Paying again after a void: which voided receipt of this booking the new one replaces ('' = none).
   const [replaces, setReplaces] = useState('');
   const [voidingReceipt, setVoidingReceipt] = useState<Receipt | null>(null);
+  /**
+   * One key per driver at the window, replaced when the next one steps up.
+   * Taking a customer's money twice is the worst version of a double submit,
+   * and a cashier under a queue is exactly who double-clicks. A failed attempt
+   * does not spend the key, so correcting the tender and pressing again reuses
+   * it.
+   */
+  const [payKey, setPayKey] = useState(newIdempotencyKey);
 
   const orderInput = useRef<HTMLInputElement>(null);
   const tenderedInput = useRef<HTMLInputElement>(null);
@@ -189,6 +197,7 @@ export default function CashWindowPage() {
   }, []);
 
   function nextDriver() {
+    setPayKey(newIdempotencyKey());
     setBooking(null); setReceipt(null); setOrderNo(''); setQuoteError(null); setPayError(null);
     setPayments([CASH_ROW]); setPayerName(''); setPayerTaxId(''); setPayerBranchNo(''); setPayerAddress('');
     setFullInvoice(false); setPaidUntil(''); setSelected(new Set()); setCustomerName(null); setReplaces('');
@@ -285,7 +294,7 @@ export default function CashWindowPage() {
         sameTruckAs: terms.sameTruckAs,
         withholdingTax: applied,
       };
-      const issued = await apiSend<Receipt>('POST', '/api/revenue/window/receipts', body);
+      const issued = await apiSend<Receipt>('POST', '/api/revenue/window/receipts', body, payKey);
       setReceipt(issued);
       toast.toast({ variant: 'success', title: issued.receiptNo, message: `${formatBaht(issued.total)} received` });
       loadShift();

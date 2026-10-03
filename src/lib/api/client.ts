@@ -129,8 +129,32 @@ async function authorised(path: string, init: RequestInit, binary: boolean): Pro
 }
 
 export const apiGet = <T>(path: string) => api<T>(path);
-export const apiSend = <T>(method: string, path: string, body?: unknown) =>
-  api<T>(path, { method, body: body === undefined ? undefined : JSON.stringify(body) });
+export const apiSend = <T>(method: string, path: string, body?: unknown, idempotencyKey?: string) =>
+  api<T>(path, {
+    method,
+    body: body === undefined ? undefined : JSON.stringify(body),
+    headers: idempotencyKey ? { "Idempotency-Key": idempotencyKey } : undefined,
+  });
+
+/**
+ * One key per USER ACTION, reused for every retry of that action.
+ *
+ * It is what lets a create be retried safely. Without it the caller cannot tell
+ * "the request failed" from "it succeeded and I lost the answer", so it cannot
+ * retry at all — and a user who presses Save twice gets two bookings, or pays
+ * twice.
+ *
+ * Replaying a key returns the SAME 201 with whatever that booking or receipt
+ * looks like now. A key used with a DIFFERENT body answers 422, so a new
+ * action must take a new key — see `newIdempotencyKey`.
+ *
+ * A request that FAILED (400 / 409) did not spend its key: fix the input and
+ * send the same key again.
+ */
+export const newIdempotencyKey = (): string =>
+  typeof crypto !== "undefined" && "randomUUID" in crypto
+    ? crypto.randomUUID()
+    : `k-${Date.now()}-${Math.random().toString(36).slice(2, 12)}`;
 
 /** multipart/form-data POST (a file upload); the answer is JSON. */
 export async function apiUpload<T>(path: string, form: FormData, method = "POST"): Promise<T> {
