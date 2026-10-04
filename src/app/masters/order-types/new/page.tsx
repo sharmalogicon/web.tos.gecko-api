@@ -144,7 +144,7 @@ export default function NewOrderTypePage() {
         </div>
         {progress?.stepsSaved
           ? <div className="gecko-cell-meta">Saved: {stepCodes.join(' → ')}. Change them later from the order type.</div>
-          : <StepsEditor rows={steps} onChange={setSteps} vocabulary={vocabulary} localErrors={stepRowErrors} apiError={apiError} />}
+          : <StepsEditor rows={steps} onChange={setSteps} vocabulary={vocabulary} localErrors={stepRowErrors} apiError={apiError} requiresVesselSchedule={form.requiresVesselSchedule} />}
       </div>
 
       <div className="gecko-card gecko-card-padded gecko-stack gecko-stack-md">

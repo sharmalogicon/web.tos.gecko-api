@@ -26,6 +26,14 @@ export interface OrderType {
   serviceCode: string | null;
   cargoClassCode: string;
   bookingTypeCode: string | null;
+  /**
+   * Do this order type's moves hang off a vessel call?
+   *
+   * The booking screen reads it to decide whether to DEMAND a vessel call and,
+   * on an export, the ports. Depot work — storage, repair, a swap — has no
+   * sailing, and asking for one is asking a clerk to invent it.
+   */
+  requiresVesselSchedule: boolean;
   isActive: boolean;
   rowVersion: string;
 }
@@ -73,10 +81,12 @@ export interface SaveOrderType {
   orderTypeCode: string;
   descriptionEn: string;
   descriptionLocal: string | null;
-  directionCode: string;
+  /** Left out on purpose: the API derives it from the booking type. */
+  directionCode?: string;
   cargoClassCode: string;
   serviceCode: string | null;
   bookingTypeCode: string | null;
+  requiresVesselSchedule: boolean;
   isActive: boolean;
   rowVersion?: string;
 }

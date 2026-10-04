@@ -12,6 +12,7 @@ import { partyPath, updateParty, type PartyDetail } from '@/lib/api/parties';
 import { PartyForm, formFromParty, localErrors, requestFromForm, type PartyFormValue } from '../_components/PartyForm';
 import { RoleBadge } from '../_components/RoleBadge';
 import { ContactsSection } from '../_components/ContactsSection';
+import { formatDateTime } from '@/lib/format';
 
 function Info({ label, value, mono, lang }: { label: string; value: React.ReactNode; mono?: boolean; lang?: string }) {
   return (
@@ -24,7 +25,7 @@ function Info({ label, value, mono, lang }: { label: string; value: React.ReactN
   );
 }
 
-const fmt = (iso: string) => new Date(iso).toLocaleString('en-GB', { dateStyle: 'medium', timeStyle: 'short' });
+const fmt = formatDateTime;   // dd-MM-yyyy HH:mm
 
 export default function CustomerDetailPage() {
   // useParams hands back the decoded segment; a code with '/' is re-encoded by partyPath.
@@ -184,7 +185,7 @@ export default function CustomerDetailPage() {
 
           <div className="gecko-table-card">
             <div style={{ padding: '14px 16px', fontWeight: 700 }}>Other codes (aliases)</div>
-            <table className="gecko-table" style={{ fontSize: 13 }}>
+            <table className="gecko-table">
               <thead><tr><th>Type</th><th>Code</th><th>Label</th></tr></thead>
               <tbody>
                 {party.aliases.length === 0 && (

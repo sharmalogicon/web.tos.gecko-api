@@ -5,8 +5,11 @@ import { Icon } from '@/components/ui/Icon';
 import { FilterPopover, FilterField, SortOption } from '@/components/ui/FilterPopover';
 import { EmptyState } from '@/components/ui/EmptyState';
 import { useApiList } from '@/lib/api/use-api';
+import { useToast } from '@/components/ui/Toast';
+import { useSession } from '@/lib/auth/session';
+import { ApiError } from '@/lib/api/problem';
 import {
-  formatDate, partySummary, STATUS_TONE, TYPE_TONE,
+  customerOf, downloadBlankTariffTemplate, formatDate, STATUS_TONE, TYPE_TONE,
   type Schedule, type ScheduleLifecycle,
 } from '@/lib/api/revenue';
 
@@ -61,6 +64,10 @@ const SORT_OPTIONS: SortOption[] = [
 export default function TariffPlansPage() {
   const [filters, setFilters] = useState<Record<string, string>>({ query: '', scheduleType: '', status: '', lifecycle: '' });
   const [sortBy, setSortBy] = useState('scope');
+  const [downloading, setDownloading] = useState(false);
+  const { toast } = useToast();
+  const { can } = useSession();
+  const canImport = can('revenue.import.manage');
 
   // Type, status and search are filtered by the API; lifecycle is derived per
   // row (from dates and the next version), so it is filtered here.
@@ -83,6 +90,28 @@ export default function TariffPlansPage() {
     return sorted;
   }, [data, filters.lifecycle, sortBy]);
 
+  // The blank workbook a clerk fills in before the tariff exists. It is the
+  // same file the import on the quotation screen reads back.
+  async function downloadTemplate() {
+    setDownloading(true);
+    try {
+      await downloadBlankTariffTemplate();
+    } catch (e) {
+      const err = e instanceof ApiError ? e : new ApiError(0, 'Could not reach the Gecko API.');
+      toast({
+        variant: 'danger',
+        title: 'Template not available',
+        message: err.status === 403
+          ? 'You need revenue.import.manage to download the tariff template.'
+          : err.status === 404
+            ? 'This Gecko.Api build has no blank tariff template yet. Open any draft tariff and download its template instead.'
+            : err.message,
+      });
+    } finally {
+      setDownloading(false);
+    }
+  }
+
   return (
     <div style={{ maxWidth: 'var(--gecko-container-max)', margin: '0 auto', display: 'flex', flexDirection: 'column', gap: 24, paddingBottom: 40 }}>
 
@@ -98,6 +127,15 @@ export default function TariffPlansPage() {
           </p>
         </div>
         <div className="gecko-toolbar">
+          {/* Ghost, and first: it is a document utility rather than a view
+              control, and it must not compete with the primary action. The API
+              answers 403 without revenue.import.manage, so a gate user is never
+              shown a link that cannot work. */}
+          {canImport && (
+            <button className="gecko-btn gecko-btn-ghost gecko-btn-sm" disabled={downloading} onClick={downloadTemplate}>
+              <Icon name="download" size={16} /> {downloading ? 'Preparing…' : 'Download template'}
+            </button>
+          )}
           <button className="gecko-btn gecko-btn-outline gecko-btn-sm" onClick={reload}>
             <Icon name="refreshCcw" size={16} /> Refresh
           </button>
@@ -125,14 +163,12 @@ export default function TariffPlansPage() {
 
       {/* Table */}
       <div className="gecko-table-card">
-        <table className="gecko-table gecko-table-comfortable" style={{ fontSize: 13 }}>
+        <table className="gecko-table gecko-table-comfortable">
           <thead>
             <tr>
               <th>Schedule</th>
-              <th>Name</th>
+              <th>Customer</th>
               <th>Type</th>
-              <th>Applies to</th>
-              <th>Precedence</th>
               <th>Effective</th>
               <th>Until</th>
               <th style={{ textAlign: 'right' }}>Rates</th>
@@ -142,9 +178,9 @@ export default function TariffPlansPage() {
           </thead>
           <tbody>
             {loading && !data ? (
-              <tr><td colSpan={10} style={{ textAlign: 'center', padding: 32, color: 'var(--gecko-text-secondary)' }}>Loading tariffs…</td></tr>
+              <tr><td colSpan={8} style={{ textAlign: 'center', padding: 32, color: 'var(--gecko-text-secondary)' }}>Loading tariffs…</td></tr>
             ) : rows.length === 0 ? (
-              <tr><td colSpan={10} style={{ padding: 0 }}>
+              <tr><td colSpan={8} style={{ padding: 0 }}>
                 <EmptyState
                   icon="dollarSign"
                   title={data && data.length > 0 ? 'Nothing matches those filters' : 'No tariff schedules yet'}
@@ -162,15 +198,13 @@ export default function TariffPlansPage() {
                     <span className="gecko-cell-meta" style={{ marginLeft: 6 }}>v{s.versionNo}</span>
                   </td>
                   <td style={{ fontWeight: 600, color: 'var(--gecko-text-primary)' }}>
-                    <Link href={`/tariff/plans/${s.scheduleId}`} style={{ color: 'inherit', textDecoration: 'none' }}>{s.name}</Link>
+                    <Link href={`/tariff/plans/${s.scheduleId}`} style={{ color: 'inherit', textDecoration: 'none' }}>{customerOf(s.name)}</Link>
                   </td>
                   <td>
                     <span className={`gecko-pill gecko-pill-${tone.tone}`}>
                       <Icon name={tone.icon} size={11} style={{ marginBottom: -1, marginRight: 4 }} /> {tone.label}
                     </span>
                   </td>
-                  <td style={{ color: 'var(--gecko-text-secondary)' }}>{partySummary(s)}</td>
-                  <td className="gecko-cell-meta">rank {s.scopeRank}</td>
                   <td className="gecko-text-mono">{formatDate(s.effectiveFrom)}</td>
                   <td className="gecko-text-mono" style={{ color: s.lifecycle === 'EXPIRED' ? 'var(--gecko-error-600)' : undefined }}>
                     {s.effectiveUntil ? formatDate(s.effectiveUntil) : 'open-ended'}

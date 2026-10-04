@@ -92,6 +92,28 @@ function useNavMatch(pathname: string | null) {
  *   kpi            Productivity & KPI      /dashboard/kpi
  */
 
+/**
+ * HIDDEN FROM THE MENU 2026-10-03, at his request. The pages and routes are
+ * untouched — each still answers on its URL — they are simply not offered while
+ * the pilot is narrowed to what KORAKIT actually works in. Put a line back to
+ * bring one back.
+ *
+ *   Gate & Yard    Gate Appointments  /gate/appointments
+ *                  Gate Kiosk         /gate/kiosk
+ *                  Yard Plan          /gate/yard-view
+ *                  Reefer Operations  /gate/reefer-ops
+ *                  Moves Planner      /gate/moves-planner
+ *   CFS            whole group — stuffing, stripping, LCL cargo, tally
+ *   Units & Equip. whole group — unit inquiry, equipment pool, EDI inquiry
+ *   Billing        whole group — cash window, service orders, statement,
+ *                  invoices, credit notes, unbilled
+ *   Configuration  Gate Slot Capacity /config/gate-slots
+ *                  Operating Hours    /config/gate-hours
+ *                  EDI Partners       /config/edi-partners
+ *                  Auto-Gate (OCR)    /config/auto-gate
+ *                  Notifications      /config/integrations
+ *                  Approval Workflows /config/approval-workflows
+ */
 const NAV = [
   { id: 'dashboard', icon: 'home', label: 'Dashboard',
     // Only the two dashboards we intend to make real (his call, 2026-09-29).
@@ -116,42 +138,12 @@ const NAV = [
       // a gate-in now lives on EIR-In below. The route still resolves for anyone
       // who has it bookmarked, and nothing about it was deleted.
       { id: 'gate-stock', label: 'Yard Stock (live)', path: '/gate/stock' },
-      { id: 'appointments', label: 'Gate Appointments', path: '/gate/appointments' },
-      { id: 'kiosk', label: 'Gate Kiosk', path: '/gate/kiosk' },
       { id: 'eir-in', label: 'Gate In (EIR)', path: '/gate/eir-in' },
       { id: 'eir-out', label: 'EIR-Out', path: '/gate/eir-out' },
-      { id: 'yard-view', label: 'Yard Plan', path: '/gate/yard-view' },
-      { id: 'reefer-ops', label: 'Reefer Operations', path: '/gate/reefer-ops' },
       { id: 'container-status', label: 'Container Status Update', path: '/gate/container-status' },
-      { id: 'moves-planner', label: 'Moves Planner', path: '/gate/moves-planner' },
     ]
   },
-  { id: 'cfs', icon: 'box', label: 'CFS',
-    children: [
-      { id: 'stuffing', label: 'Stuffing', path: '/cfs/stuffing' },
-      { id: 'stripping', label: 'Stripping', path: '/cfs/stripping' },
-      { id: 'lcl-cargo', label: 'LCL Cargo Register', path: '/cfs/lcl-cargo' },
-      { id: 'tally', label: 'Cargo Tally', path: '/cfs/tally' },
-    ]
-  },
-  { id: 'units', icon: 'layers', label: 'Units & Equipment',
-    children: [
-      { id: 'unit-inquiry', label: 'Unit Inquiry', path: '/units/unit-inquiry' },
-      { id: 'equipment-pool', label: 'Equipment Pool', path: '/units/equipment-pool' },
-      { id: 'edi-inquiry', label: 'EDI Event Inquiry', path: '/units/edi-inquiry' },
-    ]
-  },
-  { id: 'billing', icon: 'invoice', label: 'Billing & Invoicing',
-    children: [
-      { id: 'cash-window',    label: 'Cash Window',    path: '/billing/cash-window'    },
-      { id: 'service-orders', label: 'Service Orders', path: '/billing/service-orders' },
-      { id: 'billing-statement', label: 'Billing Statement', path: '/billing/statement' },
-      { id: 'invoices',       label: 'Invoices',       path: '/billing/invoices'       },
-      { id: 'credit-notes', label: 'Credit Notes', path: '/billing/credit-notes' },
-      { id: 'unbilled', label: 'Unbilled Services', path: '/billing/unbilled' },
-    ]
-  },
-  { id: 'tariff', icon: 'tag', label: 'Tariff Management',
+  { id: 'tariff', icon: 'tag', label: 'Tariffs',
     children: [
       { id: 'plans', label: 'Tariff Schedules', path: '/tariff/plans' },
       // Rate Cards and Free Time pages folded into Tariff Schedule editor tabs.
@@ -169,27 +161,17 @@ const NAV = [
   },
   { id: 'config', icon: 'settings', label: 'Configuration',
     children: [
-      { id: 'gate-slots',     label: 'Gate Slot Capacity',   path: '/config/gate-slots' },
-      { id: 'gate-hours',     label: 'Operating Hours',      path: '/config/gate-hours' },
       { id: 'yard-zones',     label: 'Yard Zones & Blocks',  path: '/config/yard-zones' },
       { id: 'roles',          label: 'Roles & Rights',       path: '/config/roles' },
       { id: 'users',          label: 'Users & Roles',        path: '/config/users' },
-      { id: 'edi-partners',   label: 'EDI Partners',         path: '/config/edi-partners' },
-      { id: 'auto-gate',      label: 'Auto-Gate (OCR)',      path: '/config/auto-gate' },
-      { id: 'integrations',   label: 'Notifications',        path: '/config/integrations' },
-      { id: 'approval-wf',    label: 'Approval Workflows',   path: '/config/approval-workflows' },
       { id: 'system-params',  label: 'System Parameters',    path: '/config/system-params' },
     ]
   },
-  // TEMPORARY (2026-10-02) — the June screens beside today's, while the booking
-  // and gate pages are redesigned. Not in PILOT_PATHS, so an empty children list
-  // drops the whole group from the pilot menu on its own. Delete this entry and
-  // src/app/compare/ when the redesign is settled.
-  { id: 'compare', icon: 'layers', label: 'Compare (June)',
-    children: [
-      { id: 'compare-june', label: 'June vs today', path: '/compare/june' },
-    ]
-  },
+  // HIDDEN 2026-10-04 (owner). The June screens are still SERVED at
+  // /compare/june — the booking rebuild was taken from them and they remain the
+  // reference for the gate pages — they are just off the menu now that the
+  // booking redesign is done. Restore this entry to bring the group back;
+  // delete it and src/app/compare/ when the gate screens are settled too.
 
   { id: 'masters', icon: 'database', label: 'Master Data',
     children: [

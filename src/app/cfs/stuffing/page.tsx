@@ -135,7 +135,7 @@ export default function StuffingPage() {
                 <div style={{ fontSize: 14, fontWeight: 500 }}>Container is empty</div>
               </div>
             ) : (
-              <table className="gecko-table gecko-table-comfortable" style={{ fontSize: 13 }}>
+              <table className="gecko-table gecko-table-comfortable">
                 <thead>
                   <tr className="gecko-eyebrow" style={{ background: 'var(--gecko-gray-100)', position: 'sticky', top: 0 }}>
                     <th style={{ textAlign: 'left', width: 40 }}><input type="checkbox" onChange={(e) => setSelectedStuffed(e.target.checked ? new Set(stuffed.map(i => i.id)) : new Set())} /></th>
@@ -216,7 +216,7 @@ export default function StuffingPage() {
 
           {/* Warehouse List */}
           <div style={{ flex: 1, overflowY: 'auto' }}>
-            <table className="gecko-table gecko-table-comfortable" style={{ fontSize: 13 }}>
+            <table className="gecko-table gecko-table-comfortable">
               <thead>
                 <tr className="gecko-eyebrow" style={{ background: 'var(--gecko-gray-100)', position: 'sticky', top: 0 }}>
                   <th style={{ textAlign: 'left', width: 40 }}><input type="checkbox" onChange={(e) => setSelectedWh(e.target.checked ? new Set(warehouse.map(i => i.id)) : new Set())} /></th>

@@ -15,6 +15,7 @@
 import React, { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
+import { DateField } from '@/components/ui/DateField';
 import { Icon } from '@/components/ui/Icon';
 import { useToast } from '@/components/ui/Toast';
 import { useApi, useApiList, type Paged } from '@/lib/api/use-api';
@@ -251,7 +252,7 @@ export default function PlugInReeferPage() {
             <div className="gecko-reefer-form-grid">
               <label className="gecko-form-row">
                 <span>Plugged in at</span>
-                <input type="datetime-local" className="gecko-input gecko-input-sm" value={pluggedInAt} onChange={e => setPluggedInAt(e.target.value)} />
+                <DateField withTime size="sm" value={pluggedInAt} onChange={setPluggedInAt} aria-label="Plugged in at" />
                 <div className="gecko-cell-meta">Leave blank for now.</div>
                 {fieldError('pluggedInAt')}
               </label>

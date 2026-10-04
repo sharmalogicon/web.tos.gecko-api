@@ -82,12 +82,19 @@ export function stepErrors(rows: StepRow[]): Record<string, string> {
   return e;
 }
 
-export function StepsEditor({ rows, onChange, vocabulary, localErrors, apiError }: {
+export function StepsEditor({ rows, onChange, vocabulary, localErrors, apiError, requiresVesselSchedule = true }: {
   rows: StepRow[];
   onChange: (rows: StepRow[]) => void;
   vocabulary: OrderTypeVocabulary;
   localErrors: Record<string, string>;
   apiError: ApiError | null;
+  /**
+   * The order type's own flag. A step may only demand a vessel / voyage when
+   * the order type says it has a schedule at all — the API answers 400 on
+   * movements[i].requireVesselVoyage otherwise, so the tick is disabled rather
+   * than offered and refused.
+   */
+  requiresVesselSchedule?: boolean;
 }) {
   const err = (key: string) => localErrors[key] ?? apiError?.forField(key);
   const set = (i: number, patch: Partial<StepRow>) => onChange(rows.map((r, j) => (j === i ? { ...r, ...patch } : r)));
@@ -123,10 +130,15 @@ export function StepsEditor({ rows, onChange, vocabulary, localErrors, apiError 
             {rows.map((r, i) => {
               const messages = [err(`movements[${i}]`), err(`movements[${i}].movementCode`), err(`movements[${i}].sequenceNo`), err(`movements[${i}].pudoMode`)]
                 .filter(Boolean);
-              const check = (key: keyof StepRow, label: string) => (
-                <input type="checkbox" className="gecko-checkbox" aria-label={`${label}, step ${i + 1}`}
-                  checked={r[key] as boolean} onChange={e => set(i, { [key]: e.target.checked } as Partial<StepRow>)} />
-              );
+              const check = (key: keyof StepRow, label: string) => {
+                const locked = key === 'requireVesselVoyage' && !requiresVesselSchedule;
+                return (
+                  <input type="checkbox" className="gecko-checkbox" aria-label={`${label}, step ${i + 1}`}
+                    checked={locked ? false : (r[key] as boolean)} disabled={locked}
+                    title={locked ? 'Tick "Requires vessel schedule" on the order type first.' : undefined}
+                    onChange={e => set(i, { [key]: e.target.checked } as Partial<StepRow>)} />
+                );
+              };
               return (
                 <React.Fragment key={r.key}>
                   <tr>

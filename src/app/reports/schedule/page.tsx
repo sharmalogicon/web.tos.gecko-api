@@ -7,6 +7,7 @@ import {
   OPERATIONAL_REPORTS, ACCOUNTS_REPORTS,
   type AutoScheduledReport, type ScheduleFrequency, type ReportDef,
 } from '@/lib/reports-catalog';
+import { formatDateTime } from '@/lib/format';
 
 const FREQ_LABEL: Record<ScheduleFrequency, string> = {
   daily: 'Daily', weekly: 'Weekly', monthly: 'Monthly',
@@ -16,11 +17,7 @@ const STATUS_TONE = {
   success: 'success', failed: 'danger', running: 'info', paused: 'neutral',
 } as const;
 
-const fmtRelativeDate = (iso: string) => {
-  if (!iso) return '—';
-  const d = new Date(iso);
-  return d.toLocaleString('en-GB', { day: '2-digit', month: 'short', hour: '2-digit', minute: '2-digit' });
-};
+const fmtRelativeDate = formatDateTime;   // dd-MM-yyyy HH:mm
 
 export default function AutoScheduleReportsPage() {
   const { toast } = useToast();
@@ -108,7 +105,7 @@ export default function AutoScheduleReportsPage() {
       {/* Schedule table */}
       <div className="gecko-table-card">
         <div style={{ overflowX: 'auto' }}>
-          <table className="gecko-table gecko-table-comfortable" style={{ fontSize: 12.5, minWidth: 1100 }}>
+          <table className="gecko-table gecko-table-comfortable" style={{ minWidth: 1100 }}>
             <thead>
               <tr>
                 <th style={{ width: 36 }} aria-label="Status" />

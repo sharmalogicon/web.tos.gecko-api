@@ -63,6 +63,12 @@ const PAIRS: Pair[] = [
     note: 'Today\'s is bound to the API and shorter; the old one carried more on-screen summary.',
   },
   {
+    what: 'Booking — detail (Container Details)',
+    then: '/compare/june/booking-detail', thenLines: 2192,
+    now: null, nowLines: 710,
+    note: 'RECOVERED 2026-10-04 from commit 83d19af, where it was deleted as a blocked mock. It is Vector’s Booking Entry screen almost field for field: the container table with multi-select, a drawer per box carrying grade, P/U mode, IMO/UN, temperature / vent / humidity with their units, seals and stowage, plus the Movements and VAS Charges panels. It also has an “add multiple containers” paste. Today’s booking page has none of the last three.',
+  },
+  {
     what: 'Bookings — new',
     then: '/compare/june/bookings-new', thenLines: 255,
     now: '/bookings/new', nowLines: 448,

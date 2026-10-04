@@ -29,7 +29,7 @@ export function DepotHolidays({ year, rows, loading, error }: { year: number; ro
       )}
 
       <div className="gecko-table-card">
-        <table className="gecko-table gecko-table-compact" style={{ fontSize: 12.5 }}>
+        <table className="gecko-table gecko-table-compact">
           <thead>
             <tr><th style={{ width: 170 }}>Date</th><th>Holiday</th><th>Thai</th><th style={{ width: 130 }}>Applies to</th><th style={{ width: 90 }}>Half day</th></tr>
           </thead>

@@ -21,8 +21,8 @@ import { saveBlob } from '@/lib/api/client';
 import { formatContainerNo, formatDateTime } from '@/lib/api/tos';
 import { toCsv } from '@/lib/api/reports';
 import {
-  amount, CHARGE_SOURCE, CHARGE_STATUS, payerLabel, statementPath,
-  type BookingStatement, type StatementTotals,
+  amount, CHARGE_SOURCE, CHARGE_STATUS, isUnpriced, payerLabel, statementPath,
+  type BookingStatement, type StatementLine, type StatementTotals,
 } from '@/lib/api/charges';
 
 export default function BookingStatementPage() {
@@ -163,9 +163,23 @@ function Statement() {
                   {b.lines.length === 0 && (
                     <tr><td colSpan={8} className="gecko-cell-meta" style={{ textAlign: 'center', padding: 12 }}>Nothing charged on this box yet.</td></tr>
                   )}
-                  {b.lines.map(({ charge: c, receiptNo }) => {
+                  {/* Grouped by movement: a box's charges are read "what does
+                      the gate-in cost, what does the gate-out cost", not as one
+                      flat list of eight codes. */}
+                  {groupByMovement(b.lines).map(([movement, lines]) => (
+                    <React.Fragment key={movement}>
+                      <tr className="gecko-table-subrow">
+                        <td colSpan={8}>
+                          <span className="gecko-mono-strong">{movement}</span>
+                          <span className="gecko-cell-meta" style={{ marginLeft: 8 }}>
+                            {lines.length} charge{lines.length === 1 ? '' : 's'}
+                          </span>
+                        </td>
+                      </tr>
+                  {lines.map(({ charge: c, receiptNo }) => {
                     const st = CHARGE_STATUS[c.status] ?? CHARGE_STATUS.QUOTED;
                     const reason = c.waiveReason ?? c.cancelReason;
+                    const unpriced = isUnpriced({ charge: c, receiptNo });
                     return (
                       <tr key={c.chargeId} style={c.status === 'CANCELLED' ? { opacity: 0.6 } : undefined}>
                         <td>
@@ -184,17 +198,30 @@ function Statement() {
                           <div className="gecko-truncate" style={{ maxWidth: 200 }}>{payerLabel(c.payerCode, c.payerName)}</div>
                           <div className="gecko-cell-meta">{c.billTo.toLowerCase()} · {c.paymentTermCode.toLowerCase()}</div>
                         </td>
-                        <td className="gecko-num gecko-mono">{amount(c.amount, c.currencyCode)}</td>
+                        <td className="gecko-num gecko-mono" style={unpriced ? { color: 'var(--gecko-error-600)', fontWeight: 700 } : undefined}>
+                          {unpriced ? 'no rate' : amount(c.amount, c.currencyCode)}
+                        </td>
                         <td className="gecko-num gecko-mono">{amount(c.taxAmount, c.currencyCode)}</td>
                         <td className="gecko-num gecko-mono" style={{ fontWeight: 700 }}>{amount(c.total, c.currencyCode)}</td>
                         <td>
-                          <span className={`gecko-badge ${st.badge}`} title={st.hint}>{st.label}</span>
+                          <span className={`gecko-badge ${unpriced ? 'gecko-badge-error' : st.badge}`} title={st.hint}>
+                            {unpriced ? 'No rate' : st.label}
+                          </span>
+                          {/* Amount 0 with no schedule is NOT free: no tariff
+                              prices it, so the gate will refuse the box. */}
+                          {unpriced && (
+                            <div className="gecko-cell-meta" style={{ color: 'var(--gecko-error-600)' }}>
+                              No rate in any tariff
+                            </div>
+                          )}
                           {reason && <div className="gecko-cell-meta gecko-truncate" style={{ maxWidth: 200 }} title={reason}>{reason}</div>}
                         </td>
                         <td className="gecko-mono">{receiptNo ?? '—'}</td>
                       </tr>
                     );
                   })}
+                    </React.Fragment>
+                  ))}
                 </tbody>
               </table>
             </section>
@@ -241,8 +268,22 @@ function Statement() {
   );
 }
 
+/** Lines by movement, in the order the movements first appear. */
+function groupByMovement(lines: StatementLine[]): [string, StatementLine[]][] {
+  const groups = new Map<string, StatementLine[]>();
+  for (const l of lines) {
+    const key = l.charge.movementCode ?? 'Other charges';
+    groups.set(key, [...(groups.get(key) ?? []), l]);
+  }
+  return [...groups.entries()];
+}
+
 function Totals({ totals, m, compact = false }: { totals: StatementTotals; m: (v: number) => string; compact?: boolean }) {
   const parts = [
+    // What it is EXPECTED to cost comes first: on a booking that has not been
+    // to the window yet, every other figure is zero and the page looked empty.
+    ['Expected cash', totals.expectedCash ?? 0, 'var(--gecko-text-primary)'],
+    ['Expected credit', totals.expectedCredit ?? 0, 'var(--gecko-text-primary)'],
     ['Paid', totals.paid, 'var(--gecko-success-700)'],
     ['Waived', totals.waived, 'var(--gecko-text-secondary)'],
     ['Unbilled', totals.unbilled, 'var(--gecko-warning-700)'],
@@ -250,6 +291,7 @@ function Totals({ totals, m, compact = false }: { totals: StatementTotals; m: (v
     ['Cancelled', totals.cancelled, 'var(--gecko-text-disabled)'],
   ] as const;
   const shown = parts.filter(([label, v]) => v !== 0 || (!compact && label === 'Paid'));
+  const noPrice = totals.noPrice ?? 0;
   return (
     <div className="gecko-row gecko-row-wrap" style={{ gap: compact ? 12 : 20 }}>
       {shown.map(([label, v, color]) => (
@@ -258,6 +300,14 @@ function Totals({ totals, m, compact = false }: { totals: StatementTotals; m: (v
           <div className="gecko-mono" style={{ fontWeight: 700, fontSize: compact ? 13 : 18, color }}>{m(v)}</div>
         </div>
       ))}
+      {noPrice > 0 && (
+        <div style={{ textAlign: 'right' }}>
+          <div className="gecko-cell-meta">No rate</div>
+          <div className="gecko-mono" style={{ fontWeight: 700, fontSize: compact ? 13 : 18, color: 'var(--gecko-error-600)' }}>
+            {noPrice}
+          </div>
+        </div>
+      )}
     </div>
   );
 }

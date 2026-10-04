@@ -571,7 +571,7 @@ export default function YardGlancePage() {
           </div>
         </div>
         <div style={{ overflowX: 'auto' }}>
-          <table className="gecko-table gecko-table-compact" style={{ fontSize: 12, minWidth: 920 }}>
+          <table className="gecko-table gecko-table-compact" style={{ minWidth: 920 }}>
             <thead>
               <tr>
                 <th>Block</th>

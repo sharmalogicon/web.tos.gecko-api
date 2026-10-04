@@ -4,6 +4,7 @@ import Link from 'next/link';
 import { Icon } from '@/components/ui/Icon';
 import { ExportButton } from '@/components/ui/ExportButton';
 import { useApiList } from '@/lib/api/use-api';
+import { formatDateTime } from '@/lib/format';
 
 /**
  * LIVE against gecko_tos (vessel.vessel_call + lines + cut-offs), batch A.
@@ -62,9 +63,7 @@ const MONTH_NAMES = ['January', 'February', 'March', 'April', 'May', 'June', 'Ju
 const DAY_LABELS = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
 
 const localDayKey = (d: Date) => `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
-const fmtDateTime = (iso: string | null) => iso
-  ? new Date(iso).toLocaleString(undefined, { day: '2-digit', month: 'short', hour: '2-digit', minute: '2-digit', hour12: false })
-  : '—';
+const fmtDateTime = formatDateTime;   // dd-MM-yyyy HH:mm
 const hoursUntil = (iso: string | null) => iso ? (new Date(iso).getTime() - Date.now()) / 3_600_000 : null;
 
 // ── Popover ───────────────────────────────────────────────────────────────────
@@ -317,7 +316,7 @@ export default function VesselSchedulePage() {
 
       {/* The month as a list — what the planner actually works down */}
       <div className="gecko-table-card">
-        <table className="gecko-table gecko-table-comfortable" style={{ fontSize: 12.5 }}>
+        <table className="gecko-table gecko-table-comfortable">
           <thead>
             <tr>
               <th style={{ width: 120 }}>ETD</th>

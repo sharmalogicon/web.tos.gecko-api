@@ -87,7 +87,7 @@ export function SettingsTable({ settings, branchId, canManage, onSaved }: {
 }) {
   return (
     <div className="gecko-table-card">
-      <table className="gecko-table gecko-table-compact" style={{ fontSize: 12.5 }}>
+      <table className="gecko-table gecko-table-compact">
         <thead>
           <tr>
             <th>Setting</th>

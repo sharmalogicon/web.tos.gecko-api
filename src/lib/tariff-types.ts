@@ -1,3 +1,4 @@
+import { formatDate } from './format';
 /**
  * Tariff types — shared schema between editor (/tariff/plans/new) and
  * view-only detail (/tariff/plans/[id]).
@@ -255,7 +256,7 @@ export const fmtDateLong = (iso: string) => {
   if (!iso) return '—';
   const d = new Date(iso);
   if (isNaN(d.getTime())) return iso;
-  return d.toLocaleDateString('en-US', { day: '2-digit', month: 'short', year: 'numeric' });
+  return formatDate(d.toISOString());
 };
 
 export function daysBetween(a: string, b: string): number {

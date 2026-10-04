@@ -2,11 +2,13 @@
 import React, { useState, useMemo, useEffect } from 'react';
 import Link from 'next/link';
 import { useParams } from 'next/navigation';
+import { DateField } from '@/components/ui/DateField';
 import { Icon } from '@/components/ui/Icon';
 import { useToast } from '@/components/ui/Toast';
 import { useApi } from '@/lib/api/use-api';
 import { apiSend } from '@/lib/api/client';
 import { ApiError } from '@/lib/api/problem';
+import { formatDateTime } from '@/lib/format';
 
 /**
  * LIVE against gecko_tos (vessel.vessel_call + vessel_call_line +
@@ -93,7 +95,7 @@ const STATUS: Record<string, { bg: string; color: string; label: string }> = {
 // ── time helpers ────────────────────────────────────────────────────────────
 const TZ = Intl.DateTimeFormat().resolvedOptions().timeZone;
 const fmt = (iso: string | null) => iso
-  ? new Date(iso).toLocaleString(undefined, { day: '2-digit', month: 'short', hour: '2-digit', minute: '2-digit', hour12: false })
+  ? formatDateTime(iso)
   : '—';
 /** ISO → value for <input type="datetime-local"> in the browser's zone. */
 const toLocalInput = (iso: string | null) => {
@@ -172,7 +174,7 @@ function ActualsForm({ call, onDone }: { call: VesselCall; onDone: () => void })
         {([['Arrived (ATA)', ata, setAta, 'ata'], ['Berthed (ATB)', atb, setAtb, 'atb'], ['Departed (ATD)', atd, setAtd, 'atd']] as const).map(([label, value, set, key]) => (
           <div key={key} className="gecko-form-group">
             <label className="gecko-label">{label}</label>
-            <input type="datetime-local" className="gecko-input" value={value} onChange={e => set(e.target.value)} />
+            <DateField withTime value={value} onChange={set} aria-label={label} />
             {error?.forField(key) && <div style={{ fontSize: 11, color: 'var(--gecko-error-600)', marginTop: 3 }}>{error.forField(key)}</div>}
           </div>
         ))}
@@ -269,7 +271,7 @@ function CutoffEditor({ call, lines, cutoffs, onDone, onClose }: {
   return (
     <div className="gecko-stack" style={{ gap: 12, padding: '16px 20px' }}>
       <ErrorBox error={error} />
-      <table className="gecko-table gecko-table-compact" style={{ fontSize: 12 }}>
+      <table className="gecko-table gecko-table-compact">
         <thead>
           <tr>
             <th style={{ width: 150 }}>Kind</th>
@@ -296,7 +298,7 @@ function CutoffEditor({ call, lines, cutoffs, onDone, onClose }: {
                   </select>
                 </td>
                 <td className="gecko-cell-meta" title={r.branchId ?? undefined}>{r.branchId ? 'one branch' : 'every branch'}</td>
-                <td><input type="datetime-local" className="gecko-input gecko-input-sm" value={r.at} onChange={e => set(r.key, { at: e.target.value })} /></td>
+                <td><DateField withTime size="sm" value={r.at} onChange={at => set(r.key, { at })} aria-label="Cut-off time" /></td>
                 <td><input className="gecko-input gecko-input-sm" maxLength={300} value={r.remarks} onChange={e => set(r.key, { remarks: e.target.value })} /></td>
                 <td>
                   <button type="button" aria-label="Remove cut-off" onClick={() => setRows(rs => rs.filter(x => x.key !== r.key))}
@@ -344,7 +346,7 @@ function EffectivePanel({ callId, lines }: { callId: string; lines: Line[] }) {
         </select>
       </div>
       {error ? <div style={{ padding: 16 }}><ErrorBox error={error} /></div> : (
-        <table className="gecko-table gecko-table-compact" style={{ fontSize: 12 }}>
+        <table className="gecko-table gecko-table-compact">
           <tbody>
             {loading && !data ? (
               <tr><td className="gecko-cell-meta" style={{ padding: 16 }}>Loading…</td></tr>
@@ -499,7 +501,7 @@ export default function VesselCallDetailPage() {
               <span style={{ fontSize: 13, fontWeight: 700 }}>Lines on this call</span>
               <span className="gecko-cell-meta">— each with its own voyage; bookings and EDI match on line + voyage</span>
             </div>
-            <table className="gecko-table gecko-table-compact" style={{ fontSize: 12.5 }}>
+            <table className="gecko-table gecko-table-compact">
               <thead>
                 <tr><th>Line</th><th>Voyage in</th><th>Voyage out</th><th>Agent</th><th>Service</th></tr>
               </thead>
@@ -532,7 +534,7 @@ export default function VesselCallDetailPage() {
             {panel === 'cutoffs' && !frozen ? (
               <CutoffEditor call={call} lines={lines} cutoffs={cutoffs} onDone={done} onClose={() => setPanel('none')} />
             ) : (
-              <table className="gecko-table gecko-table-compact" style={{ fontSize: 12.5 }}>
+              <table className="gecko-table gecko-table-compact">
                 <thead>
                   <tr><th style={{ width: 130 }}>Kind</th><th>Applies to</th><th style={{ width: 150 }}>At</th><th style={{ width: 190 }}>Source</th><th>Remarks</th></tr>
                 </thead>

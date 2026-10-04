@@ -17,6 +17,7 @@
 
 import React, { useState } from 'react';
 import Link from 'next/link';
+import { DateField } from '@/components/ui/DateField';
 import { Icon } from '@/components/ui/Icon';
 import { EmptyState } from '@/components/ui/EmptyState';
 import { Modal } from '@/components/ui/Modal';
@@ -157,11 +158,11 @@ export default function ReeferPlugLogPage() {
               <>
                 <div className="gecko-form-group">
                   <label className="gecko-form-label">Plugged in from</label>
-                  <input type="date" className="gecko-input gecko-input-sm" value={fromDay} onChange={e => setFromDay(e.target.value)} />
+                  <DateField size="sm" value={fromDay} onChange={setFromDay} max={toDay || undefined} aria-label="Plugged in from" />
                 </div>
                 <div className="gecko-form-group">
                   <label className="gecko-form-label">to</label>
-                  <input type="date" className="gecko-input gecko-input-sm" value={toDay} onChange={e => setToDay(e.target.value)} />
+                  <DateField size="sm" value={toDay} onChange={setToDay} min={fromDay || undefined} aria-label="Plugged in to" />
                 </div>
               </>
             )}
@@ -383,7 +384,7 @@ function PlugOutModal({ session, onClose, onDone }: { session: ReeferSession; on
         <Failure failure={failure} fields={['pluggedOutAt', 'remarks']} />
         <div className="gecko-form-group">
           <label className="gecko-form-label">Plugged out at</label>
-          <input type="datetime-local" className="gecko-input" value={at} onChange={e => setAt(e.target.value)} />
+          <DateField withTime value={at} onChange={setAt} aria-label="Plugged out at" />
           <div className="gecko-cell-meta">Leave blank for now.</div>
           <FieldError failure={failure} field="pluggedOutAt" />
         </div>
@@ -445,13 +446,13 @@ function CorrectModal({ session, onClose, onDone }: { session: ReeferSession; on
         <div className="gecko-reefer-form-grid">
           <label className="gecko-form-row">
             <span>Plugged in at *</span>
-            <input type="datetime-local" className="gecko-input gecko-input-sm" value={inAt} onChange={e => setInAt(e.target.value)} />
+            <DateField withTime size="sm" value={inAt} onChange={setInAt} aria-label="Plugged in at" />
             <FieldError failure={failure} field="pluggedInAt" />
           </label>
           {!session.isOpen && (
             <label className="gecko-form-row">
               <span>Plugged out at *</span>
-              <input type="datetime-local" className="gecko-input gecko-input-sm" value={outAt} onChange={e => setOutAt(e.target.value)} />
+              <DateField withTime size="sm" value={outAt} onChange={setOutAt} aria-label="Plugged out at" />
               <FieldError failure={failure} field="pluggedOutAt" />
             </label>
           )}

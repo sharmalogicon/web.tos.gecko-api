@@ -1,5 +1,6 @@
 "use client";
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { DateField } from '@/components/ui/DateField';
 import { Icon } from '@/components/ui/Icon';
 import { Modal } from '@/components/ui/Modal';
 import { useToast } from '@/components/ui/Toast';
@@ -18,6 +19,7 @@ import { DrawerBar } from './DrawerBar';
 import { ShiftReceipts } from './ShiftReceipts';
 import { VoidReceiptModal } from '../_components/VoidReceiptModal';
 import { ReceiptView, usePrintReceipt } from './ReceiptView';
+import { formatDate } from '@/lib/format';
 
 /**
  * THE CASH WINDOW — live against /api/revenue/window.
@@ -54,7 +56,7 @@ interface PaymentRow {
 const CASH_ROW: PaymentRow = { channel: 'CASH', amount: '', tendered: '', referenceNo: '', bankName: '' };
 
 const num = (s: string) => (s.trim() === '' ? NaN : Number(s));
-const shortDate = (d: string | null) => (d ? new Date(`${d}T00:00:00`).toLocaleDateString('en-GB', { day: '2-digit', month: 'short' }) : '—');
+const shortDate = formatDate;   // dd-MM-yyyy
 
 export default function CashWindowPage() {
   const { user, status, branchesFor, canAt } = useSession();
@@ -401,11 +403,15 @@ export default function CashWindowPage() {
                 />
               </div>
               <div className="gecko-form-group">
-                <label className="gecko-form-label" htmlFor="paidUntil">Storage paid until</label>
-                <input id="paidUntil" type="date" className="gecko-input" min={booking?.today} value={paidUntil}
-                  title={booking ? `Depot date today: ${shortDate(booking.today)}` : 'Defaults to the depot\'s today'}
-                  onChange={e => {
-                    const v = booking && e.target.value && e.target.value < booking.today ? booking.today : e.target.value;
+                <label className="gecko-form-label">Storage paid until</label>
+                {/* min is the depot's today: storage cannot be paid into the
+                    past. The clamp below stays as the belt to that brace. */}
+                <DateField
+                  value={paidUntil}
+                  min={booking?.today}
+                  aria-label="Storage paid until"
+                  onChange={raw => {
+                    const v = booking && raw && raw < booking.today ? booking.today : raw;
                     setPaidUntil(v);
                     if (booking && v) void quote(booking.orderNo, v, true);
                   }} />
@@ -722,6 +728,7 @@ function BoxCard({ box, selected, onToggle, mayWaive, onWaive }: {
   box: WindowBox; selected: boolean; onToggle: () => void; mayWaive: boolean; onWaive: (line: QuoteLine) => void;
 }) {
   const payable = isPayable(box);
+  const unpriced = box.noPrice ?? [];
   const right: React.CSSProperties = { textAlign: 'right', fontVariantNumeric: 'tabular-nums' };
   return (
     <div className="gecko-card" style={{ padding: 16, opacity: payable ? 1 : 0.75, outline: payable && selected ? '2px solid var(--gecko-primary-500, #2563eb)' : undefined }}>
@@ -738,6 +745,42 @@ function BoxCard({ box, selected, onToggle, mayWaive, onWaive }: {
       </div>
 
       {!payable && box.note && <div className="gecko-text-muted" style={{ marginTop: 8, fontSize: 13 }}>{box.note}</div>}
+
+      {/* UNPRICED, not free. The amount is 0 and that is the trap: a clerk who
+          reads 0 takes the money and sends the truck to a gate that will not
+          open, because the server issues no coupon for this box. Red, loud,
+          and Pay is already disabled by isPayable(). */}
+      {unpriced.length > 0 && (
+        <div className="gecko-alert gecko-alert-error" style={{ marginTop: 10 }}>
+          <div className="gecko-row" style={{ gap: 8, alignItems: 'flex-start' }}>
+            <Icon name="alertCircle" size={16} />
+            <div className="gecko-flex-1">
+              <strong>No rate in any tariff: add the rate or ask a supervisor to waive.</strong>
+              <div style={{ fontSize: 13, marginTop: 2 }}>
+                This box cannot be paid for and the gate will refuse it until every charge below is priced or waived.
+              </div>
+              <table className="gecko-table gecko-table-compact" style={{ width: '100%', marginTop: 8 }}>
+                <tbody>
+                  {unpriced.map((l, i) => (
+                    <tr key={`np-${l.chargeCode}-${l.billTo}-${i}`}>
+                      <td style={{ color: 'var(--gecko-error-600)', fontWeight: 600 }}>
+                        {l.chargeName} <span className="gecko-text-mono" style={{ fontWeight: 400 }}>{l.chargeCode}</span>
+                      </td>
+                      <td style={{ fontSize: 13 }}>{l.billTo}</td>
+                      <td style={{ ...right, color: 'var(--gecko-error-600)' }}>no price</td>
+                      {mayWaive && (
+                        <td style={right}>
+                          <button type="button" className="gecko-btn gecko-btn-sm gecko-btn-outline" onClick={() => onWaive(l)}>Waive</button>
+                        </td>
+                      )}
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </div>
+      )}
 
       {box.due.length > 0 && (
         <table className="gecko-table gecko-table-compact" style={{ width: '100%', marginTop: 10 }}>

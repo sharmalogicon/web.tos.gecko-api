@@ -1,5 +1,6 @@
 "use client";
 import React, { useMemo, useState } from 'react';
+import { DateField } from '@/components/ui/DateField';
 import { Icon } from '@/components/ui/Icon';
 import { EmptyState } from '@/components/ui/EmptyState';
 import { ConfirmDialog } from '@/components/ui/ConfirmDialog';
@@ -102,7 +103,9 @@ function Cell<T>({ col, draft, set, error, isNew }: {
       input = <input type="time" className="gecko-input gecko-input-sm gecko-num-tabular" value={(value as string | null) ?? ''} aria-label={col.label} {...invalid} onChange={e => change(e.target.value || null)} />;
       break;
     case 'date':
-      input = <input type="date" className="gecko-input gecko-input-sm" value={(value as string | null) ?? ''} aria-label={col.label} {...invalid} onChange={e => change(e.target.value || null)} />;
+      // The picker is a portal, so it escapes the table's overflow:hidden.
+      input = <DateField size="sm" value={(value as string | null) ?? ''} aria-label={col.label}
+        invalid={invalid['aria-invalid'] === true} onChange={v => change(v || null)} />;
       break;
     default:
       input = (
@@ -263,7 +266,7 @@ export function EditableTable<T>({
       )}
 
       <div className="gecko-table-card">
-        <table className="gecko-table gecko-table-compact" style={{ fontSize: 12.5 }}>
+        <table className="gecko-table gecko-table-compact">
           <thead>
             <tr>
               {columns.map(c => <th key={c.key} title={c.hint} style={c.width ? { width: c.width } : undefined}>{c.label}{c.required && editing !== null ? ' *' : ''}</th>)}

@@ -1,18 +1,22 @@
 "use client";
-import React, { useMemo, useState, use } from 'react';
+import React, { useCallback, useMemo, useState, use } from 'react';
 import Link from 'next/link';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { Icon } from '@/components/ui/Icon';
 import { useToast } from '@/components/ui/Toast';
 import { EmptyState } from '@/components/ui/EmptyState';
+import { Fact } from '@/components/ui/Fact';
+import { FreeTimeMatrix } from '../../_components/FreeTimeMatrix';
+import { freeTimeDraftsOf } from '../../_components/tariff-drafts';
 import { useApi } from '@/lib/api/use-api';
+import { useTariffCatalogs } from '@/lib/api/tariff-catalogs';
 import { apiSend } from '@/lib/api/client';
 import { ApiError } from '@/lib/api/problem';
 import { useSession } from '@/lib/auth/session';
 import {
   axis, conditionText, formatDate, formatMoment, isTimeCharge, money, partySummary,
   SCOPE_RANK_LABEL, STATUS_TONE, tierLabel, TYPE_TONE,
-  type FreeTimeSet, type PriceRequest, type PriceResult, type Rate, type RateSet, type Schedule,
+  type FreeTimeSet, type Rate, type RateSet, type Schedule,
 } from '@/lib/api/revenue';
 import { ExcelImportPanel } from '../../_components/ExcelImportPanel';
 
@@ -32,7 +36,7 @@ import { ExcelImportPanel } from '../../_components/ExcelImportPanel';
  *     rejected, by whom — not invented workflow steps.
  */
 
-type Tab = 'overview' | 'charges' | 'time' | 'free-time' | 'excel' | 'test-move' | 'activity';
+type Tab = 'overview' | 'charges' | 'storage' | 'activity';
 
 export default function TariffScheduleDetailPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = use(params);
@@ -40,8 +44,11 @@ export default function TariffScheduleDetailPage({ params }: { params: Promise<{
   const { toast } = useToast();
   const { can, user } = useSession();
   const searchParams = useSearchParams();
-  // ?tab=excel — the new-quotation screen lands here to load rates from Excel.
-  const [tab, setTab] = useState<Tab>(searchParams.get('tab') === 'excel' ? 'excel' : 'overview');
+  // ?tab=excel is an old deep link from the new-quotation screen. Excel is no
+  // longer a tab — the import card sits on Overview — so it simply lands there.
+  const requested = searchParams.get('tab');
+  const [tab, setTab] = useState<Tab>(
+    requested === 'charges' || requested === 'storage' || requested === 'activity' ? requested : 'overview');
   const [busy, setBusy] = useState<string | null>(null);
 
   const schedule = useApi<Schedule>(`/api/revenue/tariffs/${id}`);
@@ -52,6 +59,17 @@ export default function TariffScheduleDetailPage({ params }: { params: Promise<{
   const rates = rateSet.data?.rates ?? [];
   const moveCharges = useMemo(() => rates.filter(r => !isTimeCharge(r)), [rates]);
   const timeCharges = useMemo(() => rates.filter(r => isTimeCharge(r)), [rates]);
+
+  // Mapped once per load: the matrix takes drafts, so one component renders
+  // both the editor's grid and this read-only one.
+  const freeTimeDrafts = useMemo(() => freeTimeDraftsOf(freeTime.data?.rules ?? []), [freeTime.data]);
+
+  // A rate carries only the charge CODE, so the descriptions come from the
+  // master list — the same one the editor's dropdown reads.
+  const { catalogs } = useTariffCatalogs('TOS');
+  const describe = useCallback(
+    (code: string) => catalogs.charges.find(c => c.chargeCode === code)?.descriptionEn ?? '',
+    [catalogs]);
 
   const reloadAll = () => { schedule.reload(); rateSet.reload(); freeTime.reload(); };
 
@@ -148,7 +166,7 @@ export default function TariffScheduleDetailPage({ params }: { params: Promise<{
             {!s.isEditable && <span style={{ fontSize: 11, color: 'var(--gecko-text-disabled)', fontStyle: 'italic' }}>frozen — a change is a new version</span>}
           </div>
           <div className="gecko-row gecko-row-baseline gecko-row-wrap gecko-mt-1" style={{ gap: 12 }}>
-            <h1 style={{ margin: 0, fontSize: 18, fontWeight: 700, color: 'var(--gecko-text-primary)' }}>{s.name}</h1>
+            <h1 className="gecko-page-title">{s.name}</h1>
             <span style={{ fontSize: 12, color: 'var(--gecko-text-secondary)', fontFamily: 'var(--gecko-font-mono)' }}>{partySummary(s)}</span>
           </div>
         </div>
@@ -194,31 +212,15 @@ export default function TariffScheduleDetailPage({ params }: { params: Promise<{
 
       {/* Validity strip */}
       <div style={{ background: 'var(--gecko-bg-surface)', borderBottom: '1px solid var(--gecko-border)', padding: '16px 24px' }}>
-        <div className="gecko-grid-4" style={{ maxWidth: 'var(--gecko-container-max)', margin: '0 auto', gap: 14 }}>
-          <div className="gecko-kpi-tile">
-            <div className="gecko-kpi-tile-icon gecko-kpi-tile-icon-primary"><Icon name="calendar" size={16} /></div>
-            <div className="gecko-kpi-tile-value" style={{ fontSize: 16 }}>{formatDate(s.effectiveFrom)}</div>
-            <div className="gecko-kpi-tile-label">Effective from (branch-local)</div>
-          </div>
-          <div className="gecko-kpi-tile">
-            <div className="gecko-kpi-tile-icon gecko-kpi-tile-icon-warning"><Icon name="clock" size={16} /></div>
-            <div className="gecko-kpi-tile-value" style={{ fontSize: 16 }}>{s.effectiveUntil ? formatDate(s.effectiveUntil) : 'Open-ended'}</div>
-            <div className="gecko-kpi-tile-label">
-              {s.effectiveTo === null && s.effectiveUntil !== null ? 'Ends when the next version starts' : 'Effective until'}
-            </div>
-          </div>
-          <div className="gecko-kpi-tile">
-            <div className="gecko-kpi-tile-icon gecko-kpi-tile-icon-info"><Icon name="dollarSign" size={16} /></div>
-            <div className="gecko-kpi-tile-value">{s.rateCount}</div>
-            <div className="gecko-kpi-tile-label">
-              Priced rows · {moveCharges.length} move · {timeCharges.length} time
-            </div>
-          </div>
-          <div className="gecko-kpi-tile">
-            <div className="gecko-kpi-tile-icon gecko-kpi-tile-icon-success"><Icon name="layers" size={16} /></div>
-            <div className="gecko-kpi-tile-value">{s.scopeRank}</div>
-            <div className="gecko-kpi-tile-label">{SCOPE_RANK_LABEL[s.scopeRank] ?? 'Precedence rank'}</div>
-          </div>
+        <div className="gecko-fact-strip" style={{ maxWidth: 'var(--gecko-container-max)', margin: '0 auto' }}>
+          <Fact icon="calendar" tone="primary" value={formatDate(s.effectiveFrom)} label="Effective from (branch-local)" />
+          <Fact icon="clock" tone="warning"
+            value={s.effectiveUntil ? formatDate(s.effectiveUntil) : 'Open-ended'}
+            label={s.effectiveTo === null && s.effectiveUntil !== null ? 'Ends when the next version starts' : 'Effective until'} />
+          <Fact icon="dollarSign" tone="info" value={String(s.rateCount)}
+            label={`Priced rows · ${moveCharges.length} move · ${timeCharges.length} time`} />
+          <Fact icon="layers" tone="success" value={String(s.scopeRank)}
+            label={SCOPE_RANK_LABEL[s.scopeRank] ?? 'Precedence rank'} />
         </div>
       </div>
 
@@ -228,10 +230,7 @@ export default function TariffScheduleDetailPage({ params }: { params: Promise<{
           {([
             { id: 'overview', label: 'Overview', icon: 'info' },
             { id: 'charges', label: `Move charges (${moveCharges.length})`, icon: 'truck' },
-            { id: 'time', label: `Storage & time (${timeCharges.length})`, icon: 'clock' },
-            { id: 'free-time', label: `Free time (${freeTime.data?.rules.length ?? 0})`, icon: 'calendar' },
-            ...(can('revenue.import.manage') ? [{ id: 'excel', label: 'Excel', icon: 'fileText' }] : []),
-            { id: 'test-move', label: 'Test a move', icon: 'play' },
+            { id: 'storage', label: `Storage & time (${timeCharges.length})`, icon: 'clock' },
             { id: 'activity', label: 'Activity', icon: 'activity' },
           ] as { id: Tab; label: string; icon: string }[]).map(t => (
             <button key={t.id} className={`gecko-tab ${tab === t.id ? 'gecko-tab-active' : ''}`} onClick={() => setTab(t.id)}>
@@ -252,6 +251,17 @@ export default function TariffScheduleDetailPage({ params }: { params: Promise<{
 
         {tab === 'overview' && (
           <>
+            {/* Excel is no longer a tab. The import belongs with the tariff it
+                fills, and only while that version can still take one — a freshly
+                created draft lands here with nothing priced, which is exactly
+                when a clerk wants to drop the customer's workbook in. */}
+            {s.isEditable && canManage && can('revenue.import.manage') && (
+              <ExcelImportPanel scheduleId={s.scheduleId} scheduleNo={s.scheduleNo} versionNo={s.versionNo}
+                editable onApplied={reloadAll} />
+            )}
+            {/* Parties on the left, storage free days beside them — the shape of
+                Vector's Customer Rate Profile, in our cards. */}
+            <div className="gecko-tariff-header-split">
             <Card title="Parties & scope" icon="users"
               subtitle={s.scheduleType === 'PUBLIC'
                 ? 'A public list applies to every customer with no contract of their own.'
@@ -284,6 +294,11 @@ export default function TariffScheduleDetailPage({ params }: { params: Promise<{
                 </div>
               )}
             </Card>
+            <Card title="Storage free days" icon="calendar"
+              subtitle="Days free before storage starts to price. Free days come off before the tiers are counted.">
+              <FreeTimeMatrix rules={freeTimeDrafts} readOnly />
+            </Card>
+            </div>
 
             {s.status === 'REJECTED' && s.rejectionReason && (
               <div role="alert" className="gecko-alert gecko-alert-error gecko-row" style={{ gap: 10 }}>
@@ -312,42 +327,10 @@ export default function TariffScheduleDetailPage({ params }: { params: Promise<{
           </>
         )}
 
-        {tab === 'charges' && <RateTable rates={moveCharges} currency={s.currencyCode} emptyNote="No per-move charges priced here." />}
-        {tab === 'time' && <RateTable rates={timeCharges} currency={s.currencyCode} emptyNote="No storage or time-based charges priced here." />}
-
-        {tab === 'free-time' && (
-          <Card title="Free time" icon="calendar"
-            subtitle="Free units come off BEFORE the tiers are counted: 3 free days and a 1–7 tier means calendar days 4–10 price at tier 1.">
-            {(freeTime.data?.rules.length ?? 0) === 0 ? (
-              <div className="gecko-cell-meta">No free-time rules on this version — the public tariff decides.</div>
-            ) : (
-              <table className="gecko-table gecko-table-compact" style={{ fontSize: 12 }}>
-                <thead>
-                  <tr><th>Kind</th><th>Full / empty</th><th>Direction</th><th>Cargo group</th><th>Size</th><th style={{ textAlign: 'right' }}>Free</th></tr>
-                </thead>
-                <tbody>
-                  {freeTime.data!.rules.map((r, i) => (
-                    <tr key={i}>
-                      <td className="gecko-mono-strong">{r.freeTimeKind}</td>
-                      <td>{axis(r.fullEmpty)}</td>
-                      <td>{axis(r.direction)}</td>
-                      <td>{axis(r.cargoGroup)}</td>
-                      <td>{axis(r.equipmentSize)}</td>
-                      <td style={{ textAlign: 'right', fontWeight: 700 }}>{r.freeUnits} {r.unit.toLowerCase()}{r.freeUnits === 1 ? '' : 's'}</td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            )}
-          </Card>
+        {tab === 'charges' && <RateTable rates={moveCharges} currency={s.currencyCode} describe={describe} emptyNote="No per-move charges priced here." />}
+        {tab === 'storage' && (
+          <RateTable rates={timeCharges} currency={s.currencyCode} describe={describe} emptyNote="No storage or time-based charges priced here." />
         )}
-
-        {tab === 'excel' && (
-          <ExcelImportPanel scheduleId={s.scheduleId} scheduleNo={s.scheduleNo} versionNo={s.versionNo}
-            editable={s.isEditable && canManage} onApplied={reloadAll} />
-        )}
-
-        {tab === 'test-move' && <TestAMove schedule={s} rates={rates} />}
 
         {tab === 'activity' && (
           <Card title="Approval trail" icon="activity" subtitle="What the API recorded — system versioning keeps every earlier state of the row.">
@@ -432,7 +415,11 @@ function TrailRow({ icon, tone, what, when, detail, last }: {
 }
 
 /** One table for every rate row: the axes as columns, because that is what they are. */
-function RateTable({ rates, currency, emptyNote }: { rates: Rate[]; currency: string; emptyNote: string }) {
+function RateTable({ rates, currency, emptyNote, describe }: {
+  rates: Rate[]; currency: string; emptyNote: string;
+  /** A charge code is an identifier, not a label — the description makes the card readable. */
+  describe: (code: string) => string;
+}) {
   const byCharge = useMemo(() => {
     const groups = new Map<string, Rate[]>();
     for (const r of rates) groups.set(r.chargeCode, [...(groups.get(r.chargeCode) ?? []), r]);
@@ -446,9 +433,10 @@ function RateTable({ rates, currency, emptyNote }: { rates: Rate[]; currency: st
   return (
     <div className="gecko-stack gecko-stack-lg">
       {byCharge.map(([code, rows]) => (
-        <Card key={code} title={code} icon="dollarSign" subtitle={`${rows.length} priced row(s) — the most specific match wins`}>
+        <Card key={code} title={code} icon="dollarSign"
+          subtitle={[describe(code), `${rows.length} priced row(s) — the most specific match wins`].filter(Boolean).join(' · ')}>
           <div style={{ overflowX: 'auto' }}>
-            <table className="gecko-table gecko-table-compact" style={{ fontSize: 12 }}>
+            <table className="gecko-table gecko-table-compact">
               <thead>
                 <tr>
                   <th>Bill to</th><th>Term</th>
@@ -516,249 +504,10 @@ function RateTable({ rates, currency, emptyNote }: { rates: Rate[]; currency: st
   );
 }
 
-/**
- * The real resolver over HTTP. It does NOT force this schedule: it prices the
- * shipment as the gate would, and the trail shows whether this version won —
- * which is the question worth asking before approving a price.
- */
-function TestAMove({ schedule, rates }: { schedule: Schedule; rates: Rate[] }) {
-  const chargeCodes = useMemo(() => [...new Set(rates.map(r => r.chargeCode))].sort(), [rates]);
-  const orderTypes = useMemo(() => [...new Set(rates.map(r => r.orderTypeCode).filter(Boolean))] as string[], [rates]);
-  const sizes = useMemo(() => [...new Set(rates.map(r => r.equipmentSize).filter(Boolean))] as string[], [rates]);
-  const cargoCategories = useMemo(() => [...new Set(rates.map(r => r.cargoCategoryCode).filter(Boolean))] as string[], [rates]);
-  // Seed the form from ONE rate row (the first by charge code), so the default
-  // question is a shipment this tariff actually prices. Mixing the first charge
-  // with the first order type / size of OTHER rows asked for combinations no
-  // row covers, and the first click always answered "no price found".
-  // Prefer a row the form can express (no movement / truck axis — neither is on the form).
-  const firstRate = [...rates].sort((a, b) => a.chargeCode.localeCompare(b.chargeCode))
-    .find(r => !r.movementCode && !r.truckCategoryCode) ?? rates[0];
-
-  const [form, setForm] = useState<PriceRequest>({
-    moduleCode: schedule.moduleCode,
-    eventTime: new Date().toISOString(),
-    chargeCode: firstRate?.chargeCode ?? 'LIFTIN',
-    billTo: firstRate?.billTo ?? 'CUSTOMER',
-    paymentTermCode: firstRate?.paymentTermCode ?? 'CREDIT',
-    branchId: schedule.branchId,
-    agentPartyCode: schedule.agentPartyCode,
-    forwarderPartyCode: schedule.forwarderPartyCode,
-    customerPartyCode: schedule.customerPartyCode,
-    bookingRef: schedule.bookingRef,
-    orderTypeCode: firstRate ? firstRate.orderTypeCode : (orderTypes[0] ?? null),
-    equipmentTypeCode: firstRate?.equipmentTypeCode ?? null,
-    equipmentSize: firstRate ? firstRate.equipmentSize : (sizes[0] ?? null),
-    cargoCategoryCode: firstRate ? firstRate.cargoCategoryCode : (cargoCategories[0] ?? null),
-    quantity: 1,
-    freeTimeKind: null,
-    fullEmpty: 'FULL',
-    direction: 'IMPORT',
-  });
-  const [result, setResult] = useState<PriceResult | null>(null);
-  const [error, setError] = useState<string | null>(null);
-  const [pricing, setPricing] = useState(false);
-
-  const set = <K extends keyof PriceRequest>(key: K, value: PriceRequest[K]) => setForm(f => ({ ...f, [key]: value }));
-
-  const selectedRate = rates.find(r => r.chargeCode === form.chargeCode);
-  const isDurationCharge = selectedRate ? isTimeCharge(selectedRate) : false;
-
-  async function run() {
-    setPricing(true);
-    setError(null);
-    try {
-      const body: PriceRequest = {
-        ...form,
-        eventTime: new Date(form.eventTime).toISOString(),
-        freeTimeKind: isDurationCharge ? (form.freeTimeKind ?? 'STORAGE') : null,
-      };
-      setResult(await apiSend<PriceResult>('POST', '/api/revenue/price', body));
-    } catch (e) {
-      setResult(null);
-      setError(e instanceof ApiError ? e.message : 'Could not reach the Gecko API.');
-    } finally {
-      setPricing(false);
-    }
-  }
-
-  const currency = result?.currencyCode ?? schedule.currencyCode;
-
-  return (
-    <div className="gecko-stack gecko-stack-lg">
-      <Card title="Price one move" icon="play"
-        subtitle="Calls POST /api/revenue/price — the same resolver the gate and the cashier use. Nothing is saved.">
-        <div className="gecko-grid-4" style={{ gap: 14 }}>
-          <Labelled label="Charge">
-            <select className="gecko-input" value={form.chargeCode} onChange={e => set('chargeCode', e.target.value)}>
-              {(chargeCodes.length > 0 ? chargeCodes : ['LIFTIN', 'LIFTOUT', 'STORAGE']).map(c => <option key={c} value={c}>{c}</option>)}
-            </select>
-          </Labelled>
-          <Labelled label="Bill to">
-            <select className="gecko-input" value={form.billTo} onChange={e => set('billTo', e.target.value)}>
-              {['CUSTOMER', 'LINE', 'AGENT', 'FORWARDER', 'SHIPPER', 'CONSIGNEE', 'HAULIER'].map(c => <option key={c} value={c}>{c}</option>)}
-            </select>
-          </Labelled>
-          <Labelled label="Payment term">
-            <select className="gecko-input" value={form.paymentTermCode} onChange={e => set('paymentTermCode', e.target.value)}>
-              {['CREDIT', 'CASH', 'COD', 'PREPAID'].map(c => <option key={c} value={c}>{c}</option>)}
-            </select>
-          </Labelled>
-          <Labelled label="Event time (with offset)">
-            <input className="gecko-input" type="datetime-local"
-              value={toLocalInput(form.eventTime)}
-              onChange={e => set('eventTime', new Date(e.target.value).toISOString())} />
-          </Labelled>
-
-          <Labelled label="Order type">
-            <input className="gecko-input" value={form.orderTypeCode ?? ''} placeholder="any"
-              onChange={e => set('orderTypeCode', e.target.value || null)} list="tt-order-types" />
-            <datalist id="tt-order-types">{orderTypes.map(o => <option key={o} value={o} />)}</datalist>
-          </Labelled>
-          <Labelled label="Equipment size">
-            <input className="gecko-input" value={form.equipmentSize ?? ''} placeholder="any"
-              onChange={e => set('equipmentSize', e.target.value || null)} list="tt-sizes" />
-            <datalist id="tt-sizes">{sizes.map(o => <option key={o} value={o} />)}</datalist>
-          </Labelled>
-          <Labelled label="Equipment type">
-            <input className="gecko-input" value={form.equipmentTypeCode ?? ''} placeholder="any (supplies reefer / OOG)"
-              onChange={e => set('equipmentTypeCode', e.target.value || null)} />
-          </Labelled>
-          <Labelled label="Cargo category">
-            <input className="gecko-input" value={form.cargoCategoryCode ?? ''} placeholder="any"
-              onChange={e => set('cargoCategoryCode', e.target.value || null)} list="tt-cargo" />
-            <datalist id="tt-cargo">{cargoCategories.map(o => <option key={o} value={o} />)}</datalist>
-          </Labelled>
-
-          <Labelled label={isDurationCharge ? `Quantity (${selectedRate?.tierBasis?.toLowerCase() ?? 'day'}s, calendar)` : 'Quantity'}>
-            <input className="gecko-input" type="number" min={0} step="0.01" value={form.quantity ?? 1}
-              onChange={e => set('quantity', Number(e.target.value))} />
-          </Labelled>
-          <Labelled label="Gross weight (kg)">
-            <input className="gecko-input" type="number" min={0} value={form.grossWeightKg ?? ''} placeholder="—"
-              onChange={e => set('grossWeightKg', e.target.value === '' ? null : Number(e.target.value))} />
-          </Labelled>
-          <Labelled label="Full / empty">
-            <select className="gecko-input" value={form.fullEmpty ?? ''} onChange={e => set('fullEmpty', e.target.value || null)}>
-              <option value="">any</option><option value="FULL">FULL</option><option value="EMPTY">EMPTY</option>
-            </select>
-          </Labelled>
-          <Labelled label="Direction">
-            <select className="gecko-input" value={form.direction ?? ''} onChange={e => set('direction', e.target.value || null)}>
-              <option value="">any</option><option value="IMPORT">IMPORT</option><option value="EXPORT">EXPORT</option><option value="LOCAL">LOCAL</option>
-            </select>
-          </Labelled>
-        </div>
-
-        <div className="gecko-row" style={{ marginTop: 16, gap: 12 }}>
-          <label className="gecko-row" style={{ fontSize: 13, gap: 6 }}>
-            <input type="checkbox" checked={form.isDangerousGoods ?? false} onChange={e => set('isDangerousGoods', e.target.checked)} />
-            Dangerous goods
-          </label>
-          <div className="gecko-flex-1" />
-          <span className="gecko-cell-meta">
-            Parties come from this schedule: {partySummary(schedule)}
-          </span>
-          <button className="gecko-btn gecko-btn-primary gecko-btn-sm" disabled={pricing} onClick={run}>
-            <Icon name="play" size={14} /> {pricing ? 'Pricing…' : 'Price it'}
-          </button>
-        </div>
-      </Card>
-
-      {error && (
-        <div role="alert" className="gecko-alert gecko-alert-error gecko-row" style={{ gap: 10 }}>
-          <Icon name="alertCircle" size={16} /><span>{error}</span>
-        </div>
-      )}
-
-      {result && (
-        <>
-          <Card
-            title={result.outcome === 'PRICED' ? 'Priced' : 'No price found'}
-            icon={result.outcome === 'PRICED' ? 'checkCircle' : 'alertCircle'}
-            subtitle={result.outcome === 'PRICED'
-              ? `${result.scheduleNo} v${result.versionNo} (${result.scheduleType}, rank ${result.scopeRank})${result.scheduleId === schedule.scheduleId ? ' — this version' : ' — NOT this version'}`
-              : 'The gate would refuse a coupon and the accrual job would park this line for review.'}
-            right={result.outcome === 'PRICED' && (
-              <div style={{ fontSize: 22, fontWeight: 800, color: 'var(--gecko-primary-700)' }}>{money(result.amount, currency)}</div>
-            )}>
-            <div className="gecko-grid-4" style={{ gap: 14 }}>
-              <Field label="Priced for (branch-local date)" value={formatDate(result.pricedForDate)} />
-              <Field label="Method" value={result.pricingMethod ?? '—'} />
-              <Field label="Unit" value={result.billingUnitCode ?? '—'} />
-              <Field label="Specificity" value={result.specificity?.toString() ?? '—'} />
-              <Field label="Quantity" value={result.quantity.toString()} />
-              <Field label="Free units" value={result.freeUnits === null ? '—' : `${result.freeUnits}${result.freeTimeFromScheduleNo ? ` (from ${result.freeTimeFromScheduleNo})` : ''}`} />
-              <Field label="Chargeable" value={result.chargeableQuantity?.toString() ?? '—'} />
-              <Field label="Base / unit rate" value={`${money(result.baseRate, currency)} / ${money(result.unitRate, currency)}`} />
-            </div>
-
-            {result.tiers.length > 0 && (
-              <table className="gecko-table gecko-table-compact" style={{ fontSize: 12, marginTop: 16 }}>
-                <thead>
-                  <tr><th>Tier</th><th style={{ textAlign: 'right' }}>Units</th><th style={{ textAlign: 'right' }}>Rate</th><th style={{ textAlign: 'right' }}>Amount</th></tr>
-                </thead>
-                <tbody>
-                  {result.tiers.map((t, i) => (
-                    <tr key={i}>
-                      <td className="gecko-mono-strong">{tierLabel(t)}</td>
-                      <td style={{ textAlign: 'right' }}>{t.quantity}</td>
-                      <td style={{ textAlign: 'right' }}>{money(t.rate, currency)}</td>
-                      <td style={{ textAlign: 'right', fontWeight: 700 }}>{money(t.amount, currency)}</td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            )}
-
-            {result.conditions.length > 0 && (
-              <div className="gecko-stack gecko-stack-sm" style={{ marginTop: 16 }}>
-                <span className="gecko-field-label">Surcharges applied, in order</span>
-                {result.conditions.map(c => (
-                  <div key={c.sequenceNo} className="gecko-row" style={{ gap: 8, fontSize: 12 }}>
-                    <span className="gecko-pill gecko-pill-warning" style={{ fontSize: 11 }}>{c.sequenceNo}</span>
-                    <span>{c.label}</span>
-                    <span className="gecko-cell-meta">{money(c.before, currency)} → <strong>{money(c.after, currency)}</strong></span>
-                  </div>
-                ))}
-              </div>
-            )}
-          </Card>
-
-          <Card title="Why — every tariff the resolver tried" icon="gitBranch"
-            subtitle="In precedence order. This is the trail the gate snapshots onto the charge line.">
-            <ol style={{ margin: 0, paddingLeft: 20, fontSize: 12, lineHeight: 1.9 }}>
-              {result.precedenceTrail.map((line, i) => (
-                <li key={i} style={{ color: line.includes('CHOSEN') ? 'var(--gecko-success-700)' : 'var(--gecko-text-secondary)', fontWeight: line.includes('CHOSEN') ? 700 : 400 }}>
-                  {line}
-                </li>
-              ))}
-            </ol>
-          </Card>
-        </>
-      )}
-    </div>
-  );
-}
-
-function Labelled({ label, children }: { label: string; children: React.ReactNode }) {
-  return (
-    <div>
-      <div className="gecko-field-label gecko-mb-1">{label}</div>
-      {children}
-    </div>
-  );
-}
 
 /** The day after a date, as YYYY-MM-DD. */
 function nextDay(date: string): string {
   const d = new Date(`${date.slice(0, 10)}T00:00:00`);
   d.setDate(d.getDate() + 1);
   return d.toISOString().slice(0, 10);
-}
-
-/** <input type="datetime-local"> wants local wall-clock with no zone. */
-function toLocalInput(iso: string): string {
-  const d = new Date(iso);
-  const pad = (n: number) => String(n).padStart(2, '0');
-  return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}`;
 }

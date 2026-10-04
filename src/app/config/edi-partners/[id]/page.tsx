@@ -2,6 +2,7 @@
 import React, { useState, useMemo } from 'react';
 import Link from 'next/link';
 import { useParams } from 'next/navigation';
+import { DateField } from '@/components/ui/DateField';
 import { Icon } from '@/components/ui/Icon';
 
 // ── Partner stubs (mirrors the list in edi-partners/page.tsx) ─────────────────
@@ -221,15 +222,20 @@ function TF({ label, value, onChange, type = 'text', mono = false, readOnly = fa
     <div className="gecko-stack gecko-stack-xs gecko-flex-1">
       <Label>{label}</Label>
       <div className="gecko-row" style={{ position: 'relative' }}>
-        <input
-          type={type} value={value}
-          onChange={e => onChange?.(e.target.value)}
-          readOnly={readOnly} placeholder={placeholder}
-          className="gecko-input gecko-input-sm"
-          style={{ width: '100%', fontFamily: mono ? 'monospace' : 'inherit',
-            background: readOnly ? 'var(--gecko-bg-subtle)' : undefined,
-            paddingRight: suffix ? 36 : undefined }}
-        />
+        {type === 'date' ? (
+          <DateField size="sm" value={value} onChange={v => onChange?.(v)} readOnly={readOnly} aria-label={label}
+            style={{ width: '100%' }} />
+        ) : (
+          <input
+            type={type} value={value}
+            onChange={e => onChange?.(e.target.value)}
+            readOnly={readOnly} placeholder={placeholder}
+            className="gecko-input gecko-input-sm"
+            style={{ width: '100%', fontFamily: mono ? 'monospace' : 'inherit',
+              background: readOnly ? 'var(--gecko-bg-subtle)' : undefined,
+              paddingRight: suffix ? 36 : undefined }}
+          />
+        )}
         {suffix && (
           <span style={{ position: 'absolute', right: 10, fontSize: 12, color: 'var(--gecko-text-secondary)', pointerEvents: 'none' }}>
             {suffix}
@@ -785,13 +791,13 @@ export default function EdiPartnerProfilePage() {
           </div>
           <div>
             <div className="gecko-row" style={{ gap: 10 }}>
-              <h1 className="gecko-page-title" style={{ fontSize: 20 }}>{partner.name}</h1>
+              <h1 className="gecko-page-title">{partner.name}</h1>
               <span className="gecko-badge gecko-badge-gray" style={{ fontSize: 10, fontFamily: 'monospace' }}>{partner.code}</span>
               <span className={`gecko-badge gecko-badge-${status === 'active' ? 'success' : 'gray'}`} style={{ fontSize: 10 }}>
                 {status === 'active' ? '● Active' : '○ Inactive'}
               </span>
             </div>
-            <div className="gecko-page-subtitle" style={{ fontSize: 12, marginTop: 2 }}>
+            <div className="gecko-page-subtitle">
               {partner.type} · EDI Partner Profile
             </div>
           </div>

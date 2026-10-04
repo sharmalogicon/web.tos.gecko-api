@@ -331,7 +331,7 @@ export default function IntegrationsPage() {
       <div className="gecko-page-header">
         <div className="gecko-page-header-left">
           <div className="gecko-row gecko-row-wrap" style={{ gap: 10 }}>
-            <h1 className="gecko-page-title" style={{ fontSize: 20 }}>Notifications</h1>
+            <h1 className="gecko-page-title">Notifications</h1>
             {isDirty && (
               <span className="gecko-pill gecko-pill-warning">Unsaved changes</span>
             )}
@@ -339,7 +339,7 @@ export default function IntegrationsPage() {
               <span className="gecko-pill gecko-pill-success">Saved {new Date(config.savedAt).toLocaleTimeString()}</span>
             )}
           </div>
-          <div className="gecko-page-subtitle" style={{ fontSize: 12, marginTop: 3 }}>
+          <div className="gecko-page-subtitle">
             Configure how Gecko reaches your customers, truckers, and ops team — Laem Chabang ICD
           </div>
         </div>

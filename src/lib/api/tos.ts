@@ -172,16 +172,9 @@ export function formatContainerNo(containerNo: string): string {
     : containerNo;
 }
 
-export function formatDateTime(value: string | null | undefined): string {
-  if (!value) return "—";
-  const at = new Date(value);
-  return at.toLocaleString("en-GB", { day: "2-digit", month: "short", hour: "2-digit", minute: "2-digit" });
-}
+export { formatDate, formatDateTime } from "../format";
 
-export function formatTime(value: string | null | undefined): string {
-  if (!value) return "—";
-  return new Date(value).toLocaleTimeString("en-GB", { hour: "2-digit", minute: "2-digit" });
-}
+export { formatTime } from "../format";
 
 /** Dwell in the yard, the way a storage clerk says it. */
 export function dwellLabel(days: number): string {

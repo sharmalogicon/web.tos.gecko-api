@@ -1,6 +1,7 @@
 "use client";
 import React, { useState } from 'react';
 import Link from 'next/link';
+import { DateField } from '@/components/ui/DateField';
 import { Icon } from '@/components/ui/Icon';
 import { EmptyState } from '@/components/ui/EmptyState';
 import { useServerList } from '@/lib/api/use-server-list';
@@ -99,11 +100,11 @@ export function EirRegister({ direction }: { direction: GateDirection }) {
           </div>
           <div className="gecko-form-group">
             <label className="gecko-form-label">From</label>
-            <input type="date" className="gecko-input" value={fromDay} onChange={e => setFromDay(e.target.value)} />
+            <DateField value={fromDay} onChange={setFromDay} max={toDay || undefined} aria-label="From" />
           </div>
           <div className="gecko-form-group">
             <label className="gecko-form-label">To</label>
-            <input type="date" className="gecko-input" value={toDay} onChange={e => setToDay(e.target.value)} />
+            <DateField value={toDay} onChange={setToDay} min={fromDay || undefined} aria-label="To" />
           </div>
           <div className="gecko-form-group">
             <label className="gecko-form-label">Container</label>

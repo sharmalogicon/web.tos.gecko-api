@@ -517,7 +517,7 @@ export default function HoldsPage() {
 
       {/* Table */}
       <div className="gecko-table-card">
-        <table className="gecko-table gecko-table-comfortable" style={{ fontSize: 12.5, tableLayout: 'fixed', width: '100%' }}>
+        <table className="gecko-table gecko-table-comfortable" style={{ tableLayout: 'fixed', width: '100%' }}>
           <thead>
             <tr>
               <th style={{ width: 130 }}>Hold Code</th>

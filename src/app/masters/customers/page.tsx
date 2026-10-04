@@ -99,7 +99,7 @@ export default function CustomersListPage() {
       )}
 
       <div className="gecko-table-card">
-        <table className="gecko-table gecko-table-comfortable" style={{ fontSize: 13 }}>
+        <table className="gecko-table gecko-table-comfortable">
           <thead>
             <tr>
               <th>Code</th>

@@ -417,7 +417,8 @@
 .gecko-table {
   width: 100%;
   border-collapse: collapse;
-  font-size: var(--gecko-text-sm);
+  /* The register's own scale, not the prose scale — see tokens.css. */
+  font-size: var(--gecko-table-text);
   background-color: var(--gecko-bg-surface);
 }
 
@@ -430,7 +431,7 @@
   text-align: left;
   font-weight: var(--gecko-font-weight-semibold);
   color: var(--gecko-text-secondary);
-  font-size: var(--gecko-text-xs);
+  font-size: var(--gecko-table-meta);
   text-transform: uppercase;
   letter-spacing: var(--gecko-tracking-wide);
   border-bottom: 1px solid var(--gecko-border);
@@ -1136,7 +1137,9 @@
 
 .gecko-text-mono {
   font-family: var(--gecko-font-mono);
-  font-size: 12px;
+  /* Mono changes the FAMILY, never the size: a container number must
+     sit on the same baseline as the text in the cell beside it. */
+  font-size: var(--gecko-table-text);
 }
 
 /* Inline count next to a page title: "Customers  11 of 284" */
@@ -2786,7 +2789,7 @@ input[type="checkbox"].gecko-toggle.gecko-toggle-sm:checked::after { transform: 
 
 .gecko-table-subrow td {
   background: var(--gecko-bg-subtle);
-  font-size: var(--gecko-text-xs);
+  font-size: var(--gecko-table-meta);
   padding-left: 32px !important;
   border-bottom-color: var(--gecko-border);
 }
@@ -3424,6 +3427,360 @@ input[type="checkbox"].gecko-toggle.gecko-toggle-sm:checked::after { transform: 
   color: var(--gecko-text-secondary);
   margin-top: 2px;
 }
+
+
+/* ============================================================
+   SECTION 5.19b - FACT STRIP
+   The row of facts under a detail page's title: effective dates, counts,
+   precedence. It is NOT a KPI row. A KPI is a number you are meant to react
+   to, so .gecko-kpi-tile sets it at 18px; a fact is something you glance at
+   to confirm you opened the right record, and it reads at the same size as
+   the register you arrived from. Same scale as a data table, deliberately:
+   the eye should not have to re-focus between the list and the detail.
+   ============================================================ */
+
+.gecko-fact-strip {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+  gap: 10px;
+}
+
+.gecko-fact {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 8px 12px;
+  background: var(--gecko-bg-surface);
+  border: 1px solid var(--gecko-border);
+  border-radius: 8px;
+  min-width: 0;
+}
+
+.gecko-fact-icon {
+  width: 28px;
+  height: 28px;
+  border-radius: 7px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+.gecko-fact-icon-primary { background: var(--gecko-primary-50); color: var(--gecko-primary-700); }
+.gecko-fact-icon-success { background: var(--gecko-success-50); color: var(--gecko-success-700); }
+.gecko-fact-icon-warning { background: var(--gecko-warning-50); color: var(--gecko-warning-700); }
+.gecko-fact-icon-danger  { background: var(--gecko-error-50);   color: var(--gecko-error-700); }
+.gecko-fact-icon-info    { background: var(--gecko-info-50);    color: var(--gecko-info-700); }
+.gecko-fact-icon-neutral { background: var(--gecko-bg-subtle);  color: var(--gecko-text-secondary); }
+
+/* min-width:0 so a long value ellipses instead of stretching the grid cell */
+.gecko-fact-body { min-width: 0; }
+
+.gecko-fact-value {
+  font-size: var(--gecko-table-text);
+  font-weight: 700;
+  font-family: var(--gecko-font-mono);
+  font-feature-settings: 'tnum';
+  color: var(--gecko-text-primary);
+  line-height: 1.3;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.gecko-fact-label {
+  font-size: var(--gecko-table-meta);
+  color: var(--gecko-text-secondary);
+  margin-top: 1px;
+  line-height: 1.35;
+}
+
+
+/* ============================================================
+   SECTION 5.19c - FREE-TIME GRID
+   Storage free days as the depot writes them: direction x cargo for a laden
+   box, two numbers for an empty one. Vector put this in one small block beside
+   the quotation header and the clerks read it that way, so it is a grid of
+   cells and not a table of rows with an "Add rule" button.
+   ============================================================ */
+
+.gecko-freetime-grid {
+  border-collapse: separate;
+  border-spacing: 4px;
+  margin: -4px;
+}
+
+.gecko-freetime-grid th {
+  font-size: var(--gecko-table-meta);
+  font-weight: var(--gecko-font-weight-semibold);
+  color: var(--gecko-text-secondary);
+  text-align: left;
+  white-space: nowrap;
+  padding: 0 2px;
+}
+
+/* The row headers ("Export", "Empty") carry the grid, so they get the width */
+.gecko-freetime-grid tbody th { padding-right: 8px; }
+
+.gecko-freetime-corner {
+  text-transform: uppercase;
+  letter-spacing: var(--gecko-tracking-wide);
+  color: var(--gecko-text-primary);
+}
+
+.gecko-freetime-input {
+  width: 64px;
+  text-align: right;
+  font-family: var(--gecko-font-mono);
+  font-feature-settings: 'tnum';
+}
+
+.gecko-freetime-read {
+  display: inline-block;
+  min-width: 64px;
+  padding: 4px 8px;
+  text-align: right;
+  font-family: var(--gecko-font-mono);
+  font-feature-settings: 'tnum';
+  font-size: var(--gecko-table-text);
+  color: var(--gecko-text-primary);
+  background: var(--gecko-bg-subtle);
+  border: 1px solid var(--gecko-border);
+  border-radius: 6px;
+}
+
+/* The header pair: the quotation on the left, free days beside it. Below the
+   breakpoint they stack, because eight number inputs beside a six-field form
+   is the first thing to fail on a narrow screen. */
+.gecko-tariff-header-split {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(280px, 0.42fr);
+  gap: var(--gecko-space-4);
+  align-items: start;
+}
+
+@media (max-width: 1100px) {
+  .gecko-tariff-header-split { grid-template-columns: minmax(0, 1fr); }
+}
+
+/* Inside the quotation card: WHO it is for on the left, WHEN and WHERE it
+   applies on the right. The two are answered at different moments - a clerk
+   looks up the customer, then sets the dates - and splitting them stops the
+   dates being hunted for among six party fields. */
+.gecko-quotation-split {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(190px, 0.44fr);
+  gap: var(--gecko-space-4);
+  align-items: start;
+}
+
+/* The quotation number is a short code; the name is a sentence. */
+.gecko-quotation-ids {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 2fr);
+  gap: var(--gecko-space-3);
+}
+
+@media (max-width: 820px) {
+  .gecko-quotation-split,
+  .gecko-quotation-ids { grid-template-columns: minmax(0, 1fr); }
+}
+
+
+/* ============================================================
+   SECTION 5.19d - DATE FIELD
+   The app's own date control. A native <input type="date"> draws itself
+   differently in every browser and spells the date the way the viewer's OS
+   locale does, which is how "03 Oct 2026" and "10/3/2026" both reached the
+   screen. This one reads dd-MM-yyyy everywhere, on every browser.
+   Only the popup's coordinates stay inline: they are measured at open time.
+   ============================================================ */
+
+.gecko-datefield { position: relative; }
+
+.gecko-datefield-trigger {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  height: 34px;
+  padding-inline: 10px;
+  border: 1.5px solid var(--gecko-border);
+  border-radius: 7px;
+  background: var(--gecko-bg-surface);
+  cursor: pointer;
+  user-select: none;
+  font-family: var(--gecko-font-mono);
+  font-feature-settings: 'tnum';
+  font-size: var(--gecko-table-text);
+  transition: border-color var(--gecko-transition-fast);
+}
+
+.gecko-datefield-trigger:hover:not(.gecko-datefield-trigger-disabled) { border-color: var(--gecko-primary-300); }
+.gecko-datefield-trigger-open { border-color: var(--gecko-primary-400); }
+
+.gecko-datefield-trigger-disabled {
+  background: var(--gecko-bg-subtle);
+  cursor: not-allowed;
+  opacity: 0.55;
+}
+
+.gecko-datefield-sm { height: 28px; padding-inline: 8px; font-size: var(--gecko-table-meta); }
+
+.gecko-datefield-icon { color: var(--gecko-text-secondary); flex-shrink: 0; transition: color var(--gecko-transition-fast); }
+.gecko-datefield-trigger-open .gecko-datefield-icon { color: var(--gecko-primary-500); }
+
+.gecko-datefield-value { flex: 1; white-space: nowrap; color: var(--gecko-text-primary); }
+.gecko-datefield-value-empty { color: var(--gecko-text-disabled); }
+
+.gecko-datefield-clear {
+  border: 0;
+  background: none;
+  padding: 0 2px;
+  font: inherit;
+  font-size: 15px;
+  line-height: 1;
+  color: var(--gecko-text-disabled);
+  cursor: pointer;
+}
+.gecko-datefield-clear:hover { color: var(--gecko-text-secondary); }
+
+.gecko-datefield-time {
+  width: 86px;
+  height: 34px;
+  padding-inline: 10px;
+  border: 1.5px solid var(--gecko-border);
+  border-radius: 7px;
+  background: var(--gecko-bg-surface);
+  font-family: var(--gecko-font-mono);
+  font-feature-settings: 'tnum';
+  font-size: var(--gecko-table-text);
+  color: var(--gecko-text-primary);
+  outline: none;
+  transition: border-color var(--gecko-transition-fast);
+}
+.gecko-datefield-time:focus { border-color: var(--gecko-primary-400); }
+.gecko-datefield-time:disabled { background: var(--gecko-bg-subtle); opacity: 0.55; cursor: not-allowed; }
+.gecko-datefield-sm + .gecko-datefield-time,
+.gecko-datefield-time.gecko-datefield-sm { height: 28px; padding-inline: 8px; font-size: var(--gecko-table-meta); }
+
+/* --- the popup ------------------------------------------------------- */
+
+.gecko-datefield-pop {
+  position: fixed;
+  z-index: var(--gecko-z-popover, 9999);
+  width: 270px;
+  padding: 14px 14px 10px;
+  background: var(--gecko-bg-surface);
+  border: 1px solid var(--gecko-border);
+  border-radius: 10px;
+  box-shadow: var(--gecko-shadow-lg, 0 10px 36px rgba(0, 0, 0, 0.18));
+}
+
+.gecko-datefield-nav {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 10px;
+}
+
+.gecko-datefield-navbtn {
+  border: 0;
+  background: none;
+  padding: 4px 8px;
+  border-radius: 6px;
+  font: inherit;
+  font-size: 16px;
+  line-height: 1;
+  color: var(--gecko-text-secondary);
+  cursor: pointer;
+}
+.gecko-datefield-navbtn:hover { background: var(--gecko-bg-subtle); color: var(--gecko-text-primary); }
+
+.gecko-datefield-month {
+  font-size: var(--gecko-table-text);
+  font-weight: var(--gecko-font-weight-bold);
+  color: var(--gecko-text-primary);
+}
+
+.gecko-datefield-dow,
+.gecko-datefield-grid {
+  display: grid;
+  grid-template-columns: repeat(7, 1fr);
+  gap: 2px;
+}
+
+.gecko-datefield-dow { margin-bottom: 4px; }
+
+.gecko-datefield-dow span {
+  text-align: center;
+  padding: 2px 0;
+  font-size: 10px;
+  font-weight: var(--gecko-font-weight-bold);
+  color: var(--gecko-text-disabled);
+}
+
+.gecko-datefield-cell { aspect-ratio: 1; }
+
+.gecko-datefield-day {
+  width: 100%;
+  height: 100%;
+  border: 0;
+  border-radius: 6px;
+  background: none;
+  font: inherit;
+  font-size: 12px;
+  color: var(--gecko-text-primary);
+  cursor: pointer;
+}
+.gecko-datefield-day:hover:not(:disabled) { background: var(--gecko-bg-subtle); }
+
+.gecko-datefield-day-today {
+  background: var(--gecko-primary-50);
+  color: var(--gecko-primary-600);
+  outline: 1.5px solid var(--gecko-primary-200);
+  outline-offset: -1px;
+}
+
+.gecko-datefield-day-selected,
+.gecko-datefield-day-selected.gecko-datefield-day-today {
+  background: var(--gecko-primary-600);
+  color: #fff;
+  font-weight: var(--gecko-font-weight-bold);
+  outline: none;
+}
+.gecko-datefield-day-selected:hover:not(:disabled) { background: var(--gecko-primary-700); }
+
+/* Outside min/max: still shown, so the month reads normally, but not clickable */
+.gecko-datefield-day:disabled {
+  color: var(--gecko-text-disabled);
+  cursor: not-allowed;
+  background: none;
+  outline: none;
+}
+
+.gecko-datefield-foot {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-top: 10px;
+  padding-top: 8px;
+  border-top: 1px solid var(--gecko-border);
+}
+
+.gecko-datefield-link {
+  border: 0;
+  background: none;
+  padding: 2px 4px;
+  font: inherit;
+  font-size: 11px;
+  font-weight: var(--gecko-font-weight-semibold);
+  color: var(--gecko-primary-600);
+  cursor: pointer;
+}
+.gecko-datefield-link:hover { text-decoration: underline; }
+.gecko-datefield-link-muted { color: var(--gecko-text-secondary); font-weight: var(--gecko-font-weight-normal); }
+
 
 
 /* ============================================================
@@ -5181,7 +5538,7 @@ button.gecko-toggle .gecko-toggle-thumb {
 
 .gecko-reefer-header-title {
   margin: 0;
-  font-size: 20px;
+  font-size: var(--gecko-text-lg);
   font-weight: 700;
   letter-spacing: -0.02em;
   color: var(--gecko-text-primary);
@@ -5190,7 +5547,8 @@ button.gecko-toggle .gecko-toggle-thumb {
 
 .gecko-reefer-header-sub {
   margin: 2px 0 0;
-  font-size: 12.5px;
+  font-size: var(--gecko-text-xs);
+  font-style: italic;
   color: var(--gecko-text-secondary);
 }
 
@@ -6465,7 +6823,7 @@ button.gecko-toggle .gecko-toggle-thumb {
 /* §7.1 — Identifier link */
 .gecko-id-link {
   font-family: var(--gecko-font-mono);
-  font-size: 12px;
+  font-size: var(--gecko-table-text);
   font-weight: 700;
   color: var(--gecko-primary-600);
   letter-spacing: 0.01em;
@@ -6478,7 +6836,7 @@ button.gecko-toggle .gecko-toggle-thumb {
 
 /* §7.2 — Primary cell value */
 .gecko-cell-primary {
-  font-size: 12px;
+  font-size: var(--gecko-table-text);
   font-weight: 600;
   color: var(--gecko-text-primary);
 }
@@ -6486,7 +6844,7 @@ button.gecko-toggle .gecko-toggle-thumb {
 /* §7.3 — Cell sub-line, mono identifier */
 .gecko-cell-sub {
   font-family: var(--gecko-font-mono);
-  font-size: 10px;
+  font-size: var(--gecko-table-meta);
   color: var(--gecko-text-disabled);
   margin-top: 2px;
   font-weight: 500;
@@ -6494,7 +6852,7 @@ button.gecko-toggle .gecko-toggle-thumb {
 
 /* §7.4 — Cell meta, non-mono */
 .gecko-cell-meta {
-  font-size: 11px;
+  font-size: var(--gecko-table-meta);
   color: var(--gecko-text-secondary);
   margin-top: 2px;
 }
@@ -6508,19 +6866,22 @@ button.gecko-toggle .gecko-toggle-thumb {
   letter-spacing: 0.08em;
 }
 
-/* §7.6 — Page title h1 */
+/* §7.6 — Page title h1.
+   THE ONLY definition of this class — layout.css used to carry a second one
+   at --gecko-text-2xl (up to 32px) which, loading later, quietly won. A
+   register's heading is a label on a dense screen, not a magazine headline. */
 .gecko-page-title {
-  font-size: 22px;
+  font-size: var(--gecko-text-lg);
   font-weight: 700;
   color: var(--gecko-text-primary);
   letter-spacing: -0.02em;
   margin: 0;
-  line-height: 1.15;
+  line-height: 1.2;
 }
 
-/* §7.7 — Page title h1 (large, dashboards only) */
+/* §7.7 — Page title h1 (large, dashboards only) — one notch up, no more. */
 .gecko-page-title-lg {
-  font-size: 26px;
+  font-size: var(--gecko-text-xl);
   font-weight: 700;
   color: var(--gecko-text-primary);
   letter-spacing: -0.02em;
@@ -6528,13 +6889,17 @@ button.gecko-toggle .gecko-toggle-thumb {
   line-height: 1.1;
 }
 
-/* §7.8 — Page subtitle */
+/* §7.8 — Page subtitle.
+   Smaller than the body scale and italic: it is a gloss on the heading, and
+   italic says "this is the explanation" without needing a second colour.
+   The 4px top margin lived in layout.css's duplicate; it lives here now. */
 .gecko-page-subtitle {
-  font-size: 13px;
+  font-size: var(--gecko-text-xs);
+  font-style: italic;
   color: var(--gecko-text-secondary);
   line-height: 1.5;
   max-width: 720px;
-  margin: 0;
+  margin: 4px 0 0;
 }
 
 /* §7.9 — Card title */
@@ -8045,7 +8410,51 @@ label.gecko-toggle.gecko-toggle-sm input:checked ~ .gecko-toggle-track .gecko-to
   background: var(--gecko-bg-surface);
   font-size: var(--gecko-text-sm);
   color: var(--gecko-text-disabled);
+  /* It is a button now: the bar is real navigation back through steps the
+     clerk has already reached, so it needs a button's reset and a cursor. */
+  border: 0;
+  font-family: inherit;
+  text-align: left;
+  cursor: pointer;
 }
+
+.gecko-newbk-step:disabled { cursor: default; }
+
+/* A value inherited from somewhere else - the vessel schedule, a master record -
+   shown where a field would be. It is deliberately NOT a disabled input: a
+   disabled input says "you may not type here yet", this says "this is not yours
+   to type, it belongs to the sailing". */
+.gecko-readonly-value {
+  display: flex;
+  align-items: center;
+  min-height: 34px;
+  padding: 0 10px;
+  border: 1px solid var(--gecko-border);
+  border-radius: 7px;
+  background: var(--gecko-bg-subtle);
+  font-family: var(--gecko-font-mono);
+  font-feature-settings: 'tnum';
+  font-size: var(--gecko-table-text);
+  color: var(--gecko-text-secondary);
+}
+
+/* Reached, but not the one on screen — readable rather than greyed out. */
+.gecko-newbk-step-done:not(.gecko-newbk-step-on) { color: var(--gecko-text-secondary); }
+.gecko-newbk-step-done:not(.gecko-newbk-step-on):hover { background: var(--gecko-bg-subtle); }
+
+/* The order number, once the booking exists: proof it is already saved. */
+.gecko-newbk-step-order {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  margin-left: auto;
+  padding: 0 18px;
+  font-family: var(--gecko-font-mono);
+  font-size: var(--gecko-table-meta);
+  font-weight: var(--gecko-font-weight-bold);
+  color: var(--gecko-success-700);
+}
+
 .gecko-newbk-step-on { background: var(--gecko-primary-600); color: #fff; font-weight: 600; }
 .gecko-newbk-step-n {
   display: inline-flex;
@@ -8134,3 +8543,26 @@ label.gecko-toggle.gecko-toggle-sm input:checked ~ .gecko-toggle-track .gecko-to
   flex-wrap: wrap;
 }
 
+
+/* The three a booking header cannot change — shown as a fact, not an input,
+   because the API refuses them and a disabled box invites arguing with it. */
+.gecko-bk-locked {
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+  padding: 9px 12px;
+  border-radius: var(--gecko-radius-md);
+  background: var(--gecko-bg-subtle);
+  border: 1px solid var(--gecko-border);
+  font-size: var(--gecko-text-xs);
+  color: var(--gecko-text-secondary);
+  line-height: 1.5;
+}
+
+/* One requirement line: equipment, how many, and a way to drop the row. */
+.gecko-newbk-reqrow {
+  display: grid;
+  grid-template-columns: minmax(0, 2fr) minmax(0, 1fr) auto;
+  gap: 12px;
+  align-items: end;
+}

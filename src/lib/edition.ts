@@ -36,6 +36,8 @@ export const PILOT_PATHS: readonly string[] = [
   '/gate/eir-in',                // EIR-in register, /gate/eir-in/[id] detail (PDF, void)
   '/gate/eir-in-sept',           // the API-bound gate-in, while the June design is wired
   '/bookings/new-sept',          // the API-bound new booking, likewise
+  '/reports/operational-api',    // the API-bound reports, while the mocks are wired
+  '/reports/accounts-api',
   '/gate/eir-out',               // EIR-out register, /gate/eir-out/[id] detail
   '/gate/holds',                // holds board: active, released history, release
   '/gate/reefer-ops',           // reefer plug log, /new plug-in (power charge needs Revenue /reefer/power)
@@ -84,6 +86,13 @@ export const PILOT_BLOCKED: readonly string[] = [
   '/gate/eir-in',
   // /bookings/new came off this list on 2026-10-03: it is bound now — real
   // order types, real parties, a real POST — so the pilot serves it again.
+  //
+  // 2026-10-03 — the May/June report designs took these two routes back and
+  // run on the fixture catalogue, so the pilot must not serve them. The
+  // API-bound versions are kept at /reports/operational-api and
+  // /reports/accounts-api. REMOVE BOTH when the mocks are bound.
+  '/reports/operational',
+  '/reports/accounts',
 ];
 
 /**

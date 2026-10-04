@@ -4,6 +4,7 @@ import { useApi, useApiList } from '@/lib/api/use-api';
 import { useSession } from '@/lib/auth/session';
 import { HOLIDAYS_PATH, deleteById, saveById, type PublicHoliday } from '@/lib/api/logistics';
 import { EditableTable } from '../lookups/_components/EditableTable';
+import { formatDayDate } from '@/lib/format';
 
 interface Branch { branchId: string; branchCode: string; displayName: string }
 
@@ -37,7 +38,7 @@ export default function PublicHolidaysPage() {
       <EditableTable<PublicHoliday>
         columns={[
           { key: 'holidayDate', label: 'Date', kind: 'date', required: true, width: 150,
-            render: h => <span className="gecko-num-tabular">{new Date(`${h.holidayDate}T00:00:00`).toLocaleDateString(undefined, { weekday: 'short', day: 'numeric', month: 'short', year: 'numeric' })}</span> },
+            render: h => <span className="gecko-num-tabular">{formatDayDate(h.holidayDate)}</span> },
           { key: 'nameEn', label: 'Holiday', kind: 'text', required: true, maxLength: 150 },
           { key: 'nameLocal', label: 'Thai', kind: 'text', maxLength: 150 },
           { key: 'isHalfDay', label: 'Half day', kind: 'bool', width: 80 },

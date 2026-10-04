@@ -2,10 +2,12 @@
 import React, { useState, useMemo } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
+import { DateField } from '@/components/ui/DateField';
 import { Icon } from '@/components/ui/Icon';
 import { useApi, useApiList } from '@/lib/api/use-api';
 import { apiSend } from '@/lib/api/client';
 import { ApiError } from '@/lib/api/problem';
+import { formatDateTime } from '@/lib/format';
 
 /**
  * LIVE: POST /api/tos/bookings (gecko_tos batch B).
@@ -290,7 +292,7 @@ export default function NewBookingPage() {
                 <option value="">{needsCall ? '— choose the call —' : '— none —'}</option>
                 {liveCalls.map(c => (
                   <option key={c.vesselCallId} value={c.vesselCallId}>
-                    {c.callRef} · ETD {new Date(c.etd).toLocaleString(undefined, { day: '2-digit', month: 'short', hour: '2-digit', minute: '2-digit', hour12: false })} · {c.lines.join(', ') || 'no lines'}
+                    {c.callRef} · ETD {formatDateTime(c.etd)} · {c.lines.join(', ') || 'no lines'}
                   </option>
                 ))}
               </select>
@@ -313,10 +315,10 @@ export default function NewBookingPage() {
           </Field>
           <div />
           <Field label="Valid from" error={fe('validFrom')}>
-            <input type="date" className="gecko-input" value={validFrom} onChange={e => setValidFrom(e.target.value)} />
+            <DateField value={validFrom} onChange={setValidFrom} max={validTo || undefined} aria-label="Valid from" />
           </Field>
           <Field label="Valid to" hint="Depot-local date; after it the release is EXPIRED and the gate refuses it" error={fe('validTo')}>
-            <input type="date" className="gecko-input" value={validTo} onChange={e => setValidTo(e.target.value)} />
+            <DateField value={validTo} onChange={setValidTo} min={validFrom || undefined} aria-label="Valid to" />
           </Field>
         </div>
       </Section>

@@ -1,6 +1,7 @@
 "use client";
 import React, { useState } from 'react';
 import { Icon } from '../ui/Icon';
+import { formatDateTime } from '@/lib/format';
 
 /* ──────────────────────────────────────────────────────────────────────────
    Gate-print module — three print formats, one shared data shape:
@@ -289,8 +290,7 @@ function PrintCard({ title, badge, description, printer, preview, onClick }: {
 const fmtTHB = (n: number) =>
   n.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
 
-const fmtDateTime = (d: Date) =>
-  d.toLocaleString('en-GB', { day: '2-digit', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit' });
+const fmtDateTime = (d: Date) => formatDateTime(d.toISOString());
 
 const directionLabel = (d: GatePrintData['direction']) => ({
   IMPORT: 'IMPORT (laden in / out)',

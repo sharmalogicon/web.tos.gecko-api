@@ -2,6 +2,7 @@
 import React, { useMemo, useState } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
+import { DateField } from '@/components/ui/DateField';
 import { Icon } from '@/components/ui/Icon';
 import { useApiList } from '@/lib/api/use-api';
 import { apiSend } from '@/lib/api/client';
@@ -174,8 +175,8 @@ function CutoffEditor({ row, index, lineCodes, errors, onChange, onRemove }: {
         </select>
       </Field>
       <Field label={index === 0 ? 'At' : ''}>
-        <input type="datetime-local" className="gecko-input" aria-label={`Cut-off ${index + 1} time`}
-          value={row.at} onChange={e => onChange({ at: e.target.value })} />
+        <DateField withTime aria-label={`Cut-off ${index + 1} time`}
+          value={row.at} onChange={at => onChange({ at })} />
       </Field>
       <Field label={index === 0 ? 'Remarks' : ''}>
         <input className="gecko-input" maxLength={300} placeholder="optional" aria-label={`Cut-off ${index + 1} remarks`}
@@ -347,19 +348,19 @@ export default function NewVesselCallPage() {
           </div>
           <div className="gecko-grid-3" style={{ gap: 18 }}>
             <Field label="ETA" required error={fieldError('eta')}>
-              <input type="datetime-local" className={`gecko-input${fieldError('eta') ? ' gecko-input-error' : ''}`} value={header.eta} onChange={e => set({ eta: e.target.value })} />
+              <DateField withTime invalid={!!fieldError('eta')} value={header.eta} onChange={eta => set({ eta })} aria-label="ETA" />
             </Field>
             <Field label="ETB" error={fieldError('etb')} hint="Between ETA and ETD">
-              <input type="datetime-local" className={`gecko-input${fieldError('etb') ? ' gecko-input-error' : ''}`} value={header.etb} onChange={e => set({ etb: e.target.value })} />
+              <DateField withTime invalid={!!fieldError('etb')} value={header.etb} onChange={etb => set({ etb })} aria-label="ETB" />
             </Field>
             <Field label="ETD" required error={fieldError('etd') ?? (etdBeforeEta ? 'ETD must be after ETA — a call that leaves when it arrives is not a schedule.' : undefined)}>
-              <input type="datetime-local" className={`gecko-input${fieldError('etd') || etdBeforeEta ? ' gecko-input-error' : ''}`} value={header.etd} onChange={e => set({ etd: e.target.value })} />
+              <DateField withTime invalid={!!fieldError('etd') || etdBeforeEta} value={header.etd} onChange={etd => set({ etd })} aria-label="ETD" />
             </Field>
           </div>
           <Field label="Laden release" error={fieldError('ladenReleaseAt')}
                  hint="A full export box cannot be gated out before this. Leave empty for no restriction.">
-            <input type="datetime-local" className={`gecko-input${fieldError('ladenReleaseAt') ? ' gecko-input-error' : ''}`}
-                   value={header.ladenReleaseAt} onChange={e => set({ ladenReleaseAt: e.target.value })} />
+            <DateField withTime invalid={!!fieldError('ladenReleaseAt')}
+                   value={header.ladenReleaseAt} onChange={ladenReleaseAt => set({ ladenReleaseAt })} aria-label="Laden release" />
           </Field>
           <Field label="Remarks" error={fieldError('remarks')}>
             <input className="gecko-input" maxLength={500} placeholder="optional" value={header.remarks} onChange={e => set({ remarks: e.target.value })} />

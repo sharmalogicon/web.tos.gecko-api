@@ -4,6 +4,7 @@ import Link from 'next/link';
 import { Icon } from '@/components/ui/Icon';
 import { usePagination, TablePagination } from '@/components/ui/TablePagination';
 import { useApiList } from '@/lib/api/use-api';
+import { formatDate } from '@/lib/format';
 
 /**
  * LIVE against gecko_tos (booking.booking + vw_booking_progress), batch B.
@@ -58,11 +59,7 @@ const PROGRESS: Record<string, { label: string; color: string; bg: string; hint:
 };
 const progressOf = (p: string) => PROGRESS[p] ?? { label: p, color: 'var(--gecko-text-secondary)', bg: 'var(--gecko-bg-subtle)', hint: '' };
 
-const fmtDate = (iso: string | null) => {
-  if (!iso) return '—';
-  const d = new Date(iso.length === 10 ? `${iso}T00:00:00` : iso);
-  return d.toLocaleDateString(undefined, { day: '2-digit', month: 'short', year: 'numeric' });
-};
+const fmtDate = formatDate;   // dd-MM-yyyy, the one date format in this app
 
 function QtyBar({ required, assigned, completed }: { required: number; assigned: number; completed: number }) {
   const pctDone = required > 0 ? Math.min(100, (completed / required) * 100) : 0;
@@ -201,7 +198,7 @@ export default function BookingRegisterPage() {
       </div>
 
       <div className="gecko-table-card">
-        <table className="gecko-table" style={{ fontSize: 12.5 }}>
+        <table className="gecko-table">
           <thead>
             <tr>
               <th>Order No / Carrier Ref</th>

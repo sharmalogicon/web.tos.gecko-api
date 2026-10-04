@@ -2,6 +2,7 @@
 
 import React from 'react';
 import { presetRange } from '@/lib/api/reports';
+import { DateField } from '@/components/ui/DateField';
 
 export interface Depot { branchId: string; branchCode: string; displayName: string }
 
@@ -34,13 +35,13 @@ export function ReportParams({ depots, branchId, onBranch, from, to, onRange }: 
         </div>
         <div className="gecko-form-group">
           <label className="gecko-form-label">From</label>
-          <input type="date" className="gecko-input gecko-input-sm" value={from} max={to || undefined}
-                 onChange={e => e.target.value && onRange(e.target.value, to)} />
+          <DateField size="sm" value={from} max={to || undefined} aria-label="From"
+                 onChange={v => v && onRange(v, to)} />
         </div>
         <div className="gecko-form-group">
           <label className="gecko-form-label">To</label>
-          <input type="date" className="gecko-input gecko-input-sm" value={to} min={from || undefined}
-                 onChange={e => e.target.value && onRange(from, e.target.value)} />
+          <DateField size="sm" value={to} min={from || undefined} aria-label="To"
+                 onChange={v => v && onRange(from, v)} />
         </div>
         <div className="gecko-segctrl">
           {presets.map(([p, label]) => (

@@ -121,6 +121,13 @@ export interface WindowBox {
   billedLater?: QuoteLine[] | null;
   /** The gate may offer VAS on this box — an empty drop-off or a pick-up. */
   vasOffered?: boolean;
+  /**
+   * Charges no tariff prices (§16g). Not "free": UNPRICED. The box gets no
+   * coupon, the gate blocks it (NO_COUPON) and a receipt for it is a 409.
+   * Amount is 0, which is exactly why it must never be shown as a zero line —
+   * a clerk reading 0 would take the money and send the truck to a closed gate.
+   */
+  noPrice?: QuoteLine[] | null;
 }
 
 export interface WindowBooking {
@@ -475,7 +482,18 @@ export const voidReceipt = (receiptId: string, reason: string) =>
   apiSend<Receipt>('POST', `/api/revenue/window/receipts/${receiptId}/void`, { reason });
 
 /** A booking's box can be taken to the counter when the quote has lines on it. */
-export const isPayable = (box: WindowBox) => box.due.length > 0;
+/**
+ * A box can be paid for only when every charge on it HAS a price.
+ *
+ * A box carrying a noPrice line is not cheap, it is unpriced: the server issues
+ * no coupon, the gate blocks it with NO_COUPON, and a receipt for it is refused
+ * with a 409 (§16g). Letting the clerk tick it would take the customer's money
+ * and then send the truck to a gate that will not open.
+ */
+export const isPayable = (box: WindowBox) => box.due.length > 0 && !hasNoPrice(box);
+
+/** True when some charge on this box has no rate in any tariff. */
+export const hasNoPrice = (box: WindowBox) => (box.noPrice?.length ?? 0) > 0;
 
 /** The party a receipt can be made out to — only the name is used; the shape is loose on purpose. */
 export interface PartyLookup {
@@ -489,3 +507,4 @@ export interface PartyLookup {
 
 export const partyName = (p: PartyLookup | null | undefined) =>
   p?.displayName || p?.name || p?.legalName || null;
+

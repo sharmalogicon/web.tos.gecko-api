@@ -11,6 +11,7 @@
  */
 import { apiSend } from './client';
 import { withVersion } from './lookups';
+import { formatDayDate } from '../format';
 
 const BASE = '/api/master/gate-hours';
 
@@ -108,5 +109,5 @@ export function wallTime(iso: string): { date: string; time: string } {
 /** "Wed 30 Sep 2026" from yyyy-MM-dd (a calendar date, no zone). */
 export function formatDay(date: string): string {
   const [y, m, d] = date.split('-').map(Number);
-  return new Date(y, m - 1, d).toLocaleDateString('en-GB', { weekday: 'short', day: 'numeric', month: 'short', year: 'numeric' });
+  return formatDayDate(`${String(y).padStart(4, '0')}-${String(m).padStart(2, '0')}-${String(d).padStart(2, '0')}`);
 }

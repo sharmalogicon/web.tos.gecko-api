@@ -4,7 +4,7 @@ import { Icon } from '@/components/ui/Icon';
 import { useToast } from '@/components/ui/Toast';
 import { ApiError } from '@/lib/api/problem';
 import {
-  cancelImport, confirmImport, downloadTariffTemplate, uploadTariffWorkbook,
+  cancelImport, confirmImport, downloadTariffTemplate, isImportNote, uploadTariffWorkbook,
   type ImportPreview, type ImportRowView,
 } from '@/lib/api/revenue';
 
@@ -70,7 +70,10 @@ export function ExcelImportPanel({ scheduleId, scheduleNo, versionNo, editable, 
     } catch (e) { fail(e); } finally { setBusy(null); }
   }
 
-  const rows = preview?.rows.filter(r => !onlyProblems || r.issues.length > 0 || r.status !== 'OK') ?? [];
+  // A PRICE_CHANGE note is not an issue: an UPDATE row explaining "555 → 600"
+  // is the file working, and it must not survive this filter.
+  const rows = preview?.rows.filter(r =>
+    !onlyProblems || r.issues.some(i => !isImportNote(i)) || r.status !== 'OK') ?? [];
   const canConfirm = preview?.status === 'VALIDATED' && preview.rowsError === 0;
 
   return (
@@ -81,7 +84,9 @@ export function ExcelImportPanel({ scheduleId, scheduleNo, versionNo, editable, 
           <div className="gecko-section-header-title">Load rates from Excel</div>
           <div className="gecko-section-header-subtitle">
             Download this draft as a workbook, edit or paste the customer&apos;s rates, upload it back, check the preview, then apply.
-            Leave RateKey blank on new lines; delete a line to remove that rate. Tiers go in one cell: 1-7:160; 8-14:275; 15+:390.
+            Tiers go in one cell: 1-7:160; 8-14:275; 15+:390.
+            {' '}<strong>This draft&apos;s workbook is the whole rate set</strong> — a line deleted from it removes that rate.
+            The blank template from the register only adds and re-prices: it never removes a rate.
           </div>
         </div>
         <button className="gecko-btn gecko-btn-outline gecko-btn-sm" disabled={busy !== null} onClick={download}>
@@ -140,9 +145,9 @@ export function ExcelImportPanel({ scheduleId, scheduleNo, versionNo, editable, 
               <div role="alert" className="gecko-alert gecko-alert-error"><span>{preview.failureMessage}</span></div>
             )}
 
-            <table className="gecko-table gecko-table-compact" style={{ fontSize: 12 }}>
+            <table className="gecko-table gecko-table-compact">
               <thead>
-                <tr><th>Sheet · row</th><th>Action</th><th>Status</th><th>Issues</th></tr>
+                <tr><th>Sheet · row</th><th>Action</th><th>Status</th><th>Notes &amp; issues</th></tr>
               </thead>
               <tbody>
                 {rows.length === 0 && <tr><td colSpan={4} className="gecko-cell-meta">Nothing to show.</td></tr>}
@@ -180,27 +185,37 @@ function Count({ label, value, tone }: { label: string; value: number; tone: str
 const ACTION_TONE: Record<string, string> = { INSERT: 'success', UPDATE: 'info', DELETE: 'warning', UNCHANGED: 'neutral' };
 
 function PreviewRow({ row }: { row: ImportRowView }) {
+  const notes = row.issues.filter(isImportNote);
+  const problems = row.issues.filter(i => !isImportNote(i));
   return (
     <tr>
       <td className="gecko-text-mono">{row.sheet === '(removed)' ? 'removed' : `${row.sheet} · ${row.rowNo}`}</td>
       <td>{row.action ? <span className={`gecko-pill gecko-pill-${ACTION_TONE[row.action] ?? 'neutral'}`}>{row.action}</span> : <span className="gecko-cell-meta">—</span>}</td>
       <td><span className={`gecko-pill gecko-pill-${row.status === 'ERROR' ? 'warning' : row.status === 'WARNING' ? 'info' : 'success'}`}>{row.status}</span></td>
       <td>
-        {row.issues.length === 0 ? <span className="gecko-cell-meta">—</span> : (
-          <ul style={{ margin: 0, paddingLeft: 16 }}>
-            {row.issues.map((i, n) => (
-              // COPIED_ROW is a note, not a problem: the copy is simply added as a new rate
-              // (and RateKey is a hidden column the user never sees, so it is not named).
-              i.code === 'COPIED_ROW' ? (
-                <li key={n} className="gecko-cell-meta" style={{ fontStyle: 'italic' }}>{i.message}</li>
-              ) : (
-                <li key={n} style={{ color: i.severity === 'ERROR' ? 'var(--gecko-error-600)' : undefined }}>
-                  {i.column && <strong className="gecko-text-mono">{i.column}: </strong>}{i.message}
-                </li>
-              )
+        {/* Two different things share this column. A NOTE is the row explaining
+            itself — the new price, or that a line was copied — and reads quietly.
+            A PROBLEM is something the clerk has to go back to the workbook for.
+            Mixing them taught people to ignore the column. */}
+        {notes.length > 0 && (
+          <div className="gecko-stack" style={{ gap: 2 }}>
+            {notes.map((i, n) => (
+              <div key={n} className="gecko-cell-meta gecko-mono" style={{ marginTop: 0 }}>
+                {i.column && <span>{i.column} </span>}{i.message}
+              </div>
+            ))}
+          </div>
+        )}
+        {problems.length > 0 && (
+          <ul style={{ margin: notes.length > 0 ? '4px 0 0' : 0, paddingLeft: 16 }}>
+            {problems.map((i, n) => (
+              <li key={n} style={{ color: i.severity === 'ERROR' ? 'var(--gecko-error-600)' : undefined }}>
+                {i.column && <strong className="gecko-text-mono">{i.column}: </strong>}{i.message}
+              </li>
             ))}
           </ul>
         )}
+        {notes.length === 0 && problems.length === 0 && <span className="gecko-cell-meta">—</span>}
       </td>
     </tr>
   );

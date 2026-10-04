@@ -4,6 +4,7 @@ import { Icon } from '@/components/ui/Icon';
 import { apiDownload, saveBlob } from '@/lib/api/client';
 import { ProblemAlert, problemOf, type Problem } from './ProblemAlert';
 import { CHANNEL_LABEL, formatBaht, receiptPdfPath, taxBranchLabel, type Receipt } from '@/lib/api/window';
+import { formatDateTime } from '@/lib/format';
 
 /**
  * The receipt — the Thai tax invoice the driver carries to the gate.
@@ -22,9 +23,7 @@ const THAI_SAFE = "var(--gecko-font-mono), 'Courier New', 'Tahoma', 'Leelawadee 
 
 const NOT_SET = '(not set)';
 const channelLabel = (c: string) => CHANNEL_LABEL[c as keyof typeof CHANNEL_LABEL] ?? c;
-const when = (iso: string) => new Date(iso).toLocaleString('en-GB', {
-  day: '2-digit', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit',
-});
+const when = formatDateTime;   // dd-MM-yyyy HH:mm
 
 export function usePrintReceipt() {
   return useCallback(() => {

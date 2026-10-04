@@ -218,6 +218,22 @@ export function conditionText(c: RateCondition): string {
 }
 
 /** What the party columns show: PUBLIC applies to everyone, SPOT to one booking. */
+/**
+ * The customer out of a schedule's name.
+ *
+ * A migrated schedule is named "Quotation QUKTC250200001 — <customer>", and the
+ * register wants the customer alone: the schedule number is already in the
+ * column beside it, so repeating it twice per row buys nothing and pushes the
+ * name out of sight. The payload carries only the party CODE, never its name,
+ * so this is the one place the name exists.
+ *
+ * Anything not in that shape is shown as it stands.
+ */
+export function customerOf(name: string): string {
+  const dash = name.indexOf('—');
+  return dash === -1 ? name : name.slice(dash + 1).trim() || name;
+}
+
 export function partySummary(s: Schedule): string {
   if (s.scheduleType === 'PUBLIC') return 'All customers';
   const parties = [s.agentPartyCode, s.forwarderPartyCode, s.customerPartyCode].filter(Boolean).join(' × ');
@@ -248,16 +264,11 @@ export const TYPE_TONE: Record<ScheduleType, { tone: string; icon: string; label
   SPOT: { tone: 'warning', icon: 'clock', label: 'Spot' },
 };
 
-export function formatDate(value: string | null): string {
-  if (!value) return '—';
-  const date = new Date(`${value.slice(0, 10)}T00:00:00`);
-  return date.toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' });
-}
+/** dd-MM-yyyy — see src/lib/format.ts; re-exported so callers need not change. */
+export { formatDate } from '../format';
 
-export function formatMoment(value: string | null): string {
-  if (!value) return '—';
-  return new Date(value).toLocaleString('en-GB', { day: '2-digit', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit' });
-}
+/** dd-MM-yyyy HH:mm. */
+export { formatDateTime as formatMoment } from '../format';
 
 // ── writing a tariff ───────────────────────────────────────────────────────
 // Mirrors SaveScheduleRequest / RateItem / FreeTimeItem in
@@ -398,12 +409,24 @@ export function parseTiers(text: string): { tiers: RateTier[]; error: string | n
 
 // ── Excel round-trip (Gecko.Revenue/Endpoints/Imports/ImportEndpoints.cs) ──
 
+/**
+ * INFO is not a problem. It arrives on every UPDATE row of a blank-template
+ * upload carrying the price change as "555 → 600" (GATE_API_FOR_UI.md §15c),
+ * and it must not colour the row, count towards rowsWarning, or survive the
+ * "only lines with issues" filter. Treat it as the row explaining itself.
+ */
+export type ImportSeverity = 'INFO' | 'WARNING' | 'ERROR';
+
 export interface ImportIssue {
   column: string | null;
-  severity: string;
+  severity: ImportSeverity | string;
   code: string;
   message: string;
 }
+
+/** A note the clerk reads, not a problem they must fix. */
+export const isImportNote = (i: ImportIssue): boolean =>
+  i.severity === 'INFO' || i.code === 'COPIED_ROW';
 
 export interface ImportRowView {
   sheet: string;
@@ -434,6 +457,25 @@ export interface ImportPreview {
 }
 
 /** GET the tariff's workbook and hand it to the browser as a download. */
+/**
+ * The EMPTY workbook, for a tariff that does not exist yet.
+ *
+ * Deliberately a server call and not something built in the browser: the file
+ * that is parsed has to be written by the code that parses it, or the column
+ * contract drifts the first time a column is added and every tenant's clerks
+ * get a workbook the server rejects. The server also ships the tenant's valid
+ * charge codes as reference sheets with dropdown validation, which the browser
+ * could not do without shipping the whole catalogue.
+ *
+ * See docs/TARIFF_BLANK_TEMPLATE_FOR_API.md. Until that endpoint is published
+ * this 404s, and the caller says so plainly rather than handing the clerk a
+ * file that will not import.
+ */
+export async function downloadBlankTariffTemplate(): Promise<void> {
+  const { blob, filename } = await apiDownload('/api/revenue/tariffs/template');
+  saveBlob(blob, filename ?? 'Gecko-Tariff-Template.xlsx');
+}
+
 export async function downloadTariffTemplate(scheduleId: string, fallbackName: string): Promise<void> {
   const { blob, filename } = await apiDownload(`/api/revenue/tariffs/${scheduleId}/template`);
   saveBlob(blob, filename ?? fallbackName);

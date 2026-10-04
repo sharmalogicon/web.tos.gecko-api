@@ -54,3 +54,6 @@ next-env.d.ts
 
 # local https certificate for `npm run dev` (mkcert: localhost.pem + localhost-key.pem)
 certificates/
+
+# scratch space used while probing the API from the terminal
+.scratch/

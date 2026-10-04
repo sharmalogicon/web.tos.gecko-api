@@ -171,7 +171,7 @@ export default function ChargeCodesPage() {
 
       {/* Table */}
       <div className="gecko-table-card">
-        <table className="gecko-table gecko-table-comfortable" style={{ fontSize: 12.5 }}>
+        <table className="gecko-table gecko-table-comfortable">
           <thead>
             <tr>
               <th style={{ width: 150, whiteSpace: 'nowrap' }}>Code</th>

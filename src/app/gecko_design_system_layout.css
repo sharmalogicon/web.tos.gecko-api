@@ -204,18 +204,10 @@
   flex-wrap: wrap;
 }
 
-.gecko-page-title {
-  font-size: var(--gecko-text-2xl);
-  font-weight: var(--gecko-font-weight-bold);
-  color: var(--gecko-text-primary);
-  line-height: var(--gecko-leading-tight);
-}
-
-.gecko-page-subtitle {
-  font-size: var(--gecko-text-sm);
-  color: var(--gecko-text-secondary);
-  margin-top: 4px;
-}
+/* .gecko-page-title / .gecko-page-subtitle are defined ONCE, in
+   gecko_design_system_components.css §7.6 and §7.8. The copies that used to
+   sit here loaded later and overrode them, so the documented size was not the
+   size that shipped. Do not re-add them. */
 
 
 /* ------------------------------------------------------------

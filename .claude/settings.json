@@ -1,0 +1,10 @@
+{
+  "permissions": {
+    "allow": [
+      "PowerShell(npx tsc --noEmit)",
+      "PowerShell(npm run build)",
+      "PowerShell(npm start)",
+      "PowerShell($r = Invoke-WebRequest -Uri http://localhost:3000/login -UseBasicParsing -TimeoutSec 20; \"$\\($r.StatusCode\\) $\\($r.StatusDescription\\)  bytes=$\\($r.RawContentLength\\)\")"
+    ]
+  }
+}

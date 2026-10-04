@@ -255,6 +255,22 @@
   --gecko-text-4xl:  clamp(2.00rem,  1.60rem + 1.50vw, 3.50rem);
   --gecko-text-5xl:  clamp(2.40rem,  1.90rem + 2.00vw, 4.50rem);
 
+  /* --- Data-table type scale ---------------------------------
+     A register is a DENSE context and reads on its own scale, one
+     notch under the prose scale above: a hundred rows at body size
+     is a page you scroll instead of a page you scan.
+
+     Exactly two sizes are allowed inside .gecko-table:
+       --gecko-table-text  every value cell, mono or not
+       --gecko-table-meta  column headers and the sub-line under a value
+
+     Both are fluid like the rest of the scale, so a table on a 10"
+     tablet and the same table on a 40" 4K wall stay legible without a
+     media query. Any fixed px font-size in a table cell is a bug —
+     it is what made the registers look ragged before 2026-10-03. */
+  --gecko-table-text: clamp(0.75rem,  0.72rem + 0.10vw, 0.84rem);
+  --gecko-table-meta: clamp(0.66rem,  0.64rem + 0.08vw, 0.74rem);
+
   /* --- Fluid Spacing --- */
   --gecko-space-px:  1px;
   --gecko-space-0:   0;

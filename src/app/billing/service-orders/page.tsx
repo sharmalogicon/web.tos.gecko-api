@@ -14,6 +14,7 @@
 
 import React, { useState } from 'react';
 import Link from 'next/link';
+import { DateField } from '@/components/ui/DateField';
 import { Icon } from '@/components/ui/Icon';
 import { EmptyState } from '@/components/ui/EmptyState';
 import { useApiList } from '@/lib/api/use-api';
@@ -133,11 +134,11 @@ export default function ServiceOrdersPage() {
           </div>
           <div className="gecko-form-group">
             <label className="gecko-form-label">Created from</label>
-            <input type="date" className="gecko-input gecko-input-sm" value={fromDay} onChange={e => setFromDay(e.target.value)} />
+            <DateField size="sm" value={fromDay} onChange={setFromDay} max={toDay || undefined} aria-label="Created from" />
           </div>
           <div className="gecko-form-group">
             <label className="gecko-form-label">to</label>
-            <input type="date" className="gecko-input gecko-input-sm" value={toDay} onChange={e => setToDay(e.target.value)} />
+            <DateField size="sm" value={toDay} onChange={setToDay} min={fromDay || undefined} aria-label="Created to" />
           </div>
           {filtered && (
             <button className="gecko-btn gecko-btn-ghost gecko-btn-sm" onClick={clear}>

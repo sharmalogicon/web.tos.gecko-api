@@ -2,22 +2,29 @@
 import React, { useMemo, useState } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
+import { DateField } from '@/components/ui/DateField';
 import { Icon } from '@/components/ui/Icon';
 import { useToast } from '@/components/ui/Toast';
 import { apiSend } from '@/lib/api/client';
 import { ApiError } from '@/lib/api/problem';
 import { useApiList } from '@/lib/api/use-api';
 import { useSession } from '@/lib/auth/session';
+import { Fact } from '@/components/ui/Fact';
+import { ExcelImportPanel } from '../../_components/ExcelImportPanel';
+import { FreeTimeMatrix } from '../../_components/FreeTimeMatrix';
 import { PartyPicker } from '../../_components/PartyPicker';
+import { RateDialog } from '../../_components/RateDialog';
+import { Labelled } from '../../_components/TariffFields';
 import {
-  FLAG_AXES, LIST_AXES, MODIFIER_OPS, NUMERIC_AXES,
-  PRICING_METHODS, TIER_BASES, TYPE_TONE, parseTiers, rowErrors,
-  type ConditionItem, type FreeTimeItem, type FreeTimeKind, type FreeTimeSet, type PricingMethod,
-  type RateItem, type RateSet, type SaveScheduleRequest, type Schedule, type ScheduleType, type TierBasis,
+  copyRate, newRate, scopeOf,
+  type ConditionDraft, type FreeTimeDraft, type RateDraft,
+} from '../../_components/tariff-drafts';
+import {
+  FLAG_AXES, NUMERIC_AXES, SCOPE_RANK_LABEL, TYPE_TONE, formatDate, parseTiers, rowErrors,
+  type ConditionItem, type FreeTimeItem, type FreeTimeSet,
+  type RateItem, type RateSet, type SaveScheduleRequest, type Schedule, type ScheduleType,
 } from '@/lib/api/revenue';
-import {
-  chargeVariants, useTariffCatalogs, type ChargeVariant, type CodeOption, type TariffCatalogs,
-} from '@/lib/api/tariff-catalogs';
+import { useTariffCatalogs } from '@/lib/api/tariff-catalogs';
 
 /**
  * NEW QUOTATION — LIVE against Gecko.Revenue.
@@ -41,68 +48,9 @@ import {
 
 const MODULE_CODE = 'TOS';
 
-interface ConditionDraft {
-  key: string;
-  axis: string;
-  op: string;
-  values: string;
-  number: string;
-  flag: boolean;
-  modifierOp: string;
-  modifierValue: string;
-  label: string;
-}
-
-interface RateDraft {
-  key: string;
-  chargeCode: string;
-  billTo: string;
-  paymentTermCode: string;
-  creditTermDays: string;
-  orderTypeCode: string;
-  movementCode: string;
-  equipmentTypeCode: string;
-  equipmentSize: string;
-  cargoCategoryCode: string;
-  truckCategoryCode: string;
-  billingUnitCode: string;
-  pricingMethod: PricingMethod;
-  tierBasis: TierBasis | '';
-  rate: string;
-  tiersText: string;
-  conditions: ConditionDraft[];
-  open: boolean;
-}
-
-interface FreeTimeDraft {
-  key: string;
-  freeTimeKind: FreeTimeKind;
-  fullEmpty: string;
-  direction: string;
-  cargoGroup: string;
-  equipmentSize: string;
-  freeUnits: string;
-}
-
-let seed = 0;
-const newKey = () => `k${++seed}`;
 const today = () => new Date().toISOString().slice(0, 10);
 const blank = (v: string) => (v.trim() === '' ? null : v.trim());
 const num = (v: string) => (v.trim() === '' ? null : Number(v.replace(/,/g, '')));
-
-const newRate = (): RateDraft => ({
-  key: newKey(), chargeCode: '', billTo: 'CUSTOMER', paymentTermCode: 'CASH', creditTermDays: '',
-  orderTypeCode: '', movementCode: '', equipmentTypeCode: '', equipmentSize: '', cargoCategoryCode: '', truckCategoryCode: '',
-  billingUnitCode: '', pricingMethod: 'FLAT', tierBasis: '', rate: '', tiersText: '', conditions: [], open: false,
-});
-
-const newCondition = (): ConditionDraft => ({
-  key: newKey(), axis: 'EQUIPMENT_SIZE', op: 'IN', values: '', number: '', flag: true, modifierOp: 'ADD', modifierValue: '', label: '',
-});
-
-const newFreeTime = (): FreeTimeDraft => ({
-  key: newKey(), freeTimeKind: 'STORAGE', fullEmpty: '', direction: '', cargoGroup: '', equipmentSize: '', freeUnits: '',
-});
 
 function toConditionItem(c: ConditionDraft): ConditionItem {
   const isFlag = FLAG_AXES.includes(c.axis);
@@ -179,14 +127,27 @@ export default function NewQuotationPage() {
   const [forwarder, setForwarder] = useState<string | null>(null);
   const [bookingRef, setBookingRef] = useState('');
   const [currencyCode, setCurrencyCode] = useState('THB');
-  const [pricesIncludeTax, setPricesIncludeTax] = useState(false);
-  const [waiveDamaged, setWaiveDamaged] = useState(false);
+  /**
+   * Hidden on 2026-10-03, not removed. The depot quotes every charge EXCLUDING
+   * VAT and always charges storage on damaged empties, so both controls offered
+   * a choice nobody makes — and a tariff saved with the wrong one is a billing
+   * error nobody would notice until the invoice.
+   *
+   * They are still SENT, so the API contract is untouched and bringing the
+   * checkboxes back is a change to this file alone.
+   */
+  const pricesIncludeTax = false;
+  const waiveDamaged = false;
   const [remarks, setRemarks] = useState('');
 
   // body
-  const [rates, setRates] = useState<RateDraft[]>(() => [newRate()]);
+  const [rates, setRates] = useState<RateDraft[]>([]);
+  // The rate being edited. A fresh newRate() here is an ADD; an existing row
+  // is an EDIT. The dialog works on its own copy either way, so Cancel is free.
+  const [editing, setEditing] = useState<RateDraft | null>(null);
+  const addRate = () => setEditing(newRate());
+  const descriptionOf = (code: string) => catalogs.charges.find(c => c.chargeCode === code)?.descriptionEn ?? '';
   const [freeTime, setFreeTime] = useState<FreeTimeDraft[]>([]);
-  const [variants, setVariants] = useState<Record<string, ChargeVariant[]>>({});
 
   // save state
   const [created, setCreated] = useState<Schedule | null>(null);
@@ -210,6 +171,7 @@ export default function NewQuotationPage() {
   const effectiveNo = (scheduleNoTouched ? scheduleNo : scheduleNo || suggestedNo).trim().toUpperCase();
 
   const headerError = (field: string) => headerErrors?.forField(field);
+  const pricedRows = rates.filter(r => r.chargeCode).length;
 
   function changeType(next: ScheduleType) {
     setType(next);
@@ -217,23 +179,6 @@ export default function NewQuotationPage() {
     if (next === 'CONTRACT') setBookingRef('');
   }
 
-  const patchRate = (key: string, patch: Partial<RateDraft>) => setRates(rs => rs.map(r => (r.key === key ? { ...r, ...patch } : r)));
-
-  async function pickCharge(key: string, code: string) {
-    patchRate(key, { chargeCode: code });
-    if (!code) return;
-    const found = variants[code] ?? await chargeVariants(code);
-    setVariants(v => ({ ...v, [code]: found }));
-    if (found.length === 0) return;
-    setRates(rs => rs.map(r => {
-      if (r.key !== key) return r;
-      const fits = found.some(v => v.billTo === r.billTo && v.paymentTermCode === r.paymentTermCode);
-      const pick = fits ? null : found.find(v => v.paymentTermCode === r.paymentTermCode) ?? found[0];
-      return pick
-        ? { ...r, billTo: pick.billTo, paymentTermCode: pick.paymentTermCode, creditTermDays: pick.creditTermDays?.toString() ?? '' }
-        : r;
-    }));
-  }
 
   function headerBody(): SaveScheduleRequest {
     return {
@@ -298,8 +243,11 @@ export default function NewQuotationPage() {
     const id = header.schedule.scheduleId;
 
     if (mode === 'excel') {
-      toast({ variant: 'success', title: 'Draft created', message: `${header.schedule.scheduleNo} — now load its rates from Excel.` });
-      router.push(`/tariff/plans/${id}?tab=excel`);
+      // Create-then-enrich, without leaving the screen. The workbook is parsed
+      // against a real scheduleId, which the import endpoint requires, but the
+      // clerk stays on the quotation they were filling in.
+      toast({ variant: 'success', title: 'Draft created', message: `${header.schedule.scheduleNo} — now upload the filled template below.` });
+      setSaving(null);
       return;
     }
 
@@ -360,24 +308,44 @@ export default function NewQuotationPage() {
           <Icon name="arrowLeft" size={16} />
         </Link>
         <div className="gecko-flex-1">
+          {/* Same header shape as /tariff/plans/[id]: identifier + pills on the
+              first line, the name as the h1 on the second. A clerk who saves
+              this draft lands on that page and should not notice a change. */}
           <div className="gecko-row gecko-row-wrap" style={{ gap: 10 }}>
             <span className="gecko-id-link">{effectiveNo || 'New quotation'}</span>
             <span className={`gecko-pill gecko-pill-${tone.tone}`}><Icon name={tone.icon} size={11} /> {tone.label}</span>
             <span className="gecko-pill gecko-pill-neutral">{created ? `DRAFT saved · v${created.versionNo}` : 'not saved'}</span>
+            <span style={{ fontSize: 11, color: 'var(--gecko-text-disabled)', fontStyle: 'italic' }}>
+              draft → submit → approve; an approved quotation is frozen
+            </span>
           </div>
-          <div className="gecko-cell-meta gecko-mt-1">
-            Draft → submit → approve. An approved quotation is frozen; a change is a new version.
+          <div className="gecko-row gecko-row-baseline gecko-row-wrap gecko-mt-1" style={{ gap: 12 }}>
+            <h1 className="gecko-page-title">{name.trim() || 'New quotation'}</h1>
           </div>
         </div>
         {canImport && (
-          <button className="gecko-btn gecko-btn-outline gecko-btn-sm" disabled={saving !== null} onClick={() => save('excel')}
-            title="Create the draft header, then download / upload its Excel template">
-            <Icon name="fileText" size={14} /> {saving === 'excel' ? 'Creating…' : created ? 'Open Excel import' : 'Create draft & load from Excel'}
+          <button className="gecko-btn gecko-btn-outline gecko-btn-sm" disabled={saving !== null || created !== null} onClick={() => save('excel')}
+            title="Save the draft header so a filled workbook can be checked against it">
+            <Icon name="fileText" size={14} /> {saving === 'excel' ? 'Creating…' : created ? 'Draft saved' : 'Save draft & load from Excel'}
           </button>
         )}
         <button className="gecko-btn gecko-btn-primary gecko-btn-sm" disabled={saving !== null} onClick={() => save('save')}>
           <Icon name="save" size={14} /> {saving === 'save' ? 'Saving…' : created ? 'Save draft again' : 'Save draft'}
         </button>
+      </div>
+
+      {/* Validity strip — the same four facts the view/edit page shows, read
+          off the form as it is filled in rather than off a saved row. */}
+      <div style={{ background: 'var(--gecko-bg-surface)', borderBottom: '1px solid var(--gecko-border)', padding: '16px 24px' }}>
+        <div className="gecko-fact-strip" style={{ maxWidth: 'var(--gecko-container-max)', margin: '0 auto' }}>
+          <Fact icon="calendar" tone="primary" value={formatDate(effectiveFrom)} label="Effective from (branch-local)" />
+          <Fact icon="clock" tone="warning" value={effectiveTo ? formatDate(effectiveTo) : 'Open-ended'} label="Effective until" />
+          <Fact icon="dollarSign" tone="info" value={String(pricedRows)}
+            label={`Priced rows · ${freeTime.length} free-time rule${freeTime.length === 1 ? '' : 's'}`} />
+          <Fact icon="layers" tone="success"
+            value={created ? String(created.scopeRank) : '—'}
+            label={created ? (SCOPE_RANK_LABEL[created.scopeRank] ?? 'Precedence rank') : 'Precedence — set when the draft is saved'} />
+        </div>
       </div>
 
       <div className="gecko-stack gecko-stack-lg" style={{ flex: 1, padding: 24, maxWidth: 'var(--gecko-container-max)', width: '100%', margin: '0 auto' }}>
@@ -400,8 +368,13 @@ export default function NewQuotationPage() {
         )}
 
         {/* Header */}
+        {/* Quotation on the left, storage free days beside it — the shape of
+            Vector's Customer Rate Profile, in our cards. */}
+        <div className="gecko-tariff-header-split">
         <Card title="Quotation" icon="fileText" subtitle="Who it is for and when it applies. The server checks every party exists and plays the role it is named for.">
           <div className="gecko-stack">
+            {/* The kind of agreement decides which fields below even exist, so
+                it stays on its own line above them. */}
             <div className="gecko-row gecko-row-wrap" style={{ gap: 8 }}>
               {(['PUBLIC', 'CONTRACT', 'SPOT'] as ScheduleType[]).map(t => (
                 <button key={t} type="button" disabled={!!created && created.scheduleType !== t}
@@ -418,144 +391,188 @@ export default function NewQuotationPage() {
             </div>
             {headerError('scheduleType') && <div className="gecko-field-error">{headerError('scheduleType')}</div>}
 
-            {type !== 'PUBLIC' && (
-              <div className="gecko-grid-3" style={{ gap: 14 }}>
-                <Labelled label="Customer">
-                  <PartyPicker role="CUSTOMER" value={customer} onChange={c => setCustomer(c)} error={headerError('customerPartyCode')} disabled={!!created && created.versionNo > 1} />
-                </Labelled>
-                <Labelled label="Agent / shipping line (optional)">
-                  <PartyPicker role="SHIPPING_LINE" value={agent} onChange={c => setAgent(c)} error={headerError('agentPartyCode')} />
-                </Labelled>
-                <Labelled label="Forwarder (optional)">
-                  <PartyPicker role="FORWARDER" value={forwarder} onChange={c => setForwarder(c)} error={headerError('forwarderPartyCode')} />
+            <div className="gecko-quotation-split">
+              {/* LEFT — who the quotation is for */}
+              <div className="gecko-stack">
+                <div className="gecko-quotation-ids">
+                  <Labelled label="Quotation no." error={headerError('scheduleNo')}>
+                    <input className="gecko-input gecko-text-mono" value={scheduleNoTouched ? scheduleNo : scheduleNo || suggestedNo}
+                      disabled={!!created} placeholder="CTR-CUSTOMER"
+                      onChange={e => { setScheduleNo(e.target.value.toUpperCase()); setScheduleNoTouched(true); }} />
+                  </Labelled>
+                  <Labelled label="Name" error={headerError('name')}>
+                    <input className="gecko-input" value={name} maxLength={200} placeholder="e.g. ABC Logistics — 2026 rates"
+                      onChange={e => setName(e.target.value)} />
+                  </Labelled>
+                </div>
+
+                {type !== 'PUBLIC' && (
+                  <>
+                    <Labelled label="Agent / shipping line (optional)">
+                      <PartyPicker role="SHIPPING_LINE" value={agent} onChange={c => setAgent(c)} error={headerError('agentPartyCode')} />
+                    </Labelled>
+                    <Labelled label="Customer">
+                      <PartyPicker role="CUSTOMER" value={customer} onChange={c => setCustomer(c)} error={headerError('customerPartyCode')}
+                        disabled={!!created && created.versionNo > 1} />
+                    </Labelled>
+                    <Labelled label="Forwarder (optional)">
+                      <PartyPicker role="FORWARDER" value={forwarder} onChange={c => setForwarder(c)} error={headerError('forwarderPartyCode')} />
+                    </Labelled>
+                  </>
+                )}
+
+                {type === 'SPOT' && (
+                  <Labelled label="Booking ref" error={headerError('bookingRef')}>
+                    <input className="gecko-input gecko-text-mono" value={bookingRef} maxLength={30}
+                      onChange={e => setBookingRef(e.target.value.toUpperCase())} />
+                  </Labelled>
+                )}
+
+                <Labelled label="Remarks" error={headerError('remarks')}>
+                  <textarea className="gecko-textarea gecko-input" rows={4} maxLength={1000} value={remarks}
+                    onChange={e => setRemarks(e.target.value)} />
                 </Labelled>
               </div>
-            )}
 
-            <div className="gecko-grid-4" style={{ gap: 14 }}>
-              <Labelled label="Quotation no." error={headerError('scheduleNo')}>
-                <input className="gecko-input gecko-text-mono" value={scheduleNoTouched ? scheduleNo : scheduleNo || suggestedNo}
-                  disabled={!!created} placeholder="CTR-CUSTOMER"
-                  onChange={e => { setScheduleNo(e.target.value.toUpperCase()); setScheduleNoTouched(true); }} />
-              </Labelled>
-              <Labelled label="Name" error={headerError('name')}>
-                <input className="gecko-input" value={name} maxLength={200} placeholder="e.g. ABC Logistics — 2026 rates" onChange={e => setName(e.target.value)} />
-              </Labelled>
-              <Labelled label="Effective from" error={headerError('effectiveFrom')}>
-                <input className="gecko-input" type="date" value={effectiveFrom} onChange={e => setEffectiveFrom(e.target.value)} />
-              </Labelled>
-              <Labelled label="Effective to (blank = open-ended)" error={headerError('effectiveTo')}>
-                <input className="gecko-input" type="date" value={effectiveTo} onChange={e => setEffectiveTo(e.target.value)} />
-              </Labelled>
-            </div>
-
-            <div className="gecko-grid-4" style={{ gap: 14 }}>
-              <Labelled label="Branch" error={headerError('branchId')}>
-                <select className="gecko-input" value={branchId} onChange={e => setBranchId(e.target.value)}>
-                  <option value="">All branches</option>
-                  {(branches ?? []).filter(b => b.isActive).map(b => <option key={b.branchId} value={b.branchId}>{b.branchCode} — {b.displayName}</option>)}
-                </select>
-              </Labelled>
-              <Labelled label="Currency" error={headerError('currencyCode')}>
-                <input className="gecko-input gecko-text-mono" value={currencyCode} maxLength={3} onChange={e => setCurrencyCode(e.target.value.toUpperCase())} />
-              </Labelled>
-              {type === 'SPOT' ? (
-                <Labelled label="Booking ref" error={headerError('bookingRef')}>
-                  <input className="gecko-input gecko-text-mono" value={bookingRef} maxLength={30} onChange={e => setBookingRef(e.target.value.toUpperCase())} />
+              {/* RIGHT — when and where it applies */}
+              <div className="gecko-stack">
+                {/* The app's own picker, not the browser's: a native date input
+                    renders differently in every browser and spells the date the
+                    way the OS locale does, which is how "03 Oct 2026" and
+                    "10/3/2026" both got on screen. This one reads dd-MM-yyyy
+                    everywhere and carries Clear / Today. */}
+                <Labelled label="Effective from" error={headerError('effectiveFrom')}>
+                  <DateField value={effectiveFrom} onChange={setEffectiveFrom} placeholder="dd-mm-yyyy" />
                 </Labelled>
-              ) : <div />}
-              <div className="gecko-stack-sm">
-                <label className="gecko-row" style={{ gap: 6 }}>
-                  <input type="checkbox" className="gecko-checkbox" checked={pricesIncludeTax} onChange={e => setPricesIncludeTax(e.target.checked)} />
-                  <span>Prices include VAT</span>
-                </label>
-                <label className="gecko-row" style={{ gap: 6 }}>
-                  <input type="checkbox" className="gecko-checkbox" checked={waiveDamaged} onChange={e => setWaiveDamaged(e.target.checked)} />
-                  <span>Waive storage on damaged empties</span>
-                </label>
+                <Labelled label="Effective to" error={headerError('effectiveTo')} hint="Blank = open-ended.">
+                  <DateField value={effectiveTo} onChange={setEffectiveTo} placeholder="open-ended" />
+                </Labelled>
+                <Labelled label="Branch" error={headerError('branchId')}>
+                  <select className="gecko-input" value={branchId} onChange={e => setBranchId(e.target.value)}>
+                    <option value="">All branches</option>
+                    {(branches ?? []).filter(b => b.isActive).map(b => (
+                      <option key={b.branchId} value={b.branchId}>{b.branchCode} — {b.displayName}</option>
+                    ))}
+                  </select>
+                </Labelled>
+                <Labelled label="Currency" error={headerError('currencyCode')}>
+                  <input className="gecko-input gecko-text-mono" value={currencyCode} maxLength={3}
+                    onChange={e => setCurrencyCode(e.target.value.toUpperCase())} />
+                </Labelled>
               </div>
             </div>
 
-            <Labelled label="Remarks" error={headerError('remarks')}>
-              <textarea className="gecko-textarea gecko-input" rows={2} maxLength={1000} value={remarks} onChange={e => setRemarks(e.target.value)} />
-            </Labelled>
             <div className="gecko-cell-meta">Module: {MODULE_CODE} (depot operations). Only TOS charge codes can be priced here.</div>
           </div>
         </Card>
 
+        <Card title="Storage free days" icon="calendar"
+          subtitle="Vector's grid: days free before storage starts to price.">
+          <FreeTimeMatrix rules={freeTime} onChange={setFreeTime} error={freeErrs.whole} />
+        </Card>
+        </div>
+
         {/* Rates */}
-        <Card title={`Rates (${rates.filter(r => r.chargeCode).length})`} icon="layers"
-          subtitle="One row per price. Leave an axis blank for “any”; the most specific matching row wins. For a long list use Excel instead."
+        {/* Where the rates come from, directly above the rates themselves.
+            The panel needs a real scheduleId because that is what the import
+            endpoint parses against, so before the draft exists this is a
+            prompt to create it — one click, no page change. */}
+        {canImport && (created
+          ? <ExcelImportPanel scheduleId={created.scheduleId} scheduleNo={created.scheduleNo} versionNo={created.versionNo}
+              editable onApplied={() => router.push(`/tariff/plans/${created.scheduleId}`)} />
+          : (
+            <div className="gecko-table-card">
+              <div className="gecko-row" style={{ padding: '14px 18px', gap: 10 }}>
+                <Icon name="fileText" size={15} />
+                <div className="gecko-flex-1">
+                  <div className="gecko-section-header-title">Load rates from Excel</div>
+                  <div className="gecko-section-header-subtitle">
+                    Filled in the template already? Save this quotation&apos;s header first — the workbook is checked against
+                    the draft it belongs to — then upload it here and every rate is read in for you.
+                  </div>
+                </div>
+                <button className="gecko-btn gecko-btn-outline gecko-btn-sm" disabled={saving !== null} onClick={() => save('excel')}>
+                  <Icon name="upload" size={14} /> {saving === 'excel' ? 'Creating…' : 'Save draft & upload workbook'}
+                </button>
+              </div>
+            </div>
+          ))}
+
+        <Card title={`Rates (${pricedRows})`} icon="layers"
+          subtitle="What this tariff prices. Open a row to change it; for a long list load the workbook above instead."
           right={
-            <button className="gecko-btn gecko-btn-outline gecko-btn-sm" onClick={() => setRates(rs => [...rs, newRate()])}>
+            <button className="gecko-btn gecko-btn-outline gecko-btn-sm" onClick={addRate}>
               <Icon name="plus" size={14} /> Add rate
             </button>
           }>
           {catalogsLoading && <div className="gecko-cell-meta">Loading charge codes and master lists…</div>}
           {rateSetError && <div className="gecko-field-error">{rateSetError}</div>}
-          <div style={{ overflowX: 'auto' }}>
-            <table className="gecko-table gecko-table-compact" style={{ fontSize: 12, minWidth: 1100 }}>
-              <thead>
-                <tr>
-                  <th />
-                  <th>Charge</th><th>Bill to</th><th>Terms</th><th>Order type</th><th>Movement</th>
-                  <th>Equip. type</th><th>Size</th><th>Cargo</th><th>Method</th><th>Rate / tiers</th><th />
-                </tr>
-              </thead>
-              <tbody>
-                {rates.map(r => (
-                  <RateRow key={r.key} row={r} catalogs={catalogs} variants={variants[r.chargeCode]}
-                    errors={rateErrs.get(r.key)}
-                    onPatch={p => patchRate(r.key, p)}
-                    onCharge={code => void pickCharge(r.key, code)}
-                    onCopy={() => setRates(rs => { const copy = { ...r, key: newKey(), conditions: r.conditions.map(c => ({ ...c, key: newKey() })) }; const at = rs.findIndex(x => x.key === r.key); return [...rs.slice(0, at + 1), copy, ...rs.slice(at + 1)]; })}
-                    onRemove={() => setRates(rs => rs.filter(x => x.key !== r.key))} />
-                ))}
-                {rates.length === 0 && <tr><td colSpan={12} className="gecko-cell-meta">No rates — add one, or create the draft and load them from Excel.</td></tr>}
-              </tbody>
-            </table>
-          </div>
+          {/* The register READS. One rate is edited in a dialog, where the
+              eleven axes have room to be grouped and labelled. */}
+          <table className="gecko-table gecko-table-compact">
+            <thead>
+              <tr>
+                <th>Charge</th><th>Applies to</th><th>Bill to</th><th>Method</th>
+                <th style={{ textAlign: 'right' }}>Rate</th><th />
+              </tr>
+            </thead>
+            <tbody>
+              {rates.length === 0 && (
+                <tr><td colSpan={6} className="gecko-cell-meta">No rates yet — add one, or load them from the workbook above.</td></tr>
+              )}
+              {rates.map(r => {
+                const bad = rateErrs.get(r.key);
+                return (
+                  <tr key={r.key} className="gecko-row-clickable" style={{ background: bad ? 'var(--gecko-bg-subtle)' : undefined }}
+                    onClick={() => setEditing(r)}>
+                    <td>
+                      {r.chargeCode
+                        ? <>
+                            <div className="gecko-mono-strong">{r.chargeCode}</div>
+                            {/* The code is the identifier; the description is what
+                                makes the row readable without opening it. */}
+                            <div className="gecko-cell-meta">{descriptionOf(r.chargeCode)}</div>
+                          </>
+                        : <span className="gecko-cell-meta">not set</span>}
+                      {bad && <div className="gecko-field-error">{Object.values(bad).flat().join(' ')}</div>}
+                    </td>
+                    <td>{scopeOf(r)}</td>
+                    <td className="gecko-text-mono">{r.billTo}{r.paymentTermCode ? ` · ${r.paymentTermCode}` : ''}</td>
+                    <td>{r.pricingMethod === 'FLAT' ? 'Flat' : r.pricingMethod.replace('TIERED_', 'Tiered ').toLowerCase()}</td>
+                    <td className="gecko-text-mono" style={{ textAlign: 'right' }}>
+                      {r.pricingMethod === 'FLAT' ? (r.rate || '—') : (r.tiersText || '—')}
+                    </td>
+                    <td className="gecko-row" style={{ gap: 2 }} onClick={e => e.stopPropagation()}>
+                      <button className="gecko-btn gecko-btn-ghost gecko-btn-sm gecko-btn-icon" aria-label="Edit rate"
+                        onClick={() => setEditing(r)}><Icon name="edit" size={13} /></button>
+                      <button className="gecko-btn gecko-btn-ghost gecko-btn-sm gecko-btn-icon" aria-label="Copy rate"
+                        onClick={() => setRates(rs => { const at = rs.findIndex(x => x.key === r.key); const c = copyRate(r); return [...rs.slice(0, at + 1), c, ...rs.slice(at + 1)]; })}>
+                        <Icon name="copy" size={13} /></button>
+                      <button className="gecko-btn gecko-btn-ghost gecko-btn-sm gecko-btn-icon" aria-label="Remove rate"
+                        onClick={() => setRates(rs => rs.filter(x => x.key !== r.key))}><Icon name="trash" size={13} /></button>
+                    </td>
+                  </tr>
+                );
+              })}
+            </tbody>
+          </table>
         </Card>
 
-        {/* Free time */}
-        <Card title={`Free time (${freeTime.length})`} icon="calendar"
-          subtitle="Free units come off before tiers are counted. Leave a dimension blank for “any”. Storage and chassis count days, truck waiting hours."
-          right={
-            <button className="gecko-btn gecko-btn-outline gecko-btn-sm" onClick={() => setFreeTime(f => [...f, newFreeTime()])}>
-              <Icon name="plus" size={14} /> Add rule
-            </button>
-          }>
-          {freeErrs.whole && <div className="gecko-field-error">{freeErrs.whole}</div>}
-          {freeTime.length === 0 ? (
-            <div className="gecko-cell-meta">No free-time rules — the public tariff decides.</div>
-          ) : (
-            <table className="gecko-table gecko-table-compact" style={{ fontSize: 12 }}>
-              <thead><tr><th>Kind</th><th>Full / empty</th><th>Direction</th><th>Cargo group</th><th>Size</th><th>Free units</th><th /></tr></thead>
-              <tbody>
-                {freeTime.map(f => {
-                  const err = freeErrs.rows.get(f.key);
-                  const patch = (p: Partial<FreeTimeDraft>) => setFreeTime(all => all.map(x => (x.key === f.key ? { ...x, ...p } : x)));
-                  return (
-                    <tr key={f.key}>
-                      <td><select className="gecko-input" value={f.freeTimeKind} onChange={e => patch({ freeTimeKind: e.target.value as FreeTimeKind })}>
-                        <option value="STORAGE">STORAGE (days)</option><option value="CHASSIS">CHASSIS (days)</option><option value="TRUCK_WAITING">TRUCK_WAITING (hours)</option>
-                      </select></td>
-                      <td><Pick value={f.fullEmpty} options={['FULL', 'EMPTY']} onChange={v => patch({ fullEmpty: v })} /></td>
-                      <td><Pick value={f.direction} options={['IMPORT', 'EXPORT', 'LOCAL']} onChange={v => patch({ direction: v })} /></td>
-                      <td><Pick value={f.cargoGroup} options={['NORMAL', 'REEFER', 'DG']} onChange={v => patch({ cargoGroup: v })} /></td>
-                      <td><Pick value={f.equipmentSize} options={['20', '40', '45']} onChange={v => patch({ equipmentSize: v })} /></td>
-                      <td>
-                        <input className={`gecko-input ${err ? 'gecko-input-error' : ''}`} type="number" min={0} max={3650} value={f.freeUnits} onChange={e => patch({ freeUnits: e.target.value })} />
-                        {err && <div className="gecko-field-error">{Object.values(err).flat().join(' ')}</div>}
-                      </td>
-                      <td><button className="gecko-btn gecko-btn-ghost gecko-btn-sm gecko-btn-icon" aria-label="Remove rule" onClick={() => setFreeTime(all => all.filter(x => x.key !== f.key))}><Icon name="trash" size={13} /></button></td>
-                    </tr>
-                  );
-                })}
-              </tbody>
-            </table>
-          )}
-        </Card>
+        <RateDialog
+          key={editing?.key ?? 'none'}
+          open={editing !== null}
+          row={editing}
+          catalogs={catalogs}
+          errors={editing ? rateErrs.get(editing.key) : undefined}
+          currency={currencyCode}
+          onClose={() => setEditing(null)}
+          onSave={saved => {
+            setRates(rs => (rs.some(x => x.key === saved.key) ? rs.map(x => (x.key === saved.key ? saved : x)) : [...rs, saved]));
+            setEditing(null);
+          }}
+        />
+
+
       </div>
     </div>
   );
@@ -566,216 +583,6 @@ function remapToDrafts<T extends { key: string }>(byIndex: Map<number, Record<st
   const out = new Map<string, Record<string, string[]>>();
   byIndex.forEach((errs, i) => { if (sent[i]) out.set(sent[i].key, errs); });
   return out;
-}
-
-// ── rate row ───────────────────────────────────────────────────────────────
-
-function RateRow({ row: r, catalogs, variants, errors, onPatch, onCharge, onCopy, onRemove }: {
-  row: RateDraft;
-  catalogs: TariffCatalogs;
-  variants: ChargeVariant[] | undefined;
-  errors: Record<string, string[]> | undefined;
-  onPatch: (patch: Partial<RateDraft>) => void;
-  onCharge: (code: string) => void;
-  onCopy: () => void;
-  onRemove: () => void;
-}) {
-  const err = (f: string) => errors?.[f.toLowerCase()]?.join(' ');
-  const charge = catalogs.charges.find(c => c.chargeCode === r.chargeCode);
-  const tiered = r.pricingMethod !== 'FLAT';
-  const billToOptions = variants && variants.length > 0 ? [...new Set(variants.map(v => v.billTo))] : catalogs.billToRoles.map(b => b.code);
-  const termOptions = variants && variants.length > 0
-    ? [...new Set(variants.filter(v => v.billTo === r.billTo).map(v => v.paymentTermCode))]
-    : catalogs.paymentTerms.map(p => p.code);
-  const rowProblem = errors?.[''];
-  const hasDetailErrors = ['truckcategorycode', 'billingunitcode', 'tierbasis', 'credittermdays', 'conditions'].some(f => errors?.[f]);
-  const expanded = r.open || hasDetailErrors;
-
-  return (
-    <>
-      <tr style={{ background: errors ? 'var(--gecko-bg-subtle)' : undefined }}>
-        <td>
-          <button className="gecko-btn gecko-btn-ghost gecko-btn-sm gecko-btn-icon" aria-label="More" onClick={() => onPatch({ open: !r.open })}>
-            <Icon name={expanded ? 'chevronDown' : 'chevronRight'} size={13} />
-          </button>
-        </td>
-        <td style={{ minWidth: 150 }}>
-          <CodeSelect value={r.chargeCode} options={catalogs.charges.map(c => ({ code: c.chargeCode, label: c.descriptionEn }))}
-            placeholder="charge…" required onChange={onCharge} error={err('chargeCode')} />
-        </td>
-        <td><CodeSelect value={r.billTo} options={billToOptions.map(c => ({ code: c, label: c }))} required onChange={v => onPatch({ billTo: v })} error={err('billTo')} /></td>
-        <td><CodeSelect value={r.paymentTermCode} options={(termOptions.length ? termOptions : catalogs.paymentTerms.map(p => p.code)).map(c => ({ code: c, label: catalogs.paymentTerms.find(p => p.code === c)?.name ?? c }))} required onChange={v => onPatch({ paymentTermCode: v })} error={err('paymentTermCode')} /></td>
-        <td style={{ minWidth: 130 }}><CodeSelect value={r.orderTypeCode} options={catalogs.orderTypes} onChange={v => onPatch({ orderTypeCode: v })} error={err('orderTypeCode')} /></td>
-        <td style={{ minWidth: 110 }}><CodeSelect value={r.movementCode} options={catalogs.movements} onChange={v => onPatch({ movementCode: v })} error={err('movementCode')} /></td>
-        <td style={{ minWidth: 100 }}>
-          <CodeSelect value={r.equipmentTypeCode} options={catalogs.equipmentTypes}
-            onChange={v => onPatch({ equipmentTypeCode: v, equipmentSize: v ? (catalogs.equipmentTypes.find(t => t.code === v)?.size ?? r.equipmentSize) : r.equipmentSize })}
-            error={err('equipmentTypeCode')} />
-        </td>
-        <td style={{ minWidth: 70 }}><Pick value={r.equipmentSize} options={['20', '40', '45']} onChange={v => onPatch({ equipmentSize: v })} error={err('equipmentSize')} /></td>
-        <td style={{ minWidth: 110 }}><CodeSelect value={r.cargoCategoryCode} options={catalogs.cargoCategories} onChange={v => onPatch({ cargoCategoryCode: v })} error={err('cargoCategoryCode')} /></td>
-        <td>
-          <select className="gecko-input" value={r.pricingMethod}
-            onChange={e => {
-              const m = e.target.value as PricingMethod;
-              onPatch(m === 'FLAT' ? { pricingMethod: m, tierBasis: '' } : { pricingMethod: m, tierBasis: r.tierBasis || 'DAY', open: true });
-            }}>
-            {PRICING_METHODS.map(m => <option key={m} value={m}>{m === 'FLAT' ? 'Flat' : m.replace('TIERED_', 'Tiered ').toLowerCase()}</option>)}
-          </select>
-        </td>
-        <td style={{ minWidth: 150 }}>
-          {tiered ? (
-            <>
-              <input className={`gecko-input gecko-text-mono ${err('tiers') ? 'gecko-input-error' : ''}`} value={r.tiersText}
-                placeholder="1-7:160; 8-14:275; 15+:390" onChange={e => onPatch({ tiersText: e.target.value })} />
-              {err('tiers') && <div className="gecko-field-error">{err('tiers')}</div>}
-            </>
-          ) : (
-            <>
-              <input className={`gecko-input ${err('rate') ? 'gecko-input-error' : ''}`} type="number" min={0} step="0.01" value={r.rate}
-                placeholder={charge ? charge.billingUnitCode.toLowerCase().replace('_', ' ') : '0.00'} onChange={e => onPatch({ rate: e.target.value })} />
-              {err('rate') && <div className="gecko-field-error">{err('rate')}</div>}
-            </>
-          )}
-        </td>
-        <td className="gecko-row" style={{ gap: 2 }}>
-          <button className="gecko-btn gecko-btn-ghost gecko-btn-sm gecko-btn-icon" aria-label="Copy row" onClick={onCopy}><Icon name="copy" size={13} /></button>
-          <button className="gecko-btn gecko-btn-ghost gecko-btn-sm gecko-btn-icon" aria-label="Remove row" onClick={onRemove}><Icon name="trash" size={13} /></button>
-        </td>
-      </tr>
-      {rowProblem && (
-        <tr><td /><td colSpan={11} className="gecko-field-error">{rowProblem.join(' ')}</td></tr>
-      )}
-      {expanded && (
-        <tr>
-          <td />
-          <td colSpan={11}>
-            <div className="gecko-grid-4" style={{ gap: 12 }}>
-              <Labelled label="Truck category" error={err('truckCategoryCode')}>
-                <CodeSelect value={r.truckCategoryCode} options={catalogs.truckCategories} onChange={v => onPatch({ truckCategoryCode: v })} />
-              </Labelled>
-              <Labelled label={`Billing unit${charge ? ` (charge default ${charge.billingUnitCode})` : ''}`} error={err('billingUnitCode')}>
-                <Pick value={r.billingUnitCode} options={catalogs.billingUnits.map(u => u.code)} anyLabel="charge default" onChange={v => onPatch({ billingUnitCode: v })} />
-              </Labelled>
-              <Labelled label="Credit days" error={err('creditTermDays')}>
-                <input className="gecko-input" type="number" min={0} max={365} value={r.creditTermDays} onChange={e => onPatch({ creditTermDays: e.target.value })} />
-              </Labelled>
-              {tiered ? (
-                <Labelled label="Tier basis" error={err('tierBasis')}>
-                  <select className="gecko-input" value={r.tierBasis} onChange={e => onPatch({ tierBasis: e.target.value as TierBasis })}>
-                    {TIER_BASES.map(b => <option key={b} value={b}>{b}</option>)}
-                  </select>
-                </Labelled>
-              ) : <div />}
-            </div>
-            <ConditionsEditor conditions={r.conditions} errors={errors} onChange={conditions => onPatch({ conditions })} />
-          </td>
-        </tr>
-      )}
-    </>
-  );
-}
-
-function ConditionsEditor({ conditions, errors, onChange }: {
-  conditions: ConditionDraft[];
-  errors: Record<string, string[]> | undefined;
-  onChange: (c: ConditionDraft[]) => void;
-}) {
-  const patch = (key: string, p: Partial<ConditionDraft>) => onChange(conditions.map(c => (c.key === key ? { ...c, ...p } : c)));
-  return (
-    <div className="gecko-stack-sm gecko-mt-1">
-      <div className="gecko-row" style={{ gap: 8 }}>
-        <span className="gecko-field-label gecko-flex-1">Surcharge conditions — applied in order (e.g. +300 if WEIGHT_KG &gt; 30000)</span>
-        <button className="gecko-btn gecko-btn-ghost gecko-btn-sm" onClick={() => onChange([...conditions, newCondition()])}><Icon name="plus" size={12} /> Condition</button>
-      </div>
-      {errors?.conditions && <div className="gecko-field-error">{errors.conditions.join(' ')}</div>}
-      {conditions.map(c => {
-        const isFlag = FLAG_AXES.includes(c.axis);
-        const isNumeric = NUMERIC_AXES.includes(c.axis);
-        return (
-          <div key={c.key} className="gecko-row gecko-row-wrap" style={{ gap: 6 }}>
-            <select className="gecko-input" style={{ width: 160 }} value={c.axis}
-              onChange={e => {
-                const axis = e.target.value;
-                patch(c.key, { axis, op: FLAG_AXES.includes(axis) ? 'IS' : NUMERIC_AXES.includes(axis) ? 'GT' : 'IN' });
-              }}>
-              {[...LIST_AXES, ...FLAG_AXES, ...NUMERIC_AXES].map(a => <option key={a} value={a}>{a}</option>)}
-            </select>
-            {isFlag ? (
-              <select className="gecko-input" style={{ width: 90 }} value={c.flag ? 'true' : 'false'} onChange={e => patch(c.key, { flag: e.target.value === 'true' })}>
-                <option value="true">is yes</option><option value="false">is no</option>
-              </select>
-            ) : isNumeric ? (
-              <>
-                <select className="gecko-input" style={{ width: 80 }} value={c.op} onChange={e => patch(c.key, { op: e.target.value })}>
-                  {['GT', 'GTE', 'LT', 'LTE'].map(o => <option key={o} value={o}>{o}</option>)}
-                </select>
-                <input className="gecko-input" style={{ width: 110 }} type="number" value={c.number} placeholder="30000" onChange={e => patch(c.key, { number: e.target.value })} />
-              </>
-            ) : (
-              <>
-                <select className="gecko-input" style={{ width: 70 }} value={c.op} onChange={e => patch(c.key, { op: e.target.value })}>
-                  <option value="IN">IN</option><option value="EQ">EQ</option>
-                </select>
-                <input className="gecko-input gecko-text-mono" style={{ width: 160 }} value={c.values} placeholder="codes, comma separated" onChange={e => patch(c.key, { values: e.target.value })} />
-              </>
-            )}
-            <span className="gecko-cell-meta">→</span>
-            <select className="gecko-input" style={{ width: 110 }} value={c.modifierOp} onChange={e => patch(c.key, { modifierOp: e.target.value })}>
-              {MODIFIER_OPS.map(m => <option key={m} value={m}>{m}</option>)}
-            </select>
-            <input className="gecko-input" style={{ width: 100 }} type="number" step="0.01" value={c.modifierValue} onChange={e => patch(c.key, { modifierValue: e.target.value })} />
-            <input className="gecko-input" style={{ width: 160 }} value={c.label} maxLength={100} placeholder="label (optional)" onChange={e => patch(c.key, { label: e.target.value })} />
-            <button className="gecko-btn gecko-btn-ghost gecko-btn-sm gecko-btn-icon" aria-label="Remove condition" onClick={() => onChange(conditions.filter(x => x.key !== c.key))}><Icon name="x" size={12} /></button>
-          </div>
-        );
-      })}
-    </div>
-  );
-}
-
-// ── small inputs ───────────────────────────────────────────────────────────
-
-/** A real list when master data loaded; a typed code (validated on save) when it did not. */
-function CodeSelect({ value, options, onChange, placeholder, required, error }: {
-  value: string;
-  options: CodeOption[];
-  onChange: (code: string) => void;
-  placeholder?: string;
-  required?: boolean;
-  error?: string;
-}) {
-  const cls = `gecko-input ${error ? 'gecko-input-error' : ''}`;
-  const known = options.some(o => o.code === value);
-  return (
-    <>
-      {options.length === 0 ? (
-        <input className={`${cls} gecko-text-mono`} value={value} placeholder={placeholder ?? (required ? '' : 'any')}
-          onChange={e => onChange(e.target.value.toUpperCase())} />
-      ) : (
-        <select className={cls} value={value} onChange={e => onChange(e.target.value)} title={options.find(o => o.code === value)?.label}>
-          <option value="">{required ? (placeholder ?? 'choose…') : 'any'}</option>
-          {value && !known && <option value={value}>{value} (not in list)</option>}
-          {options.map(o => <option key={o.code} value={o.code}>{o.code === o.label ? o.code : `${o.code} — ${o.label}`}</option>)}
-        </select>
-      )}
-      {error && <div className="gecko-field-error">{error}</div>}
-    </>
-  );
-}
-
-function Pick({ value, options, onChange, anyLabel = 'any', error }: {
-  value: string; options: string[]; onChange: (v: string) => void; anyLabel?: string; error?: string;
-}) {
-  return (
-    <>
-      <select className={`gecko-input ${error ? 'gecko-input-error' : ''}`} value={value} onChange={e => onChange(e.target.value)}>
-        <option value="">{anyLabel}</option>
-        {options.map(o => <option key={o} value={o}>{o}</option>)}
-      </select>
-      {error && <div className="gecko-field-error">{error}</div>}
-    </>
-  );
 }
 
 function Card({ title, subtitle, icon, right, children }: {
@@ -796,12 +603,3 @@ function Card({ title, subtitle, icon, right, children }: {
   );
 }
 
-function Labelled({ label, error, children }: { label: string; error?: string; children: React.ReactNode }) {
-  return (
-    <div>
-      <div className="gecko-field-label gecko-mb-1">{label}</div>
-      {children}
-      {error && <div className="gecko-field-error">{error}</div>}
-    </div>
-  );
-}

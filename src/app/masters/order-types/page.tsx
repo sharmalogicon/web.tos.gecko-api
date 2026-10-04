@@ -171,7 +171,7 @@ function RulesMatrix({ steps, selectedSeq, onSelect }: {
   steps: Step[]; selectedSeq: number | null; onSelect: (seq: number) => void;
 }) {
   return (
-    <table className="gecko-table gecko-table-compact" style={{ fontSize: 12 }}>
+    <table className="gecko-table gecko-table-compact">
       <thead>
         <tr>
           <th style={{ width: 44 }}>#</th>
@@ -228,7 +228,7 @@ function ChargesTable({ charges, selectedStep }: { charges: Charge[]; selectedSt
   }
 
   return (
-    <table className="gecko-table gecko-table-compact" style={{ fontSize: 12 }}>
+    <table className="gecko-table gecko-table-compact">
       <thead>
         <tr>
           <th style={{ width: 130 }}>Charge</th>
@@ -632,7 +632,7 @@ export default function OrderTypeMasterPage() {
                 <div style={{ padding: '24px 24px 20px', overflowX: 'auto' }}>
                   {mode === 'steps' && vocabulary ? (
                     <div className="gecko-stack gecko-stack-md">
-                      <StepsEditor rows={stepRows} onChange={setStepRows} vocabulary={vocabulary} localErrors={stepRowErrors} apiError={actionError} />
+                      <StepsEditor rows={stepRows} onChange={setStepRows} vocabulary={vocabulary} localErrors={stepRowErrors} apiError={actionError} requiresVesselSchedule={ot?.requiresVesselSchedule ?? true} />
                       <div className="gecko-row gecko-row-right">
                         <button className="gecko-btn gecko-btn-outline" onClick={cancel} disabled={busy}>Cancel</button>
                         <button className="gecko-btn gecko-btn-primary" onClick={saveSteps} disabled={busy}>

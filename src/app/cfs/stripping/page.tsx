@@ -106,7 +106,7 @@ export default function StrippingPage() {
                 <div style={{ fontSize: 16, fontWeight: 700 }}>Container fully stripped!</div>
               </div>
             ) : (
-              <table className="gecko-table gecko-table-comfortable" style={{ fontSize: 13 }}>
+              <table className="gecko-table gecko-table-comfortable">
                 <thead>
                   <tr className="gecko-eyebrow" style={{ background: 'var(--gecko-gray-100)', position: 'sticky', top: 0 }}>
                     <th style={{ textAlign: 'left', width: 40 }}><input type="checkbox" onChange={(e) => setSelectedCont(e.target.checked ? new Set(container.map(i => i.id)) : new Set())} /></th>
@@ -195,7 +195,7 @@ export default function StrippingPage() {
                  <div style={{ fontSize: 14, fontWeight: 500 }}>Select items to strip into warehouse</div>
                </div>
             ) : (
-              <table className="gecko-table gecko-table-comfortable" style={{ fontSize: 13 }}>
+              <table className="gecko-table gecko-table-comfortable">
                 <thead>
                   <tr className="gecko-eyebrow" style={{ background: 'var(--gecko-gray-100)', position: 'sticky', top: 0 }}>
                     <th style={{ textAlign: 'left', width: 40 }}><input type="checkbox" onChange={(e) => setSelectedWh(e.target.checked ? new Set(warehouse.map(i => i.id)) : new Set())} /></th>

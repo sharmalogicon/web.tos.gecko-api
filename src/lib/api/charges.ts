@@ -118,7 +118,43 @@ export const payerLabel = (code: string | null, name: string | null) =>
 export const statementPath = (orderNo: string) => `${CHARGES_PATH}/statement?orderNo=${encodeURIComponent(orderNo)}`;
 
 /** With VAT, by where the money is. Paid includes earned. */
-export interface StatementTotals { paid: number; waived: number; unbilled: number; invoiced: number; cancelled: number }
+export interface StatementTotals {
+  paid: number;
+  waived: number;
+  unbilled: number;
+  invoiced: number;
+  cancelled: number;
+  /**
+   * What the booking is EXPECTED to cost, from the quotation or the standard
+   * tariff — before anything has been collected. `noPrice` is the count of
+   * charges no tariff prices, which is not the same as free: the gate will
+   * refuse those boxes.
+   */
+  expectedCash?: number;
+  expectedCredit?: number;
+  noPrice?: number;
+}
+
+/** How a statement line is shown. QUOTED is an expectation, not money taken. */
+export const STATEMENT_STATUS: Record<string, { label: string; tone: string }> = {
+  QUOTED:   { label: 'Expected', tone: 'info' },
+  PAID:     { label: 'Paid',     tone: 'success' },
+  EARNED:   { label: 'Paid',     tone: 'success' },
+  UNBILLED: { label: 'To bill',  tone: 'warning' },
+  INVOICED: { label: 'Invoiced', tone: 'primary' },
+  WAIVED:   { label: 'Waived',   tone: 'neutral' },
+  CANCELLED:{ label: 'Cancelled',tone: 'neutral' },
+};
+
+/**
+ * A quoted line that nothing prices.
+ *
+ * Amount 0 with no schedule behind it is NOT a free move — it is a charge no
+ * tariff covers. Shown red, because a clerk reading 0 would take no money and
+ * send the truck to a gate that will not open.
+ */
+export const isUnpriced = (l: StatementLine): boolean =>
+  l.charge.status === 'QUOTED' && (l.charge.amount ?? 0) === 0 && !l.charge.scheduleNo;
 
 export interface StatementLine { charge: Charge; receiptNo: string | null }
 

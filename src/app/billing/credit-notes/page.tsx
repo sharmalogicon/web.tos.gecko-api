@@ -47,7 +47,7 @@ export default function CreditNotesPage() {
       <div className="gecko-page-actions">
         <div className="gecko-page-actions-left">
           <div style={{ display: 'flex', alignItems: 'baseline', gap: 12 }}>
-            <h1 style={{ fontSize: 24, fontWeight: 700, margin: 0, color: 'var(--gecko-text-primary)' }}>Credit Notes</h1>
+            <h1 className="gecko-page-title">Credit Notes</h1>
             <span className="gecko-count-badge">4 shown</span>
           </div>
           <div className="gecko-page-subtitle">Formal adjustments and refunds applied to finalized invoices.</div>
@@ -71,7 +71,7 @@ export default function CreditNotesPage() {
 
       {/* Table */}
       <div style={{ background: 'var(--gecko-bg-surface)', border: '1px solid var(--gecko-border)', borderRadius: 12, overflow: 'hidden', boxShadow: 'var(--gecko-shadow-sm)' }}>
-        <table className="gecko-table gecko-table-comfortable" style={{ fontSize: 13 }}>
+        <table className="gecko-table gecko-table-comfortable">
           <thead>
             <tr>
               <th>CN Number</th>

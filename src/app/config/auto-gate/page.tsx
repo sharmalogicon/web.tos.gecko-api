@@ -2,6 +2,7 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import { Icon } from '@/components/ui/Icon';
 import { useToast } from '@/components/ui/Toast';
+import { formatDateTime } from '@/lib/format';
 
 /* ──────────────────────────────────────────────────────────────────────────
    Auto-Gate Configuration
@@ -442,7 +443,7 @@ export default function AutoGatePage() {
                   <span className="gecko-pill gecko-pill-info" style={{ fontSize: 10 }}>{selected.direction === 'IN' ? 'Inbound ↓' : 'Outbound ↑'}</span>
                 </div>
                 <div style={{ fontSize: 12, color: 'var(--gecko-text-secondary)', marginTop: 4 }}>
-                  Last event: {selected.lastEvent ? new Date(selected.lastEvent).toLocaleString('en-GB', { day: '2-digit', month: 'short', hour: '2-digit', minute: '2-digit', second: '2-digit' }) : 'never'}
+                  Last event: {selected.lastEvent ? formatDateTime(selected.lastEvent) : 'never'}
                   {' · '}{selected.eventCount24h.toLocaleString()} events in last 24h
                 </div>
               </div>
@@ -605,7 +606,7 @@ export default function AutoGatePage() {
           </span>
         </div>
         <div style={{ maxHeight: 380, overflowY: 'auto' }}>
-          <table className="gecko-table gecko-table-compact" style={{ fontSize: 12 }}>
+          <table className="gecko-table gecko-table-compact">
             <thead>
               <tr>
                 <th>Time</th>
@@ -680,7 +681,7 @@ export default function AutoGatePage() {
               <div style={{ marginBottom: 18 }}>
                 <div className="gecko-eyebrow gecko-mb-2">Decoded fields</div>
                 <div className="gecko-grid-2" style={{ gap: 10 }}>
-                  <Field label="Timestamp" value={new Date(inspectorEvent.ts).toLocaleString()} />
+                  <Field label="Timestamp" value={formatDateTime(inspectorEvent.ts)} />
                   <Field label="Lane" value={inspectorEvent.laneCode} mono />
                   <Field label="Plate" value={`${inspectorEvent.plate.value} (${(inspectorEvent.plate.confidence * 100).toFixed(0)}%)`} mono />
                   {inspectorEvent.container && <Field label="Container" value={`${inspectorEvent.container.value} (${(inspectorEvent.container.confidence * 100).toFixed(0)}%)`} mono />}

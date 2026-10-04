@@ -97,7 +97,7 @@ export default function ShippingLinesPage() {
       )}
 
       <div className="gecko-table-card">
-        <table className="gecko-table gecko-table-comfortable" style={{ fontSize: 13 }}>
+        <table className="gecko-table gecko-table-comfortable">
           <thead>
             <tr>
               <th style={{ width: 140 }}>Code</th>
