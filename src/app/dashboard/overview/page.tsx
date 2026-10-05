@@ -20,7 +20,7 @@ import { ApiError } from '@/lib/api/problem';
  *
  * A quiet depot is the normal case right now: KORAKIT's migration loaded the
  * boxes standing in the yard, not the gate moves that put them there, so every
- * count reads zero until the pilot starts recording. Each panel says so in its
+ * count reads zero until the depot starts recording. Each panel says so in its
  * own words rather than drawing an empty chart.
  */
 

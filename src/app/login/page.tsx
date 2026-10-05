@@ -8,7 +8,7 @@ import { ApiError } from '../../lib/api/problem';
 import { LANDING_PATH } from '../../lib/edition';
 
 /**
- * DEVELOPMENT ONLY — the pilot owner, pre-filled so a local sign-in is one
+ * DEVELOPMENT ONLY — the owner account, pre-filled so a local sign-in is one
  * click. `next build` replaces NODE_ENV with 'production' and tree-shakes both
  * of these to '', so neither the address nor the password can reach a deployed
  * bundle. That is deliberate: it needs no one to remember to take them out

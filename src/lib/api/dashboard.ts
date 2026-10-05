@@ -10,7 +10,7 @@
  * ZERO IS A REAL ANSWER. A depot that has not recorded a gate move today
  * returns zeros, nulls and empty lists, and that is correct — KORAKIT's
  * migration loaded the boxes currently in the yard, not their gate history, so
- * every figure here stays at zero until the pilot records live moves. The
+ * every figure here stays at zero until the depot records live moves. The
  * screens have to make that read as "nothing yet", not as "broken".
  *
  * `null` and `0` are different answers and must not be collapsed:

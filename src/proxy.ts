@@ -5,11 +5,11 @@ import { isPathAvailable } from '@/lib/edition';
 /**
  * Two jobs (Next 16 "proxy", formerly middleware).
  *
- * 1. EDITION ROUTE GUARD. In the pilot edition a direct URL to a mock-data screen
- *    (e.g. /dashboard/overview, /cfs/stuffing) is rewritten to /not-available — the
- *    address bar keeps the URL the user typed, the page says "not in this edition",
- *    and no mock data is rendered. In the full edition every path passes through.
- *    Same list as the sidebar: src/lib/edition.ts.
+ * 1. ROUTE GUARD. A direct URL to a screen Gecko does not serve (e.g.
+ *    /cfs/stuffing, /billing/invoices) is rewritten to /not-available — the
+ *    address bar keeps the URL the user typed, and no fixture data is rendered.
+ *    One list, applied in development exactly as in production, and the same
+ *    one the sidebar reads: src/lib/edition.ts.
  *
  * 2. CLIENT IP FOR /auth ON VERCEL. Gecko.Api rate-limits sign-in per client IP,
  *    but through Vercel it only sees Vercel's rotating egress IPs, so every user

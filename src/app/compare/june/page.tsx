@@ -17,7 +17,7 @@ import { Icon } from '@/components/ui/Icon';
  * (OpsPrimitives, Icon, Toast, GatePrint, BarcodeDisplay…) still exports the
  * same names.
  *
- * NOT in PILOT_PATHS, so the pilot build never serves any of it — the whole
+ * NOT in LIVE_PATHS, so no build ever serves any of it — the whole
  * folder disappears from a production menu on its own. Delete
  * src/app/compare/ and the one NAV entry when the redesign is settled.
  */
@@ -94,7 +94,7 @@ export default function CompareJunePage() {
           <strong>These are mock screens, copied unedited.</strong>
           <div className="gecko-cell-meta">
             Nothing here reaches the API; every number on them is a fixture. They are for looking at,
-            not for working in — and the pilot build never serves them.
+            not for working in — and no build ever serves them.
           </div>
         </div>
       </div>

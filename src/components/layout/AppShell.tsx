@@ -9,8 +9,7 @@ import { FacilityProvider, useFacility } from '@/lib/api/facility';
 import { Icon } from '../ui/Icon';
 import { ToastProvider } from '../ui/Toast';
 import { AskGeckoProvider } from '../ai/AskGeckoWidget';
-import { autoSeedIfEmpty, seedDemoData } from '@/lib/demo-seed';
-import { IS_PILOT, isPathAvailable } from '@/lib/edition';
+import { isPathAvailable } from '@/lib/edition';
 
 // Page-title / breadcrumb derivation from the NAV tree. Single source of truth:
 // browser tab title and in-app header both come from here. Future pages added
@@ -19,39 +18,9 @@ function titleCaseSegment(s: string) {
   return s.replace(/[-_]/g, ' ').replace(/\b\w/g, c => c.toUpperCase());
 }
 
-/**
- * Where a menu entry really goes in the pilot.
- *
- * Two routes are held by a May/June design that is still on fixture data, so the
- * route guard blocks them (PILOT_BLOCKED) while the API-bound version lives
- * beside each one. The menu keeps ONE entry with the name an operator knows and
- * sends them to the bound route; without this the entry was shown and then
- * answered "Not available in this edition" when clicked.
- *
- * DELETE a line the day its June page is bound — and its PILOT_BLOCKED entry.
- */
-const PILOT_ROUTE_SWAPS: Record<string, string> = {
-  // Emptied 2026-10-05. Gate In went back to its own route when it was bound,
-  // and the two report routes followed when KORAKIT turned out to be a live
-  // cutover rather than a pilot. Kept because the pattern earns its place the
-  // next time a rebuilt screen has to live beside the one it replaces.
-};
-
-/** The menu entry's path → the path the pilot actually serves. */
-const boundPath = (path: string) => (IS_PILOT ? PILOT_ROUTE_SWAPS[path] ?? path : path);
-
-/** The reverse, so a bound route still finds its menu entry for the breadcrumb. */
-function menuPath(path: string): string {
-  for (const [entry, bound] of Object.entries(PILOT_ROUTE_SWAPS)) {
-    if (path === bound) return entry;
-    if (path.startsWith(bound + '/')) return entry + path.slice(bound.length);
-  }
-  return path;
-}
-
 function useNavMatch(pathname: string | null) {
   return useMemo(() => {
-    const path = menuPath(pathname ?? '/');
+    const path = pathname ?? '/';
     const segments = path.split('/').filter(Boolean);
 
     // Root
@@ -106,7 +75,7 @@ function useNavMatch(pathname: string | null) {
  *
  * The page files and routes are untouched — type a URL and you still get them,
  * which is what we want while reviewing. Move an entry back into NAV the day its
- * endpoint exists, and into PILOT_PATHS once it is actually live.
+ * endpoint exists, and into LIVE_PATHS once it is actually live.
  *
  * Note this is NOT a permissions decision: see the comment on VISIBLE_NAV.
  *
@@ -125,7 +94,7 @@ function useNavMatch(pathname: string | null) {
 /**
  * HIDDEN FROM THE MENU 2026-10-03, at his request. The pages and routes are
  * untouched — each still answers on its URL — they are simply not offered while
- * the pilot is narrowed to what KORAKIT actually works in. Put a line back to
+ * the menu is narrowed to what KORAKIT actually works in. Put a line back to
  * bring one back.
  *
  *   Gate & Yard    Gate Appointments  /gate/appointments
@@ -149,7 +118,7 @@ const NAV = [
   { id: 'dashboard', icon: 'home', label: 'Dashboard',
     // Only the two dashboards we intend to make real (his call, 2026-09-29).
     // Both are bound now — the server counts every figure on them — so both are
-    // in PILOT_PATHS. The other ten are in HIDDEN_DASHBOARDS below.
+    // in LIVE_PATHS. The other ten are in HIDDEN_DASHBOARDS below.
     children: [
       { id: 'overview',       label: 'Overview',               path: '/dashboard/overview' },
       { id: 'gate-traffic',   label: 'Gate & Traffic',         path: '/dashboard/gate-traffic' },
@@ -182,7 +151,7 @@ const NAV = [
     // read what was charged, and Unbilled is what is waiting to be invoiced.
     //
     // /billing/invoices and /billing/credit-notes stay OFF, and off
-    // PILOT_PATHS, because they are still fixture arrays — there is no invoice
+    // LIVE_PATHS, because they are still fixture arrays — there is no invoice
     // or credit-note endpoint in the API at all (only /api/revenue/charges,
     // /charges/statement and /charges/unbilled). Add them the day one exists.
     children: [
@@ -247,7 +216,7 @@ const NAV = [
   },
 ];
 
-// Pilot edition: only the API-bound screens (src/lib/edition.ts). Modules left empty drop out.
+// Only the screens Gecko serves (src/lib/edition.ts). Modules left empty drop out.
 // Full edition: NAV unchanged.
 //
 // WHY THE MENU IS NOT FILTERED BY PERMISSION. The obvious idea is to hang a
@@ -262,21 +231,21 @@ const NAV = [
 //      and hold nearly every permission, so a permission filter would hide
 //      nothing from exactly the person we are trying to keep out of mock data.
 //
-// What decides whether a screen ships is whether the API can back it, which is
-// the edition list — not who is signed in. Permission-gating belongs on the
-// ACTIONS inside a page (can()/canAt() already do that: the cash window hides
-// waive behind revenue.charge.waive), not on the navigation.
+// What decides whether a screen ships is whether the API can back it — not who
+// is signed in. Permission-gating belongs on the ACTIONS inside a page
+// (can()/canAt() already do that: the cash window hides waive behind
+// revenue.charge.waive), not on the navigation.
+//
+// The menu asks exactly what the route guard asks, so a link is never shown for
+// a page that would then refuse to load.
 // The menu asks the SAME question the route guard asks. It used to test
-// PILOT_PATHS alone, which ignored PILOT_BLOCKED — so a screen that was listed
+// LIVE_PATHS alone, which ignored BLOCKED_PATHS — so a screen that was listed
 // as live but blocked underneath (the June Gate In, the two mock reports) kept
 // its menu entry and answered "Not available in this edition" when clicked.
 // One function, one answer: a link is shown only if the path is actually served.
-const VISIBLE_NAV = IS_PILOT
-  ? NAV.map(m => ({ ...m, children: m.children
-      .map(c => ({ ...c, path: boundPath(c.path) }))
-      .filter(c => isPathAvailable(c.path)) }))
-       .filter(m => m.children.length > 0)
-  : NAV;
+const VISIBLE_NAV = NAV
+  .map(m => ({ ...m, children: m.children.filter(c => isPathAvailable(c.path)) }))
+  .filter(m => m.children.length > 0);
 
 function Sidebar({ collapsed, onToggle }: { collapsed: boolean, onToggle: () => void }) {
   const pathname = usePathname();
@@ -388,28 +357,11 @@ function Sidebar({ collapsed, onToggle }: { collapsed: boolean, onToggle: () => 
       <div className="gecko-sidebar-footer">
         {!collapsed ? (
           <>
-            {/* Demo / reset row — subtle, only visible expanded. Not in the pilot edition. */}
-            {!IS_PILOT && <button
-              onClick={() => {
-                const r = seedDemoData();
-                if (r.seeded) {
-                  // Soft-reload data-driven pages by triggering a route refresh-equivalent.
-                  // For the demo we just nudge with a discrete confirmation.
-                  if (typeof window !== 'undefined') {
-                    const banner = document.createElement('div');
-                    banner.textContent = '✓ Demo data reseeded — yard + sample data restored';
-                    banner.style.cssText = 'position:fixed;top:24px;left:50%;transform:translateX(-50%);background:#10b981;color:#fff;padding:10px 16px;border-radius:8px;font-size:13px;font-weight:600;font-family:system-ui;z-index:9999;box-shadow:0 8px 20px rgba(0,0,0,0.2);';
-                    document.body.appendChild(banner);
-                    setTimeout(() => banner.remove(), 2400);
-                  }
-                }
-              }}
-              title="Re-seed yard layout and sample data for demo purposes"
-              className="gecko-sidebar-demo-btn"
-            >
-              <Icon name="refresh" size={11} />
-              Demo · reset data
-            </button>}
+            {/* The "Demo · reset data" button lived here. It called seedDemoData(),
+                which overwrites the yard layout and sample data, and was hidden
+                only by the old pilot flag. With one edition there is nowhere
+                safe to show it: KORAKIT is live, and reseeding a live depot is
+                not an undoable mistake. Removed 2026-10-05. */}
             <div className="gecko-sidebar-user-row">
               <div className="gecko-avatar gecko-avatar-accent">{who.initials}</div>
               <div className="gecko-flex-1 gecko-min-w-0">
@@ -604,7 +556,11 @@ export function AppShell({ children }: { children: React.ReactNode }) {
 
   // Demo safety net — seed yard layout + sample data on first load if missing.
   // Fresh browser / wiped storage shouldn't sink the demo.
-  useEffect(() => { autoSeedIfEmpty(); }, []);
+  // autoSeedIfEmpty() ran here. It wrote a fabricated yard layout into every
+  // user's localStorage on first load, for /config/yard-zones and
+  // /dashboard/yard-glance to read. Neither is served, so it did nothing today
+  // — and the day one of them is unblocked it would have shown KORAKIT an
+  // invented yard as if it were their own. Removed 2026-10-05.
 
   // Auth-shaped pages render bare — no sidebar, no header, no breadcrumbs.
   // Currently /login; future /forgot, /reset, /onboarding follow the same pattern.
