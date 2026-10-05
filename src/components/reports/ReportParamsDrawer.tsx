@@ -1,5 +1,5 @@
 "use client";
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import { Icon } from '../ui/Icon';
 import { DateField } from '../ui/DateField';
 import { EntitySearch, type EntityOption } from '../ui/EntitySearch';
@@ -52,29 +52,44 @@ interface ParamValues {
 
 const BLANK: ParamValues = { dateFrom: '', dateTo: '' };
 
+/** The local day as yyyy-MM-dd. toISOString would shift it a day in Bangkok. */
+function dayOf(d: Date): string {
+  const pad = (n: number) => String(n).padStart(2, '0');
+  return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`;
+}
+
 export function ReportParamsDrawer({ report, onClose, onGenerate }: {
   report: ReportDef | null;
   onClose: () => void;
   onGenerate: (report: ReportDef, params: ParamValues) => void;
 }) {
   const [vals, setVals] = useState<ParamValues>(BLANK);
+  const [forReport, setForReport] = useState<string | null>(null);
 
-  // Reset values when a new report is opened
-  useEffect(() => {
-    if (report) {
-      // Default date range = last 30 days (mock — using today's date 2026-05-16)
-      const today = new Date('2026-05-16');
-      const from  = new Date(today); from.setDate(from.getDate() - 30);
-      setVals({
-        ...BLANK,
-        dateFrom: from.toISOString().slice(0, 10),
-        dateTo:   today.toISOString().slice(0, 10),
-        branch: 'All Branches',
-        bookingType: 'All',
-        orderType: 'All',
-      });
-    }
-  }, [report]);
+  /**
+   * Fresh parameters each time a different report is opened.
+   *
+   * Done during render rather than in an effect — React's own way of resetting
+   * state when a prop changes, and the one the compiler allows. An effect here
+   * rendered the drawer once with the previous report's dates still in it.
+   *
+   * The range used to be anchored to a hardcoded "2026-05-16", so every report
+   * opened on the same two dates whatever the day. It is the last 30 days now.
+   */
+  if (report && forReport !== report.id) {
+    setForReport(report.id);
+    const today = new Date();
+    const from = new Date(today);
+    from.setDate(from.getDate() - 30);
+    setVals({
+      ...BLANK,
+      dateFrom: dayOf(from),
+      dateTo: dayOf(today),
+      branch: 'All Branches',
+      bookingType: 'All',
+      orderType: 'All',
+    });
+  }
 
   if (!report) return null;
   const set = <K extends keyof ParamValues>(k: K, v: ParamValues[K]) => setVals(p => ({ ...p, [k]: v }));

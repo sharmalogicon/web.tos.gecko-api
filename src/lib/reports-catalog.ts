@@ -40,6 +40,18 @@ export interface ReportDef {
   group: ReportGroup;
   icon: string;            // gecko icon name
   params: ReportParamKey[];
+  /**
+   * The screen that actually answers this report today.
+   *
+   * KORAKIT is switching OFF the desktop, so every report they had is listed
+   * here — but most have no query behind them yet. A card with no `live` says
+   * so on its face rather than queueing a PDF that never arrives: on a live
+   * cutover, a clerk who waits twenty minutes for a report that was never
+   * generated is worse off than one who was told plainly.
+   *
+   * Set this the moment a report gets a real endpoint.
+   */
+  live?: string;
 }
 
 /* ──────────────────────────────────────────────────────────────────────────
@@ -50,15 +62,15 @@ export const OPERATIONAL_REPORTS: ReportDef[] = [
   // ── Out-Bound ────────────────────────────────────────────────────────────
   { id: 'op-truck-control', title: 'Truck Control', description: 'All trucks that entered the yard for outbound moves, with arrival/departure timestamps and lane assignment.',
     category: 'operational', group: 'Out-Bound Reports', icon: 'truck',
-    params: ['agent', 'truckCategory', 'haulier', 'movementCode'] },
+    params: ['agent', 'truckCategory', 'haulier', 'movementCode'], live: '/reports/operational-api' },
 
   { id: 'op-empty-in-yard', title: 'Empty in Yard', description: 'Inventory of empty containers currently parked, by line/owner and yard block.',
     category: 'operational', group: 'Out-Bound Reports', icon: 'box',
-    params: ['agent', 'owner', 'yardLocation', 'typeSize', 'containerClass'] },
+    params: ['agent', 'owner', 'yardLocation', 'typeSize', 'containerClass'], live: '/gate/yard-view' },
 
   { id: 'op-full-in-yard', title: 'Full in Yard', description: 'Laden containers awaiting outbound — by customer, line, and yard slot.',
     category: 'operational', group: 'Out-Bound Reports', icon: 'package',
-    params: ['agent', 'customer', 'owner', 'yardLocation', 'typeSize', 'emptyLoaded'] },
+    params: ['agent', 'customer', 'owner', 'yardLocation', 'typeSize', 'emptyLoaded'], live: '/gate/yard-view' },
 
   { id: 'op-export-booking-order', title: 'Export Booking Order', description: 'Booking-level listing of containers committed to outbound vessels.',
     category: 'operational', group: 'Out-Bound Reports', icon: 'fileText',
@@ -86,7 +98,7 @@ export const OPERATIONAL_REPORTS: ReportDef[] = [
 
   { id: 'op-stock-report', title: 'Stock Report', description: 'Full container stock snapshot across all yard blocks.',
     category: 'operational', group: 'Out-Bound Reports', icon: 'database',
-    params: ['agent', 'owner', 'yardLocation', 'typeSize', 'containerClass', 'emptyLoaded'] },
+    params: ['agent', 'owner', 'yardLocation', 'typeSize', 'containerClass', 'emptyLoaded'], live: '/gate/stock' },
 
   { id: 'op-container-repair-summary', title: 'Container Repair Summary', description: 'M&R activity summary — IICL codes, parts used, technician hours.',
     category: 'operational', group: 'Out-Bound Reports', icon: 'edit',
@@ -131,11 +143,11 @@ export const OPERATIONAL_REPORTS: ReportDef[] = [
 
   { id: 'op-gate-in-out', title: 'Gate-In / Gate-Out', description: 'All gate movements (both directions) in the date range.',
     category: 'operational', group: 'In-Bound Reports', icon: 'truck',
-    params: ['agent', 'customer', 'haulier', 'movementCode'] },
+    params: ['agent', 'customer', 'haulier', 'movementCode'], live: '/reports/operational-api' },
 
   { id: 'op-gate-in-out-agent', title: 'Gate-In / Gate-Out (By Agent)', description: 'Gate movements grouped by shipping line / agent.',
     category: 'operational', group: 'In-Bound Reports', icon: 'truck',
-    params: ['agent', 'movementCode'] },
+    params: ['agent', 'movementCode'], live: '/reports/operational-api' },
 
   { id: 'op-eta', title: 'Estimated Arrival Time', description: 'Expected truck/container arrivals based on slot bookings.',
     category: 'operational', group: 'In-Bound Reports', icon: 'clock',
@@ -241,15 +253,15 @@ export const ACCOUNTS_REPORTS: ReportDef[] = [
 
   { id: 'ac-cash-receipt-user', title: 'Cash Receipt Listing — By User', description: 'Cash receipts collected at gate, grouped by clerk/user.',
     category: 'accounts', group: 'Accounting Reports', icon: 'invoice',
-    params: ['userId'] },
+    params: ['userId'], live: '/reports/accounts-api' },
 
   { id: 'ac-cash-receipt-liner', title: 'Cash Receipt Listing — By Line', description: 'Cash receipts grouped by shipping line.',
     category: 'accounts', group: 'Accounting Reports', icon: 'invoice',
-    params: ['agent', 'owner'] },
+    params: ['agent', 'owner'], live: '/reports/accounts-api' },
 
   { id: 'ac-cash-receipt-company', title: 'Cash Receipt Listing — By Company', description: 'Cash receipts grouped by paying company/customer.',
     category: 'accounts', group: 'Accounting Reports', icon: 'invoice',
-    params: ['customer'] },
+    params: ['customer'], live: '/reports/accounts-api' },
 
   { id: 'ac-credit-receipt-detail', title: 'Credit Receipt Detail List', description: 'Detail listing of all credit-term invoiced receipts.',
     category: 'accounts', group: 'Accounting Reports', icon: 'invoice',
@@ -265,11 +277,11 @@ export const ACCOUNTS_REPORTS: ReportDef[] = [
 
   { id: 'ac-credit-invoice-listing', title: 'Credit Invoice Listing', description: 'All credit-term invoices issued in the period.',
     category: 'accounts', group: 'Accounting Reports', icon: 'invoice',
-    params: ['agent', 'customer'] },
+    params: ['agent', 'customer'], live: '/billing/unbilled' },
 
   { id: 'ac-waive-charges', title: 'Waive Charges', description: 'Charges that were waived during the period, with reason codes.',
     category: 'accounts', group: 'Accounting Reports', icon: 'edit',
-    params: ['agent', 'customer'] },
+    params: ['agent', 'customer'], live: '/billing/service-orders' },
 ];
 
 /* ──────────────────────────────────────────────────────────────────────────

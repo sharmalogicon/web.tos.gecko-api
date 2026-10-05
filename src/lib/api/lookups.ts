@@ -177,6 +177,29 @@ export const TRUCK_CATEGORY_PATH = `${CODE_LISTS_PATH}/TRUCK_CATEGORY`;
  * The truck sizes this tenant prices by. TRUCK_CATEGORY is a tariff axis, so
  * the value picked here decides what the move costs — it is not decoration.
  */
+/**
+ * The movement catalogue, which is the only place that says whether a movement
+ * code goes IN or OUT and whether it is full or empty.
+ *
+ * A booking's own steps carry the movement CODE and nothing else, so anything
+ * that needs the direction of a pending step — the gate's booking picker, for
+ * one — joins to this rather than reading meaning into the string "FULL_OUT".
+ */
+/** The box conditions a clerk may put on an EIR — Vector's "Status". */
+export function useConditions(): { conditions: ContainerCondition[]; loading: boolean } {
+  const { data, loading } = useApi<{ items: ContainerCondition[] }>(`${CONDITIONS_PATH}?pageSize=200`);
+  return { conditions: data?.items ?? NO_CONDITIONS, loading };
+}
+
+const NO_CONDITIONS: ContainerCondition[] = [];
+
+export function useMovements(): { movements: Movement[]; loading: boolean } {
+  const { data, loading } = useApi<{ items: Movement[] }>(`${MOVEMENTS_PATH}?pageSize=200`);
+  return { movements: data?.items ?? NO_MOVEMENTS, loading };
+}
+
+const NO_MOVEMENTS: Movement[] = [];
+
 export function useTruckCategories(): { categories: CodeListValue[]; loading: boolean } {
   const { data, loading } = useApi<CodeListValue[]>(TRUCK_CATEGORY_PATH);
   return { categories: data ?? NO_CODES, loading };

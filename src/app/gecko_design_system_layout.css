@@ -241,7 +241,9 @@
 .gecko-flex-center { display: flex; align-items: center; justify-content: center; }
 .gecko-flex-between { display: flex; align-items: center; justify-content: space-between; }
 .gecko-flex-wrap { flex-wrap: wrap; }
+.gecko-gap-1 { gap: 6px; }
 .gecko-gap-2 { gap: 8px; }
+.gecko-gap-2h { gap: 10px; }
 .gecko-gap-3 { gap: 12px; }
 .gecko-gap-4 { gap: 16px; }
 

@@ -1,7 +1,7 @@
 "use client";
-import { EirRegister } from '../_components/EirRegister';
+import { GateOutForm } from './_components/GateOutForm';
 
-/** EIR-Out register — gate-outs recorded at the desk (/gate/desk). */
-export default function EirOutRegisterPage() {
-  return <EirRegister direction="OUT" />;
+/** Gate Out — one truck, one box, on its way out. */
+export default function GateOutPage() {
+  return <GateOutForm />;
 }

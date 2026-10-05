@@ -26,6 +26,13 @@ export const IS_PILOT = MENU_MODE === 'pilot';
 
 /** Live (API-bound) screens. A path and everything under it (detail pages, /new) is allowed. */
 export const PILOT_PATHS: readonly string[] = [
+  // The two dashboards that survived 2026-09-29, both bound since: every number
+  // on them is counted by the server (/api/tos/dashboard/overview and
+  // /gate-traffic) and the invented panels were deleted, not hidden. Listed one
+  // by one rather than as '/dashboard', which would also serve the ten retired
+  // fixture dashboards to anyone who typed their URL.
+  '/dashboard/overview',
+  '/dashboard/gate-traffic',
   '/bookings',                  // register, /bookings/new, /bookings/[id]
   // Kept reachable by URL though it is no longer in the menu (2026-10-01): the
   // depot has no barrier, so EIR-In replaced it as the way a gate-in is
@@ -33,12 +40,14 @@ export const PILOT_PATHS: readonly string[] = [
   // and it is worth keeping as a fallback until the new screen has run a week.
   '/gate/desk',
   '/gate/stock',
-  '/gate/eir-in',                // EIR-in register, /gate/eir-in/[id] detail (PDF, void)
+  '/gate/eir-in',                // the gate-in form: one truck, every box on it
+  '/gate/eir-in-register',       // the register of past gate-ins, as /gate/eir-out is for OUT
   '/gate/eir-in-sept',           // the API-bound gate-in, while the June design is wired
   '/bookings/new-sept',          // the API-bound new booking, likewise
   '/reports/operational-api',    // the API-bound reports, while the mocks are wired
   '/reports/accounts-api',
-  '/gate/eir-out',               // EIR-out register, /gate/eir-out/[id] detail
+  '/gate/eir-out',               // the gate-out form, /gate/eir-out/[id] detail
+  '/gate/eir-out-register',      // the register of past gate-outs
   '/gate/holds',                // holds board: active, released history, release
   '/gate/reefer-ops',           // reefer plug log, /new plug-in (power charge needs Revenue /reefer/power)
   '/gate/yard-view',            // yard-level fill, areas, stock by type / customer / dwell (/api/tos/yard/stock)
@@ -78,21 +87,19 @@ export const PILOT_PATHS: readonly string[] = [
  * bound to the API.
  */
 export const PILOT_BLOCKED: readonly string[] = [
-  // 2026-10-02 — the June design took this route and is still on MOCK data.
-  // Blocking it keeps fixture screens off the pilot KORAKIT uses, which is the
-  // one rule this file exists to enforce. The API-bound September version is
-  // still served at /gate/eir-in-sept, and LANDING_PATH points there.
-  // REMOVE THIS LINE the moment the June Gate In is bound to the API.
-  '/gate/eir-in',
+  // /gate/eir-in came off this list on 2026-10-04: the June truck-visit design
+  // is bound now and was proved against the running API — preflight, the
+  // required-field matrix, a drop-off that opens the visit, a pick-up that
+  // joins it by truckVisitId, the derived pickupDropoffMode, and quote-visit.
+  // /gate/eir-in-sept is kept reachable as a fallback but is no longer the
+  // menu's Gate In.
   // /bookings/new came off this list on 2026-10-03: it is bound now — real
   // order types, real parties, a real POST — so the pilot serves it again.
   //
-  // 2026-10-03 — the May/June report designs took these two routes back and
-  // run on the fixture catalogue, so the pilot must not serve them. The
-  // API-bound versions are kept at /reports/operational-api and
-  // /reports/accounts-api. REMOVE BOTH when the mocks are bound.
-  '/reports/operational',
-  '/reports/accounts',
+  // 2026-10-05 — /reports/operational and /reports/accounts came OFF this list.
+  // KORAKIT is not a pilot: they are switching off the desktop, so the full
+  // report catalogue has to be there. The cards that have nothing behind them
+  // say so on their face instead of being hidden — see reports-catalog.ts.
 ];
 
 /**
@@ -121,7 +128,5 @@ export function isPathAvailable(path: string): boolean {
   return underAny(path, PILOT_PATHS);
 }
 
-/** Where a signed-in user lands. Pilot: a live screen, never a mock dashboard. */
-// The pilot lands on the bound gate-in, not the June mock that currently holds
-// /gate/eir-in. Point this back when the June page is wired.
-export const LANDING_PATH = IS_PILOT ? '/gate/eir-in-sept' : '/dashboard/overview';
+/** Where a signed-in user lands: the screen the depot works in all day. */
+export const LANDING_PATH = IS_PILOT ? '/gate/eir-in' : '/dashboard/overview';

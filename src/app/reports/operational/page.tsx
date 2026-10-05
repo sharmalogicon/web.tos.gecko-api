@@ -1,5 +1,6 @@
 "use client";
 import React, { useState, useMemo } from 'react';
+import { useRouter } from 'next/navigation';
 import { Icon } from '@/components/ui/Icon';
 import { useToast } from '@/components/ui/Toast';
 import { ReportCard } from '@/components/reports/ReportCard';
@@ -11,6 +12,7 @@ import {
 
 export default function OperationalReportsPage() {
   const { toast } = useToast();
+  const router = useRouter();
   const [activeReport, setActiveReport] = useState<ReportDef | null>(null);
   const [search, setSearch] = useState('');
 
@@ -24,13 +26,25 @@ export default function OperationalReportsPage() {
   const grouped = useMemo(() => groupReports(filtered), [filtered]);
   const groupOrder = ['Out-Bound Reports', 'In-Bound Reports', 'Customer-Service Reports'] as const;
 
+  /**
+   * Run it, or say plainly that it cannot be run.
+   *
+   * This used to toast "PDF queued. Download starts when generation completes."
+   * for all of them, which was simply untrue — nothing was queued and nothing
+   * ever arrived. On a live cutover that is the worst kind of bug: the clerk
+   * believes it worked and waits.
+   */
   const onGenerate = (r: ReportDef) => {
+    if (r.live) {
+      router.push(r.live);
+      setActiveReport(null);
+      return;
+    }
     toast({
-      variant: 'success',
-      title: 'Report generated',
-      message: `${r.title} — PDF queued. Download starts when generation completes.`,
+      variant: 'warning',
+      title: `${r.title} is not available yet`,
+      message: 'This report has no query behind it in Gecko yet. It is listed so nothing from the desktop goes missing.',
     });
-    setActiveReport(null);
   };
 
   return (

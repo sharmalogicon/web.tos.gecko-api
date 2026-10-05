@@ -10,7 +10,7 @@ import { Icon } from '../ui/Icon';
 import { ToastProvider } from '../ui/Toast';
 import { AskGeckoProvider } from '../ai/AskGeckoWidget';
 import { autoSeedIfEmpty, seedDemoData } from '@/lib/demo-seed';
-import { IS_PILOT, PILOT_PATHS } from '@/lib/edition';
+import { IS_PILOT, isPathAvailable } from '@/lib/edition';
 
 // Page-title / breadcrumb derivation from the NAV tree. Single source of truth:
 // browser tab title and in-app header both come from here. Future pages added
@@ -19,9 +19,39 @@ function titleCaseSegment(s: string) {
   return s.replace(/[-_]/g, ' ').replace(/\b\w/g, c => c.toUpperCase());
 }
 
+/**
+ * Where a menu entry really goes in the pilot.
+ *
+ * Two routes are held by a May/June design that is still on fixture data, so the
+ * route guard blocks them (PILOT_BLOCKED) while the API-bound version lives
+ * beside each one. The menu keeps ONE entry with the name an operator knows and
+ * sends them to the bound route; without this the entry was shown and then
+ * answered "Not available in this edition" when clicked.
+ *
+ * DELETE a line the day its June page is bound — and its PILOT_BLOCKED entry.
+ */
+const PILOT_ROUTE_SWAPS: Record<string, string> = {
+  // Emptied 2026-10-05. Gate In went back to its own route when it was bound,
+  // and the two report routes followed when KORAKIT turned out to be a live
+  // cutover rather than a pilot. Kept because the pattern earns its place the
+  // next time a rebuilt screen has to live beside the one it replaces.
+};
+
+/** The menu entry's path → the path the pilot actually serves. */
+const boundPath = (path: string) => (IS_PILOT ? PILOT_ROUTE_SWAPS[path] ?? path : path);
+
+/** The reverse, so a bound route still finds its menu entry for the breadcrumb. */
+function menuPath(path: string): string {
+  for (const [entry, bound] of Object.entries(PILOT_ROUTE_SWAPS)) {
+    if (path === bound) return entry;
+    if (path.startsWith(bound + '/')) return entry + path.slice(bound.length);
+  }
+  return path;
+}
+
 function useNavMatch(pathname: string | null) {
   return useMemo(() => {
-    const path = pathname ?? '/';
+    const path = menuPath(pathname ?? '/');
     const segments = path.split('/').filter(Boolean);
 
     // Root
@@ -105,8 +135,9 @@ function useNavMatch(pathname: string | null) {
  *                  Moves Planner      /gate/moves-planner
  *   CFS            whole group — stuffing, stripping, LCL cargo, tally
  *   Units & Equip. whole group — unit inquiry, equipment pool, EDI inquiry
- *   Billing        whole group — cash window, service orders, statement,
- *                  invoices, credit notes, unbilled
+ *   Billing        invoices, credit notes — both still fixture data, and the
+ *                  API has no invoice endpoint. The other four came back on
+ *                  the menu 2026-10-05.
  *   Configuration  Gate Slot Capacity /config/gate-slots
  *                  Operating Hours    /config/gate-hours
  *                  EDI Partners       /config/edi-partners
@@ -117,8 +148,8 @@ function useNavMatch(pathname: string | null) {
 const NAV = [
   { id: 'dashboard', icon: 'home', label: 'Dashboard',
     // Only the two dashboards we intend to make real (his call, 2026-09-29).
-    // Both still read fixture data; neither has an aggregate endpoint yet, so
-    // neither is in PILOT_PATHS. The other ten are in HIDDEN_DASHBOARDS below.
+    // Both are bound now — the server counts every figure on them — so both are
+    // in PILOT_PATHS. The other ten are in HIDDEN_DASHBOARDS below.
     children: [
       { id: 'overview',       label: 'Overview',               path: '/dashboard/overview' },
       { id: 'gate-traffic',   label: 'Gate & Traffic',         path: '/dashboard/gate-traffic' },
@@ -139,8 +170,26 @@ const NAV = [
       // who has it bookmarked, and nothing about it was deleted.
       { id: 'gate-stock', label: 'Yard Stock (live)', path: '/gate/stock' },
       { id: 'eir-in', label: 'Gate In (EIR)', path: '/gate/eir-in' },
-      { id: 'eir-out', label: 'EIR-Out', path: '/gate/eir-out' },
+      { id: 'eir-out', label: 'Gate Out (EIR)', path: '/gate/eir-out' },
+      { id: 'eir-in-register', label: 'EIR-In Register', path: '/gate/eir-in-register' },
+      { id: 'eir-out-register', label: 'EIR-Out Register', path: '/gate/eir-out-register' },
       { id: 'container-status', label: 'Container Status Update', path: '/gate/container-status' },
+    ]
+  },
+  { id: 'billing', icon: 'invoice', label: 'Billing',
+    // Back on the menu 2026-10-05 (owner). Only the four that are bound:
+    // the cash window takes the money, the charge register and the statement
+    // read what was charged, and Unbilled is what is waiting to be invoiced.
+    //
+    // /billing/invoices and /billing/credit-notes stay OFF, and off
+    // PILOT_PATHS, because they are still fixture arrays — there is no invoice
+    // or credit-note endpoint in the API at all (only /api/revenue/charges,
+    // /charges/statement and /charges/unbilled). Add them the day one exists.
+    children: [
+      { id: 'cash-window',     label: 'Cash Window',      path: '/billing/cash-window' },
+      { id: 'service-orders',  label: 'Charge Register',  path: '/billing/service-orders' },
+      { id: 'statement',       label: 'Booking Statement', path: '/billing/statement' },
+      { id: 'unbilled',        label: 'Unbilled Charges', path: '/billing/unbilled' },
     ]
   },
   { id: 'tariff', icon: 'tag', label: 'Tariffs',
@@ -217,9 +266,15 @@ const NAV = [
 // the edition list — not who is signed in. Permission-gating belongs on the
 // ACTIONS inside a page (can()/canAt() already do that: the cash window hides
 // waive behind revenue.charge.waive), not on the navigation.
-const isPilotEntry = (path: string) => PILOT_PATHS.some(p => path === p || path.startsWith(p + '/'));
+// The menu asks the SAME question the route guard asks. It used to test
+// PILOT_PATHS alone, which ignored PILOT_BLOCKED — so a screen that was listed
+// as live but blocked underneath (the June Gate In, the two mock reports) kept
+// its menu entry and answered "Not available in this edition" when clicked.
+// One function, one answer: a link is shown only if the path is actually served.
 const VISIBLE_NAV = IS_PILOT
-  ? NAV.map(m => ({ ...m, children: m.children.filter(c => isPilotEntry(c.path)) }))
+  ? NAV.map(m => ({ ...m, children: m.children
+      .map(c => ({ ...c, path: boundPath(c.path) }))
+      .filter(c => isPathAvailable(c.path)) }))
        .filter(m => m.children.length > 0)
   : NAV;
 
