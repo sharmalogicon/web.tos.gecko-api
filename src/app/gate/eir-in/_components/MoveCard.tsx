@@ -143,12 +143,15 @@ export function MoveCard({ move, index, open, branchId, takenBoxes, onToggle, on
             <span className={`gecko-move-ready${issues.length ? ' gecko-move-ready-no' : held ? '' : ' gecko-move-ready-no'}`}>
               {issues.length ? `${issues.length} to fill` : held ? 'Held' : 'Ready'}
             </span>
-            <button type="button" className="gecko-btn gecko-btn-outline gecko-btn-sm"
+            {/* It adds the trip to the truck — it does not record anything at
+                the barrier. The Save is what commits. */}
+            <button type="button" className="gecko-btn gecko-btn-success gecko-btn-sm"
               disabled={!canRecord || move.saving || issues.length > 0 || pickupHasNoOrder(move)}
               onClick={onRecord}>
-              {move.saving ? 'Holding…' : held ? 'Re-check' : 'Record'}
+              <Icon name="plus" size={13} />
+              {move.saving ? 'Adding…' : held ? 'Re-check' : 'Add trip'}
             </button>
-            <button type="button" className="gecko-btn gecko-btn-ghost gecko-btn-sm gecko-btn-icon"
+            <button type="button" className="gecko-btn gecko-btn-ghost gecko-btn-sm gecko-btn-icon gecko-btn-icon-danger"
               aria-label={`Remove box ${index + 1}`} onClick={onRemove} disabled={move.saving}>
               <Icon name="trash" size={13} />
             </button>

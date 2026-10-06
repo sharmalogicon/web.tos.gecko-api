@@ -9255,3 +9255,35 @@ label.gecko-toggle.gecko-toggle-sm input:checked ~ .gecko-toggle-track .gecko-to
 .gecko-cw-later-why { margin-left: 8px; }
 
 .gecko-w-full { width: 100%; }
+
+/* ── §27  The gate's add buttons, and a destructive icon ───────────────────
+   Add drop-off and Add pick-up are two ACTIONS, not a choice between two
+   states. Making one primary read as "already selected", so a clerk could not
+   tell which they had pressed. Equal weight, each tinted like the row it adds —
+   blue in, amber out — so the button and its result say the same thing. */
+
+.gecko-btn-add-in,
+.gecko-btn-add-out {
+  border: 1px solid transparent;
+  font-weight: 600;
+}
+.gecko-btn-add-in {
+  background: var(--gecko-info-50);
+  border-color: var(--gecko-info-200);
+  color: var(--gecko-info-700);
+}
+.gecko-btn-add-in:hover:not(:disabled) { background: var(--gecko-info-100); }
+.gecko-btn-add-out {
+  background: var(--gecko-warning-50);
+  border-color: var(--gecko-warning-200);
+  color: var(--gecko-warning-700);
+}
+.gecko-btn-add-out:hover:not(:disabled) { background: var(--gecko-warning-100); }
+
+/* Removing a trip is destructive, and the icon should say so before it is
+   pressed rather than after. */
+.gecko-btn-icon-danger { color: var(--gecko-error-600); }
+.gecko-btn-icon-danger:hover:not(:disabled) {
+  background: var(--gecko-error-50);
+  color: var(--gecko-error-700);
+}

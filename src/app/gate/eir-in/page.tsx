@@ -415,11 +415,15 @@ export default function GateInPage() {
                 </div>
               </div>
               <div className="gecko-row gecko-gap-2">
-                <button className="gecko-btn gecko-btn-outline gecko-btn-sm"
+                {/* Two actions, not a choice. Styling one as primary made it
+                    look already chosen, so a clerk could not tell which they
+                    had pressed. Equal weight now, each tinted like the row it
+                    adds — the button and its result agree. */}
+                <button className="gecko-btn gecko-btn-sm gecko-btn-add-in"
                   disabled={!truckReady || !!result} onClick={() => addMove('DROP_OFF_CONT')}>
                   <Icon name="arrowDown" size={13} /> Add drop-off
                 </button>
-                <button className="gecko-btn gecko-btn-primary gecko-btn-sm"
+                <button className="gecko-btn gecko-btn-sm gecko-btn-add-out"
                   disabled={!truckReady || !!result} onClick={() => addMove('PICK_UP_CONT')}>
                   <Icon name="arrowUp" size={13} /> Add pick-up
                 </button>
