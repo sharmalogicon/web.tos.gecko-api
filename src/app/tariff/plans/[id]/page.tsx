@@ -11,6 +11,7 @@ import {
   freeTimeDraftsOf, rateDraftsOf, toRateItem, type RateDraft,
 } from '../../_components/tariff-drafts';
 import { RateDialog } from '../../_components/RateDialog';
+import { AskDialog, type AskRequest } from '../../_components/AskDialog';
 import { useApi } from '@/lib/api/use-api';
 import { useTariffCatalogs } from '@/lib/api/tariff-catalogs';
 import { apiSend } from '@/lib/api/client';
@@ -84,6 +85,8 @@ export default function TariffScheduleDetailPage({ params }: { params: Promise<{
   const [editing, setEditing] = useState<RateDraft | null>(null);
   const [rateErrors, setRateErrors] = useState<Record<string, string[]> | undefined>(undefined);
   const [rateBusy, setRateBusy] = useState<string | null>(null);
+  /** One dialog serves every question this screen asks. */
+  const [ask, setAsk] = useState<AskRequest | null>(null);
 
   /** The id of the row being edited, so the replacement lands in its place. */
   const [editingId, setEditingId] = useState<string | null>(null);
@@ -130,7 +133,6 @@ export default function TariffScheduleDetailPage({ params }: { params: Promise<{
   }
 
   async function deleteRate(r: Rate) {
-    if (!window.confirm(`Remove ${r.chargeCode} from this version?`)) return;
     setRateBusy(r.tosRateId);
     const keep = rates.filter(x => x.tosRateId !== r.tosRateId);
     await putRates(rateDraftsOf(keep), () => {});
@@ -193,10 +195,8 @@ export default function TariffScheduleDetailPage({ params }: { params: Promise<{
    * those words rather than as a bare 404. See
    * docs/TARIFF_UNAPPROVE_FOR_API.md.
    */
-  async function unapprove() {
+  async function unapprove(reason: string) {
     if (!s) return;
-    const reason = window.prompt('Why is this tariff being unapproved?')?.trim();
-    if (!reason) return;
     setBusy('unapprove');
     try {
       await apiSend('POST', `/api/revenue/tariffs/${s.scheduleId}/unapprove`, { rowVersion: s.rowVersion, reason });
@@ -223,11 +223,8 @@ export default function TariffScheduleDetailPage({ params }: { params: Promise<{
    * is never edited). It must start later than the version it replaces, so the
    * default offered is the day after this one stops being in force.
    */
-  async function revise() {
+  async function revise(from: string) {
     if (!s) return;
-    const suggested = nextDay(s.effectiveUntil ?? s.effectiveFrom);
-    const from = window.prompt(`Start date for v${s.versionNo + 1} (YYYY-MM-DD)`, suggested)?.trim();
-    if (!from) return;
     setBusy('revise');
     try {
       const created = await apiSend<Schedule>('POST', `/api/revenue/tariffs/${s.scheduleId}/revise`, {
@@ -323,10 +320,16 @@ export default function TariffScheduleDetailPage({ params }: { params: Promise<{
           )}
           {s.status === 'PENDING' && canApprove && (
             <>
-              <button className="gecko-btn gecko-btn-outline gecko-btn-sm" disabled={busy !== null} onClick={() => {
-                const reason = window.prompt('Why is this tariff rejected?')?.trim();
-                if (reason) act('reject', reason);
-              }}>
+              <button className="gecko-btn gecko-btn-outline gecko-btn-sm" disabled={busy !== null}
+                onClick={() => setAsk({
+                  kind: 'reason', danger: true,
+                  title: 'Reject this tariff',
+                  subtitle: `${s.scheduleNo} v${s.versionNo} goes back to whoever submitted it.`,
+                  label: 'Why is it rejected?',
+                  placeholder: 'The lift rate is wrong for 40HC',
+                  confirmLabel: 'Reject',
+                  onConfirm: r => act('reject', r),
+                })}>
                 <Icon name="x" size={14} /> Reject
               </button>
               <button className="gecko-btn gecko-btn-primary gecko-btn-sm" disabled={busy !== null} onClick={() => act('approve')}>
@@ -335,20 +338,42 @@ export default function TariffScheduleDetailPage({ params }: { params: Promise<{
             </>
           )}
           {isOpen && canManage && (
-            <button className="gecko-btn gecko-btn-outline gecko-btn-sm" disabled={busy !== null} onClick={() => {
-              const reason = window.prompt('Why withdraw it?')?.trim();
-              if (reason) act('withdraw', reason);
-            }}>
+            <button className="gecko-btn gecko-btn-outline gecko-btn-sm" disabled={busy !== null}
+              onClick={() => setAsk({
+                kind: 'reason',
+                title: 'Withdraw this tariff',
+                subtitle: 'It stops being considered. A new version can be started later.',
+                label: 'Why withdraw it?',
+                placeholder: 'Superseded by the new contract',
+                confirmLabel: 'Withdraw',
+                onConfirm: r => act('withdraw', r),
+              })}>
               <Icon name="cornerUpLeft" size={14} /> Withdraw
             </button>
           )}
           {s.status === 'APPROVED' && canApprove && (
-            <button className="gecko-btn gecko-btn-outline gecko-btn-sm" disabled={busy !== null} onClick={unapprove}>
+            <button className="gecko-btn gecko-btn-outline gecko-btn-sm" disabled={busy !== null} onClick={() => setAsk({
+                kind: 'reason', danger: true,
+                title: 'Unapprove this tariff',
+                subtitle: `${s.scheduleNo} v${s.versionNo} goes back to a draft. Its prices stop being live.`,
+                label: 'Why is it being unapproved?',
+                placeholder: 'Approved against the wrong customer',
+                confirmLabel: 'Unapprove',
+                onConfirm: unapprove,
+              })}>
               <Icon name="cornerUpLeft" size={14} /> {busy === 'unapprove' ? 'Unapproving…' : 'Unapprove'}
             </button>
           )}
           {s.status === 'APPROVED' && canManage && (
-            <button className="gecko-btn gecko-btn-primary gecko-btn-sm" disabled={busy !== null} onClick={revise}>
+            <button className="gecko-btn gecko-btn-primary gecko-btn-sm" disabled={busy !== null} onClick={() => setAsk({
+                kind: 'date',
+                title: `Start version ${s.versionNo + 1}`,
+                subtitle: 'Every rate, tier, condition and free-time rule is copied into a new draft.',
+                label: 'In force from',
+                initial: nextDay(s.effectiveUntil ?? s.effectiveFrom),
+                confirmLabel: 'Create the draft',
+                onConfirm: revise,
+              })}>
               <Icon name="copy" size={14} /> {busy === 'revise' ? 'Copying…' : 'New version'}
             </button>
           )}
@@ -478,14 +503,26 @@ export default function TariffScheduleDetailPage({ params }: { params: Promise<{
             emptyNote="No per-move charges priced here."
             editable={!!s.isEditable && canManage} busyKey={rateBusy}
             onEdit={r => { setEditingId(r.tosRateId); setEditing(rateDraftsOf([r])[0]); setRateErrors(undefined); }}
-            onDelete={deleteRate} />
+            onDelete={r => setAsk({
+              kind: 'confirm', danger: true,
+              title: `Remove ${r.chargeCode}?`,
+              subtitle: `${describe(r.chargeCode) || 'This priced row'} comes off ${s.scheduleNo} v${s.versionNo}.`,
+              confirmLabel: 'Remove the row',
+              onConfirm: () => deleteRate(r),
+            })} />
         )}
         {tab === 'storage' && (
           <RateTable rates={timeCharges} currency={s.currencyCode} describe={describe}
             emptyNote="No storage or time-based charges priced here."
             editable={!!s.isEditable && canManage} busyKey={rateBusy}
             onEdit={r => { setEditingId(r.tosRateId); setEditing(rateDraftsOf([r])[0]); setRateErrors(undefined); }}
-            onDelete={deleteRate} />
+            onDelete={r => setAsk({
+              kind: 'confirm', danger: true,
+              title: `Remove ${r.chargeCode}?`,
+              subtitle: `${describe(r.chargeCode) || 'This priced row'} comes off ${s.scheduleNo} v${s.versionNo}.`,
+              confirmLabel: 'Remove the row',
+              onConfirm: () => deleteRate(r),
+            })} />
         )}
 
         {tab === 'activity' && (
@@ -515,6 +552,8 @@ export default function TariffScheduleDetailPage({ params }: { params: Promise<{
         currency={s.currencyCode}
         onClose={() => { setEditing(null); setEditingId(null); setRateErrors(undefined); }}
         onSave={saveRate} />
+
+      <AskDialog ask={ask} onClose={() => setAsk(null)} />
     </div>
   );
 }
