@@ -9050,3 +9050,208 @@ label.gecko-toggle.gecko-toggle-sm input:checked ~ .gecko-toggle-track .gecko-to
   font-size: var(--gecko-text-xs);
   font-weight: 600;
 }
+
+/* A charge code with what it means — the pair reads as one thing, as it does in
+   the pickers and the rate dialog. */
+.gecko-charge-pill {
+  padding: 6px 12px;
+  font-size: 12px;
+}
+.gecko-charge-pill-name {
+  font-weight: 500;
+  margin-left: 5px;
+  opacity: 0.85;
+}
+.gecko-charge-pill-count {
+  font-weight: 500;
+  margin-left: 8px;
+  opacity: 0.7;
+}
+
+/* ── §23  Tariff priced rows ────────────────────────────────────────────────
+   The charge code leads, with what it means underneath — a clerk scanning for
+   LIFT OFF EMPTY reads the rows, not the headings above them. */
+
+.gecko-rate-charge {
+  min-width: 170px;
+  line-height: 1.35;
+}
+.gecko-rate-amount { font-weight: 700; }
+
+.gecko-rate-actions-head { width: 84px; text-align: center; }
+.gecko-rate-actions {
+  white-space: nowrap;
+  text-align: center;
+}
+
+/* The row the server is being asked about. */
+.gecko-row-busy > td { opacity: 0.55; }
+
+.gecko-rate-detail { background: var(--gecko-bg-subtle); }
+.gecko-rate-tiers { margin-bottom: 8px; }
+.gecko-rate-pill { font-size: 11px; }
+
+/* ── §24  A two-way switch above a form ─────────────────────────────────────
+   One control, not two loose buttons: a tinted tray with the chosen half
+   lifted out of it in the primary colour, so which way the form is pointing is
+   readable at a glance rather than by comparing two greys. */
+
+.gecko-seg {
+  display: inline-flex;
+  align-self: flex-start;
+  padding: 3px;
+  gap: 2px;
+  border: 1px solid var(--gecko-border);
+  border-radius: 999px;
+  background: var(--gecko-surface-subtle);
+}
+.gecko-seg-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 7px 16px;
+  border: 0;
+  border-radius: 999px;
+  background: none;
+  color: var(--gecko-text-secondary);
+  font-family: inherit;
+  font-size: var(--gecko-text-sm);
+  font-weight: 600;
+  line-height: 1.2;
+  cursor: pointer;
+  white-space: nowrap;
+  transition: background 140ms ease, color 140ms ease, box-shadow 140ms ease;
+}
+.gecko-seg-btn:hover { color: var(--gecko-text-primary); }
+.gecko-seg-btn:focus-visible {
+  outline: 2px solid var(--gecko-primary-500);
+  outline-offset: 1px;
+}
+.gecko-seg-btn-on {
+  background: var(--gecko-primary-600);
+  color: #fff;
+  box-shadow: 0 1px 3px rgb(0 0 0 / 18%);
+}
+.gecko-seg-btn-on:hover { color: #fff; }
+
+/* "5" is a quantity, not a serial number. */
+.gecko-count-input {
+  width: 96px;
+  flex: 0 0 auto;
+  text-align: center;
+  font-variant-numeric: tabular-nums;
+  font-weight: 700;
+}
+.gecko-count-of {
+  align-self: center;
+  color: var(--gecko-text-secondary);
+  font-size: var(--gecko-text-sm);
+}
+
+/* Typed in upper case, shown in upper case — the box never disagrees with the
+   value behind it, which is what text-transform alone would do. */
+.gecko-upper { text-transform: uppercase; }
+.gecko-upper::placeholder { text-transform: none; }
+
+/* ── §25  Gate In: holds, extras, damage, what the Save made of it ─────────── */
+
+.gecko-wht-row {
+  font-size: var(--gecko-text-sm);
+  font-weight: 600;
+  cursor: pointer;
+  padding-top: 4px;
+}
+
+/* The extras that can be sold on a box, priced by the same quote. */
+.gecko-vas-panel {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+.gecko-vas-item {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 6px 8px;
+  border-radius: var(--gecko-radius-sm);
+  font-size: var(--gecko-text-sm);
+  cursor: pointer;
+}
+.gecko-vas-item:hover { background: var(--gecko-surface-hover); }
+/* Nothing prices it, so it cannot be sold — shown, not hidden, because a
+   missing line only looks like a bug. */
+.gecko-vas-item-unpriced { opacity: 0.55; cursor: not-allowed; }
+.gecko-vas-name { margin-left: 8px; color: var(--gecko-text-secondary); }
+.gecko-vas-price { white-space: nowrap; }
+
+.gecko-damage-row {
+  display: grid;
+  grid-template-columns: minmax(0, 1.4fr) minmax(0, 1fr) minmax(0, 1fr) 80px minmax(0, 1.2fr) auto;
+  gap: 8px;
+  align-items: center;
+}
+@media (max-width: 900px) {
+  .gecko-damage-row { grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); }
+}
+.gecko-damage-qty { text-align: center; font-variant-numeric: tabular-nums; }
+
+/* What the Save made of the truck. */
+.gecko-saved-trip { border-color: var(--gecko-success-200); background: var(--gecko-success-50); }
+.gecko-saved-rows {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+.gecko-saved-row {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  flex-wrap: wrap;
+  font-size: var(--gecko-text-sm);
+}
+.gecko-saved-badge {
+  padding: 2px 9px;
+  border-radius: 999px;
+  font-size: var(--gecko-text-xs);
+  font-weight: 700;
+  white-space: nowrap;
+}
+.gecko-saved-badge-in   { background: var(--gecko-success-100); color: var(--gecko-success-700); }
+.gecko-saved-badge-wait { background: var(--gecko-warning-50);  color: var(--gecko-warning-700); }
+.gecko-saved-badge-no   { background: var(--gecko-error-50);    color: var(--gecko-error-700); }
+
+.gecko-type-change-row {
+  padding: 10px 12px;
+  border: 1px solid var(--gecko-border);
+  border-radius: var(--gecko-radius-md);
+}
+
+/* ── §26  Charges that go on an account, not in the drawer ─────────────────
+   A haulier on credit terms owes the money just the same — it is simply not
+   owed at the counter. Shown plainly, never in the red the unpriced lines use,
+   because there is nothing here for a clerk to fix. */
+
+.gecko-cw-nothing-due {
+  font-size: var(--gecko-text-sm);
+  font-weight: 600;
+  color: var(--gecko-text-secondary);
+}
+
+.gecko-cw-later-box {
+  margin-top: 10px;
+  padding: 10px 12px;
+  border: 1px solid var(--gecko-border);
+  border-radius: var(--gecko-radius-md);
+  background: var(--gecko-surface-subtle);
+}
+.gecko-cw-later-box-head {
+  font-size: var(--gecko-text-xs);
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--gecko-text-secondary);
+}
+.gecko-cw-later-code { font-weight: 400; }
+.gecko-cw-later-why { margin-left: 8px; }
+
+.gecko-w-full { width: 100%; }

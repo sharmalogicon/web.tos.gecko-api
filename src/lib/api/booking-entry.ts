@@ -82,10 +82,17 @@ export interface BatchResult {
 }
 
 /**
- * The server's cap. Sending more in one call is a 400, so the queue splits
+ * The server's cap on ONE call. Sending more is a 400, so the queue splits
  * rather than discovering it at the depot counter.
  */
-export const BATCH_MAX = 200;
+export const BATCH_MAX = 100;
+
+/**
+ * The most boxes one booking may carry (owner, 2026-10-05). Checked here as
+ * well as at the server because a clerk who types 600 should be told before
+ * the first hundred are already written.
+ */
+export const BOOKING_CONTAINER_MAX = 500;
 
 /** Send rows in at most BATCH_MAX chunks; the caller gets every item back. */
 export async function postContainerBatch(

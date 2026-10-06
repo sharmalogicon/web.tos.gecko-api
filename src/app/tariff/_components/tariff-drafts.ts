@@ -6,7 +6,10 @@
  * and the conversion happens once, on save, where the server's answer can be
  * put back against the row that caused it.
  */
-import type { FreeTimeKind, PricingMethod, TierBasis } from '@/lib/api/revenue';
+import { FLAG_AXES, NUMERIC_AXES, parseTiers } from '@/lib/api/revenue';
+import type {
+  ConditionItem, FreeTimeKind, PricingMethod, RateItem, TierBasis,
+} from '@/lib/api/revenue';
 
 export interface ConditionDraft {
   key: string;
@@ -104,3 +107,119 @@ export function freeTimeDraftsOf(rules: readonly {
     freeUnits: String(r.freeUnits),
   }));
 }
+
+/**
+ * Saved rates, back into editable drafts.
+ *
+ * The inverse of `toRateItem`: the API keeps a NULL axis for "any" and a tier
+ * list as rows, while the editor holds "" and a line of text. This is what lets
+ * an existing quotation be opened in the same screen that creates one.
+ *
+ * It matters that EVERY saved row comes back. `PUT /tariffs/{id}/rates`
+ * replaces the whole set, so a draft loaded with nine of its ten rows and saved
+ * would delete the tenth without saying a word.
+ */
+export function rateDraftsOf(rates: readonly {
+  chargeCode: string; billTo: string; paymentTermCode: string; creditTermDays: number | null;
+  orderTypeCode: string | null; movementCode: string | null; equipmentTypeCode: string | null;
+  equipmentSize: string | null; cargoCategoryCode: string | null; truckCategoryCode: string | null;
+  billingUnitCode: string; pricingMethod: string; tierBasis: string | null; rate: number | null;
+  tiers: readonly { fromQty: number; toQty: number | null; rate: number }[];
+  conditions: readonly {
+    axis: string; op: string; values: string[]; number: number | null; flag: boolean | null;
+    modifierOp: string; modifierValue: number; label: string | null;
+  }[];
+}[]): RateDraft[] {
+  return rates.map(r => ({
+    key: newKey(),
+    chargeCode: r.chargeCode,
+    billTo: r.billTo,
+    paymentTermCode: r.paymentTermCode,
+    creditTermDays: r.creditTermDays?.toString() ?? '',
+    orderTypeCode: r.orderTypeCode ?? '',
+    movementCode: r.movementCode ?? '',
+    equipmentTypeCode: r.equipmentTypeCode ?? '',
+    equipmentSize: r.equipmentSize ?? '',
+    cargoCategoryCode: r.cargoCategoryCode ?? '',
+    truckCategoryCode: r.truckCategoryCode ?? '',
+    billingUnitCode: r.billingUnitCode ?? '',
+    pricingMethod: r.pricingMethod as RateDraft['pricingMethod'],
+    tierBasis: (r.tierBasis ?? '') as RateDraft['tierBasis'],
+    rate: r.rate?.toString() ?? '',
+    // Exactly what `parseTiers` reads: ranges separated by ';', each
+    // "range:rate", with '+' for an open-ended top tier — 1-7:160; 8+:200.
+    tiersText: r.tiers
+      .map(t => {
+        const range = t.toQty === null ? `${t.fromQty}+`
+          : t.fromQty === t.toQty ? `${t.fromQty}`
+          : `${t.fromQty}-${t.toQty}`;
+        return `${range}:${t.rate}`;
+      })
+      .join('; '),
+    conditions: r.conditions.map(c => ({
+      key: newKey(),
+      axis: c.axis,
+      op: c.op,
+      values: (c.values ?? []).join(', '),
+      number: c.number?.toString() ?? '',
+      flag: c.flag ?? false,
+      modifierOp: c.modifierOp,
+      modifierValue: c.modifierValue?.toString() ?? '',
+      label: c.label ?? '',
+    })),
+    open: false,
+  }));
+}
+
+/* ── drafts → what the API stores ──────────────────────────────────────── */
+
+/** '' is absent, not zero: a blank credit-days field means 'follow the term'. */
+const num = (v: string) => (v.trim() === '' ? null : Number(v.replace(/,/g, '')));
+const blank = (v: string) => (v.trim() === '' ? null : v.trim());
+
+export function toConditionItem(c: ConditionDraft): ConditionItem {
+  const isFlag = FLAG_AXES.includes(c.axis);
+  const isNumeric = NUMERIC_AXES.includes(c.axis);
+  return {
+    axis: c.axis,
+    op: isFlag ? 'IS' : c.op,
+    values: isFlag || isNumeric ? [] : c.values.split(/[,\s]+/).map(v => v.trim().toUpperCase()).filter(Boolean),
+    number: isNumeric ? num(c.number) : null,
+    flag: isFlag ? c.flag : null,
+    modifierOp: c.modifierOp,
+    modifierValue: num(c.modifierValue) ?? 0,
+    label: blank(c.label),
+  };
+}
+
+
+/**
+ * A draft row as the API stores it. `problem` is a tier list that could not be
+ * read — caught here rather than by a 400 after a round trip.
+ */
+export function toRateItem(r: RateDraft): { item: RateItem; problem: string | null } {
+  const tiered = r.pricingMethod !== 'FLAT';
+  const parsed = tiered ? parseTiers(r.tiersText) : { tiers: [], error: null };
+  return {
+    item: {
+      chargeCode: r.chargeCode.trim().toUpperCase(),
+      billTo: r.billTo,
+      paymentTermCode: r.paymentTermCode,
+      creditTermDays: num(r.creditTermDays),
+      orderTypeCode: blank(r.orderTypeCode),
+      movementCode: blank(r.movementCode),
+      equipmentTypeCode: blank(r.equipmentTypeCode),
+      equipmentSize: blank(r.equipmentSize),
+      cargoCategoryCode: blank(r.cargoCategoryCode),
+      truckCategoryCode: blank(r.truckCategoryCode),
+      billingUnitCode: blank(r.billingUnitCode),
+      pricingMethod: r.pricingMethod,
+      tierBasis: tiered ? (r.tierBasis || null) : null,
+      rate: tiered ? null : num(r.rate),
+      tiers: parsed.tiers,
+      conditions: r.conditions.map(toConditionItem),
+    },
+    problem: parsed.error,
+  };
+}
+

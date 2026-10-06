@@ -1,7 +1,7 @@
 "use client";
 import React, { useState, useMemo, useRef, useEffect, useCallback } from 'react';
 import { apiGet, apiSend, newIdempotencyKey } from '@/lib/api/client';
-import { newClientLineId } from '@/lib/api/booking-entry';
+import { BATCH_MAX, BOOKING_CONTAINER_MAX, newClientLineId } from '@/lib/api/booking-entry';
 import { defaultHandoverMode, handoverModesFor } from '@/lib/api/tos';
 import { ApiError } from '@/lib/api/problem';
 import { useFacility } from '@/lib/api/facility';
@@ -12,6 +12,7 @@ import { PortPicker } from './PortPicker';
 import type { Port } from '@/lib/api/logistics';
 import Link from 'next/link';
 import { Icon } from '@/components/ui/Icon';
+import { Modal } from '@/components/ui/Modal';
 import { BarcodeDisplay } from '@/components/ui/BarcodeDisplay';
 import { DateField } from '@/components/ui/DateField';
 import { DeleteConfirmModal } from '@/components/ui/DeleteConfirmModal';
@@ -116,7 +117,10 @@ function containerToApi(c: Container, clientLineId: string) {
   const n = (v: number) => (v === 0 ? null : v);
   return {
     clientLineId,
-    containerNo: c.containerNo.trim().toUpperCase(),
+    // An unnominated box is `null`, not ''. A booking made for "5 x 40HC"
+    // before anybody knows which five is a row with no number, and the API
+    // takes it — an empty string is a number the registry would be asked about.
+    containerNo: c.containerNo.trim().toUpperCase() || null,
     lineNo: c.lineNo,
     declaredSealNo: c.sealAgent.trim() || null,
     customerSealNo: c.sealCustomer.trim() || null,
@@ -1079,7 +1083,10 @@ function TabContainers({ containers, requirements, onSelectContainer, onAddConta
   containers: Container[];
   requirements: ApiRequirement[];
   /** Paste-many: saves every number in ONE batch call. */
-  onAddMultiple: (p: { numbers: string[]; size: string; type: string; cargoCat: string }) => Promise<void>;
+  onAddMultiple: (p: {
+    mode: 'numbers' | 'count'; numbers: string[]; count: number;
+    size: string; type: string; cargoCat: string;
+  }) => Promise<void>;
   onDeleteMany: (ids: string[]) => Promise<void>;
   onSetHandover: (ids: string[], mode: string) => Promise<void>;
   handoverModes: { value: string; label: string }[];
@@ -1288,6 +1295,7 @@ function TabContainers({ containers, requirements, onSelectContainer, onAddConta
       {addMultipleOpen && (
         <AddMultipleContainersModal
           requirements={requirements}
+          onBooking={containers.length}
           onCancel={() => setAddMultipleOpen(false)}
           onConfirm={async p => { await onAddMultiple(p); setAddMultipleOpen(false); }}
         />
@@ -1702,11 +1710,18 @@ export function BookingWorkspace({ bookingId }: { bookingId?: string }) {
     const room = existing ? existing.qty - existing.qtyAssigned - existing.qtyCompleted : 0;
     if (existing && room >= want) return existing.lineNo;
 
-    const next = requirements.map(r => ({
-      equipmentTypeCode: r.equipmentTypeCode,
-      // widen the line these boxes need; leave the others as they are
-      qty: r.equipmentTypeCode === equip ? r.qty + (want - room) : r.qty,
-    }));
+    // PUT /requirements REPLACES the whole set and matches lines by `lineNo`.
+    // Sending an existing line without its number reads as "delete it", and the
+    // server rightly refuses: "Line 1 (40HC) has boxes on it and cannot be
+    // removed." So every line that already exists carries its number, and only
+    // the genuinely new one goes without.
+    const next: { equipmentTypeCode: string; qty: number; lineNo?: number }[] =
+      requirements.map(r => ({
+        equipmentTypeCode: r.equipmentTypeCode,
+        lineNo: r.lineNo,
+        // widen the line these boxes need; leave the others as they are
+        qty: r.equipmentTypeCode === equip ? r.qty + (want - room) : r.qty,
+      }));
     if (!existing) next.push({ equipmentTypeCode: equip, qty: want });
 
     try {
@@ -1842,32 +1857,59 @@ export function BookingWorkspace({ bookingId }: { bookingId?: string }) {
    * equipment, saved in ONE call. Rejected rows are named rather than counted,
    * because "3 failed" tells a clerk nothing about which to retype.
    */
-  async function onAddMultiple(p: { numbers: string[]; size: string; type: string; cargoCat: string }) {
+  /**
+   * Several boxes at once — by number, or by how many.
+   *
+   * BY NUMBER is a list of boxes somebody already has: each row carries its
+   * number, and the booking must have room for them.
+   *
+   * BY COUNT is a booking made before anybody knows which boxes will go on it —
+   * "5 x 40HC". The rows are created with NO container number, which the API
+   * allows (`containerNo: null`), and the numbers are filled in when the boxes
+   * are nominated. Adding 5 means 5 MORE, whatever is already there, so the
+   * requirement line is raised to fit rather than the extras being refused.
+   */
+  async function onAddMultiple(p: {
+    mode: 'numbers' | 'count'; numbers: string[]; count: number;
+    size: string; type: string; cargoCat: string;
+  }) {
     const equip = `${p.size}${p.type}`;
+    const wanted = p.mode === 'count' ? p.count : p.numbers.length;
     // Same rule as one box: the booking is asked to want them.
     let line = requirements.find(r => r.equipmentTypeCode === equip);
-    if (!line || line.qty - line.qtyAssigned - line.qtyCompleted < p.numbers.length) {
-      const lineNo = await ensureLineFor(equip, p.numbers.length);
+    if (!line || line.qty - line.qtyAssigned - line.qtyCompleted < wanted) {
+      const lineNo = await ensureLineFor(equip, wanted);
       if (!lineNo) return;
       line = { lineNo, equipmentTypeCode: equip, qty: 0, qtyAssigned: 0, qtyCompleted: 0 };
     }
-    const rows: Container[] = p.numbers.map(no => ({
-      ...BLANK_CONTAINER,
-      id: `new-${no}`,
-      clientLineId: newClientLineId(),
-      lineNo: line.lineNo,
-      containerNo: no,
-      size: p.size,
-      type: p.type,
-      cargoCategory: p.cargoCat,
-    }));
+    const rows: Container[] = p.mode === 'count'
+      ? Array.from({ length: wanted }, (_, i) => ({
+        ...BLANK_CONTAINER,
+        id: `new-blank-${Date.now()}-${i}`,
+        clientLineId: newClientLineId(),
+        lineNo: line.lineNo,
+        containerNo: '',
+        size: p.size,
+        type: p.type,
+        cargoCategory: p.cargoCat,
+      }))
+      : p.numbers.map(no => ({
+        ...BLANK_CONTAINER,
+        id: `new-${no}`,
+        clientLineId: newClientLineId(),
+        lineNo: line.lineNo,
+        containerNo: no,
+        size: p.size,
+        type: p.type,
+        cargoCategory: p.cargoCat,
+      }));
     const items = await saveContainers(rows);
     const bad = items.filter(i => i.outcome === 'REJECTED');
     const warned = items.filter(i => i.outcome !== 'REJECTED' && i.warnings && Object.keys(i.warnings).length > 0);
     const ok = items.length - bad.length;
     const notes = [
-      bad.length ? `Refused: ${bad.map(b => `${b.containerNo} (${Object.values(b.errors ?? {}).flat()[0] ?? 'rejected'})`).join('; ')}` : '',
-      warned.length ? `Saved with a warning: ${warned.map(w => w.containerNo).join(', ')}` : '',
+      bad.length ? `Refused: ${bad.map(b => `${b.containerNo || 'a box with no number'} (${Object.values(b.errors ?? {}).flat()[0] ?? 'rejected'})`).join('; ')}` : '',
+      warned.length ? `Saved with a warning: ${warned.map(w => w.containerNo || '(no number)').join(', ')}` : '',
     ].filter(Boolean).join(' · ');
     toast({
       variant: bad.length || warned.length ? 'warning' : 'success',
@@ -2593,12 +2635,23 @@ function BulkActionsMenu({
  * actually has is a list of numbers, off a release note or a scanner dump, so
  * that is what this takes.
  */
-function AddMultipleContainersModal({ onCancel, onConfirm, requirements }: {
+function AddMultipleContainersModal({ onCancel, onConfirm, requirements, onBooking }: {
   onCancel: () => void;
-  onConfirm: (p: { numbers: string[]; size: string; type: string; cargoCat: string }) => Promise<void>;
+  onConfirm: (p: {
+    mode: 'numbers' | 'count';
+    numbers: string[];
+    count: number;
+    size: string;
+    type: string;
+    cargoCat: string;
+  }) => Promise<void>;
   requirements: ApiRequirement[];
+  /** Boxes already on the booking — the 500 is counted against the whole of it. */
+  onBooking: number;
 }) {
+  const [mode, setMode] = useState<'numbers' | 'count'>('numbers');
   const [text, setText] = useState('');
+  const [count, setCount] = useState('5');
   const [size, setSize] = useState('40');
   const [type, setType] = useState('HC');
   const [cargoCat, setCargoCat] = useState('GENERAL');
@@ -2613,22 +2666,95 @@ function AddMultipleContainersModal({ onCancel, onConfirm, requirements }: {
   const line = requirements.find(r => r.equipmentTypeCode === equip);
   const room = line ? line.qty - line.qtyAssigned - line.qtyCompleted : 0;
 
+  const howMany = Math.max(0, Math.floor(Number(count) || 0));
+  const byCount = mode === 'count';
+
+  // Two ceilings, and they mean different things. BATCH_MAX is what one call
+  // may carry; BOOKING_CONTAINER_MAX is what the booking may hold at all. A
+  // clerk who types 600 is told now, not after the first hundred are written.
+  const roomOnBooking = Math.max(0, BOOKING_CONTAINER_MAX - onBooking);
+  const perGo = Math.min(BATCH_MAX, roomOnBooking);
+  const asked = byCount ? howMany : numbers.length;
+  const overBatch = asked > BATCH_MAX;
+  const overBooking = asked > roomOnBooking;
+
+  const ready = (byCount ? howMany > 0 : numbers.length > 0 && !!line)
+    && !overBatch && !overBooking;
+
   return (
-    <div className="gecko-modal-shell" onClick={onCancel}>
-      <div className="gecko-modal-card" onClick={e => e.stopPropagation()}>
-        <div className="gecko-modal-head">
-          <div>
-            <div className="gecko-modal-title">Add multiple containers</div>
-            <div className="gecko-modal-subtitle">Paste the numbers — one per line, or separated by commas.</div>
-          </div>
+    <Modal
+      isOpen
+      onClose={onCancel}
+      size="lg"
+      title="Add multiple containers"
+      subtitle={byCount
+        ? 'Say how many. The numbers are filled in when the boxes are nominated.'
+        : 'Paste the numbers — one per line, or separated by commas.'}
+      footer={
+        <>
+          <button className="gecko-btn gecko-btn-outline gecko-btn-sm" onClick={onCancel} disabled={busy}>
+            Cancel
+          </button>
+          <button className="gecko-btn gecko-btn-primary gecko-btn-sm" disabled={busy || !ready}
+            onClick={async () => {
+              setBusy(true);
+              await onConfirm({ mode, numbers, count: howMany, size, type, cargoCat });
+              setBusy(false);
+            }}>
+            <Icon name="plus" size={13} />
+            {busy ? 'Saving…'
+              : byCount
+                ? `Add ${howMany || ''} × ${equip}`
+                : `Add ${numbers.length || ''} container${numbers.length === 1 ? '' : 's'}`}
+          </button>
+        </>
+      }
+    >
+      <div className="gecko-stack">
+        {/* Two ways in: a list of boxes somebody already has, or a count of
+            boxes nobody has yet. A booking for "5 x 40HC" is made long before
+            anyone knows which five. */}
+        <div className="gecko-seg" role="tablist">
+          <button type="button" role="tab" aria-selected={!byCount}
+            className={`gecko-seg-btn${!byCount ? ' gecko-seg-btn-on' : ''}`}
+            onClick={() => setMode('numbers')}>
+            By container number
+          </button>
+          <button type="button" role="tab" aria-selected={byCount}
+            className={`gecko-seg-btn${byCount ? ' gecko-seg-btn-on' : ''}`}
+            onClick={() => setMode('count')}>
+            By number of containers
+          </button>
         </div>
 
-        <div className="gecko-stack" style={{ padding: '16px 20px' }}>
+        {byCount ? (
+          <div className="gecko-form-group">
+            <label className="gecko-label gecko-label-required">How many</label>
+            <div className="gecko-row gecko-gap-2">
+              <input className="gecko-input gecko-count-input" type="number"
+                min={1} max={perGo} step={1} inputMode="numeric"
+                value={count} aria-label="Number of containers"
+                // type="number" still lets e, + and - through on most browsers,
+                // and a minus here would be asking for -5 boxes.
+                onKeyDown={e => { if (['e', 'E', '+', '-', '.'].includes(e.key)) e.preventDefault(); }}
+                onChange={e => setCount(e.target.value.replace(/[^0-9]/g, ('')).slice(0, 3))} />
+              <span className="gecko-count-of">containers of <strong>{equip}</strong></span>
+            </div>
+            <div className="gecko-helper-text">
+              {line
+                ? `Line ${line.lineNo} asks for ${line.qty}, with ${line.qtyAssigned + line.qtyCompleted} already on the booking — it is raised to fit these ${howMany}.`
+                : `No line asks for a ${equip} yet — one for ${howMany} is added with them.`}
+            </div>
+          </div>
+        ) : (
           <div className="gecko-form-group">
             <label className="gecko-label gecko-label-required">Container numbers</label>
-            <textarea className="gecko-input gecko-text-mono" rows={7} value={text}
+            <textarea className="gecko-input gecko-textarea gecko-text-mono gecko-upper" rows={6}
+              value={text}
               placeholder={'EITU9845677\nGECU7000005\nMSCU1234566'}
-              onChange={e => setText(e.target.value)} />
+              // A container number is upper case, so it is upper case while it is
+              // typed — not silently corrected on the way out.
+              onChange={e => setText(e.target.value.toUpperCase())} />
             <div className="gecko-helper-text">
               {numbers.length === 0 ? 'Nothing pasted yet.' : `${numbers.length} number${numbers.length === 1 ? '' : 's'} read.`}
               {line
@@ -2636,49 +2762,50 @@ function AddMultipleContainersModal({ onCancel, onConfirm, requirements }: {
                 : ` No line on this booking asks for a ${equip}.`}
             </div>
           </div>
+        )}
 
-          <div className="gecko-grid-3">
-            <div className="gecko-form-group">
-              <label className="gecko-label">Size</label>
-              <select className="gecko-input" value={size} onChange={e => setSize(e.target.value)}>
-                {['20', '40', '45'].map(s => <option key={s}>{s}</option>)}
-              </select>
-            </div>
-            <div className="gecko-form-group">
-              <label className="gecko-label">Type</label>
-              <select className="gecko-input" value={type} onChange={e => setType(e.target.value)}>
-                {['GP', 'HC', 'RF', 'RH', 'OT', 'FL', 'TK'].map(t => <option key={t}>{t}</option>)}
-              </select>
-            </div>
-            <div className="gecko-form-group">
-              <label className="gecko-label">Cargo category</label>
-              <select className="gecko-input" value={cargoCat} onChange={e => setCargoCat(e.target.value)}>
-                {['GENERAL', 'DANGEROUS', 'REEFER_GEN', 'REEFER_DG', 'CONSOL', 'BONDED'].map(c => <option key={c}>{c}</option>)}
-              </select>
-            </div>
+        <div className="gecko-grid-3">
+          <div className="gecko-form-group">
+            <label className="gecko-label">Size</label>
+            <select className="gecko-input" value={size} onChange={e => setSize(e.target.value)}>
+              {['20', '40', '45'].map(s => <option key={s}>{s}</option>)}
+            </select>
           </div>
-
-          {numbers.length > room && line && (
-            <div className="gecko-alert gecko-alert-warning">
-              Line {line.lineNo} has room for {room}. The rest will be refused — raise the quantity first.
-            </div>
-          )}
+          <div className="gecko-form-group">
+            <label className="gecko-label">Type</label>
+            <select className="gecko-input" value={type} onChange={e => setType(e.target.value)}>
+              {['GP', 'HC', 'RF', 'RH', 'OT', 'FL', 'TK'].map(t => <option key={t}>{t}</option>)}
+            </select>
+          </div>
+          <div className="gecko-form-group">
+            <label className="gecko-label">Cargo category</label>
+            <select className="gecko-input" value={cargoCat} onChange={e => setCargoCat(e.target.value)}>
+              {['GENERAL', 'DANGEROUS', 'REEFER_GEN', 'REEFER_DG', 'CONSOL', 'BONDED'].map(c => <option key={c}>{c}</option>)}
+            </select>
+          </div>
         </div>
 
-        <div className="gecko-modal-foot">
-          <button className="gecko-btn gecko-btn-outline gecko-btn-sm" onClick={onCancel} disabled={busy}>Cancel</button>
-          <button className="gecko-btn gecko-btn-primary gecko-btn-sm"
-            disabled={busy || numbers.length === 0 || !line}
-            onClick={async () => {
-              setBusy(true);
-              await onConfirm({ numbers, size, type, cargoCat });
-              setBusy(false);
-            }}>
-            <Icon name="plus" size={13} /> {busy ? 'Saving…' : `Add ${numbers.length || ''} container${numbers.length === 1 ? '' : 's'}`}
-          </button>
-        </div>
+        {/* Pasted numbers are refused past the line's quantity, because a box
+            with a number is a real box and the booking has to agree. A count
+            raises the line instead — that is what the clerk asked for. */}
+        {overBooking && (
+          <div className="gecko-alert gecko-alert-error">
+            A booking holds at most {BOOKING_CONTAINER_MAX} containers. {onBooking} are on this one,
+            so there is room for {roomOnBooking}.
+          </div>
+        )}
+        {!overBooking && overBatch && (
+          <div className="gecko-alert gecko-alert-error">
+            At most {BATCH_MAX} containers can be added at once. Add them in two goes.
+          </div>
+        )}
+        {!byCount && !overBatch && !overBooking && numbers.length > room && line && (
+          <div className="gecko-alert gecko-alert-warning">
+            Line {line.lineNo} has room for {room}. The rest will be refused — raise the quantity first.
+          </div>
+        )}
       </div>
-    </div>
+    </Modal>
   );
 }
 

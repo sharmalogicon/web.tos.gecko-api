@@ -152,8 +152,13 @@ export default function CashWindowPage() {
   }), [truckCategory, defaultTruckCategory, haulierCode, vas, sameTruckAs]);
   // `quote` is a useCallback the Enter handler and the effects share; reading
   // the terms through a ref keeps it from being rebuilt on every keystroke.
+  //
+  // The ref is written in an effect, not during render. Writing it inline made
+  // the render impure — React may render a component twice and throw the first
+  // away, and a ref mutated on the discarded pass is a value nobody can account
+  // for later.
   const termsRef = useRef(terms);
-  termsRef.current = terms;
+  useEffect(() => { termsRef.current = terms; }, [terms]);
 
   const quote = useCallback(async (order: string, until: string, keepSelection: boolean, terms?: QuoteTerms) => {
     const no = order.trim().toUpperCase();
@@ -729,9 +734,19 @@ function BoxCard({ box, selected, onToggle, mayWaive, onWaive }: {
 }) {
   const payable = isPayable(box);
   const unpriced = box.noPrice ?? [];
+  const later = box.billedLater ?? [];
+  /**
+   * Nothing to pay here, but not because anything is wrong.
+   *
+   * A haulier on CREDIT terms moves its charges off the cash due, so the box
+   * owes nothing at the counter and the whole amount goes on the account. That
+   * is a settled box, not a refused one — greying it like an unpriced box sends
+   * the clerk hunting for a problem that does not exist.
+   */
+  const settledOnCredit = !payable && unpriced.length === 0 && later.length > 0;
   const right: React.CSSProperties = { textAlign: 'right', fontVariantNumeric: 'tabular-nums' };
   return (
-    <div className="gecko-card" style={{ padding: 16, opacity: payable ? 1 : 0.75, outline: payable && selected ? '2px solid var(--gecko-primary-500, #2563eb)' : undefined }}>
+    <div className="gecko-card" style={{ padding: 16, opacity: payable || settledOnCredit ? 1 : 0.75, outline: payable && selected ? '2px solid var(--gecko-primary-500, #2563eb)' : undefined }}>
       <div className="gecko-row" style={{ gap: 16, alignItems: 'center', flexWrap: 'wrap' }}>
         <input type="checkbox" checked={payable && selected} disabled={!payable} onChange={onToggle}
           aria-label={`Pay for ${box.containerNo ?? 'box'}`} style={{ width: 18, height: 18 }} />
@@ -741,7 +756,11 @@ function BoxCard({ box, selected, onToggle, mayWaive, onWaive }: {
         {box.stayDays != null && <span className="gecko-text-muted" style={{ fontSize: 13 }}>
           {box.stayDays} day{box.stayDays === 1 ? '' : 's'} in yard{box.inAt ? ` · in ${new Date(box.inAt).toLocaleDateString('en-GB', { day: '2-digit', month: 'short' })}` : ''}
         </span>}
-        <span style={{ marginLeft: 'auto', fontSize: 18, fontWeight: 700 }}>{payable ? formatBaht(box.total) : ''}</span>
+        <span style={{ marginLeft: 'auto', fontSize: 18, fontWeight: 700 }}>
+          {payable ? formatBaht(box.total)
+            : settledOnCredit ? <span className="gecko-cw-nothing-due">Nothing to pay now</span>
+            : ''}
+        </span>
       </div>
 
       {!payable && box.note && <div className="gecko-text-muted" style={{ marginTop: 8, fontSize: 13 }}>{box.note}</div>}
@@ -779,6 +798,34 @@ function BoxCard({ box, selected, onToggle, mayWaive, onWaive }: {
               </table>
             </div>
           </div>
+        </div>
+      )}
+
+      {/* What goes on the account instead of the drawer. A line the haulier's
+          term moved is shown as exactly that — it is priced, it is owed, and it
+          is simply not owed HERE. */}
+      {later.length > 0 && (
+        <div className="gecko-cw-later-box">
+          <div className="gecko-cw-later-box-head">
+            Billed later{settledOnCredit ? ' — nothing is due at the counter for this box' : ''}
+          </div>
+          <table className="gecko-table gecko-table-compact gecko-w-full">
+            <tbody>
+              {later.map((l, i) => (
+                <tr key={`bl-${l.chargeCode}-${i}`}>
+                  <td>
+                    {l.chargeName} <span className="gecko-text-mono gecko-cw-later-code">{l.chargeCode}</span>
+                    {l.byHaulierTerm && (
+                      <span className="gecko-badge gecko-badge-info gecko-cw-later-why">on the haulier&apos;s credit term</span>
+                    )}
+                  </td>
+                  <td className="gecko-cell-meta">{l.paymentTermCode ?? 'CREDIT'}</td>
+                  <td style={right}>{formatBaht(l.total)}</td>
+                  {mayWaive && <td />}
+                </tr>
+              ))}
+            </tbody>
+          </table>
         </div>
       )}
 
@@ -831,7 +878,9 @@ function BoxCard({ box, selected, onToggle, mayWaive, onWaive }: {
       {box.tried.length > 0 && (
         <details style={{ marginTop: 6, fontSize: 12 }}>
           <summary className="gecko-text-muted">
-            {payable ? `What was not charged here (${box.tried.length})` : `Why nothing is due (${box.tried.length} tariff checks)`}
+            {payable ? `What was not charged here (${box.tried.length})`
+              : settledOnCredit ? `Why nothing is due here (${box.tried.length} checks)`
+              : `Why nothing is due (${box.tried.length} tariff checks)`}
           </summary>
           {box.tried.map((t, i) => (
             <div key={i}>

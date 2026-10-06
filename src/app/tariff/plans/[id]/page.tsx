@@ -7,7 +7,10 @@ import { useToast } from '@/components/ui/Toast';
 import { EmptyState } from '@/components/ui/EmptyState';
 import { Fact } from '@/components/ui/Fact';
 import { FreeTimeMatrix } from '../../_components/FreeTimeMatrix';
-import { freeTimeDraftsOf } from '../../_components/tariff-drafts';
+import {
+  freeTimeDraftsOf, rateDraftsOf, toRateItem, type RateDraft,
+} from '../../_components/tariff-drafts';
+import { RateDialog } from '../../_components/RateDialog';
 import { useApi } from '@/lib/api/use-api';
 import { useTariffCatalogs } from '@/lib/api/tariff-catalogs';
 import { apiSend } from '@/lib/api/client';
@@ -73,6 +76,68 @@ export default function TariffScheduleDetailPage({ params }: { params: Promise<{
 
   const reloadAll = () => { schedule.reload(); rateSet.reload(); freeTime.reload(); };
 
+  // ── editing the priced rows, in the dialog that creates them ─────────────
+  //
+  // The rate set is written as a WHOLE: PUT /tariffs/{id}/rates replaces it. So
+  // every save sends every row, with the one the clerk touched swapped in — a
+  // PUT built from anything less deletes the rows it left out.
+  const [editing, setEditing] = useState<RateDraft | null>(null);
+  const [rateErrors, setRateErrors] = useState<Record<string, string[]> | undefined>(undefined);
+  const [rateBusy, setRateBusy] = useState<string | null>(null);
+
+  /** The id of the row being edited, so the replacement lands in its place. */
+  const [editingId, setEditingId] = useState<string | null>(null);
+
+  const putRates = useCallback(async (next: RateDraft[], undo: () => void) => {
+    const converted = next.map(toRateItem);
+    const bad = converted.find(c => c.problem);
+    if (bad) {
+      setRateErrors({ tiers: [bad.problem!] });
+      return false;
+    }
+    try {
+      await apiSend('PUT', `/api/revenue/tariffs/${id}/rates`, {
+        rowVersion: rateSet.data?.rowVersion ?? s?.rowVersion,
+        rates: converted.map(c => c.item),
+      });
+      setRateErrors(undefined);
+      reloadAll();
+      return true;
+    } catch (e) {
+      const error = e instanceof ApiError ? e : new ApiError(0, 'Could not reach the Gecko API.');
+      // The server keys its refusals per row; the dialog shows the one it is on.
+      const mine = editingId
+        ? Object.fromEntries(Object.entries(error.fieldErrors ?? {})
+            .map(([k, v]) => [k.replace(/^rates\[\d+\]\./, ''), v]))
+        : undefined;
+      setRateErrors(mine && Object.keys(mine).length > 0 ? mine : { tiers: [error.message] });
+      undo();
+      return false;
+    }
+  }, [id, rateSet.data, s, editingId]);
+
+  async function saveRate(saved: RateDraft) {
+    setRateBusy(editingId);
+    const current = rateDraftsOf(rates);
+    // rateDraftsOf mints fresh keys, so the row is found by its position.
+    const index = editingId ? rates.findIndex(r => r.tosRateId === editingId) : -1;
+    const next = index >= 0
+      ? current.map((d, i) => (i === index ? { ...saved, key: d.key } : d))
+      : [...current, saved];
+    const ok = await putRates(next, () => {});
+    setRateBusy(null);
+    if (ok) { setEditing(null); setEditingId(null); }
+  }
+
+  async function deleteRate(r: Rate) {
+    if (!window.confirm(`Remove ${r.chargeCode} from this version?`)) return;
+    setRateBusy(r.tosRateId);
+    const keep = rates.filter(x => x.tosRateId !== r.tosRateId);
+    await putRates(rateDraftsOf(keep), () => {});
+    setRateBusy(null);
+  }
+
+
   async function act(action: 'submit' | 'approve' | 'reject' | 'withdraw', reason?: string) {
     if (!s) return;
     setBusy(action);
@@ -83,6 +148,70 @@ export default function TariffScheduleDetailPage({ params }: { params: Promise<{
     } catch (e) {
       const error = e instanceof ApiError ? e : new ApiError(0, 'Could not reach the Gecko API.');
       toast({ variant: 'danger', title: `Could not ${action}`, message: error.message });
+    } finally {
+      setBusy(null);
+    }
+  }
+
+  /**
+   * Approve a DRAFT in one press.
+   *
+   * The API only approves a PENDING tariff, so this is submit-then-approve. It
+   * is two calls because that is the shape of the API, not because a clerk
+   * should have to think about it — but the submit is checked, so a tariff the
+   * server refuses is never silently left half way, sitting in PENDING with
+   * nobody told.
+   *
+   * Someone who may manage a tariff but not approve one still gets the plain
+   * "Submit for approval" instead.
+   */
+  async function approveDraft() {
+    if (!s) return;
+    setBusy('approve');
+    try {
+      const pending = await apiSend<Schedule>('POST', `/api/revenue/tariffs/${s.scheduleId}/submit`, { rowVersion: s.rowVersion });
+      await apiSend('POST', `/api/revenue/tariffs/${s.scheduleId}/approve`, { rowVersion: pending.rowVersion });
+      toast({ variant: 'success', title: 'Tariff approved', message: `${s.scheduleNo} v${s.versionNo} — prices are live.` });
+      reloadAll();
+    } catch (e) {
+      const error = e instanceof ApiError ? e : new ApiError(0, 'Could not reach the Gecko API.');
+      toast({ variant: 'danger', title: 'Could not approve', message: error.message });
+      // It may have reached PENDING before the approve was refused; the reload
+      // shows whichever state it is really in rather than what we assumed.
+      reloadAll();
+    } finally {
+      setBusy(null);
+    }
+  }
+
+  /**
+   * Take an approved tariff back to a draft.
+   *
+   * There is no endpoint for this yet — the API freezes an approved price and
+   * offers "New version" as the way to change one. The owner wants it anyway
+   * (2026-10-05), so the call is made and a missing endpoint is reported in
+   * those words rather than as a bare 404. See
+   * docs/TARIFF_UNAPPROVE_FOR_API.md.
+   */
+  async function unapprove() {
+    if (!s) return;
+    const reason = window.prompt('Why is this tariff being unapproved?')?.trim();
+    if (!reason) return;
+    setBusy('unapprove');
+    try {
+      await apiSend('POST', `/api/revenue/tariffs/${s.scheduleId}/unapprove`, { rowVersion: s.rowVersion, reason });
+      toast({ variant: 'success', title: 'Tariff unapproved', message: `${s.scheduleNo} v${s.versionNo} is a draft again.` });
+      reloadAll();
+    } catch (e) {
+      const error = e instanceof ApiError ? e : new ApiError(0, 'Could not reach the Gecko API.');
+      const missing = error.status === 404 || error.status === 405;
+      toast({
+        variant: 'danger',
+        title: missing ? 'Unapprove is not built yet' : 'Could not unapprove',
+        message: missing
+          ? 'The API has no unapprove endpoint. Until it does, change an approved price with "New version".'
+          : error.message,
+      });
     } finally {
       setBusy(null);
     }
@@ -176,9 +305,20 @@ export default function TariffScheduleDetailPage({ params }: { params: Promise<{
           <button className="gecko-btn gecko-btn-ghost gecko-btn-sm" onClick={reloadAll} aria-label="Reload">
             <Icon name="refreshCcw" size={14} />
           </button>
-          {s.status === 'DRAFT' && canManage && (
+          {s.isEditable && canManage && (
+            <Link href={`/tariff/plans/${s.scheduleId}/edit`} className="gecko-btn gecko-btn-outline gecko-btn-sm">
+              <Icon name="edit" size={14} /> Edit charges
+            </Link>
+          )}
+          {s.status === 'DRAFT' && canManage && !canApprove && (
             <button className="gecko-btn gecko-btn-primary gecko-btn-sm" disabled={busy !== null} onClick={() => act('submit')}>
               <Icon name="send" size={14} /> {busy === 'submit' ? 'Submitting…' : 'Submit for approval'}
+            </button>
+          )}
+          {/* Someone who can approve does not need to submit to themselves. */}
+          {s.status === 'DRAFT' && canApprove && (
+            <button className="gecko-btn gecko-btn-primary gecko-btn-sm" disabled={busy !== null} onClick={approveDraft}>
+              <Icon name="check" size={14} /> {busy === 'approve' ? 'Approving…' : 'Approve'}
             </button>
           )}
           {s.status === 'PENDING' && canApprove && (
@@ -200,6 +340,11 @@ export default function TariffScheduleDetailPage({ params }: { params: Promise<{
               if (reason) act('withdraw', reason);
             }}>
               <Icon name="cornerUpLeft" size={14} /> Withdraw
+            </button>
+          )}
+          {s.status === 'APPROVED' && canApprove && (
+            <button className="gecko-btn gecko-btn-outline gecko-btn-sm" disabled={busy !== null} onClick={unapprove}>
+              <Icon name="cornerUpLeft" size={14} /> {busy === 'unapprove' ? 'Unapproving…' : 'Unapprove'}
             </button>
           )}
           {s.status === 'APPROVED' && canManage && (
@@ -314,9 +459,10 @@ export default function TariffScheduleDetailPage({ params }: { params: Promise<{
               ) : (
                 <div className="gecko-row gecko-row-wrap">
                   {[...new Set(rates.map(r => r.chargeCode))].sort().map(code => (
-                    <span key={code} className="gecko-pill gecko-pill-primary" style={{ padding: '6px 12px', fontSize: 12 }}>
-                      <strong style={{ fontFamily: 'var(--gecko-font-mono)' }}>{code}</strong>
-                      <span style={{ fontWeight: 500, marginLeft: 6, opacity: 0.85 }}>
+                    <span key={code} className="gecko-pill gecko-pill-primary gecko-charge-pill">
+                      <strong className="gecko-text-mono">{code}</strong>
+                      {describe(code) && <span className="gecko-charge-pill-name">- {describe(code)}</span>}
+                      <span className="gecko-charge-pill-count">
                         {rates.filter(r => r.chargeCode === code).length} row(s)
                       </span>
                     </span>
@@ -327,9 +473,19 @@ export default function TariffScheduleDetailPage({ params }: { params: Promise<{
           </>
         )}
 
-        {tab === 'charges' && <RateTable rates={moveCharges} currency={s.currencyCode} describe={describe} emptyNote="No per-move charges priced here." />}
+        {tab === 'charges' && (
+          <RateTable rates={moveCharges} currency={s.currencyCode} describe={describe}
+            emptyNote="No per-move charges priced here."
+            editable={!!s.isEditable && canManage} busyKey={rateBusy}
+            onEdit={r => { setEditingId(r.tosRateId); setEditing(rateDraftsOf([r])[0]); setRateErrors(undefined); }}
+            onDelete={deleteRate} />
+        )}
         {tab === 'storage' && (
-          <RateTable rates={timeCharges} currency={s.currencyCode} describe={describe} emptyNote="No storage or time-based charges priced here." />
+          <RateTable rates={timeCharges} currency={s.currencyCode} describe={describe}
+            emptyNote="No storage or time-based charges priced here."
+            editable={!!s.isEditable && canManage} busyKey={rateBusy}
+            onEdit={r => { setEditingId(r.tosRateId); setEditing(rateDraftsOf([r])[0]); setRateErrors(undefined); }}
+            onDelete={deleteRate} />
         )}
 
         {tab === 'activity' && (
@@ -348,6 +504,17 @@ export default function TariffScheduleDetailPage({ params }: { params: Promise<{
           </Card>
         )}
       </div>
+
+      {/* The same dialog that creates a rate, opened on one that exists. */}
+      <RateDialog
+        key={editing?.key ?? 'none'}
+        open={editing !== null}
+        row={editing}
+        catalogs={catalogs}
+        errors={rateErrors}
+        currency={s.currencyCode}
+        onClose={() => { setEditing(null); setEditingId(null); setRateErrors(undefined); }}
+        onSave={saveRate} />
     </div>
   );
 }
@@ -415,92 +582,120 @@ function TrailRow({ icon, tone, what, when, detail, last }: {
 }
 
 /** One table for every rate row: the axes as columns, because that is what they are. */
-function RateTable({ rates, currency, emptyNote, describe }: {
-  rates: Rate[]; currency: string; emptyNote: string;
-  /** A charge code is an identifier, not a label — the description makes the card readable. */
+function RateTable({ rates, currency, emptyNote, describe, editable, onEdit, onDelete, busyKey }: {
+  rates: Rate[];
+  currency: string;
+  emptyNote: string;
+  /** A charge code is an identifier, not a label — the description makes it readable. */
   describe: (code: string) => string;
+  /** Only a version that is still open may be changed. An approved price is frozen. */
+  editable: boolean;
+  onEdit: (r: Rate) => void;
+  onDelete: (r: Rate) => void;
+  /** The row the server is being asked about, so only that one shows as busy. */
+  busyKey: string | null;
 }) {
-  const byCharge = useMemo(() => {
-    const groups = new Map<string, Rate[]>();
-    for (const r of rates) groups.set(r.chargeCode, [...(groups.get(r.chargeCode) ?? []), r]);
-    return [...groups.entries()].sort(([a], [b]) => a.localeCompare(b));
-  }, [rates]);
-
   if (rates.length === 0) {
     return <Card title="Rates" icon="dollarSign"><div className="gecko-cell-meta">{emptyNote}</div></Card>;
   }
 
+  // One table, charge code first. Grouping into a card per charge code pushed
+  // the code into a heading and left the rows below it anonymous — a clerk
+  // scanning for LIFT OFF EMPTY had to read the headings rather than the rows.
+  const sorted = [...rates].sort((a, b) =>
+    a.chargeCode.localeCompare(b.chargeCode) || b.specificity - a.specificity);
+
   return (
-    <div className="gecko-stack gecko-stack-lg">
-      {byCharge.map(([code, rows]) => (
-        <Card key={code} title={code} icon="dollarSign"
-          subtitle={[describe(code), `${rows.length} priced row(s) — the most specific match wins`].filter(Boolean).join(' · ')}>
-          <div style={{ overflowX: 'auto' }}>
-            <table className="gecko-table gecko-table-compact">
-              <thead>
-                <tr>
-                  <th>Bill to</th><th>Term</th>
-                  <th>Order type</th><th>Movement</th><th>Equip</th><th>Size</th><th>Cargo</th><th>Truck</th>
-                  <th>Unit</th><th>Method</th>
-                  <th style={{ textAlign: 'right' }}>Rate</th>
-                  <th style={{ textAlign: 'right' }}>Spec</th>
-                  <th>Source</th>
-                </tr>
-              </thead>
-              <tbody>
-                {[...rows].sort((a, b) => b.specificity - a.specificity).map(r => (
-                  <React.Fragment key={r.tosRateId}>
-                    <tr>
-                      <td className="gecko-mono-strong">{r.billTo}</td>
-                      <td>{r.paymentTermCode}{r.creditTermDays !== null ? ` ${r.creditTermDays}d` : ''}</td>
-                      <td>{axis(r.orderTypeCode)}</td>
-                      <td>{axis(r.movementCode)}</td>
-                      <td>{axis(r.equipmentTypeCode)}</td>
-                      <td>{axis(r.equipmentSize)}</td>
-                      <td>{axis(r.cargoCategoryCode)}</td>
-                      <td>{axis(r.truckCategoryCode)}</td>
-                      <td>{r.billingUnitCode}</td>
-                      <td>{r.pricingMethod === 'FLAT' ? 'flat' : `${r.pricingMethod.replace('TIERED_', '').toLowerCase()} / ${r.tierBasis?.toLowerCase()}`}</td>
-                      <td style={{ textAlign: 'right', fontWeight: 700 }}>
-                        {r.pricingMethod === 'FLAT'
-                          ? money(r.rate, currency)
-                          : <span className="gecko-cell-meta">see tiers</span>}
+    <Card title={`Priced rows (${rates.length})`} icon="dollarSign"
+      subtitle="Where two rows both match a move, the more specific one wins.">
+      <div className="gecko-table-wrap">
+        <table className="gecko-table gecko-table-compact">
+          <thead>
+            <tr>
+              <th>Charge</th>
+              <th>Bill to</th><th>Term</th>
+              <th>Order type</th><th>Movement</th><th>Equip</th><th>Size</th><th>Cargo</th><th>Truck</th>
+              <th>Unit</th><th>Method</th>
+              <th className="gecko-num">Rate</th>
+              <th className="gecko-num">Spec</th>
+              {editable && <th className="gecko-rate-actions-head">Actions</th>}
+            </tr>
+          </thead>
+          <tbody>
+            {sorted.map(r => {
+              const detail = r.tiers.length > 0 || r.conditions.length > 0;
+              const busy = busyKey === r.tosRateId;
+              return (
+                <React.Fragment key={r.tosRateId}>
+                  <tr className={busy ? 'gecko-row-busy' : undefined}>
+                    <td className="gecko-rate-charge">
+                      <div className="gecko-mono-strong">{r.chargeCode}</div>
+                      {describe(r.chargeCode) && (
+                        <div className="gecko-cell-meta">{describe(r.chargeCode)}</div>
+                      )}
+                    </td>
+                    <td>{r.billTo}</td>
+                    <td>{r.paymentTermCode}{r.creditTermDays !== null ? ` ${r.creditTermDays}d` : ''}</td>
+                    <td>{axis(r.orderTypeCode)}</td>
+                    <td>{axis(r.movementCode)}</td>
+                    <td>{axis(r.equipmentTypeCode)}</td>
+                    <td>{axis(r.equipmentSize)}</td>
+                    <td>{axis(r.cargoCategoryCode)}</td>
+                    <td>{axis(r.truckCategoryCode)}</td>
+                    <td>{r.billingUnitCode}</td>
+                    <td>{r.pricingMethod === 'FLAT' ? 'flat' : `${r.pricingMethod.replace('TIERED_', '').toLowerCase()} / ${r.tierBasis?.toLowerCase()}`}</td>
+                    <td className="gecko-num gecko-rate-amount">
+                      {r.pricingMethod === 'FLAT'
+                        ? money(r.rate, currency)
+                        : <span className="gecko-cell-meta">see tiers</span>}
+                    </td>
+                    <td className="gecko-num gecko-cell-meta">{r.specificity}</td>
+                    {editable && (
+                      <td className="gecko-rate-actions">
+                        <button type="button" className="gecko-btn gecko-btn-ghost gecko-btn-sm gecko-btn-icon"
+                          aria-label={`Edit ${r.chargeCode}`} disabled={busy} onClick={() => onEdit(r)}>
+                          <Icon name="edit" size={13} />
+                        </button>
+                        <button type="button" className="gecko-btn gecko-btn-ghost gecko-btn-sm gecko-btn-icon gecko-tone-error"
+                          aria-label={`Delete ${r.chargeCode}`} disabled={busy} onClick={() => onDelete(r)}>
+                          <Icon name="trash" size={13} />
+                        </button>
                       </td>
-                      <td style={{ textAlign: 'right' }} className="gecko-cell-meta">{r.specificity}</td>
-                      <td className="gecko-cell-meta">{r.source}</td>
-                    </tr>
-                    {(r.tiers.length > 0 || r.conditions.length > 0) && (
-                      <tr>
-                        <td colSpan={13} style={{ background: 'var(--gecko-bg-subtle)' }}>
-                          {r.tiers.length > 0 && (
-                            <div className="gecko-row gecko-row-wrap" style={{ gap: 8, marginBottom: r.conditions.length > 0 ? 8 : 0 }}>
-                              <span className="gecko-field-label">Tiers ({r.tierBasis?.toLowerCase()}, chargeable units)</span>
-                              {r.tiers.map((t, i) => (
-                                <span key={i} className="gecko-pill gecko-pill-neutral" style={{ fontSize: 11 }}>
-                                  {tierLabel(t)} → <strong>{money(t.rate, currency)}</strong>
-                                </span>
-                              ))}
-                            </div>
-                          )}
-                          {r.conditions.length > 0 && (
-                            <div className="gecko-row gecko-row-wrap" style={{ gap: 8 }}>
-                              <span className="gecko-field-label">Surcharges (applied in order)</span>
-                              {[...r.conditions].sort((a, b) => a.sequenceNo - b.sequenceNo).map(c => (
-                                <span key={c.sequenceNo} className="gecko-pill gecko-pill-warning" style={{ fontSize: 11 }}>{conditionText(c)}</span>
-                              ))}
-                            </div>
-                          )}
-                        </td>
-                      </tr>
                     )}
-                  </React.Fragment>
-                ))}
-              </tbody>
-            </table>
-          </div>
-        </Card>
-      ))}
-    </div>
+                  </tr>
+                  {detail && (
+                    <tr>
+                      <td colSpan={editable ? 14 : 13} className="gecko-rate-detail">
+                        {r.tiers.length > 0 && (
+                          <div className="gecko-row gecko-row-wrap gecko-gap-2 gecko-rate-tiers">
+                            <span className="gecko-field-label">Tiers ({r.tierBasis?.toLowerCase()}, chargeable units)</span>
+                            {r.tiers.map((t, i) => (
+                              <span key={i} className="gecko-pill gecko-pill-neutral gecko-rate-pill">
+                                {tierLabel(t)} → <strong>{money(t.rate, currency)}</strong>
+                              </span>
+                            ))}
+                          </div>
+                        )}
+                        {r.conditions.length > 0 && (
+                          <div className="gecko-row gecko-row-wrap gecko-gap-2">
+                            <span className="gecko-field-label">Surcharges (applied in order)</span>
+                            {[...r.conditions].sort((a, b) => a.sequenceNo - b.sequenceNo).map(c => (
+                              <span key={c.sequenceNo} className="gecko-pill gecko-pill-warning gecko-rate-pill">
+                                {conditionText(c)}
+                              </span>
+                            ))}
+                          </div>
+                        )}
+                      </td>
+                    </tr>
+                  )}
+                </React.Fragment>
+              );
+            })}
+          </tbody>
+        </table>
+      </div>
+    </Card>
   );
 }
 

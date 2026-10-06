@@ -3,46 +3,41 @@ import React, { useCallback, useState } from 'react';
 import Link from 'next/link';
 import { Icon } from '@/components/ui/Icon';
 import { useToast } from '@/components/ui/Toast';
-import { apiGet, apiSend } from '@/lib/api/client';
+import { apiGet } from '@/lib/api/client';
 import { ApiError } from '@/lib/api/problem';
 import { useFacility } from '@/lib/api/facility';
 import { useSession } from '@/lib/auth/session';
-import { useApiList } from '@/lib/api/use-api';
-import { useTruckCategories } from '@/lib/api/lookups';
+import { useConditions } from '@/lib/api/lookups';
 import {
   TOS_PERMISSIONS, preflightPath,
-  type GateFinding, type GatePreflight, type GateTransaction,
+  type GateFinding, type GatePreflight, type TruckVisit,
 } from '@/lib/api/tos';
-import { GateField } from '../../_components/GateField';
-import type { BookableBox } from '../../_components/BookingPicker';
-import { TruckInYardPicker, type OpenVisit } from '../../_components/TruckInYardPicker';
-import { OutTripFields } from './OutTripFields';
 import {
-  blankGateOut, blankGateOutTruck, gateOutIssues, gateOutToRequest, truckIssues,
-  type GateOutDraft, type GateOutTruck,
+  cancelPickup, departVisit, isPlanned, saveTrip,
+  type TripRefusalRow, type TripSaveResult, type VisitPickup,
+} from '@/lib/api/gate-trips';
+import { GateField } from '../../_components/GateField';
+import { TruckInYardPicker, type OpenVisit } from '../../_components/TruckInYardPicker';
+import {
+  blankGateOutTruck, isBlocked, releaseIssues, releaseToTripRow, rowFor, yardChooses,
+  type GateOutTruck, type ReleaseRow,
 } from './gate-out-draft';
 
 /**
- * GATE OUT — one truck, every box leaving on it.
+ * GATE OUT — the truck in front of the clerk, and what it came to collect.
  *
- * TWO WAYS A TRUCK GETS HERE, and the difference shapes the screen:
+ * It does not choose what leaves. Gate In announced each pick-up, took the
+ * money and held the box for this truck; here the clerk confirms what was
+ * actually loaded and lets it go. So there is no booking search and no payment
+ * on this screen — only the truck's own planned pick-ups.
  *
- *   ALREADY INSIDE — it came in, dropped something, and is now leaving. The
- *   clerk finds it in the yard and every fact about it is read off the visit.
- *   Each box joins that visit by `truckVisitId`.
+ * The release is ONE `POST /gate/trips` carrying `truckVisitId`, so one arrival
+ * stays one visit. `POST /gate/transactions` is not called from here at all.
  *
- *   ARRIVED EMPTY TO COLLECT — nothing was recorded on the way in, because a
- *   gate move needs a container and an empty truck has none. So there is no
- *   visit to find: the truck is keyed, and the FIRST box recorded opens one.
- *   This is the two-boxes-on-one-booking case, and it is why this screen takes
- *   several boxes rather than one.
- *
- * Each box is its own POST, first with `truck` and the rest with the visit id.
- * `/gate/trips` is deliberately NOT used here: it has no `truckVisitId`, so a
- * truck already in the yard would get a SECOND visit for one arrival
- * (docs/GATE_TRIPS_FINDINGS_FOR_API.md §3). Looping the single call costs
- * nothing — that endpoint is not atomic either — and keeps the yard honest.
- *
+ * A truck that only dropped off has no pick-ups and simply departs. One that
+ * cannot take a box it came for needs a supervisor to cancel that pick-up
+ * before it can leave — otherwise the yard goes on holding a box for a truck
+ * that has gone.
  */
 export function GateOutForm() {
   const { can } = useSession();
@@ -50,181 +45,157 @@ export function GateOutForm() {
   const toast = useToast();
   const branchId = branch?.branchId ?? '';
   const mayRecord = can(TOS_PERMISSIONS.gateCreate);
+  const mayOverride = can(TOS_PERMISSIONS.gateOverride);
+  const { conditions } = useConditions();
 
   const [truck, setTruck] = useState<GateOutTruck>(blankGateOutTruck);
-  const [rows, setRows] = useState<GateOutDraft[]>([]);
-  const [openKey, setOpenKey] = useState<string | null>(null);
-  const [newTruck, setNewTruck] = useState(false);
-  const [truckError, setTruckError] = useState<ApiError | null>(null);
-  const [departed, setDeparted] = useState(false);
+  const [rows, setRows] = useState<ReleaseRow[]>([]);
+  const [loadingVisit, setLoadingVisit] = useState(false);
+  const [saving, setSaving] = useState(false);
   const [departing, setDeparting] = useState(false);
+  const [idempotencyKey, setIdempotencyKey] = useState<string | null>(null);
+  const [result, setResult] = useState<TripSaveResult | null>(null);
+  const [error, setError] = useState<ApiError | null>(null);
 
-  const { data: haulierRows } = useApiList<{ partyCode: string; nameEn: string }>(
-    '/api/master/parties?role=HAULIER&pageSize=200');
-  const hauliers = haulierRows ?? [];
-  const { categories } = useTruckCategories();
-
-  // A truck that is not in the yard is keyed; one that is has its facts read
-  // off the visit.
-  const keyedTruck = newTruck;
-  const patchTruck = (p: Partial<GateOutTruck>) => setTruck(t => ({ ...t, ...p }));
-  const patchRow = useCallback((key: string, p: Partial<GateOutDraft>) => {
+  const patchRow = useCallback((key: string, p: Partial<ReleaseRow>) => {
     setRows(rs => rs.map(r => (r.key === key ? { ...r, ...p } : r)));
   }, []);
 
-  const recorded = rows.filter(r => r.recorded);
-  const visitId = truck.truckVisitId || recorded[0]?.recorded?.truckVisitId || '';
-  const visitNo = truck.visitNo || recorded[0]?.recorded?.visitNo || '';
-  const truckProblems = truckIssues(truck, keyedTruck);
-  const truckReady = truckProblems.length === 0;
-  const taken = rows.map(r => r.bookingContainerId).filter(Boolean);
+  const outstanding = rows.filter(r => !r.releasedEirNo);
+  const ready = outstanding.filter(r => releaseIssues(r).length === 0);
 
-  const pickTruck = (v: OpenVisit) => patchTruck({
-    truckVisitId: v.truckVisitId,
-    visitNo: v.visitNo,
-    truckPlate: v.truckPlate,
-    trailerPlate: v.trailerPlate ?? '',
-    haulierCode: v.haulierCode ?? '',
-    driverName: v.driverName ?? '',
-    truckCategoryCode: v.truckCategoryCode ?? '',
-  });
-
-  const addBox = () => {
-    const row = blankGateOut();
-    setRows(rs => [...rs, row]);
-    setOpenKey(row.key);
-  };
-
-  /** The box leaving, and everything its booking and the registry already know. */
-  const pickBox = useCallback(async (key: string, box: BookableBox) => {
-    patchRow(key, {
-      bookingContainerId: box.bookingContainerId,
-      bookingId: box.bookingId,
-      orderNo: box.orderNo,
-      carrierRef: box.carrierRef ?? '',
-      orderTypeCode: box.orderTypeCode,
-      bookingTypeCode: box.bookingTypeCode,
-      customerCode: box.customerCode ?? '',
-      agentCode: box.agentCode ?? '',
-      equipmentTypeCode: box.equipmentTypeCode ?? '',
-      containerNo: box.containerNo ?? '',
-      movementCode: box.nextStep?.movementCode ?? '',
-      fullEmpty: box.nextStep?.fullEmpty ?? null,
+  /** Pick the truck, then read its visit for the pick-ups it came for. */
+  const pickTruck = useCallback(async (v: OpenVisit) => {
+    setTruck({
+      truckVisitId: v.truckVisitId,
+      visitNo: v.visitNo,
+      truckPlate: v.truckPlate,
+      trailerPlate: v.trailerPlate ?? '',
+      haulierCode: v.haulierCode ?? '',
+      driverName: v.driverName ?? '',
+      truckCategoryCode: v.truckCategoryCode ?? '',
     });
-
-    if (box.containerNo) {
-      try {
-        const c = await apiGet<{
-          tareWeightKg: number | null; maxGrossKg: number | null;
-          material: string | null; isoCode: string | null;
-        }>(`/api/master/containers/${encodeURIComponent(box.containerNo)}`);
-        patchRow(key, {
-          tareWeightKg: c.tareWeightKg?.toString() ?? '',
-          maxGrossWeightKg: c.maxGrossKg?.toString() ?? '',
-          materialCode: c.material ?? '',
-          isoCode: c.isoCode ?? '',
-        });
-      } catch { /* a box the registry has never seen is still allowed out */ }
-    }
-
+    setRows([]);
+    setResult(null);
+    setError(null);
+    setIdempotencyKey(null);
+    setLoadingVisit(true);
     try {
-      const b = await apiGet<{ booking: {
-        vesselCode: string | null; voyageIn: string | null; voyageOut: string | null;
-        nextPrevLocation: string | null; paperlessCode: string | null;
-      } }>(`/api/tos/bookings/${box.bookingId}`);
-      patchRow(key, {
-        vesselName: b.booking.vesselCode ?? '',
-        voyageNo: b.booking.voyageOut ?? b.booking.voyageIn ?? '',
-        nextLocationCode: b.booking.nextPrevLocation ?? '',
-        paperlessCode: b.booking.paperlessCode ?? '',
-      });
-    } catch { /* display only */ }
-
-    // What the barrier thinks of letting it out — §10's three refusals land here.
-    if (branchId && box.containerNo) {
-      try {
-        const answer = await apiGet<GatePreflight>(preflightPath({
-          branchId, containerNo: box.containerNo, direction: 'OUT',
-          truckVisitId: visitId || null,
-          truckCategoryCode: truck.truckCategoryCode || null,
-          haulierCode: truck.haulierCode || null,
-        }));
-        patchRow(key, { known: answer, findings: answer.findings ?? [] });
-      } catch { patchRow(key, { known: null }); }
+      const visit = await apiGet<TruckVisit & { pickups?: VisitPickup[] }>(
+        `/api/tos/gate/visits/${v.truckVisitId}`);
+      setRows((visit.pickups ?? []).filter(isPlanned).map(rowFor));
+    } catch (e) {
+      setError(e instanceof ApiError ? e : new ApiError(0, 'The truck could not be read.'));
+    } finally {
+      setLoadingVisit(false);
     }
-  }, [branchId, patchRow, truck.haulierCode, truck.truckCategoryCode, visitId]);
+  }, []);
 
   /**
-   * Record one box. The first one carries the truck and opens the visit unless
-   * the truck is already inside, in which case every box joins by id.
+   * What the barrier makes of the box the clerk keyed.
+   *
+   * It is the server's call, not this screen's: in this yard, the right load,
+   * not held, and the owner the booking's line expects. Shown in red and
+   * holding the Save, because a box released against a refusal cannot be put
+   * back from here.
    */
-  const record = useCallback(async (key: string) => {
+  const look = useCallback(async (key: string) => {
     const row = rows.find(r => r.key === key);
-    if (!branchId || !row || row.saving || row.recorded) return;
-    patchRow(key, { saving: true, error: null });
-    setTruckError(null);
+    if (!branchId || !row || !row.containerNo.trim()) return;
+    patchRow(key, { looking: true });
     try {
-      const written = await apiSend<GateTransaction>(
-        'POST', '/api/tos/gate/transactions',
-        gateOutToRequest(row, truck, branchId, visitId || null));
-      patchRow(key, {
-        saving: false, recorded: written, error: null,
-        findings: written.findings ?? [],
+      const answer = await apiGet<GatePreflight>(preflightPath({
+        branchId,
+        containerNo: row.containerNo.trim().toUpperCase(),
+        direction: 'OUT',
+        truckVisitId: truck.truckVisitId || null,
+      }));
+      patchRow(key, { known: answer, looking: false, findings: answer.findings ?? [] });
+    } catch {
+      patchRow(key, { looking: false, known: null });
+    }
+  }, [branchId, patchRow, rows, truck.truckVisitId]);
+
+  /** Release every row that is ready, in one call. */
+  const release = useCallback(async () => {
+    if (!branchId || saving || ready.length === 0) return;
+    setSaving(true);
+    setError(null);
+    const key = idempotencyKey ?? crypto.randomUUID();
+    setIdempotencyKey(key);
+    try {
+      const answer = await saveTrip({
+        branchId,
+        draftId: crypto.randomUUID(),
+        // The visit, not a truck block: this truck is already inside, and
+        // naming it again would open a second visit for one arrival.
+        truckVisitId: truck.truckVisitId,
+        rows: ready.map(r => releaseToTripRow(r, branchId)),
+      }, key);
+
+      setResult(answer);
+      setRows(cur => cur.map(r => {
+        const i = ready.findIndex(x => x.key === r.key);
+        if (i < 0) return r;
+        const got = answer.rows.find(x => x.index === i);
+        return got
+          ? { ...r, releasedEirNo: got.eirNo, releasedPdfUrl: got.eirPdfUrl, findings: got.findings ?? [] }
+          : r;
+      }));
+      toast.toast({
+        variant: 'success',
+        title: answer.visitNo ?? 'Released',
+        message: answer.truckLeftAt
+          ? 'Nothing left to collect — the truck is out.'
+          : `${answer.rows.filter(r => r.status === 'GATED').length} box(es) released.`,
       });
-      if (!truck.truckVisitId) {
-        patchTruck({ truckVisitId: written.truckVisitId, visitNo: written.visitNo });
-      }
-      setOpenKey(cur => (cur === key ? null : cur));
-      toast.toast({ variant: 'success', title: written.eirNo, message: `${written.movementCode} recorded for ${written.containerNo}` });
     } catch (e) {
-      const problem = e instanceof ApiError ? e : new ApiError(0, 'The gate-out could not be recorded.');
-      const refused = problem.extension<GateFinding[]>('findings');
-      patchRow(key, {
-        saving: false, error: problem,
-        findings: Array.isArray(refused) ? refused : row.findings,
-      });
-      if (problem.fieldErrors && Object.keys(problem.fieldErrors).some(f => f.startsWith('truck.'))) {
-        setTruckError(problem);
-      }
-      setOpenKey(key);
+      const problem = e instanceof ApiError ? e : new ApiError(0, 'The boxes could not be released.');
+      const refused = problem.extension<TripRefusalRow[]>('rows') ?? [];
+      setError(problem);
+      setRows(cur => cur.map(r => {
+        const i = ready.findIndex(x => x.key === r.key);
+        if (i < 0) return r;
+        const got = refused.find(x => x.index === i);
+        return got ? { ...r, findings: got.findings ?? [], error: problem } : r;
+      }));
+    } finally {
+      setSaving(false);
     }
-  }, [branchId, rows, patchRow, toast, truck, visitId]);
+  }, [branchId, idempotencyKey, ready, saving, toast, truck.truckVisitId]);
 
-  /** Record every box that is ready, in order. */
-  const recordAll = useCallback(async () => {
-    for (const r of rows) {
-      if (!r.recorded && gateOutIssues(r).length === 0) {
-        // Sequential on purpose: the first opens the visit the rest join.
-        await record(r.key);
-      }
-    }
-  }, [rows, record]);
-
-  /**
-   * The truck has physically left. Recording the moves and closing the visit
-   * are different facts — a truck can make several before it goes.
-   */
+  /** The truck leaves. Refused while it still has a box to collect. */
   async function depart() {
-    if (!visitId) return;
+    if (!truck.truckVisitId) return;
     setDeparting(true);
+    setError(null);
     try {
-      await apiSend('POST', `/api/tos/gate/visits/${visitId}/depart`, {});
-      setDeparted(true);
-      toast.toast({ variant: 'success', title: 'Truck departed', message: visitNo });
+      await departVisit(truck.truckVisitId);
+      toast.toast({ variant: 'success', title: 'Truck out', message: truck.visitNo });
+      clear();
     } catch (e) {
-      setTruckError(e instanceof ApiError ? e : new ApiError(0, 'The visit could not be closed.'));
+      setError(e instanceof ApiError ? e : new ApiError(0, 'The truck could not be let out.'));
     } finally {
       setDeparting(false);
     }
   }
 
+  /** A supervisor lets the truck go without the box it came for. */
+  async function cancel(row: ReleaseRow) {
+    const reason = window.prompt(`Why is ${row.pickup.containerNo ?? 'this pick-up'} not going?`)?.trim();
+    if (!reason || !truck.truckVisitId) return;
+    try {
+      await cancelPickup(truck.truckVisitId, row.pickup.visitPickupId, reason);
+      setRows(cur => cur.filter(r => r.key !== row.key));
+      toast.toast({ variant: 'success', title: 'Pick-up cancelled', message: 'The box is free again.' });
+    } catch (e) {
+      setError(e instanceof ApiError ? e : new ApiError(0, 'The pick-up could not be cancelled.'));
+    }
+  }
+
   const clear = () => {
     setTruck(blankGateOutTruck());
-    setRows([]);
-    setOpenKey(null);
-    setNewTruck(false);
-    setTruckError(null);
-    setDeparted(false);
+    setRows([]); setResult(null); setError(null); setIdempotencyKey(null);
   };
 
   if (!branchId) {
@@ -238,8 +209,8 @@ export function GateOutForm() {
     </div>;
   }
 
-  const pending = rows.filter(r => !r.recorded);
-  const readyCount = pending.filter(r => gateOutIssues(r).length === 0).length;
+  const picked = !!truck.truckVisitId;
+  const allReleased = picked && rows.length > 0 && outstanding.length === 0;
 
   return (
     <div className="gecko-stack gecko-stack-lg gecko-eirin-page">
@@ -249,230 +220,197 @@ export function GateOutForm() {
           <p className="gecko-page-subtitle">{branch?.displayName}</p>
         </div>
         <div className="gecko-page-header-right">
-          {recorded.length > 0 && (
-            <>
-              <button className="gecko-btn gecko-btn-outline gecko-btn-sm" onClick={() => window.print()}>
-                <Icon name="print" size={13} /> Print
-              </button>
-              {!departed && (
-                <button className="gecko-btn gecko-btn-outline gecko-btn-sm" disabled={departing} onClick={depart}>
-                  <Icon name="truck" size={13} /> {departing ? 'Closing…' : 'Truck has left'}
-                </button>
-              )}
-              <button className="gecko-btn gecko-btn-primary gecko-btn-sm" onClick={clear}>
-                <Icon name="plus" size={13} /> Next truck
-              </button>
-            </>
+          {picked && (
+            <button className="gecko-btn gecko-btn-outline gecko-btn-sm" onClick={clear}>
+              <Icon name="x" size={13} /> Another truck
+            </button>
           )}
         </div>
       </div>
 
-      {/* ── 1 · the truck ───────────────────────────────────────────────── */}
+      {/* ── 1 · the truck in front of the clerk ─────────────────────────── */}
       <div className="gecko-card gecko-card-padded gecko-stack">
         <div className="gecko-row gecko-row-between gecko-row-start">
           <div className="gecko-row gecko-gap-2h">
             <div className="gecko-step-badge">1</div>
-            <div className="gecko-card-title">Truck information</div>
+            <div className="gecko-card-title">Truck</div>
           </div>
-          {visitNo && (
+          {truck.visitNo && (
             <div className="gecko-visit-chip">
               <Icon name="truck" size={13} />
-              <span className="gecko-text-mono">{visitNo}</span>
-              {departed && <span className="gecko-visit-chip-mode">departed</span>}
+              <span className="gecko-text-mono">{truck.visitNo}</span>
             </div>
           )}
         </div>
 
-        <label className="gecko-row gecko-gap-1 gecko-gate-toggle">
-          <input type="checkbox" className="gecko-checkbox" checked={newTruck}
-            disabled={rows.length > 0}
-            onChange={e => { setNewTruck(e.target.checked); patchTruck(blankGateOutTruck()); }} />
-          <span>Truck is not in the yard</span>
-        </label>
-
         <div className="gecko-gate-truck-grid">
-          <GateField label="Registration no." required error={truckError?.forField('truck.plate')}>
-            {keyedTruck ? (
-              <input className="gecko-input gecko-text-mono" value={truck.truckPlate} maxLength={20}
-                disabled={recorded.length > 0}
-                onChange={e => patchTruck({ truckPlate: e.target.value.toUpperCase() })} />
-            ) : (
-              <TruckInYardPicker branchId={branchId} value={truck.truckPlate}
-                disabled={recorded.length > 0}
-                onPick={pickTruck}
-                onClear={() => patchTruck(blankGateOutTruck())} />
-            )}
+          <GateField label="Registration no." required>
+            <TruckInYardPicker branchId={branchId} value={truck.truckPlate}
+              onPick={v => void pickTruck(v)} onClear={clear} />
           </GateField>
-
-          <GateField label="Haulier" required={keyedTruck} frozen={!keyedTruck}
-            error={truckError?.forField('truck.haulierCode')}>
-            {keyedTruck ? (
-              <select className="gecko-input" value={truck.haulierCode} disabled={recorded.length > 0}
-                onChange={e => patchTruck({ haulierCode: e.target.value })}>
-                <option value="">Choose…</option>
-                {hauliers.map(h => <option key={h.partyCode} value={h.partyCode}>{h.partyCode} - {h.nameEn}</option>)}
-              </select>
-            ) : (
-              <div className="gecko-readonly-value gecko-text-mono">{truck.haulierCode || '—'}</div>
-            )}
+          <GateField label="Haulier" frozen>
+            <div className="gecko-readonly-value gecko-text-mono">{truck.haulierCode || '—'}</div>
           </GateField>
-
-          <GateField label="Truck category" frozen={!keyedTruck}
-            error={truckError?.forField('truck.truckCategoryCode')}>
-            {keyedTruck ? (
-              <select className="gecko-input" value={truck.truckCategoryCode} disabled={recorded.length > 0}
-                onChange={e => patchTruck({ truckCategoryCode: e.target.value })}>
-                <option value="">Depot default</option>
-                {categories.map(c => <option key={c.code} value={c.code}>{c.code} - {c.descriptionEn}</option>)}
-              </select>
-            ) : (
-              <div className="gecko-readonly-value gecko-text-mono">{truck.truckCategoryCode || '—'}</div>
-            )}
+          <GateField label="Truck category" frozen>
+            <div className="gecko-readonly-value gecko-text-mono">{truck.truckCategoryCode || '—'}</div>
           </GateField>
-
-          <GateField label="Driver" frozen={!keyedTruck}>
-            {keyedTruck ? (
-              <input className="gecko-input" value={truck.driverName} maxLength={100}
-                disabled={recorded.length > 0}
-                onChange={e => patchTruck({ driverName: e.target.value })} />
-            ) : (
-              <div className="gecko-readonly-value">{truck.driverName || '—'}</div>
-            )}
+          <GateField label="Driver" frozen>
+            <div className="gecko-readonly-value">{truck.driverName || '—'}</div>
           </GateField>
         </div>
       </div>
 
-      {/* ── 2 · the boxes ───────────────────────────────────────────────── */}
-      <div className="gecko-card gecko-card-padded gecko-stack">
-        <div className="gecko-row gecko-row-between gecko-row-start">
+      {error && <div className="gecko-alert gecko-alert-error">{error.title ?? error.message}</div>}
+
+      {/* ── 2 · what it came to collect ─────────────────────────────────── */}
+      {picked && (
+        <div className="gecko-card gecko-card-padded gecko-stack">
           <div className="gecko-row gecko-gap-2h">
             <div className="gecko-step-badge">2</div>
             <div>
-              <div className="gecko-card-title">Boxes leaving</div>
+              <div className="gecko-card-title">Boxes to collect</div>
               {rows.length > 0 && (
                 <div className="gecko-card-subtitle">
-                  {rows.length} box{rows.length === 1 ? '' : 'es'} · {recorded.length} recorded
+                  {outstanding.length} to release of {rows.length}
                 </div>
               )}
             </div>
           </div>
-          <button className="gecko-btn gecko-btn-primary gecko-btn-sm"
-            disabled={!truckReady || departed} onClick={addBox}>
-            <Icon name="plus" size={13} /> Add box
-          </button>
-        </div>
 
-        {!truckReady && (
-          <div className="gecko-cell-meta">
-            {keyedTruck ? 'Key the truck first.' : 'Find the truck in the yard first.'}
-          </div>
-        )}
-
-        {truckReady && rows.length === 0 && (
-          <div className="gecko-dash-placeholder">Nothing leaving on this truck yet.</div>
-        )}
-
-        <div className="gecko-stack-sm">
-          {rows.map((r, i) => {
-            const issues = gateOutIssues(r);
-            const done = !!r.recorded;
-            const open = openKey === r.key;
-            const blocked = r.findings.filter(f => f.severity === 'BLOCK');
-            return (
-              <div key={r.key}
-                className={`gecko-move-card${done ? ' gecko-move-card-done' : ''}${open ? ' gecko-move-card-open' : ''}`}>
-                <div className="gecko-move-head">
-                  <button type="button" className="gecko-move-toggle"
-                    aria-expanded={open} aria-label={open ? 'Collapse this box' : 'Expand this box'}
-                    onClick={() => setOpenKey(k => (k === r.key ? null : r.key))}>
-                    <Icon name={open ? 'chevronDown' : 'chevronRight'} size={14} />
-                  </button>
-                  <span className="gecko-move-kind gecko-move-kind-out">
-                    <Icon name="arrowUp" size={12} /> Pick-up
-                  </span>
-                  <span className="gecko-text-mono gecko-move-box">{r.containerNo || '(no box yet)'}</span>
-                  <div className="gecko-move-spacer" />
-                  {done ? (
-                    <span className="gecko-move-eir">
-                      <Icon name="shieldCheck" size={13} />
-                      <Link href={`/gate/eir-out/${r.recorded!.gateTransactionId}`}
-                        className="gecko-link gecko-text-mono">{r.recorded!.eirNo}</Link>
-                    </span>
-                  ) : (
-                    <div className="gecko-row gecko-gap-1">
-                      <span className={`gecko-move-ready${issues.length ? ' gecko-move-ready-no' : ''}`}>
-                        {issues.length ? `${issues.length} to fill` : 'Ready'}
+          {loadingVisit ? (
+            <div className="gecko-dash-placeholder">Reading the truck…</div>
+          ) : rows.length === 0 ? (
+            <div className="gecko-dash-placeholder">
+              This truck came only to drop off — there is nothing to collect.
+            </div>
+          ) : (
+            <div className="gecko-stack-sm">
+              {rows.map(r => {
+                const done = !!r.releasedEirNo;
+                const issues = releaseIssues(r);
+                return (
+                  <div key={r.key}
+                    className={`gecko-move-card${done ? ' gecko-move-card-done' : ''}`}>
+                    <div className="gecko-move-head">
+                      <span className="gecko-move-kind gecko-move-kind-out">
+                        <Icon name="arrowUp" size={12} /> Pick-up
                       </span>
-                      <button type="button" className="gecko-btn gecko-btn-primary gecko-btn-sm"
-                        disabled={r.saving || issues.length > 0 || blocked.length > 0 || !truckReady}
-                        onClick={() => record(r.key)}>
-                        {r.saving ? 'Recording…' : 'Record'}
-                      </button>
-                      <button type="button" className="gecko-btn gecko-btn-ghost gecko-btn-sm gecko-btn-icon"
-                        aria-label={`Remove box ${i + 1}`} disabled={r.saving}
-                        onClick={() => setRows(rs => rs.filter(x => x.key !== r.key))}>
-                        <Icon name="trash" size={13} />
-                      </button>
+                      <span className="gecko-cell-meta gecko-text-mono">{r.pickup.orderNo}</span>
+                      <span className="gecko-cell-meta">{r.pickup.equipmentTypeCode}</span>
+                      <div className="gecko-move-spacer" />
+                      {done ? (
+                        <span className="gecko-move-eir">
+                          <Icon name="shieldCheck" size={13} />
+                          <span className="gecko-text-mono">{r.releasedEirNo}</span>
+                          {r.releasedPdfUrl && (
+                            <a className="gecko-link" href={r.releasedPdfUrl} target="_blank" rel="noreferrer">print</a>
+                          )}
+                        </span>
+                      ) : (
+                        <span className={`gecko-move-ready${issues.length ? ' gecko-move-ready-no' : ''}`}>
+                          {issues.length ? issues.join(' · ') : 'Ready'}
+                        </span>
+                      )}
+                      {!done && mayOverride && (
+                        <button type="button" className="gecko-btn gecko-btn-ghost gecko-btn-sm"
+                          onClick={() => void cancel(r)}>
+                          Not going
+                        </button>
+                      )}
                     </div>
-                  )}
-                </div>
 
-                {(r.orderNo || r.findings.length > 0 || r.error) && (
-                  <div className="gecko-move-facts">
-                    {r.orderNo && (
-                      <span className="gecko-move-fact">
-                        <Link href={`/bookings/${r.bookingId}`} className="gecko-link gecko-text-mono">
-                          {r.carrierRef || r.orderNo}
-                        </Link>
-                        {r.movementCode ? ` · ${r.movementCode}` : ''}
-                        {r.fullEmpty ? ` · ${r.fullEmpty}` : ''}
-                      </span>
-                    )}
-                  </div>
-                )}
-
-                {(r.findings.length > 0 || r.error) && (
-                  <div className="gecko-move-notes">
-                    {r.error && !r.error.fieldErrors && (
-                      <div className="gecko-eirin-finding gecko-eirin-finding-block">
-                        <Icon name="alertCircle" size={13} /> <span>{r.error.message}</span>
+                    {r.findings.length > 0 && (
+                      <div className="gecko-move-notes">
+                        {r.findings.map((f, i) => (
+                          <div key={`${f.code}-${i}`}
+                            className={`gecko-eirin-finding gecko-eirin-finding-${f.severity === 'BLOCK' ? 'block' : f.severity === 'INFO' ? 'info' : 'override'}`}>
+                            <Icon name={f.severity === 'INFO' ? 'info' : 'alertCircle'} size={13} />
+                            <span>{f.message}</span>
+                          </div>
+                        ))}
                       </div>
                     )}
-                    {r.findings.map((f, j) => (
-                      <div key={`${f.code}-${j}`}
-                        className={`gecko-eirin-finding gecko-eirin-finding-${f.severity === 'BLOCK' ? 'block' : f.severity === 'INFO' ? 'info' : 'override'}`}>
-                        <Icon name={f.severity === 'INFO' ? 'info' : 'alertCircle'} size={13} />
-                        <span>{f.message}</span>
+
+                    {!done && (
+                      <div className="gecko-move-body">
+                        <div className="gecko-gate-grid-4">
+                          <GateField label="Container no." required
+                            hint={yardChooses(r) ? 'The yard chooses — key the box loaded.' : undefined}
+                            error={r.error?.forField('containerNo')}>
+                            <input className="gecko-input gecko-text-mono" value={r.containerNo} maxLength={14}
+                              onChange={e => patchRow(r.key, {
+                                containerNo: e.target.value.toUpperCase().replace(/[^A-Z0-9]/g, ''),
+                                findings: [],
+                              })}
+                              onBlur={() => void look(r.key)} />
+                          </GateField>
+                          <GateField label="Seal #1">
+                            <input className="gecko-input gecko-text-mono" value={r.sealNo1} maxLength={20}
+                              onChange={e => patchRow(r.key, { sealNo1: e.target.value.toUpperCase() })} />
+                          </GateField>
+                          <GateField label="Seal #2">
+                            <input className="gecko-input gecko-text-mono" value={r.sealNo2} maxLength={20}
+                              aria-label="Seal 2"
+                              onChange={e => patchRow(r.key, { sealNo2: e.target.value.toUpperCase() })} />
+                          </GateField>
+                          <GateField label="Status">
+                            <select className="gecko-input" value={r.conditionCode}
+                              onChange={e => patchRow(r.key, { conditionCode: e.target.value })}>
+                              <option value="">—</option>
+                              {conditions.map(c => (
+                                <option key={c.conditionCode} value={c.conditionCode}>
+                                  {c.conditionCode} - {c.descriptionEn}
+                                </option>
+                              ))}
+                            </select>
+                          </GateField>
+                          <GateField label="Remarks" span={2}>
+                            <input className="gecko-input" value={r.remarks} maxLength={300}
+                              onChange={e => patchRow(r.key, { remarks: e.target.value })} />
+                          </GateField>
+                        </div>
+                        {r.looking && <div className="gecko-cell-meta">Checking the box…</div>}
                       </div>
-                    ))}
+                    )}
                   </div>
-                )}
+                );
+              })}
+            </div>
+          )}
 
-                {open && (
-                  <div className="gecko-move-body">
-                    <OutTripFields
-                      d={r}
-                      branchId={branchId}
-                      locked={done}
-                      taken={taken.filter(t => t !== r.bookingContainerId)}
-                      onChange={p => patchRow(r.key, p)}
-                      onPick={box => void pickBox(r.key, box)}
-                      err={f => r.error?.forField(f)} />
-                  </div>
-                )}
-              </div>
-            );
-          })}
-        </div>
-
-        {readyCount > 1 && (
-          <div className="gecko-row gecko-row-end">
-            <button className="gecko-btn gecko-btn-primary gecko-btn-sm" onClick={recordAll}>
-              <Icon name="check" size={13} /> Record all {readyCount}
-            </button>
+          <div className="gecko-row gecko-row-between gecko-flex-wrap gecko-gap-2">
+            <span className="gecko-cell-meta">
+              {rows.some(isBlocked) ? 'A refusal above has to be cleared before the truck can go.' : ''}
+            </span>
+            <div className="gecko-row gecko-gap-2">
+              {(rows.length === 0 || allReleased || result?.truckLeftAt) && (
+                <button className="gecko-btn gecko-btn-outline gecko-btn-sm" disabled={departing}
+                  onClick={depart}>
+                  <Icon name="truck" size={13} /> {departing ? 'Letting out…' : 'Truck out'}
+                </button>
+              )}
+              {outstanding.length > 0 && (
+                <button className="gecko-btn gecko-btn-primary gecko-btn-sm"
+                  disabled={saving || ready.length === 0} onClick={release}>
+                  <Icon name="check" size={13} />
+                  {saving ? 'Releasing…' : `Release ${ready.length} box${ready.length === 1 ? '' : 'es'}`}
+                </button>
+              )}
+            </div>
           </div>
-        )}
-      </div>
+        </div>
+      )}
+
+      {result?.truckLeftAt && (
+        <div className="gecko-card gecko-card-padded gecko-saved-trip">
+          <Icon name="shieldCheck" size={18} />
+          <span>
+            <span className="gecko-text-mono">{result.visitNo}</span> — nothing left to collect. The truck is out.
+          </span>
+          {' '}
+          <Link href="/gate/eir-out-register" className="gecko-link">EIR-Out register</Link>
+        </div>
+      )}
     </div>
   );
 }

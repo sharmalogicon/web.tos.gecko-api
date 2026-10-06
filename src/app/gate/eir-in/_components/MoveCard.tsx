@@ -7,10 +7,12 @@ import { useFacility } from '@/lib/api/facility';
 import { useConditions } from '@/lib/api/lookups';
 import type { GateFinding } from '@/lib/api/tos';
 import { GateField } from '../../_components/GateField';
+import { VasPanel } from './VasPanel';
+import { DamagePanel } from './DamagePanel';
 import { BookingPicker, type BookableBox } from '../../_components/BookingPicker';
 import {
   boxLooksRight, needsDigitReason, needsLateReason,
-  editable, grossOf, locationLabel, normaliseBox, onBooking, overMaxWeight,
+  editable, grossOf, isDamaged, locationLabel, normaliseBox, onBooking, overMaxWeight,
   pickupHasNoOrder, requiredFor, rowIssues,
   type MoveDraft, type SealRow,
 } from './visit-moves';
@@ -31,7 +33,7 @@ import {
 interface PartyRow { partyCode: string; nameEn: string }
 interface EquipmentTypeRow { equipmentTypeId: string; typeCode: string; descriptionEn: string; isActive: boolean }
 
-export function MoveCard({ move, index, open, branchId, takenBoxes, onToggle, onChange, onRemove, onLook, onRecord, onPickBooking, canRecord }: {
+export function MoveCard({ move, index, open, branchId, takenBoxes, onToggle, onChange, onRemove, onLook, onRecord, onPickBooking, onToggleVas, canRecord }: {
   move: MoveDraft;
   index: number;
   open: boolean;
@@ -39,6 +41,7 @@ export function MoveCard({ move, index, open, branchId, takenBoxes, onToggle, on
   /** Boxes already on this truck, so the picker cannot offer one twice. */
   takenBoxes: string[];
   onPickBooking: (box: BookableBox) => void;
+  onToggleVas: (chargeCode: string) => void;
   onToggle: () => void;
   onChange: (patch: Partial<MoveDraft>) => void;
   onRemove: () => void;
@@ -59,7 +62,9 @@ export function MoveCard({ move, index, open, branchId, takenBoxes, onToggle, on
   const equipmentTypes = equipmentRows ?? [];
 
   const drop = move.trip === 'DROP_OFF_CONT';
-  const done = !!move.recorded;
+  // Held and priced — not committed. The Save is what writes it.
+  const held = move.reserved;
+  const done = !!move.result;
   const required = requiredFor(move);
   const needs = (f: string) => required.includes(f);
   const err = (f: string) => move.error?.forField(f);
@@ -126,20 +131,22 @@ export function MoveCard({ move, index, open, branchId, takenBoxes, onToggle, on
 
         {done ? (
           <span className="gecko-move-eir">
-            <Icon name="shieldCheck" size={13} />
-            <Link href={`/gate/eir-in/${move.recorded!.gateTransactionId}`} className="gecko-link gecko-text-mono">
-              {move.recorded!.eirNo}
-            </Link>
+            <Icon name={move.result!.status === 'GATED' ? 'shieldCheck' : 'clock'} size={13} />
+            {move.result!.eirNo
+              ? <Link href={`/gate/eir-in/${move.result!.gateTransactionId}`} className="gecko-link gecko-text-mono">
+                  {move.result!.eirNo}
+                </Link>
+              : <span className="gecko-text-mono">{move.result!.couponRef ?? 'waiting for gate out'}</span>}
           </span>
         ) : (
           <div className="gecko-row gecko-gap-1">
-            <span className={`gecko-move-ready${issues.length ? ' gecko-move-ready-no' : ''}`}>
-              {issues.length ? `${issues.length} to fill` : 'Ready'}
+            <span className={`gecko-move-ready${issues.length ? ' gecko-move-ready-no' : held ? '' : ' gecko-move-ready-no'}`}>
+              {issues.length ? `${issues.length} to fill` : held ? 'Held' : 'Ready'}
             </span>
-            <button type="button" className="gecko-btn gecko-btn-primary gecko-btn-sm"
+            <button type="button" className="gecko-btn gecko-btn-outline gecko-btn-sm"
               disabled={!canRecord || move.saving || issues.length > 0 || pickupHasNoOrder(move)}
               onClick={onRecord}>
-              {move.saving ? 'Recording…' : 'Record'}
+              {move.saving ? 'Holding…' : held ? 'Re-check' : 'Record'}
             </button>
             <button type="button" className="gecko-btn gecko-btn-ghost gecko-btn-sm gecko-btn-icon"
               aria-label={`Remove box ${index + 1}`} onClick={onRemove} disabled={move.saving}>
@@ -169,8 +176,15 @@ export function MoveCard({ move, index, open, branchId, takenBoxes, onToggle, on
       )}
 
       {/* ── what the barrier said ───────────────────────────────────────── */}
-      {(move.findings.length > 0 || blocked.length > 0 || move.error) && (
+      {(move.findings.length > 0 || blocked.length > 0 || move.error || move.placeMessage) && (
         <div className="gecko-move-notes">
+          {/* The place picked was taken, so the server moved to the next free
+              one like it. News, not a fault — hence blue. */}
+          {move.placeMessage && (
+            <div className="gecko-eirin-finding gecko-eirin-finding-info">
+              <Icon name="info" size={13} /> <span>{move.placeMessage}</span>
+            </div>
+          )}
           {move.error && !move.error.fieldErrors && (
             <div className="gecko-eirin-finding gecko-eirin-finding-block">
               <Icon name="alertCircle" size={13} /> {move.error.message}
@@ -349,11 +363,19 @@ export function MoveCard({ move, index, open, branchId, takenBoxes, onToggle, on
 
               <GateField label="Material / height" error={err('materialCode')}>
                 <div className="gecko-row gecko-gap-1">
-                  <input className="gecko-input gecko-text-mono" maxLength={20} value={move.materialCode}
-                    placeholder="STL" aria-label="Material"
-                    onChange={e => onChange({ materialCode: e.target.value.toUpperCase() })} />
-                  <input className="gecko-input gecko-text-mono" value={move.heightCode} disabled
-                    aria-label="Height" placeholder="8ft6" />
+                  <select className="gecko-input" value={move.materialCode} aria-label="Material"
+                    onChange={e => onChange({ materialCode: e.target.value })}>
+                    <option value="">—</option>
+                    {['STL', 'ALU', 'GRP'].map(m => <option key={m} value={m}>{m}</option>)}
+                  </select>
+                  {/* Left blank, the equipment type's own height class is kept. */}
+                  <select className="gecko-input" value={move.heightCode} aria-label="Height"
+                    onChange={e => onChange({ heightCode: e.target.value })}>
+                    <option value="">From the type</option>
+                    <option value="STANDARD">Standard</option>
+                    <option value="HIGH_CUBE">High cube</option>
+                    <option value="HALF">Half</option>
+                  </select>
                 </div>
               </GateField>
 
@@ -479,6 +501,27 @@ export function MoveCard({ move, index, open, branchId, takenBoxes, onToggle, on
             </Section>
           )}
 
+          {move.vasMenu.length > 0 && (
+            <Section title="Extras">
+              <VasPanel
+                menu={move.vasMenu}
+                ticked={move.vasTicked}
+                disabled={done}
+                currency={move.due[0]?.currencyCode ?? 'THB'}
+                onToggle={onToggleVas} />
+            </Section>
+          )}
+
+          {/* A damaged drop-off carries its survey into the same Save. */}
+          {isDamaged(move) && (
+            <Section title="Damage">
+              <DamagePanel
+                damages={move.damages}
+                disabled={done}
+                onChange={damages => onChange({ damages })} />
+            </Section>
+          )}
+
           {/* Only when the server has actually asked for a reason. */}
           {(needsDigitReason(move) || needsLateReason(move)) && (
             <Section title="Override">
@@ -508,17 +551,26 @@ export function MoveCard({ move, index, open, branchId, takenBoxes, onToggle, on
         </div>
       )}
 
-      {/* A recorded box is a record, not a form. */}
-      {open && done && move.recorded && (
+      {/* A saved row is a record, not a form. A pick-up has no EIR yet: it is
+          paid for and held, and Gate Out releases it against this same visit. */}
+      {open && done && move.result && (
         <div className="gecko-move-body">
           <div className="gecko-eirin-readback">
-            <Readback label="EIR" value={move.recorded.eirNo} />
-            <Readback label="Movement" value={move.recorded.movementCode} />
-            <Readback label="Load" value={move.recorded.fullEmpty} />
-            <Readback label="Order" value={move.recorded.orderNo} />
-            <Readback label="Visit" value={move.recorded.visitNo} />
-            <Readback label="Gross kg" value={move.recorded.grossWeightKg?.toString() ?? '—'} />
+            <Readback label="Outcome" value={move.result.status === 'GATED' ? 'Gated in'
+              : move.result.status === 'PLANNED' ? 'Waiting for gate out' : move.result.status} />
+            <Readback label="EIR" value={move.result.eirNo ?? '—'} />
+            <Readback label="Coupon" value={move.result.couponRef ?? '—'} />
+            <Readback label="Order" value={move.result.orderNo} />
+            {move.result.surveyId && <Readback label="Survey" value={move.result.surveyId.slice(0, 8)} />}
+            {(move.result.holdsApplied ?? []).length > 0 && (
+              <Readback label="Holds put on" value={(move.result.holdsApplied ?? []).join(', ')} />
+            )}
           </div>
+          {move.result.reason && (
+            <div className="gecko-eirin-finding gecko-eirin-finding-block">
+              <Icon name="alertCircle" size={13} /> <span>{move.result.reason}</span>
+            </div>
+          )}
         </div>
       )}
     </div>

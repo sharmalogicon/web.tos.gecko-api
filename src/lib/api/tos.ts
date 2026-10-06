@@ -236,6 +236,10 @@ export interface GateTransactionRequest {
   customsPermitNo?: string | null;
   paperlessCode?: string | null;
   nextLocationCode?: string | null;
+  /** STANDARD / HIGH_CUBE / HALF. Left out, the equipment type's class is kept. */
+  heightCode?: string | null;
+  /** The draft this move belongs to, so a reserved place is recognised. */
+  draftId?: string | null;
 }
 
 /** "" → null, so an untouched optional field is absent rather than empty. */

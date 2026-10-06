@@ -18,9 +18,11 @@
  * the behaviour a gate clerk needs when one box of three has a hold on it.
  */
 import type {
-  GateFinding, GatePreflight, GateTransaction, GateTransactionRequest, TripType,
+  GateFinding, GatePreflight, GateTransactionRequest, TripType,
 } from '@/lib/api/tos';
+import type { TripDamage, TripRowResult, VasOption } from '@/lib/api/gate-trips';
 import { directionOfTrip, numberOrNull, requiredGateFields, textOrNull } from '@/lib/api/tos';
+import type { TripRow } from '@/lib/api/gate-trips';
 import type { ApiError } from '@/lib/api/problem';
 
 export interface SealRow { sealNo: string; sealType: string; isIntact: boolean }
@@ -51,8 +53,22 @@ export interface MoveDraft {
   equipmentTypeCode: string;
   agentCode: string;
 
+  /** Agreed on the second Save, after the clerk accepted a type change (§23.5). */
+  acceptTypeChange: boolean;
+
   /** Set when the row was filled from a booking the clerk picked. */
   bookingContainerId: string;
+  /**
+   * The picked line's rowVersion, needed to NOMINATE it.
+   *
+   * A booking is often made before anyone knows which boxes will go on it, so
+   * its rows carry no number. At the gate the clerk picks one of those pending
+   * moves and keys the box that actually turned up — that is an edit of the
+   * booking line, not a new assignment.
+   */
+  bookingContainerRowVersion: string;
+  /** What the booking line already held, so a real change is recognisable. */
+  bookedContainerNo: string;
   bookingId: string;
   orderNo: string;
   carrierRef: string;
@@ -66,8 +82,11 @@ export interface MoveDraft {
   /** Vector's "Container Class". The gate has no separate class field. */
   gradeCode: string;
   materialCode: string;
-  /** No API field carries it yet; shown so the shape is right. */
+  /** STANDARD / HIGH_CUBE / HALF, pre-filled from the equipment type (§23.4). */
   heightCode: string;
+  /** Split from the equipment type: the truck's 45 ft limit counts in feet. */
+  size: string;
+  type: string;
   isoCode: string;
 
   /** Read off the booking, never typed — they belong to the vessel call. */
@@ -102,11 +121,49 @@ export interface MoveDraft {
   checkDigitOverrideReason: string;
   lateOverrideReason: string;
 
+  /** Drop-off rows with a damaged condition carry a survey (§23.3). */
+  damages: TripDamage[];
+
+  /** The VAS menu for this box's next movement, priced (§23.2a). */
+  vasMenu: VasOption[];
+  vasTicked: string[];
+
+  /** What this row would cost, from the quote that Record ran. */
+  due: QuoteLineLike[];
+  /**
+   * What goes on an account instead of the drawer — a haulier on CREDIT terms
+   * moves its charges off the cash due. Priced and owed, just not owed here.
+   */
+  billedLater: QuoteLineLike[];
+  quoteTotal: number;
+  quoteTax: number;
+
+  /**
+   * Set by Record: the place the server HELD, which may not be the one picked.
+   * `placeMessage` says so, and is shown blue — it is news, not a fault.
+   */
+  reserved: boolean;
+  placeMessage: string | null;
+
   saving: boolean;
-  recorded: GateTransaction | null;
+  /** What the Save made of it: GATED with an EIR, or PLANNED with a coupon. */
+  result: TripRowResult | null;
   error: ApiError | null;
-  /** What the barrier said — on the 201, or carried by a 409. Never stored. */
+  /** What the barrier said — from Record, or carried by a refusal. */
   findings: GateFinding[];
+}
+
+/** Only the parts of a quote line this screen shows. */
+export interface QuoteLineLike {
+  chargeCode: string;
+  chargeName?: string | null;
+  paymentTermCode?: string | null;
+  /** The haulier's own term moved this line to credit (§2). */
+  byHaulierTerm?: boolean | null;
+  amount: number;
+  taxAmount: number;
+  total: number;
+  currencyCode?: string | null;
 }
 
 let seq = 0;
@@ -125,7 +182,10 @@ export function blankMove(trip: TripType, defaults: {
     customerCode: '',
     equipmentTypeCode: '',
     agentCode: '',
+    acceptTypeChange: false,
     bookingContainerId: '',
+    bookingContainerRowVersion: '',
+    bookedContainerNo: '',
     bookingId: '',
     orderNo: '',
     carrierRef: '',
@@ -137,6 +197,8 @@ export function blankMove(trip: TripType, defaults: {
     gradeCode: '',
     materialCode: '',
     heightCode: '',
+    size: '',
+    type: '',
     isoCode: '',
     vesselName: '',
     voyageNo: '',
@@ -165,8 +227,17 @@ export function blankMove(trip: TripType, defaults: {
     remarks: '',
     checkDigitOverrideReason: '',
     lateOverrideReason: '',
+    damages: [],
+    vasMenu: [],
+    vasTicked: [],
+    due: [],
+    billedLater: [],
+    quoteTotal: 0,
+    quoteTax: 0,
+    reserved: false,
+    placeMessage: null,
     saving: false,
-    recorded: null,
+    result: null,
     error: null,
     findings: [],
   };
@@ -191,6 +262,19 @@ export function requiredFor(move: MoveDraft): string[] {
     (move.known?.booking?.directionCode ?? move.bookingTypeCode) === 'EXPORT',
   );
 }
+
+/**
+ * The clerk picked a pending move and keyed a different box into it.
+ *
+ * That is a NOMINATION: the booking line is updated to the container that
+ * actually turned up. It is not the same as gating a loose box, and doing it
+ * the other way round is what made the gate ask the server about a container it
+ * had never been told of.
+ */
+export const needsNomination = (m: MoveDraft): boolean =>
+  m.bookingContainerId !== ''
+  && normaliseBox(m.containerNo) !== ''
+  && normaliseBox(m.containerNo) !== normaliseBox(m.bookedContainerNo);
 
 /** Is this box on an order — one the clerk picked, or one preflight found? */
 export const onBooking = (m: MoveDraft): boolean =>
@@ -262,62 +346,6 @@ export interface TruckDetails {
  * visit and names the truck, the rest join it by id. Sending both would leave
  * the server to guess which one the clerk meant.
  */
-export function moveToRequest(
-  move: MoveDraft,
-  branchId: string,
-  truck: TruckDetails,
-  truckVisitId: string | null,
-): GateTransactionRequest {
-  const box = normaliseBox(move.containerNo);
-  return {
-    branchId,
-    containerNo: box,
-    direction: directionOfTrip(move.trip),
-    tripType: move.trip,
-    ...(truckVisitId
-      ? { truckVisitId }
-      : {
-        truck: {
-          plate: truck.plate.trim().toUpperCase(),
-          trailerPlate: textOrNull(truck.trailerPlate),
-          driverName: textOrNull(truck.driverName),
-          driverLicence: textOrNull(truck.driverLicenceNo),
-          haulierCode: textOrNull(truck.haulierCode),
-          truckCategoryCode: textOrNull(truck.truckCategoryCode),
-        },
-      }),
-    // Gross is derived from tare + cargo, as Vector derives it. It is NOT a
-    // weighbridge reading, so `weightSource` stays null rather than claiming
-    // the box was weighed when nobody weighed it.
-    grossWeightKg: grossOf(move),
-    tareWeightKg: numberOrNull(move.tareWeightKg),
-    maxGrossWeightKg: numberOrNull(move.maxGrossWeightKg),
-    cargoWeightKg: numberOrNull(move.cargoWeightKg),
-    vgmKg: numberOrNull(move.vgmKg),
-    weightSource: null,
-    conditionCode: textOrNull(move.conditionCode),
-    gradeCode: textOrNull(move.gradeCode),
-    materialCode: textOrNull(move.materialCode),
-    isoCode: textOrNull(move.isoCode),
-    temperatureC: numberOrNull(move.temperatureC),
-    ventSetting: textOrNull(move.ventSetting),
-    humidityPct: numberOrNull(move.humidityPct),
-    gensetNo: textOrNull(move.gensetNo),
-    clipOnNo: textOrNull(move.clipOnNo),
-    customsPermitNo: textOrNull(move.customsPermitNo),
-    paperlessCode: textOrNull(move.paperlessCode),
-    nextLocationCode: textOrNull(move.nextLocationCode),
-    yardId: move.yardId || null,
-    positionText: textOrNull(move.positionText),
-    seals: move.seals
-      .filter(s => s.sealNo.trim())
-      .map(s => ({ sealNo: s.sealNo.trim().toUpperCase(), sealType: s.sealType, isIntact: s.isIntact })),
-    remarks: textOrNull(move.remarks),
-    checkDigitOverrideReason: textOrNull(move.checkDigitOverrideReason),
-    lateOverrideReason: textOrNull(move.lateOverrideReason),
-  };
-}
-
 /**
  * Gross is COMPUTED, never typed: `gross = tare + cargo`
  * (`CalculateGrossWeight`, GateIn.cs line 3284). Letting a clerk type a third
@@ -367,9 +395,85 @@ export function editable(move: MoveDraft, field: 'reefer' | 'seals' | 'cargo' | 
 export const locationLabel = (move: MoveDraft): string =>
   (move.known?.booking?.orderTypeCode ?? move.orderTypeCode).includes('IN') ? 'Prev loc.' : 'Next loc.';
 
+/** A damaged box carries a survey; Vector's condition for it is DMG. */
+export const isDamaged = (move: MoveDraft): boolean =>
+  move.trip === 'DROP_OFF_CONT' && move.conditionCode.trim().toUpperCase() === 'DMG';
+
+/**
+ * One row as the Save wants it.
+ *
+ * The truck is NOT on the row — it is on the Save, once, because a truck
+ * arrives once. The place (`bookingContainerId`) is what ties the row to the
+ * booking, and the server writes the container number onto that place itself:
+ * the UI never PUTs the booking line (§24.3).
+ */
+export function moveToTripRow(move: MoveDraft, branchId: string): TripRow {
+  const box = normaliseBox(move.containerNo);
+  const row: TripRow = {
+    move: {
+      branchId,
+      // An empty pick-up where the yard chooses the box is keyed at Gate Out,
+      // so the number is genuinely blank here (§25.1).
+      containerNo: box,
+      direction: directionOfTrip(move.trip),
+      tripType: move.trip,
+      // Gross is derived from tare + cargo, as Vector derives it. It is not a
+      // weighbridge reading, so `weightSource` stays null.
+      grossWeightKg: grossOf(move),
+      tareWeightKg: numberOrNull(move.tareWeightKg),
+      maxGrossWeightKg: numberOrNull(move.maxGrossWeightKg),
+      cargoWeightKg: numberOrNull(move.cargoWeightKg),
+      vgmKg: numberOrNull(move.vgmKg),
+      weightSource: null,
+      conditionCode: textOrNull(move.conditionCode),
+      gradeCode: textOrNull(move.gradeCode),
+      materialCode: textOrNull(move.materialCode),
+      heightCode: textOrNull(move.heightCode),
+      isoCode: textOrNull(move.isoCode),
+      temperatureC: numberOrNull(move.temperatureC),
+      ventSetting: textOrNull(move.ventSetting),
+      humidityPct: numberOrNull(move.humidityPct),
+      gensetNo: move.gensetMode === 'YES' ? textOrNull(move.gensetNo) : null,
+      clipOnNo: textOrNull(move.clipOnNo),
+      customsPermitNo: textOrNull(move.customsPermitNo),
+      paperlessCode: textOrNull(move.paperlessCode),
+      nextLocationCode: textOrNull(move.nextLocationCode),
+      yardId: move.yardId || null,
+      positionText: textOrNull(move.positionText),
+      seals: move.seals
+        .filter(s => s.sealNo.trim())
+        .map(s => ({ sealNo: s.sealNo.trim().toUpperCase(), sealType: s.sealType, isIntact: s.isIntact })),
+      remarks: textOrNull(move.remarks),
+      checkDigitOverrideReason: textOrNull(move.checkDigitOverrideReason),
+      lateOverrideReason: textOrNull(move.lateOverrideReason),
+    },
+  };
+
+  if (move.bookingContainerId) row.bookingContainerId = move.bookingContainerId;
+  else {
+    row.blind = {
+      containerNo: box,
+      lineCode: move.lineCode,
+      customerCode: move.customerCode || null,
+      equipmentTypeCode: move.equipmentTypeCode || null,
+      agentCode: move.agentCode || null,
+      remarks: move.remarks || null,
+    };
+  }
+
+  // Damages belong to a drop-off only; on a pick-up they are a 400.
+  if (move.trip === 'DROP_OFF_CONT' && move.damages.length > 0) row.damages = move.damages;
+
+  // What the clerk read off the box, so the server can say it differs (§23.5).
+  if (move.equipmentTypeCode) row.equipmentTypeCode = move.equipmentTypeCode;
+  if (move.acceptTypeChange) row.acceptTypeChange = true;
+
+  return row;
+}
+
 /** What the visit calls itself, by the same rule the server uses (§11). */
 export function derivedMode(moves: MoveDraft[]): 'NONE' | 'DROPOFF' | 'PICKUP' | 'PICKUP_DROPOFF' {
-  const done = moves.filter(m => m.recorded);
+  const done = moves.filter(m => m.result && m.result.status !== 'NOT_GATED');
   const anyIn = done.some(m => m.trip === 'DROP_OFF_CONT');
   const anyOut = done.some(m => m.trip === 'PICK_UP_CONT');
   if (anyIn && anyOut) return 'PICKUP_DROPOFF';
