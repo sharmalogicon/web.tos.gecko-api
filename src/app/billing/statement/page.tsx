@@ -330,7 +330,9 @@ function Statement() {
             <MoneyCards rows={all} currency={cur} />
           </div>
 
-          <section className="gecko-table-card">
+          {/* -menus: the card must not clip the toolbar's dropdowns. The
+              table below does the corner-clipping instead. */}
+          <section className="gecko-table-card gecko-table-card-menus">
             <div className="gecko-table-toolbar">
               <Icon name="filter" size={13} />
               <span>
@@ -382,6 +384,7 @@ function Statement() {
               />
             </div>
 
+            <div className="gecko-table-clip">
             <table className="gecko-table gecko-table-compact gecko-table-fixed">
               <thead>
                 <tr>
@@ -501,6 +504,7 @@ function Statement() {
                 })}
               </tbody>
             </table>
+            </div>
           </section>
 
           <section className="gecko-table-card">

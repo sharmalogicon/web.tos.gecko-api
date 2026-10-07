@@ -175,6 +175,12 @@
   --gecko-z-sticky:  25;
   --gecko-z-header:  30;
   --gecko-z-sidebar: 40;
+  /* Menus: a dropdown must clear the sticky header (30) and the sidebar (40),
+     and must NOT cover a modal (50), a toast (60) or a tooltip (70). Before
+     this existed each menu picked its own number — the filter panel sat at the
+     modal layer and two others at 200, above every toast the app can raise. */
+  --gecko-z-menu-scrim: 44;
+  --gecko-z-menu:    45;
   --gecko-z-modal:   50;
   --gecko-z-toast:   60;
   --gecko-z-tooltip: 70;

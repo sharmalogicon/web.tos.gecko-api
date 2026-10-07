@@ -103,7 +103,7 @@ export function StatementRegister({ onOpen }: { onOpen: (orderNo: string) => voi
 
   return (
     <div className="gecko-stack gecko-stack-md">
-      <div className="gecko-table-card">
+      <div className="gecko-table-card gecko-table-card-menus">
         <div className="gecko-table-toolbar">
           <Icon name="fileText" size={13} />
           <span>
@@ -139,6 +139,7 @@ export function StatementRegister({ onOpen }: { onOpen: (orderNo: string) => voi
           </div>
         )}
 
+        <div className="gecko-table-clip">
         <table className="gecko-table gecko-table-compact gecko-table-fixed">
           <thead>
             <tr>
@@ -203,6 +204,8 @@ export function StatementRegister({ onOpen }: { onOpen: (orderNo: string) => voi
             ))}
           </tbody>
         </table>
+
+        </div>
 
         {rows.length > 0 && (
           <TablePagination

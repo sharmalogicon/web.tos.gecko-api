@@ -893,7 +893,7 @@
   border: 1px solid var(--gecko-border);
   border-radius: 10px;
   box-shadow: 0 8px 24px rgba(0, 0, 0, 0.12);
-  z-index: var(--gecko-z-modal);
+  z-index: var(--gecko-z-menu);
   font-family: var(--gecko-font-sans);
   font-size: 12px;
   overflow: hidden;
@@ -9500,7 +9500,7 @@ label.gecko-toggle.gecko-toggle-sm input:checked ~ .gecko-toggle-track .gecko-to
   position: absolute;
   right: 0;
   top: calc(100% + 6px);
-  z-index: 200;
+  z-index: var(--gecko-z-menu);
   width: 272px;
   padding: 6px 0;
   border: 1px solid var(--gecko-border);
@@ -9616,7 +9616,7 @@ label.gecko-toggle.gecko-toggle-sm input:checked ~ .gecko-toggle-track .gecko-to
 .gecko-menu-scrim {
   position: fixed;
   inset: 0;
-  z-index: 190;
+  z-index: var(--gecko-z-menu-scrim);
 }
 
 /* ── §32  The invoice document ──────────────────────────────────────────────
@@ -9720,4 +9720,21 @@ label.gecko-toggle.gecko-toggle-sm input:checked ~ .gecko-toggle-track .gecko-to
   line-height: 1.5;
   color: var(--gecko-text-secondary);
   background: var(--gecko-bg-subtle);
+}
+
+
+/* ── §33  A table card whose toolbar opens menus ────────────────────────────
+   `.gecko-table-card` sets `overflow: hidden` so the table's corners follow the
+   card's radius. That also CLIPS anything absolutely positioned inside it — so
+   a Filter or Send-to panel opened from a toolbar in the card was cut off at
+   the card's edge, and no z-index could rescue it: clipping is not stacking.
+
+   The card stops clipping, and the part that needed clipping — the table and
+   its pagination — does it instead. */
+
+.gecko-table-card-menus { overflow: visible; }
+.gecko-table-card-menus > .gecko-table-clip {
+  overflow: hidden;
+  border-bottom-left-radius: 12px;
+  border-bottom-right-radius: 12px;
 }

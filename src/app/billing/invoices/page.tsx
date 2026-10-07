@@ -158,7 +158,7 @@ function Invoices() {
         </div>
       )}
 
-      <div className="gecko-table-card">
+      <div className="gecko-table-card gecko-table-card-menus">
         <div className="gecko-table-toolbar">
           <Icon name="invoice" size={13} />
           <span>Showing <strong>{rows.length}</strong>{data && data.totalCount > invoices.length ? ` of ${data.totalCount}` : ''}</span>
@@ -166,6 +166,7 @@ function Invoices() {
           <span>Shown total <strong className="gecko-mono">{amount(shownTotal, currency)}</strong></span>
         </div>
 
+        <div className="gecko-table-clip">
         <table className="gecko-table gecko-table-compact gecko-table-fixed">
           <thead>
             <tr>
@@ -220,6 +221,8 @@ function Invoices() {
             })}
           </tbody>
         </table>
+
+        </div>
 
         {rows.length > 0 && (
           <TablePagination
