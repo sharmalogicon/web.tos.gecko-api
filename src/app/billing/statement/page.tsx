@@ -123,6 +123,10 @@ function Statement() {
   const { user } = useSession();
   const perms = user?.permissions ?? [];
   const mayEdit = perms.includes('revenue.charge.waive') || perms.includes('revenue.charge.override');
+  // revenue.invoice.issue is NEW (2026-10-07). Without it the send answers 403,
+  // so the button is not offered — a clerk should never be shown an action the
+  // server will refuse.
+  const mayInvoice = perms.includes('revenue.invoice.issue');
 
   const statement = useApi<BookingStatement>(orderNo ? statementPath(orderNo) : null);
   const s = orderNo ? statement.data : null;
@@ -376,8 +380,10 @@ function Statement() {
                 </div>
               )}
 
-              <SendToMenu counts={termCounts} disabled={selected.length === 0}
-                onPick={action => setDialog({ kind: 'send', action })} />
+              {mayInvoice && (
+                <SendToMenu counts={termCounts} disabled={selected.length === 0}
+                  onPick={action => setDialog({ kind: 'send', action })} />
+              )}
               <FilterPopover
                 fields={fields} values={filters} defaultValues={DEFAULTS} tone="orange"
                 onChange={setFilters} onApply={setFilters} onClear={() => setFilters(DEFAULTS)}

@@ -147,7 +147,29 @@ waiting on new API work.
 
 ---
 
-## 8. A gated credit charge never becomes UNBILLED — HALF FIXED
+## 8. A gated credit charge never becomes UNBILLED — RESOLVED (`d7fca89`)
+
+**Resolved 2026-10-07.** Both halves are fixed by `d7fca89`; the gate-out write
+already existed and only needed the line the quote used to drop. The "write is
+missing" retest below read the charges before the gate event had been processed
+— the write lands a few seconds after the gate-out (outbox), not in the same
+request. The retest's own gate-out did write it:
+
+```
+billing.charge  S-002  GATE  UNBILLED  CREDIT  280.37  GCKU8753708  MTY_OUT
+                EIR-KTC-2610-00029   gate-out 10:44:24 UTC → charge 10:44:30 UTC
+GET /api/revenue/charges/unbilled/orders?branchId=<KTC>   (2026-10-07)
+  → BK-KTC-2610-00038  CUSOMER MTY  lines 1  amount 280.37  tax 19.63  total 300.00  CREDIT
+```
+
+When checking after a gate-out, poll the Unbilled screen for a few seconds
+rather than reading it once. The `QUOTED / CASH` S-002 lines on the booking are
+the booking's quote, not a second charge — the window collects nothing for them
+(`due` is empty). **#8a (gate VAS moved to credit) is separate and still open.**
+
+The history below is kept as it was written.
+
+---
 
 **`d7fca89` fixed the PRICING. The WRITE still does not happen.** Retested on
 KORAKIT 2026-10-06 against the published API, with evidence below.
@@ -250,8 +272,8 @@ lines rather than the movement's own charges.
 
 1. **#1** — `truckVisitId`. **Shipped**; Gate Out now releases against the
    truck's own visit and one arrival stays one visit.
-2. **#8** — pricing fixed in `d7fca89`; the UNBILLED **write is still missing**,
-   retested 2026-10-06. The Unbilled screen stays empty until it lands.
+2. **#8** — **Resolved** (`d7fca89`): priced on credit and written UNBILLED at
+   gate-out, a few seconds after (verified 2026-10-07).
 3. **#8a** — a gate VAS moved to credit, quoted and then lost.
 4. **#3** — orphan blind orders, then **#2** a one-line answer.
 4. **#6** — two questions, and we build the damage panel ourselves.
