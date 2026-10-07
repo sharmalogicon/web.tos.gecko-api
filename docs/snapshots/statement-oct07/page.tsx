@@ -41,7 +41,7 @@ import {
   payerLabel, SETTLED_LABEL, settledGroup, statementPath, whyNotEditable,
   type BookingStatement, type StatementRow,
 } from '@/lib/api/charges';
-import type { InvoiceTerm } from './_components/SendToMenu';
+import type { InvoiceTerm } from '@/lib/api/statement-writes';
 import { ChargeDetailModal } from './_components/ChargeDetailModal';
 import { MoneyCards } from './_components/MoneyCards';
 import { SendToMenu, type SendAction } from './_components/SendToMenu';
@@ -560,7 +560,8 @@ function Statement() {
         <RegenerateModal orderNo={s.orderNo} rows={all} onClose={() => setDialog(null)} onDone={done} />
       )}
       {dialog?.kind === 'send' && (
-        <SendToInvoiceModal selected={selected} currency={cur} onClose={() => setDialog(null)} onDone={done} />
+        <SendToInvoiceModal kind={dialog.action.kind} term={dialog.action.term} selected={selected}
+          currency={cur} onClose={() => setDialog(null)} onDone={done} />
       )}
     </div>
   );

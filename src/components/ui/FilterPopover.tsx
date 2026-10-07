@@ -17,16 +17,28 @@ export interface FilterPopoverProps {
   sortOptions?: SortOption[]
   sortValue?: string
   onSortChange?: (value: string) => void
+  /**
+   * 'orange' when filtering is the screen's main view control rather than a
+   * refinement of it — the booking statement opens filtered (amount > 0), so
+   * the button has to announce that something is already being hidden.
+   */
+  tone?: 'default' | 'orange'
+  /** Filters that are on by default and so should not be counted as "active". */
+  defaultValues?: Record<string, string>
 }
 
 export function FilterPopover({
   fields, values, onChange, onApply, onClear,
-  sortOptions, sortValue, onSortChange,
+  sortOptions, sortValue, onSortChange, tone = 'default', defaultValues,
 }: FilterPopoverProps) {
   const [open, setOpen] = useState(false);
   const wrapperRef = useRef<HTMLDivElement>(null);
 
-  const activeCount = fields.filter(f => (values[f.key] ?? '') !== '').length;
+  // A filter sitting at its default is not a filter the clerk set.
+  const activeCount = fields.filter(f => {
+    const v = values[f.key] ?? '';
+    return v !== '' && v !== (defaultValues?.[f.key] ?? '');
+  }).length;
   const searchField = fields.find(f => f.type === 'search');
   const selectFields = fields.filter(f => f.type === 'select') as Extract<FilterField, { type: 'select' }>[];
 
@@ -49,7 +61,9 @@ export function FilterPopover({
     <div ref={wrapperRef} className="gecko-filter-trigger">
       {/* Trigger */}
       <button
-        className={`gecko-btn gecko-btn-sm ${activeCount > 0 ? 'gecko-btn-primary' : 'gecko-btn-outline'}`}
+        className={`gecko-btn gecko-btn-sm ${tone === 'orange'
+          ? 'gecko-btn-filter-orange'
+          : activeCount > 0 ? 'gecko-btn-primary' : 'gecko-btn-outline'}`}
         onClick={() => setOpen(o => !o)}
       >
         <Icon name="filter" size={13} />

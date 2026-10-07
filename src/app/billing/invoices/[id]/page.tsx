@@ -1,177 +1,209 @@
 "use client";
+
+/**
+ * ONE INVOICE — the June 2026 document, bound to
+ * GET /api/revenue/invoices/{invoiceId} (live 2026-10-07).
+ *
+ * The June page was a printable A4 canvas over four hardcoded lines. The canvas
+ * is kept, because it is what a customer is sent; the four lines are now the
+ * invoice's own, and the depot's own name and tax ID come from the branch
+ * rather than being typed into the markup.
+ *
+ * Gone because the API does not have them and inventing them on a tax document
+ * is the worst place to invent anything: the due date (there is a payment term,
+ * not a date), "Send via email", and the PDF button — the API has no PDF
+ * endpoint yet, so Print is the honest way out and the page is laid out for it.
+ *
+ * Its LINE shape is unsettled: the published schema is the subscription billing
+ * line, not the charge line that was agreed. Reported 2026-10-07; this page
+ * reads either (see lineView in lib/api/invoices.ts) and shows a column only
+ * when the data actually carries it.
+ */
+
 import React from 'react';
 import Link from 'next/link';
+import { useParams } from 'next/navigation';
 import { Icon } from '@/components/ui/Icon';
+import { EmptyState } from '@/components/ui/EmptyState';
 import { BarcodeDisplay } from '@/components/ui/BarcodeDisplay';
-import { useToast } from '@/components/ui/Toast';
+import { useApi } from '@/lib/api/use-api';
+import { useFacility } from '@/lib/api/facility';
+import { amount } from '@/lib/api/charges';
+import { INVOICE_STATUS, invoicePath, lineView, type InvoiceDetail } from '@/lib/api/invoices';
 
-export default function InvoiceDetailPage({ params }: { params: { id: string } }) {
-  const id = params.id || 'INV-26-009412';
-  const { toast } = useToast();
+export default function InvoiceDetailPage() {
+  const params = useParams<{ id: string }>();
+  const invoiceId = (() => {
+    try { return decodeURIComponent(params.id); } catch { return params.id; }
+  })();
+
+  const { branch, company } = useFacility();
+  const { data, error, loading } = useApi<InvoiceDetail>(invoiceId ? invoicePath(invoiceId) : null);
+  const inv = data?.invoice;
+  const lines = (data?.lines ?? []).map(lineView);
+
+  // Only draw a column the data actually fills. An empty "Container" column on
+  // a tax document reads as "no container", which is not the same as "the API
+  // did not send one".
+  const hasUnit = lines.some(l => l.containerNo || l.movementCode || l.orderNo);
+  const hasTax = lines.some(l => l.taxAmount !== null);
 
   return (
-    <div className="gecko-stack gecko-stack-xl" style={{ maxWidth: 900, margin: '0 auto', paddingBottom: 60 }}>
+    <div className="gecko-stack gecko-stack-xl" style={{ maxWidth: 940, margin: '0 auto', paddingBottom: 60 }}>
 
-      {/* Header breadcrumb & actions */}
       <div className="gecko-row gecko-row-between">
         <nav className="gecko-breadcrumb" aria-label="Breadcrumb">
-          <Link href="/billing/invoices" className="gecko-breadcrumb-item">Billing &amp; Invoicing › Invoices</Link>
+          <Link href="/billing/invoices" className="gecko-breadcrumb-item">Invoices</Link>
           <span className="gecko-breadcrumb-sep" />
-          <span className="gecko-breadcrumb-current">{id}</span>
+          <span className="gecko-breadcrumb-current gecko-mono">{inv?.invoiceNo ?? invoiceId}</span>
         </nav>
-        <div className="gecko-row gecko-stack-md">
-          <button className="gecko-btn gecko-btn-ghost" onClick={() => window.print()}><Icon name="printer" size={16} /> Print</button>
-          <button className="gecko-btn gecko-btn-outline" onClick={() => toast({ variant: 'info', title: 'PDF queued', message: `Invoice ${id} will download shortly.` })}><Icon name="download" size={16} /> PDF</button>
-          <button className="gecko-btn gecko-btn-primary" onClick={() => toast({ variant: 'success', title: 'Invoice sent', message: `${id} emailed to the bill-to address.` })}><Icon name="send" size={16} /> Send via Email</button>
+        <div className="gecko-row gecko-stack-md gecko-no-print">
+          <button className="gecko-btn gecko-btn-outline gecko-btn-sm" onClick={() => window.print()} disabled={!inv}>
+            <Icon name="printer" size={15} /> Print
+          </button>
         </div>
       </div>
 
-      {/* Invoice Document Canvas */}
-      <div style={{ background: '#fff', borderRadius: 16, border: '1px solid var(--gecko-border)', boxShadow: '0 8px 30px rgba(0,0,0,0.04)', padding: 48, display: 'flex', flexDirection: 'column', gap: 40 }}>
-        
-        {/* Doc Header */}
-        <div className="gecko-row gecko-row-start gecko-row-between">
+      {error && (
+        <div role="alert" className="gecko-alert gecko-alert-error">
+          <Icon name="alertCircle" size={18} />
           <div>
-            <div className="gecko-mini-icon gecko-mini-icon-solid gecko-mini-icon-lg gecko-mb-4">
-              <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
-                <path d="M3 12h4l3-9 4 18 3-9h4"/>
-              </svg>
-            </div>
-            <h1 style={{ fontSize: 32, fontWeight: 800, color: 'var(--gecko-text-primary)', margin: '0 0 8px 0', letterSpacing: '-0.02em' }}>INVOICE</h1>
-            <div style={{ fontSize: 16, color: 'var(--gecko-text-secondary)', fontFamily: 'var(--gecko-font-mono)' }}>{id}</div>
-            <div className="gecko-pill gecko-pill-neutral gecko-mt-3">
-              DRAFT
-            </div>
-          </div>
-
-          <div style={{ textAlign: 'right', fontSize: 13, color: 'var(--gecko-text-secondary)', lineHeight: 1.6 }}>
-            <div style={{ fontWeight: 700, color: 'var(--gecko-text-primary)', fontSize: 14 }}>GECKO</div>
-            <div>Laem Chabang ICD - Import Yard</div>
-            <div>Thung Sukhla, Si Racha</div>
-            <div>Chon Buri 20230, Thailand</div>
-            <div>Tax ID: 0105542000123</div>
-          </div>
-
-          {/* Barcode */}
-          <div className="gecko-stack gecko-stack-sm" style={{ alignItems: 'center' }}>
-            <BarcodeDisplay value={id} variant="qr" qrSize={90} showValue={false} />
-            <div className="gecko-eyebrow" style={{ fontSize: 9, textAlign: 'center' }}>Scan to verify</div>
-            <BarcodeDisplay value={id} variant="code128" showValue={false} />
+            <strong>{error.status === 404 ? 'No such invoice' : error.title}</strong>
+            <div>{error.status === 404
+              ? 'It may have been raised in another branch, or the link is stale.'
+              : error.explanation ?? error.message}</div>
           </div>
         </div>
+      )}
 
-        {/* Bill To & Details */}
-        <div className="gecko-row gecko-row-between gecko-row-start" style={{ padding: '32px 0', borderTop: '1px solid var(--gecko-border)', borderBottom: '1px solid var(--gecko-border)' }}>
-          <div className="gecko-flex-1">
-            <div className="gecko-eyebrow gecko-mb-2">Bill To</div>
-            <div style={{ fontSize: 16, fontWeight: 700, color: 'var(--gecko-text-primary)', marginBottom: 4 }}>Thai Union Group PCL</div>
-            <div style={{ fontSize: 13, color: 'var(--gecko-text-secondary)', lineHeight: 1.6 }}>
-              72/1 Moo 7, Sethakit 1 Road<br/>
-              Tambon Tarsrai, Amphur Muang<br/>
-              Samut Sakhon 74000, Thailand<br/>
-              Customer Code: <span style={{ fontFamily: 'var(--gecko-font-mono)' }}>C-00142</span><br/>
-              Tax ID: 0107537000084
+      {loading && !data && <div className="gecko-card gecko-card-padded gecko-cell-meta">Loading the invoice…</div>}
+
+      {!loading && !inv && !error && (
+        <div className="gecko-card">
+          <EmptyState icon="invoice" title="Nothing to show" description="This invoice could not be read." />
+        </div>
+      )}
+
+      {inv && (
+        <div className="gecko-invoice-sheet">
+
+          <div className="gecko-row gecko-row-start gecko-row-between">
+            <div>
+              <h1 className="gecko-invoice-title">TAX INVOICE</h1>
+              <div className="gecko-mono gecko-invoice-no">{inv.invoiceNo}</div>
+              <div className="gecko-mt-3">
+                <span className={`gecko-badge ${INVOICE_STATUS[inv.status]?.badge ?? 'gecko-badge-gray'}`}>
+                  {INVOICE_STATUS[inv.status]?.label ?? inv.status}
+                </span>
+                <span className="gecko-badge gecko-badge-gray gecko-ml-2">{inv.paymentTermCode}</span>
+              </div>
+            </div>
+
+            {/* Who is issuing it. The depot's own name and tax ID come from
+                the branch's company — on a tax document, typed-in markup is the
+                one thing that must never be wrong. */}
+            <div className="gecko-invoice-from">
+              <div className="gecko-invoice-from-name">{company?.nameEn ?? branch?.displayName ?? 'GECKO'}</div>
+              {company?.nameLocal && <div>{company.nameLocal}</div>}
+              {branch && <div>{branch.displayName}</div>}
+              {company?.taxId && <div>Tax ID: <span className="gecko-mono">{company.taxId}</span></div>}
+            </div>
+
+            <div className="gecko-stack gecko-stack-sm gecko-invoice-barcode">
+              <BarcodeDisplay value={inv.invoiceNo} variant="qr" qrSize={88} showValue={false} />
+              <div className="gecko-eyebrow gecko-invoice-barcode-note">Scan to verify</div>
             </div>
           </div>
 
-          <div className="gecko-kv-grid" style={{ alignContent: 'start' }}>
-            <div className="gecko-kv-label">Invoice Date</div>
-            <div className="gecko-kv-value">Apr 24, 2026</div>
-            <div className="gecko-kv-label">Terms</div>
-            <div className="gecko-kv-value">Net 30</div>
-            <div className="gecko-kv-label">Due Date</div>
-            <div className="gecko-kv-value">May 24, 2026</div>
-            <div className="gecko-kv-label">Reference</div>
-            <div className="gecko-kv-value">BKG-88124</div>
-          </div>
-        </div>
+          <div className="gecko-invoice-parties">
+            <div className="gecko-flex-1">
+              <div className="gecko-eyebrow gecko-mb-2">Bill to</div>
+              <div className="gecko-invoice-payer">{inv.payerName ?? inv.payerCode ?? '—'}</div>
+              <div className="gecko-cell-meta">
+                {inv.payerCode && <>Code <span className="gecko-mono">{inv.payerCode}</span> · </>}
+                {inv.billTo.toLowerCase()}
+              </div>
+            </div>
 
-        {/* Line Items */}
-        <div>
-          <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 13 }}>
+            <div className="gecko-kv-grid gecko-invoice-meta">
+              <div className="gecko-kv-label">Issued</div>
+              <div className="gecko-kv-value">{inv.issuedAt.slice(0, 10)}</div>
+              <div className="gecko-kv-label">Terms</div>
+              <div className="gecko-kv-value">{inv.paymentTermCode}</div>
+              <div className="gecko-kv-label">Currency</div>
+              <div className="gecko-kv-value">{inv.currencyCode}</div>
+              <div className="gecko-kv-label">Lines</div>
+              <div className="gecko-kv-value">{inv.lines}</div>
+            </div>
+          </div>
+
+          <table className="gecko-table gecko-invoice-lines">
             <thead>
-              <tr style={{ borderBottom: '2px solid var(--gecko-border)' }}>
-                <th className="gecko-eyebrow" style={{ padding: '12px 0', textAlign: 'left' }}>Description</th>
-                <th className="gecko-eyebrow" style={{ padding: '12px 0', textAlign: 'left' }}>Unit Ref</th>
-                <th className="gecko-eyebrow" style={{ padding: '12px 0', textAlign: 'right' }}>Qty</th>
-                <th className="gecko-eyebrow" style={{ padding: '12px 0', textAlign: 'right' }}>Rate</th>
-                <th className="gecko-eyebrow" style={{ padding: '12px 0', textAlign: 'right' }}>Amount</th>
+              <tr>
+                <th style={{ width: 36 }}>#</th>
+                <th>Description</th>
+                {hasUnit && <th style={{ width: 150 }}>Unit</th>}
+                <th className="gecko-num" style={{ width: 70 }}>Qty</th>
+                <th className="gecko-num" style={{ width: 110 }}>Rate</th>
+                {hasTax && <th className="gecko-num" style={{ width: 100 }}>VAT</th>}
+                <th className="gecko-num" style={{ width: 120 }}>Amount</th>
               </tr>
             </thead>
             <tbody>
-              {/* Item 1 */}
-              <tr style={{ borderBottom: '1px solid var(--gecko-border)' }}>
-                <td style={{ padding: '16px 0' }}>
-                  <div className="gecko-cell-primary">Gate entry processing (GATE-IN)</div>
-                  <div className="gecko-cell-meta">Apr 24 14:30 · SO-2026-0881</div>
-                </td>
-                <td className="gecko-mono" style={{ padding: '16px 0', color: 'var(--gecko-text-secondary)' }}>MSKU 744218-3</td>
-                <td className="gecko-num-tabular" style={{ padding: '16px 0' }}>1</td>
-                <td className="gecko-num-tabular" style={{ padding: '16px 0' }}>฿120.00</td>
-                <td className="gecko-money gecko-money-sm" style={{ padding: '16px 0', fontWeight: 600 }}>฿120.00</td>
-              </tr>
-              {/* Item 2 */}
-              <tr style={{ borderBottom: '1px solid var(--gecko-border)' }}>
-                <td style={{ padding: '16px 0' }}>
-                  <div className="gecko-cell-primary">Container lift-on (LIFT-ON)</div>
-                  <div className="gecko-cell-meta">Apr 24 14:30 · SO-2026-0882</div>
-                </td>
-                <td className="gecko-mono" style={{ padding: '16px 0', color: 'var(--gecko-text-secondary)' }}>MSKU 744218-3</td>
-                <td className="gecko-num-tabular" style={{ padding: '16px 0' }}>1</td>
-                <td className="gecko-num-tabular" style={{ padding: '16px 0' }}>฿850.00</td>
-                <td className="gecko-money gecko-money-sm" style={{ padding: '16px 0', fontWeight: 600 }}>฿850.00</td>
-              </tr>
-              {/* Item 3 */}
-              <tr style={{ borderBottom: '1px solid var(--gecko-border)' }}>
-                <td style={{ padding: '16px 0' }}>
-                  <div className="gecko-cell-primary">Storage, laden (STORAGE-L)</div>
-                  <div className="gecko-cell-meta">4 days (Apr 20 - Apr 24) · SO-2026-0840</div>
-                </td>
-                <td className="gecko-mono" style={{ padding: '16px 0', color: 'var(--gecko-text-secondary)' }}>MSKU 744218-3</td>
-                <td className="gecko-num-tabular" style={{ padding: '16px 0' }}>4</td>
-                <td className="gecko-num-tabular" style={{ padding: '16px 0' }}>฿80.00</td>
-                <td className="gecko-money gecko-money-sm" style={{ padding: '16px 0', fontWeight: 600 }}>฿320.00</td>
-              </tr>
-              {/* Item 4 */}
-              <tr style={{ borderBottom: '1px solid var(--gecko-border)' }}>
-                <td style={{ padding: '16px 0' }}>
-                  <div className="gecko-cell-primary">Container stuffing (STUFF)</div>
-                  <div className="gecko-cell-meta">CFS 62 cbm · SO-2026-0831</div>
-                </td>
-                <td className="gecko-mono" style={{ padding: '16px 0', color: 'var(--gecko-text-secondary)' }}>MSKU 744218-3</td>
-                <td className="gecko-num-tabular" style={{ padding: '16px 0' }}>62</td>
-                <td className="gecko-num-tabular" style={{ padding: '16px 0' }}>฿180.00</td>
-                <td className="gecko-money gecko-money-sm" style={{ padding: '16px 0', fontWeight: 600 }}>฿11,160.00</td>
-              </tr>
+              {lines.length === 0 && (
+                <tr><td colSpan={7} className="gecko-cell-meta" style={{ textAlign: 'center', padding: 20 }}>
+                  This invoice carries no lines.
+                </td></tr>
+              )}
+              {lines.map(l => (
+                <tr key={l.key}>
+                  <td className="gecko-cell-meta">{l.no}</td>
+                  <td>
+                    <div className="gecko-cell-primary">
+                      {l.code && <span className="gecko-mono-strong">{l.code} </span>}{l.text}
+                    </div>
+                    {l.orderNo && <div className="gecko-cell-meta gecko-mono">{l.orderNo}</div>}
+                  </td>
+                  {hasUnit && (
+                    <td className="gecko-mono gecko-cell-meta">
+                      {l.containerNo ?? '—'}
+                      {l.movementCode && <div>{l.movementCode}</div>}
+                    </td>
+                  )}
+                  <td className="gecko-num gecko-mono">{l.quantity}</td>
+                  <td className="gecko-num gecko-mono">{amount(l.unitRate, inv.currencyCode)}</td>
+                  {hasTax && <td className="gecko-num gecko-mono">{amount(l.taxAmount ?? 0, inv.currencyCode)}</td>}
+                  <td className="gecko-num gecko-mono" style={{ fontWeight: 600 }}>{amount(l.amount, inv.currencyCode)}</td>
+                </tr>
+              ))}
             </tbody>
           </table>
-        </div>
 
-        {/* Totals Area */}
-        <div className="gecko-row gecko-row-right" style={{ paddingTop: 8 }}>
-          <div style={{ width: 320 }}>
-            <div className="gecko-row gecko-row-between" style={{ padding: '8px 0', fontSize: 14, color: 'var(--gecko-text-secondary)' }}>
-              <span>Subtotal</span>
-              <span className="gecko-money gecko-money-md">฿12,450.00</span>
-            </div>
-            <div className="gecko-row gecko-row-between" style={{ padding: '8px 0', fontSize: 14, color: 'var(--gecko-text-secondary)', borderBottom: '1px solid var(--gecko-border)' }}>
-              <span>VAT (7%)</span>
-              <span className="gecko-money gecko-money-md">฿871.50</span>
-            </div>
-            <div className="gecko-row gecko-row-between" style={{ padding: '16px 0', fontSize: 20, fontWeight: 800, color: 'var(--gecko-primary-700)' }}>
-              <span>Total due</span>
-              <span style={{ fontFamily: 'var(--gecko-font-mono)' }}>฿13,321.50</span>
+          <div className="gecko-row gecko-row-right">
+            <div className="gecko-invoice-totals">
+              <Total label="Subtotal" value={amount(inv.amount, inv.currencyCode)} />
+              <Total label="VAT" value={amount(inv.tax, inv.currencyCode)} rule />
+              <Total label="Total due" value={amount(inv.total, inv.currencyCode)} big />
             </div>
           </div>
-        </div>
 
-        {/* Footer Notes */}
-        <div style={{ borderTop: '1px solid var(--gecko-border)', paddingTop: 24, fontSize: 12, color: 'var(--gecko-text-disabled)', lineHeight: 1.6 }}>
-          Payment is due within 30 days. Please make checks payable to GECKO.<br/>
-          For wire transfers: Kasikornbank PCL, Account: 012-3-45678-9, SWIFT: KASITHBK.
+          {inv.remarks && (
+            <div className="gecko-invoice-remarks">
+              <div className="gecko-eyebrow gecko-mb-1">Remarks</div>
+              {inv.remarks}
+            </div>
+          )}
         </div>
-      </div>
+      )}
+    </div>
+  );
+}
 
+function Total({ label, value, rule, big }: { label: string; value: string; rule?: boolean; big?: boolean }) {
+  return (
+    <div className={`gecko-invoice-total-row${rule ? ' gecko-invoice-total-rule' : ''}${big ? ' gecko-invoice-total-big' : ''}`}>
+      <span>{label}</span>
+      <span className="gecko-mono">{value}</span>
     </div>
   );
 }

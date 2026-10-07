@@ -10,7 +10,8 @@ import { useCommercialVocabulary } from '@/lib/api/charge-codes';
 import { createOrderType, replaceCharges, replaceSteps, useOrderTypeVocabulary } from '@/lib/api/order-types';
 import { OrderTypeForm, EMPTY_ORDER_TYPE, orderTypeErrors, requestFromOrderType, type OrderTypeFormValue } from '../_components/OrderTypeForm';
 import { StepsEditor, blankStep, requestFromSteps, stepErrors, type StepRow } from '../_components/StepsEditor';
-import { ChargesEditor, chargeRowErrors, requestFromCharges, type ChargeRow } from '../_components/ChargesEditor';
+import { ChargesTables } from '../_components/ChargesTables';
+import { chargeRowErrors, requestFromCharges, type ChargeRow } from '../_components/charge-rows';
 
 /**
  * New order type: its fields, its gate steps, and the charges it raises — saved
@@ -152,8 +153,9 @@ export default function NewOrderTypePage() {
           <div className="gecko-form-section-title">Charges raised</div>
           <div className="gecko-form-section-desc">Optional. Who pays and when — the price comes from the tariff.</div>
         </div>
-        <ChargesEditor rows={charges} onChange={setCharges} stepCodes={stepCodes} vocabulary={vocabulary} commercial={commercial}
-          localErrors={chargeErrors} apiError={apiError} />
+        <ChargesTables rows={charges} onChange={rows => setCharges(rows)} stepCodes={stepCodes}
+          vocabulary={vocabulary} commercial={commercial} selectedStep={null} canManage={!saving}
+          busy={saving} errors={chargeErrors} />
       </div>
 
       <div className="gecko-row gecko-row-right">

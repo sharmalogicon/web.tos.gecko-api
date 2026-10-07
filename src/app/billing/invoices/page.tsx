@@ -1,122 +1,234 @@
 "use client";
-import React, { useState } from 'react';
+
+/**
+ * INVOICES — the June 2026 register, bound to GET /api/revenue/invoices
+ * (live 2026-10-07). It was seven hardcoded rows and a count of "14,208"
+ * until today, which is why the route was blocked.
+ *
+ * CREDIT ONLY, and that is the whole shape of the screen. A cash charge is
+ * collected at the cash window and its RECEIPT is the tax invoice — it never
+ * becomes one of these. So there is no "new invoice" button here: an invoice is
+ * raised from the charges themselves, on the Booking Statement, by ticking
+ * credit lines and pressing Send to.
+ *
+ * What June drew and the API cannot answer, so it is gone rather than faked:
+ * a due date (the API carries issuedAt and the payment term, not a due date),
+ * Draft / Overdue statuses (an invoice is issued at once and final), and the
+ * batch print. See docs/STATEMENT_CHARGE_EDIT_FOR_API.md §7.
+ */
+
+import React, { Suspense, useMemo, useState } from 'react';
 import Link from 'next/link';
 import { Icon } from '@/components/ui/Icon';
-import { FilterPopover, FilterField, SortOption } from '@/components/ui/FilterPopover';
-import { ExportButton } from '@/components/ui/ExportButton';
+import { EmptyState } from '@/components/ui/EmptyState';
+import { FilterPopover, type FilterField } from '@/components/ui/FilterPopover';
+import { usePagination, TablePagination } from '@/components/ui/TablePagination';
+import { useApi } from '@/lib/api/use-api';
+import { useFacility } from '@/lib/api/facility';
+import { useSession } from '@/lib/auth/session';
+import { saveBlob } from '@/lib/api/client';
+import { toCsv } from '@/lib/api/reports';
+import { amount } from '@/lib/api/charges';
+import {
+  INVOICE_PERMISSIONS, INVOICE_STATUS, invoicesPath,
+  type InvoiceSummary,
+} from '@/lib/api/invoices';
 
-const INVOICES = [
-  { id: 'INV-26-009412', date: 'Apr 24, 2026', dueDate: 'May 24, 2026', customer: 'C-00142', custName: 'Thai Union Group PCL', amount: '฿12,450.00', vat: '฿871.50', total: '฿13,321.50', status: 'Draft' },
-  { id: 'INV-26-009411', date: 'Apr 23, 2026', dueDate: 'May 23, 2026', customer: 'C-00308', custName: 'PTT Global Chemical', amount: '฿42,100.00', vat: '฿2,947.00', total: '฿45,047.00', status: 'Final' },
-  { id: 'INV-26-009408', date: 'Apr 20, 2026', dueDate: 'May 20, 2026', customer: 'C-00211', custName: 'Siam Cement Group', amount: '฿8,400.00', vat: '฿588.00', total: '฿8,988.00', status: 'Final' },
-  { id: 'INV-26-009395', date: 'Mar 15, 2026', dueDate: 'Apr 14, 2026', customer: 'C-00412', custName: 'CP Foods Co., Ltd.', amount: '฿1,200.00', vat: '฿84.00', total: '฿1,284.00', status: 'Overdue' },
-  { id: 'INV-26-009388', date: 'Mar 10, 2026', dueDate: 'Apr 09, 2026', customer: 'C-00142', custName: 'Thai Union Group PCL', amount: '฿18,500.00', vat: '฿1,295.00', total: '฿19,795.00', status: 'Paid' },
-  { id: 'INV-26-009382', date: 'Mar 05, 2026', dueDate: 'Apr 04, 2026', customer: 'C-00501', custName: 'Betagro Public Co.', amount: '฿4,600.00', vat: '฿322.00', total: '฿4,922.00', status: 'Paid' },
-  { id: 'INV-26-009374', date: 'Feb 28, 2026', dueDate: 'Mar 30, 2026', customer: 'C-00622', custName: 'Bangchak Corporation PCL', amount: '฿2,100.00', vat: '฿147.00', total: '฿2,247.00', status: 'Paid' },
-];
-
-const INV_FILTER_FIELDS: FilterField[] = [
-  { type: 'search', key: 'query', placeholder: 'Search invoice no, customer...' },
-  { type: 'select', key: 'status', label: 'Status', options: [{ label: 'All', value: '' }, { label: 'Draft', value: 'draft' }, { label: 'Final', value: 'final' }, { label: 'Overdue', value: 'overdue' }, { label: 'Paid', value: 'paid' }] },
-  { type: 'select', key: 'date', label: 'Date range', options: [{ label: 'All time', value: '' }, { label: 'This month', value: 'month' }, { label: 'Last 30 days', value: '30d' }, { label: 'This year', value: 'year' }] },
-  { type: 'select', key: 'terms', label: 'Payment terms', options: [{ label: 'All', value: '' }, { label: 'Cash', value: 'cash' }, { label: 'Net 30', value: 'net30' }, { label: 'Net 60', value: 'net60' }] },
-];
-
-const INV_SORT_OPTIONS: SortOption[] = [
-  { label: 'Date (newest)', value: 'date_desc' },
-  { label: 'Due date (soonest)', value: 'due_asc' },
-  { label: 'Total (high → low)', value: 'total_desc' },
-  { label: 'Customer A → Z', value: 'customer' },
-];
-
-function StatusBadge({ status }: { status: string }) {
-  if (status === 'Draft') return <span className="gecko-badge gecko-badge-gray">Draft</span>;
-  if (status === 'Final') return <span className="gecko-badge gecko-badge-info">Final</span>;
-  if (status === 'Overdue') return <span className="gecko-badge gecko-badge-error">Overdue</span>;
-  if (status === 'Paid') return <span className="gecko-badge gecko-badge-success">Paid</span>;
-  return null;
-}
+interface Page { items: InvoiceSummary[]; page: number; pageSize: number; totalCount: number; totalPages: number }
 
 export default function InvoicesPage() {
-  const [filters, setFilters] = useState<Record<string, string>>({ query: '', status: '', date: 'month', terms: '' });
-  const [sortBy, setSortBy] = useState('date_desc');
+  return (
+    <Suspense fallback={<div className="gecko-cell-meta" style={{ padding: 24 }}>Loading…</div>}>
+      <Invoices />
+    </Suspense>
+  );
+}
+
+function Invoices() {
+  const { branch } = useFacility();
+  const { user } = useSession();
+  const mayView = (user?.permissions ?? []).includes(INVOICE_PERMISSIONS.view);
+
+  const [filters, setFilters] = useState<Record<string, string>>({ query: '', payerCode: '', orderNo: '', status: '' });
+  const [sortBy, setSortBy] = useState('issued_desc');
+
+  const path = useMemo(
+    () => invoicesPath({ search: filters.query, payerCode: filters.payerCode, orderNo: filters.orderNo },
+      branch?.branchId ?? '', 1, 200),
+    [filters.query, filters.payerCode, filters.orderNo, branch?.branchId]);
+
+  const { data, error, loading, reload } = useApi<Page>(mayView ? path : null);
+  const invoices = useMemo(() => data?.items ?? [], [data]);
+
+  const rows = useMemo(() => {
+    const out = invoices.filter(i => !filters.status || i.status === filters.status);
+    const by: Record<string, (a: InvoiceSummary, b: InvoiceSummary) => number> = {
+      issued_desc: (a, b) => b.issuedAt.localeCompare(a.issuedAt),
+      issued_asc: (a, b) => a.issuedAt.localeCompare(b.issuedAt),
+      total_desc: (a, b) => b.total - a.total,
+      payer: (a, b) => (a.payerName ?? '').localeCompare(b.payerName ?? ''),
+    };
+    return [...out].sort(by[sortBy] ?? by.issued_desc);
+  }, [invoices, filters.status, sortBy]);
+
+  const page = usePagination(rows, 25);
+  const shownTotal = rows.reduce((n, i) => n + i.total, 0);
+  const currency = invoices[0]?.currencyCode ?? 'THB';
+
+  const fields: FilterField[] = [
+    { type: 'search', key: 'query', placeholder: 'Invoice no or payer…' },
+    {
+      type: 'select', key: 'status', label: 'Status',
+      options: [{ label: 'All', value: '' },
+        ...[...new Set(invoices.map(i => i.status))].sort()
+          .map(s => ({ label: INVOICE_STATUS[s]?.label ?? s, value: s }))],
+    },
+    {
+      type: 'select', key: 'payerCode', label: 'Payer',
+      options: [{ label: 'All payers', value: '' },
+        ...[...new Map(invoices.filter(i => i.payerCode).map(i => [i.payerCode!, i.payerName ?? i.payerCode!])).entries()]
+          .sort((a, b) => a[1].localeCompare(b[1]))
+          .map(([code, name]) => ({ label: name, value: code }))],
+    },
+  ];
+
+  const exportCsv = () => saveBlob(toCsv(
+    ['Invoice', 'Issued', 'Payer code', 'Payer', 'Bill to', 'Term', 'Lines', 'Amount', 'VAT', 'Total', 'Status', 'Remarks'],
+    rows.map(i => [i.invoiceNo, i.issuedAt, i.payerCode ?? '', i.payerName ?? '', i.billTo, i.paymentTermCode,
+      i.lines, i.amount, i.tax, i.total, i.status, i.remarks ?? '']),
+  ), 'invoices.csv');
+
+  if (!mayView) {
+    return (
+      <div className="gecko-card">
+        <EmptyState icon="lock" title="Not your screen"
+          description="Reading invoices needs revenue.charge.view. Ask a supervisor." />
+      </div>
+    );
+  }
 
   return (
-    <div style={{ maxWidth: 'var(--gecko-container-max)', margin: '0 auto', display: 'flex', flexDirection: 'column', gap: 24, paddingBottom: 40 }}>
+    <div className="gecko-stack gecko-stack-xl" style={{ maxWidth: 'var(--gecko-container-max)', margin: '0 auto', paddingBottom: 40 }}>
 
-      {/* Header */}
       <div className="gecko-page-actions">
         <div className="gecko-page-actions-left">
           <div className="gecko-row gecko-row-baseline gecko-stack-md">
             <h1 className="gecko-page-title">Invoices</h1>
-            <span className="gecko-count-badge">7 shown of 14,208</span>
+            <span className="gecko-badge gecko-badge-success">LIVE</span>
+            <span className="gecko-count-badge">
+              {loading && !data ? '…' : `${data?.totalCount ?? 0} issued`}
+            </span>
           </div>
-          <div className="gecko-page-subtitle">Consolidated bills for customers. Includes both cash and credit terms.</div>
+          <div className="gecko-page-subtitle gecko-mt-1">
+            Credit invoices raised from charges. Cash is collected at the window — its receipt is the tax invoice.
+          </div>
         </div>
         <div className="gecko-toolbar">
-          <ExportButton resource="Invoices" iconSize={16} />
-          <button className="gecko-btn gecko-btn-outline gecko-btn-sm" onClick={() => window.print()}><Icon name="printer" size={16} /> Print Batch</button>
+          <button className="gecko-btn gecko-btn-outline gecko-btn-sm" onClick={exportCsv} disabled={rows.length === 0}>
+            <Icon name="download" size={14} /> Export
+          </button>
+          <button className="gecko-btn gecko-btn-outline gecko-btn-sm" onClick={reload}>
+            <Icon name="refreshCcw" size={14} /> Refresh
+          </button>
           <FilterPopover
-            fields={INV_FILTER_FIELDS}
-            values={filters}
-            onChange={setFilters}
-            onApply={(v) => setFilters(v)}
-            onClear={() => setFilters({ query: '', status: '', date: '', terms: '' })}
-            sortOptions={INV_SORT_OPTIONS}
-            sortValue={sortBy}
-            onSortChange={setSortBy}
+            fields={fields} values={filters} tone="orange"
+            onChange={setFilters} onApply={setFilters}
+            onClear={() => setFilters({ query: '', payerCode: '', orderNo: '', status: '' })}
+            sortOptions={[
+              { label: 'Newest first', value: 'issued_desc' },
+              { label: 'Oldest first', value: 'issued_asc' },
+              { label: 'Largest first', value: 'total_desc' },
+              { label: 'Payer A → Z', value: 'payer' },
+            ]}
+            sortValue={sortBy} onSortChange={setSortBy}
           />
-          <Link href="/billing/unbilled" className="gecko-btn gecko-btn-primary gecko-btn-sm" style={{ textDecoration: 'none' }}>
-            <Icon name="plus" size={16} /> New from Unbilled Services
+          <Link href="/billing/statement" className="gecko-btn gecko-btn-primary gecko-btn-sm">
+            <Icon name="plus" size={15} /> Raise one from a statement
           </Link>
         </div>
       </div>
 
-      {/* Table */}
+      {error && (
+        <div role="alert" className="gecko-alert gecko-alert-error">
+          <Icon name="alertCircle" size={18} />
+          <div>
+            <strong>{error.title}</strong>
+            {error.explanation && <div>{error.explanation}</div>}
+          </div>
+        </div>
+      )}
+
       <div className="gecko-table-card">
-        <table className="gecko-table gecko-table-comfortable">
+        <div className="gecko-table-toolbar">
+          <Icon name="invoice" size={13} />
+          <span>Showing <strong>{rows.length}</strong>{data && data.totalCount > invoices.length ? ` of ${data.totalCount}` : ''}</span>
+          <span className="gecko-table-toolbar-spacer" />
+          <span>Shown total <strong className="gecko-mono">{amount(shownTotal, currency)}</strong></span>
+        </div>
+
+        <table className="gecko-table gecko-table-compact gecko-table-fixed">
           <thead>
             <tr>
-              <th>Invoice No</th>
-              <th>Date</th>
-              <th>Due Date</th>
-              <th>Customer (Bill-to)</th>
-              <th style={{ textAlign: 'right' }}>Amount</th>
-              <th style={{ textAlign: 'right' }}>VAT (7%)</th>
-              <th style={{ textAlign: 'right' }}>Total</th>
-              <th>Status</th>
-              <th style={{ textAlign: 'right' }}></th>
+              <th style={{ width: '18%' }}>Invoice no</th>
+              <th style={{ width: '13%' }}>Issued</th>
+              <th>Payer</th>
+              <th style={{ width: '9%' }}>Term</th>
+              <th className="gecko-num" style={{ width: '7%' }}>Lines</th>
+              <th className="gecko-num" style={{ width: '12%' }}>Amount</th>
+              <th className="gecko-num" style={{ width: '10%' }}>VAT</th>
+              <th className="gecko-num" style={{ width: '12%' }}>Total</th>
+              <th style={{ width: '9%' }}>Status</th>
             </tr>
           </thead>
           <tbody>
-            {INVOICES.map((inv) => (
-              <tr key={inv.id}>
-                <td>
-                  <Link href={`/billing/invoices/${inv.id}`} className="gecko-id-link">{inv.id}</Link>
-                </td>
-                <td style={{ color: 'var(--gecko-text-secondary)' }}>{inv.date}</td>
-                <td style={{ color: inv.status === 'Overdue' ? 'var(--gecko-error-600)' : 'var(--gecko-text-secondary)', fontWeight: inv.status === 'Overdue' ? 600 : 400 }}>{inv.dueDate}</td>
-                <td>
-                  <div className="gecko-cell-two-line">
-                    <div className="gecko-cell-primary gecko-truncate">{inv.custName}</div>
-                    <div className="gecko-cell-sub">{inv.customer}</div>
-                  </div>
-                </td>
-                <td className="gecko-money gecko-money-md">{inv.amount}</td>
-                <td className="gecko-money gecko-money-md" style={{ color: 'var(--gecko-text-secondary)' }}>{inv.vat}</td>
-                <td className="gecko-money gecko-money-lg">{inv.total}</td>
-                <td>
-                  <StatusBadge status={inv.status} />
-                </td>
-                <td style={{ textAlign: 'right' }}>
-                  <button style={{ background: 'transparent', border: 'none', color: 'var(--gecko-text-disabled)', cursor: 'pointer' }}><Icon name="moreHorizontal" size={16} /></button>
+            {loading && !data && (
+              <tr><td colSpan={9} className="gecko-cell-meta" style={{ textAlign: 'center', padding: 28 }}>Loading invoices…</td></tr>
+            )}
+            {!loading && rows.length === 0 && (
+              <tr>
+                <td colSpan={9} style={{ padding: 0 }}>
+                  <EmptyState icon="invoice" title="No invoice has been raised yet"
+                    description="An invoice is made from a booking's credit charges: open a statement, tick the credit lines and press Send to." />
                 </td>
               </tr>
-            ))}
+            )}
+            {page.pageItems.map(i => {
+              const st = INVOICE_STATUS[i.status];
+              return (
+                <tr key={i.invoiceId}>
+                  <td>
+                    <Link href={`/billing/invoices/${encodeURIComponent(i.invoiceId)}`} className="gecko-mono-strong gecko-link gecko-cell-tight">
+                      {i.invoiceNo}
+                    </Link>
+                    {i.remarks && <div className="gecko-cell-meta gecko-cell-tight" title={i.remarks}>{i.remarks}</div>}
+                  </td>
+                  <td className="gecko-cell-tight">{i.issuedAt.slice(0, 10)}</td>
+                  <td>
+                    <span className="gecko-cell-tight">{i.payerName ?? '—'}</span>
+                    <span className="gecko-cell-meta gecko-mono">{i.payerCode ?? ''} · {i.billTo.toLowerCase()}</span>
+                  </td>
+                  <td><span className="gecko-badge gecko-badge-xs gecko-badge-gray">{i.paymentTermCode}</span></td>
+                  <td className="gecko-num gecko-mono">{i.lines}</td>
+                  <td className="gecko-num gecko-mono">{amount(i.amount, i.currencyCode)}</td>
+                  <td className="gecko-num gecko-mono">{amount(i.tax, i.currencyCode)}</td>
+                  <td className="gecko-num gecko-mono" style={{ fontWeight: 700 }}>{amount(i.total, i.currencyCode)}</td>
+                  <td>
+                    <span className={`gecko-badge gecko-badge-xs ${st?.badge ?? 'gecko-badge-gray'}`}>{st?.label ?? i.status}</span>
+                  </td>
+                </tr>
+              );
+            })}
           </tbody>
         </table>
-      </div>
 
+        {rows.length > 0 && (
+          <TablePagination
+            page={page.page} pageSize={page.pageSize} totalItems={page.totalItems} totalPages={page.totalPages}
+            startRow={page.startRow} endRow={page.endRow}
+            onPageChange={page.setPage} onPageSizeChange={page.setPageSize} noun="invoices"
+          />
+        )}
+      </div>
     </div>
   );
 }

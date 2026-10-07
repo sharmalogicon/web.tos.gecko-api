@@ -11,12 +11,13 @@ import { ApiError } from '@/lib/api/problem';
 import { useCommercialVocabulary } from '@/lib/api/charge-codes';
 import {
   deleteOrderType, replaceCharges, replaceSteps, updateOrderType, useOrderTypeVocabulary,
-  type OrderType, type OrderTypeCharge, type OrderTypeDetail, type OrderTypeStep,
+  type OrderType, type OrderTypeDetail, type OrderTypeStep,
 } from '@/lib/api/order-types';
 import { isPathAvailable } from '@/lib/edition';
 import { OrderTypeForm, formFromOrderType, orderTypeErrors, requestFromOrderType, type OrderTypeFormValue } from './_components/OrderTypeForm';
 import { StepsEditor, requestFromSteps, rowsFromSteps, stepErrors, type StepRow } from './_components/StepsEditor';
-import { ChargesEditor, chargeRowErrors, requestFromCharges, rowsFromCharges, type ChargeRow } from './_components/ChargesEditor';
+import { ChargesTables } from './_components/ChargesTables';
+import { chargeRowErrors, requestFromCharges, rowsFromCharges, type ChargeRow } from './_components/charge-rows';
 
 /**
  * LIVE against gecko_master (commercial.order_type + order_type_movement +
@@ -53,7 +54,6 @@ const MAX_PAGE = 200;
 const isStale = (e: ApiError | null) => e?.status === 409 && /changed since you loaded/i.test(e.title);
 
 type Step = OrderTypeStep;
-type Charge = OrderTypeCharge;
 
 // ── Design tokens ─────────────────────────────────────────────────────────────
 const SEQ_COLORS = [
@@ -213,74 +213,6 @@ function RulesMatrix({ steps, selectedSeq, onSelect }: {
   );
 }
 
-// ── Charges table ─────────────────────────────────────────────────────────────
-function ChargesTable({ charges, selectedStep }: { charges: Charge[]; selectedStep: string | null }) {
-  const shown = selectedStep ? charges.filter(c => c.movementCode === null || c.movementCode === selectedStep) : charges;
-
-  if (charges.length === 0) {
-    return (
-      <EmptyState
-        icon="invoice"
-        title="No charges configured"
-        description="Nothing is raised automatically for this order type — every charge will come from the tariff at invoicing, or be added by hand."
-      />
-    );
-  }
-
-  return (
-    <table className="gecko-table gecko-table-compact">
-      <thead>
-        <tr>
-          <th style={{ width: 130 }}>Charge</th>
-          <th>Description</th>
-          <th style={{ width: 110 }}>Step</th>
-          <th style={{ width: 110 }}>Bill to</th>
-          <th style={{ width: 90 }}>Term</th>
-          <th style={{ width: 90 }}>Raised</th>
-          <th style={{ width: 150 }}>Flags</th>
-          <th style={{ width: 60, textAlign: 'right' }}>Qty</th>
-        </tr>
-      </thead>
-      <tbody>
-        {shown.map(c => (
-          <tr key={c.orderTypeChargeId}>
-            <td>
-              {isPathAvailable(`/masters/charge-codes/${c.chargeCode}`)
-                ? <Link href={`/masters/charge-codes/${encodeURIComponent(c.chargeCode)}`} className="gecko-id-link">{c.chargeCode}</Link>
-                : <span className="gecko-id-link" style={{ cursor: 'default' }}>{c.chargeCode}</span>}
-            </td>
-            <td style={{ fontWeight: 500, color: 'var(--gecko-text-primary)' }}>{c.chargeDescription}</td>
-            <td>
-              {c.movementCode
-                ? <span style={{ fontFamily: 'var(--gecko-font-mono)', fontSize: 11, fontWeight: 700 }}>{c.movementCode}</span>
-                : <span className="gecko-cell-meta">every step</span>}
-            </td>
-            <td><span className="gecko-badge gecko-badge-xs gecko-badge-gray">{c.paymentTo}</span></td>
-            <td className="gecko-page-subtitle">{c.paymentTermCode ?? '—'}</td>
-            <td>
-              {c.isOptional
-                ? <span className="gecko-badge gecko-badge-xs gecko-badge-info" title="Offered to the clerk, not raised unless picked">optional</span>
-                : <span className="gecko-badge gecko-badge-xs gecko-badge-success" title="Raised automatically">default</span>}
-            </td>
-            <td>
-              <div className="gecko-row gecko-row-wrap" style={{ gap: 3 }}>
-                {c.isCargoCharge && <span className="gecko-badge gecko-badge-xs gecko-badge-gray">cargo</span>}
-                {c.isValueAddedService && <span className="gecko-badge gecko-badge-xs gecko-badge-warning">VAS</span>}
-                {c.raiseAtGateIn && <span className="gecko-badge gecko-badge-xs gecko-badge-info" title="Raised when the box gates in, not at invoicing">at gate-in</span>}
-                {!c.isCargoCharge && !c.isValueAddedService && !c.raiseAtGateIn && <span className="gecko-cell-meta">—</span>}
-              </div>
-            </td>
-            <td style={{ textAlign: 'right', fontVariantNumeric: 'tabular-nums' }}>{c.defaultQty ?? '—'}</td>
-          </tr>
-        ))}
-        {shown.length === 0 && (
-          <tr><td colSpan={8} className="gecko-cell-meta" style={{ textAlign: 'center', padding: 20 }}>No charges on {selectedStep}.</td></tr>
-        )}
-      </tbody>
-    </table>
-  );
-}
-
 // ── Main Page ─────────────────────────────────────────────────────────────────
 export default function OrderTypeMasterPage() {
   const [search, setSearch] = useState('');
@@ -329,21 +261,19 @@ export default function OrderTypeMasterPage() {
   // ── editing: one section at a time ──────────────────────────────────────
   const { data: vocabulary } = useOrderTypeVocabulary();
   const { data: commercial } = useCommercialVocabulary();
-  const [mode, setMode] = useState<'view' | 'header' | 'steps' | 'charges'>('view');
+  const [mode, setMode] = useState<'view' | 'header' | 'steps'>('view');
   const [form, setForm] = useState<OrderTypeFormValue | null>(null);
   const [stepRows, setStepRows] = useState<StepRow[]>([]);
-  const [chargeRows, setChargeRows] = useState<ChargeRow[]>([]);
   const [submitted, setSubmitted] = useState(false);
   const [busy, setBusy] = useState(false);
   const [actionError, setActionError] = useState<ApiError | null>(null);
   const [confirmDelete, setConfirmDelete] = useState(false);
   const canEdit = canManage && mode === 'view' && !!vocabulary && !!commercial;
 
-  const begin = (next: 'header' | 'steps' | 'charges') => {
+  const begin = (next: 'header' | 'steps') => {
     if (!current) return;
     setForm(formFromOrderType(current.orderType));
     setStepRows(rowsFromSteps(current.movements));
-    setChargeRows(rowsFromCharges(current.charges));
     setSubmitted(false);
     setActionError(null);
     setMode(next);
@@ -367,10 +297,18 @@ export default function OrderTypeMasterPage() {
     }
   };
 
-  const savedStepCodes = [...(current?.movements ?? [])].sort((a, b) => a.sequenceNo - b.sequenceNo).map(m => m.movementCode);
+  // Memoised because the charge rows and their errors are derived from it.
+  const savedStepCodes = useMemo(() => [...steps].sort((a, b) => a.sequenceNo - b.sequenceNo).map(m => m.movementCode), [steps]);
   const headerErrors = submitted && form ? orderTypeErrors(form) : {};
   const stepRowErrors = submitted ? stepErrors(stepRows) : {};
-  const chargeErrors = submitted ? chargeRowErrors(chargeRows, savedStepCodes) : {};
+
+  // Derived from the API's own answer, not copied into state: a charge is saved
+  // the moment the dialog closes, so a second copy could only go stale against
+  // the reload that follows.
+  const chargeRows = useMemo<ChargeRow[]>(() => rowsFromCharges(charges), [charges]);
+  // A charge pinned to a step that has since been removed is the one error the
+  // clerk cannot see in the dialog, because it was legal when it was saved.
+  const chargeErrors = useMemo(() => chargeRowErrors(chargeRows, savedStepCodes), [chargeRows, savedStepCodes]);
 
   const saveHeader = () => {
     if (!current || !form) return;
@@ -384,11 +322,14 @@ export default function OrderTypeMasterPage() {
     if (Object.keys(stepErrors(stepRows)).length > 0) return;
     run(() => replaceSteps(current.orderType.orderTypeCode, requestFromSteps(stepRows), current.orderType.rowVersion), 'Gate steps saved');
   };
-  const saveCharges = () => {
+  /**
+   * One charge changed, so the whole set goes back: the API has no per-charge
+   * endpoint, `PUT …/charges` replaces the lot, and anything left out of it is
+   * deleted. The dialog has already validated the row it touched.
+   */
+  const saveCharges = (rows: ChargeRow[], done: string) => {
     if (!current) return;
-    setSubmitted(true);
-    if (Object.keys(chargeRowErrors(chargeRows, savedStepCodes)).length > 0) return;
-    run(() => replaceCharges(current.orderType.orderTypeCode, requestFromCharges(chargeRows), current.orderType.rowVersion), 'Charges saved');
+    run(() => replaceCharges(current.orderType.orderTypeCode, requestFromCharges(rows), current.orderType.rowVersion), done);
   };
   const toggleActive = () => {
     if (!current) return;
@@ -680,26 +621,30 @@ export default function OrderTypeMasterPage() {
                   <span className="gecko-page-subtitle">
                     {selectedStep ? `— on ${selectedStep}, plus those on every step` : '— the price comes from the tariff; this says who pays and when'}
                   </span>
-                  {canEdit && (
-                    <button className="gecko-btn gecko-btn-outline gecko-btn-sm gecko-ml-auto" onClick={() => begin('charges')} disabled={busy}>
-                      <Icon name="edit" size={14} /> Edit charges
-                    </button>
+                </div>
+                <div className="gecko-card-padded">
+                  {charges.length === 0 && !canManage ? (
+                    <EmptyState
+                      icon="invoice"
+                      title="No charges configured"
+                      description="Nothing is raised automatically for this order type — every charge will come from the tariff at invoicing, or be added by hand."
+                    />
+                  ) : vocabulary && commercial ? (
+                    <ChargesTables
+                      rows={chargeRows}
+                      vocabulary={vocabulary}
+                      commercial={commercial}
+                      stepCodes={savedStepCodes}
+                      selectedStep={selectedStep}
+                      canManage={canManage && mode === 'view'}
+                      busy={busy}
+                      errors={chargeErrors}
+                      onChange={saveCharges}
+                    />
+                  ) : (
+                    <div className="gecko-cell-meta">Loading the charge codes…</div>
                   )}
                 </div>
-                {mode === 'charges' && vocabulary && commercial ? (
-                  <div className="gecko-stack gecko-stack-md gecko-card-padded">
-                    <ChargesEditor rows={chargeRows} onChange={setChargeRows} stepCodes={savedStepCodes}
-                      vocabulary={vocabulary} commercial={commercial} localErrors={chargeErrors} apiError={actionError} />
-                    <div className="gecko-row gecko-row-right">
-                      <button className="gecko-btn gecko-btn-outline" onClick={cancel} disabled={busy}>Cancel</button>
-                      <button className="gecko-btn gecko-btn-primary" onClick={saveCharges} disabled={busy}>
-                        <Icon name="save" size={16} /> {busy ? 'Saving…' : 'Save charges'}
-                      </button>
-                    </div>
-                  </div>
-                ) : (
-                  <ChargesTable charges={charges} selectedStep={selectedStep} />
-                )}
               </div>
             </>
           )}

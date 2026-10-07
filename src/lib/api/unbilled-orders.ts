@@ -82,6 +82,15 @@ export interface UnbilledOrder {
   stepsTotal: number;
   firstDate: string | null;
   lastDate: string | null;
+  /**
+   * Only with `includeSettled=true` (API 2026-10-07). Without the flag the
+   * endpoint lists unbilled orders only and `total` IS the unbilled figure, so
+   * these three are undefined and the screen shows a dash rather than a zero —
+   * "not asked for" and "nothing billed" are different answers.
+   */
+  totalBillable?: number | null;
+  billedAmount?: number | null;
+  unbilledAmount?: number | null;
 }
 
 /** The page carries its own totals, so the footer is the server's arithmetic. */

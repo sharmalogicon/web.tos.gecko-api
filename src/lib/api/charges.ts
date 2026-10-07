@@ -9,6 +9,8 @@
  * UNBILLED lines come from credit accrual at the gate, which is not running yet.
  */
 
+import { apiSend } from './client';
+
 export type ChargeStatus = 'QUOTED' | 'PAID' | 'EARNED' | 'UNBILLED' | 'INVOICED' | 'WAIVED' | 'CANCELLED';
 export type ChargeSource = 'WINDOW' | 'GATE' | 'STORAGE' | 'MANUAL';
 
@@ -51,6 +53,31 @@ export interface Charge {
   cancelReason: string | null;
   creditNoteRequired: boolean;
   createdAt: string;
+
+  /**
+   * Set once the API carries them (docs/STATEMENT_CHARGE_EDIT_FOR_API.md).
+   * Optional because the running API does not return them yet: the screen shows
+   * an overridden rate as overridden when it can, and simply shows the rate
+   * when it cannot.
+   */
+  rowVersion?: string;
+  /** Vector's price model: original rate, a discount, and the selling rate it computes. */
+  originalRate?: number | null;
+  discountType?: 'NONE' | 'AMT' | 'PCT';
+  discountRate?: number | null;
+  isRateOverridden?: boolean;
+  overrideReason?: string | null;
+  overriddenBy?: string | null;
+  overriddenAt?: string | null;
+  /** A locked line survives Regenerate. */
+  isLocked?: boolean;
+  waivedBy?: string | null;
+  waiveReasonCode?: string | null;
+  /** Master-data context Vector shows on the grid. */
+  chargeType?: string | null;
+  billingUnitCode?: string | null;
+  equipmentSize?: string | null;
+  equipmentTypeCode?: string | null;
 }
 
 export interface UnbilledPayer {
@@ -197,3 +224,90 @@ export interface BookingStatement {
   receipts: StatementReceipt[];
   totals: StatementTotals;
 }
+
+// ── the statement as one flat table (billing/statement) ─────────────────────
+
+/**
+ * Vector's Cost Sheet is ONE grid: every charge on the booking, with the
+ * container as a column. Ours was grouped by box and then by movement, which
+ * reads well on a two-box booking and becomes unusable on a twenty-box one —
+ * the clerk hunting for LOLO has to open every section to find it, and cannot
+ * sort by rate at all. So the statement flattens, and the grouping becomes
+ * what it always really was: a filter.
+ */
+export interface StatementRow {
+  charge: Charge;
+  receiptNo: string | null;
+  /** Where the line sits: null bookingContainerId means Revenue has no box for it. */
+  bookingContainerId: string | null;
+  containerNo: string | null;
+  equipmentTypeCode: string | null;
+}
+
+export const flattenStatement = (s: BookingStatement): StatementRow[] =>
+  s.boxes.flatMap(b => b.lines.map(l => ({
+    charge: l.charge,
+    receiptNo: l.receiptNo,
+    bookingContainerId: b.bookingContainerId,
+    containerNo: b.containerNo,
+    equipmentTypeCode: b.equipmentTypeCode,
+  })));
+
+/**
+ * Paid or not, in the words the counter uses. The seven charge statuses are an
+ * accounting distinction; a clerk asking "has this been paid?" wants three
+ * answers, and WAIVED is its own because it is a decision somebody made.
+ */
+export type SettledGroup = 'UNPAID' | 'PAID' | 'WAIVED' | 'CANCELLED';
+
+export const settledGroup = (c: Charge): SettledGroup =>
+  c.status === 'PAID' || c.status === 'EARNED' || c.status === 'INVOICED' ? 'PAID'
+    : c.status === 'WAIVED' ? 'WAIVED'
+      : c.status === 'CANCELLED' ? 'CANCELLED'
+        : 'UNPAID';
+
+export const SETTLED_LABEL: Record<SettledGroup, string> = {
+  UNPAID: 'Unpaid', PAID: 'Paid', WAIVED: 'Waived', CANCELLED: 'Cancelled',
+};
+
+/**
+ * Only a QUOTED line may be repriced or waived: money that has been taken and
+ * the charge behind it must never be allowed to disagree. A paid line is
+ * corrected by voiding its receipt, an invoiced one by a credit note.
+ */
+export const isEditableCharge = (c: Charge) => c.status === 'QUOTED';
+
+/** Why this line cannot be touched, in the clerk's words. */
+export const whyNotEditable = (c: Charge): string =>
+  c.status === 'PAID' || c.status === 'EARNED'
+    ? 'Already paid — void the receipt to change it.'
+    : c.status === 'INVOICED' ? 'On an invoice — this needs a credit note.'
+      : c.status === 'UNBILLED' ? 'Waiting to be invoiced — not changed from here.'
+        : c.status === 'WAIVED' ? 'Already waived.'
+          : c.status === 'CANCELLED' ? 'Cancelled with its EIR.'
+            : 'Cannot be changed.';
+
+// ── writes (docs/STATEMENT_CHARGE_EDIT_FOR_API.md) ──────────────────────────
+
+/**
+ * Override the rate on one quoted line, and waive one quoted line.
+ *
+ * `POST …/charges/{id}/override` DOES NOT EXIST YET — it is specified in
+ * docs/STATEMENT_CHARGE_EDIT_FOR_API.md and the screen reports a 404 in those
+ * words rather than as a bare failure. Waiving by charge id does not exist
+ * either; `POST /api/revenue/window/waive` does, but it is keyed by
+ * (bookingContainerId, chargeCode, billTo), which is AMBIGUOUS whenever the
+ * same charge code appears on two movements of one box — as A-004 does on
+ * KORAKIT's own BK-KTC-2610-00038. So the screen tries the precise path first
+ * and falls back to the window's only when the key can only mean this line.
+ */
+export interface WindowWaiveRequest {
+  bookingContainerId: string;
+  chargeCode: string;
+  billTo: string;
+  paidUntil: string | null;
+  reason: string;
+}
+
+export const waiveAtWindow = (body: WindowWaiveRequest) =>
+  apiSend<unknown>('POST', '/api/revenue/window/waive', body);

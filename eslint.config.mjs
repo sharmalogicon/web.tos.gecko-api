@@ -70,6 +70,11 @@ const eslintConfig = defineConfig([
     "demo-slides/**",
     // graphify cache + tooling artifacts.
     "src/graphify-out/**",
+    // The June 2026 screens, kept VERBATIM at commit 5f82606 so the rebuilds
+    // can be read against them. They predate the React Compiler rules and must
+    // not be "fixed": an edited reference is no longer a reference. Nothing
+    // under /compare calls the API or ships in a menu.
+    "src/app/compare/**",
   ]),
 ]);
 

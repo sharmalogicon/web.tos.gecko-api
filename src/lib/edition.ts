@@ -18,7 +18,16 @@
  * (src/proxy.ts), and the page a user lands on after signing in.
  */
 
-/** Live screens. A path and everything under it (detail pages, /new) is served. */
+/**
+ * Live screens. A path and everything under it (detail pages, /new) is served.
+ *
+ * `/compare/june` is deliberately NOT here. Those are the June 2026 screens on
+ * MOCK data — invented bookings, invented amounts — kept as the reference the
+ * rebuilds are read against. KORAKIT is live, and a screen full of invented
+ * numbers that nobody can tell are invented is worse than no screen. Add
+ * '/compare' here for a local review session, and take it out again before the
+ * next deploy.
+ */
 export const LIVE_PATHS: readonly string[] = [
   // The two dashboards that survived 2026-09-29, both bound since: every number
   // on them is counted by the server. Listed one by one rather than as
@@ -44,6 +53,7 @@ export const LIVE_PATHS: readonly string[] = [
   '/billing/cash-window',
   '/billing/service-orders',     // the charge register, /api/revenue/charges
   '/billing/statement',          // one booking's charge lines and receipts (?orderNo=)
+  '/billing/invoices',           // credit invoices: the register and one document
   '/billing/unbilled',           // the billing worklist: orders, then their charge lines
   '/reports/operational',        // the report catalogue; each card says if it can run
   '/reports/accounts',
@@ -79,10 +89,11 @@ export const LIVE_PATHS: readonly string[] = [
  * entry out the day its page is bound.
  */
 export const BLOCKED_PATHS: readonly string[] = [
-  // Hardcoded arrays of invented invoices and credit notes. The API has no
-  // invoice or credit-note endpoint of any kind — only /api/revenue/charges,
-  // /charges/statement and /charges/unbilled.
-  '/billing/invoices',
+  // Still a hardcoded array of invented credit notes. The API gained invoices
+  // on 2026-10-07 (GET /api/revenue/invoices, /{id}, POST /invoices/send) and
+  // '/billing/invoices' was unblocked with them — but there is still no
+  // credit-note endpoint, and on a LIVE cutover an invented credit note is
+  // worse than a missing screen. Take this out the day it is bound.
   '/billing/credit-notes',
 ];
 

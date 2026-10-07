@@ -186,36 +186,6 @@ export default function TariffScheduleDetailPage({ params }: { params: Promise<{
     }
   }
 
-  /**
-   * Take an approved tariff back to a draft.
-   *
-   * There is no endpoint for this yet — the API freezes an approved price and
-   * offers "New version" as the way to change one. The owner wants it anyway
-   * (2026-10-05), so the call is made and a missing endpoint is reported in
-   * those words rather than as a bare 404. See
-   * docs/TARIFF_UNAPPROVE_FOR_API.md.
-   */
-  async function unapprove(reason: string) {
-    if (!s) return;
-    setBusy('unapprove');
-    try {
-      await apiSend('POST', `/api/revenue/tariffs/${s.scheduleId}/unapprove`, { rowVersion: s.rowVersion, reason });
-      toast({ variant: 'success', title: 'Tariff unapproved', message: `${s.scheduleNo} v${s.versionNo} is a draft again.` });
-      reloadAll();
-    } catch (e) {
-      const error = e instanceof ApiError ? e : new ApiError(0, 'Could not reach the Gecko API.');
-      const missing = error.status === 404 || error.status === 405;
-      toast({
-        variant: 'danger',
-        title: missing ? 'Unapprove is not built yet' : 'Could not unapprove',
-        message: missing
-          ? 'The API has no unapprove endpoint. Until it does, change an approved price with "New version".'
-          : error.message,
-      });
-    } finally {
-      setBusy(null);
-    }
-  }
 
   /**
    * A new version of an APPROVED tariff: the API copies its rates, tiers,
@@ -349,19 +319,6 @@ export default function TariffScheduleDetailPage({ params }: { params: Promise<{
                 onConfirm: r => act('withdraw', r),
               })}>
               <Icon name="cornerUpLeft" size={14} /> Withdraw
-            </button>
-          )}
-          {s.status === 'APPROVED' && canApprove && (
-            <button className="gecko-btn gecko-btn-outline gecko-btn-sm" disabled={busy !== null} onClick={() => setAsk({
-                kind: 'reason', danger: true,
-                title: 'Unapprove this tariff',
-                subtitle: `${s.scheduleNo} v${s.versionNo} goes back to a draft. Its prices stop being live.`,
-                label: 'Why is it being unapproved?',
-                placeholder: 'Approved against the wrong customer',
-                confirmLabel: 'Unapprove',
-                onConfirm: unapprove,
-              })}>
-              <Icon name="cornerUpLeft" size={14} /> {busy === 'unapprove' ? 'Unapproving…' : 'Unapprove'}
             </button>
           )}
           {s.status === 'APPROVED' && canManage && (
