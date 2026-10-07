@@ -146,19 +146,21 @@ const NAV = [
     ]
   },
   { id: 'billing', icon: 'invoice', label: 'Billing',
-    // Back on the menu 2026-10-05 (owner). Only the four that are bound:
-    // the cash window takes the money, the charge register and the statement
-    // read what was charged, and Unbilled is what is waiting to be invoiced.
+    // Back on the menu 2026-10-05 (owner), and INVOICES joined them 2026-10-07
+    // when the API gained GET /api/revenue/invoices, /{id} and
+    // POST /invoices/send. They read in the order the money moves: the cash
+    // window takes it, the charge register and the statement say what was
+    // charged, Unbilled is what is waiting, and Invoices is what was sent.
     //
-    // /billing/invoices and /billing/credit-notes stay OFF, and off
-    // LIVE_PATHS, because they are still fixture arrays — there is no invoice
-    // or credit-note endpoint in the API at all (only /api/revenue/charges,
-    // /charges/statement and /charges/unbilled). Add them the day one exists.
+    // /billing/credit-notes stays OFF, and off LIVE_PATHS: still a fixture
+    // array, and there is no credit-note endpoint of any kind. Add it the day
+    // one exists.
     children: [
       { id: 'cash-window',     label: 'Cash Window',      path: '/billing/cash-window' },
       { id: 'service-orders',  label: 'Charge Register',  path: '/billing/service-orders' },
       { id: 'statement',       label: 'Booking Statement', path: '/billing/statement' },
       { id: 'unbilled',        label: 'Unbilled Charges', path: '/billing/unbilled' },
+      { id: 'invoices',        label: 'Invoices',         path: '/billing/invoices' },
     ]
   },
   { id: 'tariff', icon: 'tag', label: 'Tariffs',
