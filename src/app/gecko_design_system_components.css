@@ -1617,16 +1617,22 @@
 
 .gecko-modal-consequences-list {
   margin: 0;
-  padding-left: 16px;
+  padding-left: 18px;
   display: flex;
   flex-direction: column;
-  gap: 4px;
+  gap: 2px;
+  /* Bulleted: it is a LIST of things being destroyed, and four flush lines of
+     red read as one paragraph nobody finishes. */
+  list-style: disc;
 }
 
+/* Fixed 11px, not the fluid --gecko-text-xs, which clamps up to 0.8rem and made
+   this strip as loud as the heading above it. It is the small print of a
+   destructive dialog: it must be readable, not shouted. */
 .gecko-modal-consequences-list li {
-  font-size: var(--gecko-text-xs);
+  font-size: 11px;
   color: var(--gecko-error-700);
-  line-height: 1.5;
+  line-height: 1.45;
 }
 
 /* Modal body — used for form fields under the consequences strip */
@@ -8877,7 +8883,9 @@ label.gecko-toggle.gecko-toggle-sm input:checked ~ .gecko-toggle-track .gecko-to
 
 .gecko-booking-drop {
   position: absolute;
-  z-index: 40;
+  /* The menu rung: clear of the sticky header and the sidebar, under modals and
+     toasts. It was 40 — the sidebar's own number — so it could tie with it. */
+  z-index: var(--gecko-z-menu);
   top: 100%;
   left: 0;
   right: 0;
@@ -9162,27 +9170,32 @@ label.gecko-toggle.gecko-toggle-sm input:checked ~ .gecko-toggle-track .gecko-to
   padding-top: 4px;
 }
 
-/* The extras that can be sold on a box, priced by the same quote. */
-.gecko-vas-panel {
+/* The value-added services that can be sold on a box, priced by the same quote.
+   A table rather than a list of checkboxes: it is a price list the clerk reads
+   down a column, and loose rows made the prices impossible to compare. */
+.gecko-vas-table-card { border-radius: 10px; }
+.gecko-vas-table { font-size: var(--gecko-text-sm); }
+.gecko-vas-table th { font-size: 10px; letter-spacing: 0.05em; text-transform: uppercase; }
+.gecko-vas-tick-col { width: 34px; text-align: center; }
+
+/* The whole name is the label, so the row is one target rather than a checkbox
+   that has to be hit exactly. */
+.gecko-vas-label {
   display: flex;
-  flex-direction: column;
-  gap: 2px;
-}
-.gecko-vas-item {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  padding: 6px 8px;
-  border-radius: var(--gecko-radius-sm);
-  font-size: var(--gecko-text-sm);
+  align-items: baseline;
+  gap: 8px;
   cursor: pointer;
 }
-.gecko-vas-item:hover { background: var(--gecko-surface-hover); }
+.gecko-vas-name { color: var(--gecko-text-secondary); }
+
+.gecko-vas-table tbody tr:hover { background: var(--gecko-bg-subtle); }
+.gecko-vas-row-on { background: var(--gecko-primary-50); }
+[data-theme="dark"] .gecko-vas-row-on { background: rgba(59,130,246,0.12); }
+
 /* Nothing prices it, so it cannot be sold — shown, not hidden, because a
    missing line only looks like a bug. */
-.gecko-vas-item-unpriced { opacity: 0.55; cursor: not-allowed; }
-.gecko-vas-name { margin-left: 8px; color: var(--gecko-text-secondary); }
-.gecko-vas-price { white-space: nowrap; }
+.gecko-vas-row-unpriced { opacity: 0.55; }
+.gecko-vas-row-unpriced .gecko-vas-label { cursor: not-allowed; }
 
 .gecko-damage-row {
   display: grid;
@@ -9738,3 +9751,180 @@ label.gecko-toggle.gecko-toggle-sm input:checked ~ .gecko-toggle-track .gecko-to
   border-bottom-left-radius: 12px;
   border-bottom-right-radius: 12px;
 }
+
+/* ── §34  "Saved" as a state, not a button ──────────────────────────────────
+   A primary button that can never be pressed is a question the reader has to
+   answer for themselves. When a record has no pending change, say so as a
+   quiet chip and keep the button for when there is something to do. */
+
+.gecko-saved-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 5px 11px;
+  border: 1px solid var(--gecko-success-200);
+  border-radius: 999px;
+  background: var(--gecko-success-50);
+  color: var(--gecko-success-700);
+  font-size: 12px;
+  font-weight: 600;
+  white-space: nowrap;
+}
+
+/* The clone dialog's note: supporting detail, set to match the helper text
+   under the field above it (11px, italic) so the two read as one voice rather
+   than as a notice competing with the form. */
+.gecko-clone-note {
+  font-size: 11px;
+  font-style: italic;
+  line-height: 1.4;
+}
+.gecko-clone-note > div { display: flex; flex-direction: column; gap: 3px; }
+.gecko-clone-note strong { font-style: italic; }
+
+/* ── §35  Picking an order to move containers to ────────────────────────────
+   A scrollable list of candidates where one is chosen. The picked row is
+   marked on its left edge as well as by colour, so the choice survives a
+   screen that is being read quickly at a counter. */
+
+.gecko-transfer-list {
+  max-height: 260px;
+  overflow-y: auto;
+  border: 1px solid var(--gecko-border);
+  border-radius: 8px;
+}
+.gecko-transfer-empty {
+  padding: 18px 12px;
+  text-align: center;
+  font-size: 12px;
+  color: var(--gecko-text-secondary);
+}
+.gecko-transfer-row {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  width: 100%;
+  padding: 9px 12px;
+  border: 0;
+  border-bottom: 1px solid var(--gecko-border);
+  border-left: 3px solid transparent;
+  background: none;
+  font-family: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+.gecko-transfer-row:last-child { border-bottom: 0; }
+.gecko-transfer-row:hover { background: var(--gecko-bg-subtle); }
+.gecko-transfer-row-picked {
+  border-left-color: var(--gecko-primary-500);
+  background: var(--gecko-primary-50);
+}
+.gecko-transfer-row-main {
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+  flex: 1;
+  min-width: 0;
+}
+
+/* ── §36  Type-ahead search on a form field ─────────────────────────────────
+   A list that opens under the box it belongs to. The row under the cursor is
+   marked by background AND left edge, so it survives being read at a counter;
+   the matched run of the number is marked inside the text, so a near-miss is
+   visible rather than merely unselected. */
+
+.gecko-statement-search { position: relative; }
+
+.gecko-search-menu {
+  position: absolute;
+  top: 100%;
+  left: 0;
+  right: 0;
+  z-index: var(--gecko-z-menu);
+  margin-top: 4px;
+  max-height: 320px;
+  overflow-y: auto;
+  border: 1px solid var(--gecko-border);
+  border-radius: 10px;
+  background: var(--gecko-bg-surface);
+  box-shadow: var(--gecko-shadow-lg, 0 12px 30px rgba(0,0,0,0.16));
+}
+.gecko-search-empty {
+  padding: 14px 12px;
+  text-align: center;
+  font-size: 12px;
+  color: var(--gecko-text-secondary);
+}
+.gecko-search-row {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  width: 100%;
+  padding: 8px 12px;
+  border: 0;
+  border-bottom: 1px solid var(--gecko-border);
+  border-left: 3px solid transparent;
+  background: none;
+  font-family: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+.gecko-search-row:last-child { border-bottom: 0; }
+.gecko-search-row-on {
+  border-left-color: var(--gecko-primary-500);
+  background: var(--gecko-primary-50);
+}
+.gecko-search-row-main { display: flex; flex-direction: column; gap: 1px; flex: 1; min-width: 0; }
+.gecko-search-row-top { display: flex; align-items: center; gap: 6px; }
+.gecko-search-row-side { display: flex; flex-direction: column; align-items: flex-end; gap: 1px; white-space: nowrap; }
+
+.gecko-search-mark {
+  padding: 0 1px;
+  border-radius: 2px;
+  background: var(--gecko-warning-100);
+  color: inherit;
+  font-weight: 700;
+}
+
+/* ── §37  A record that can be read but not changed ─────────────────────────
+   Said once, across the top, in the record's own colour. A screen with every
+   button quietly missing and no explanation reads as broken rather than as
+   closed. */
+
+.gecko-booking-frozen {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 20px;
+  border-bottom: 1px solid var(--gecko-border);
+  background: var(--gecko-bg-subtle);
+  font-size: 12px;
+  color: var(--gecko-text-secondary);
+}
+
+/* A quote that could not be read, or a charge no tariff covers: said in the
+   payment panel, where the money is, rather than left as a silent zero. */
+.gecko-visit-quote-problem {
+  margin-top: 8px;
+  font-size: 11px;
+  line-height: 1.45;
+}
+
+/* Charges no tariff prices: listed under what IS owed, muted and with no
+   amount. The service happened and was not billed — a clerk needs to see that,
+   and must never read it as part of the total. */
+.gecko-visit-unpriced {
+  margin-top: 6px;
+  padding-top: 6px;
+  border-top: 1px dashed var(--gecko-border);
+  color: var(--gecko-text-secondary);
+}
+
+
+/* ── §38  A card whose field opens a dropdown ───────────────────────────────
+   `.gecko-card` sets `overflow: hidden` for its rounded corners, and that CLIPS
+   anything absolutely positioned inside it — the truck picker on Gate Out was
+   sliced off at the card's bottom edge. Clipping is not stacking: no z-index
+   rescues it. The card stops clipping; nothing inside it needed the corners. */
+
+.gecko-card-menus { overflow: visible; }

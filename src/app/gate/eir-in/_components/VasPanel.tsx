@@ -4,7 +4,7 @@ import type { VasOption } from '@/lib/api/gate-trips';
 import { isVasSellable } from '@/lib/api/gate-trips';
 
 /**
- * The extras that can be sold on this box, priced.
+ * The value-added services that can be sold on this box, priced.
  *
  * The menu and its prices come from the same quote that priced the row
  * (§23.2a), so ticking one re-quotes and the item's line moves into what is
@@ -26,28 +26,46 @@ export function VasPanel({ menu, ticked, disabled, currency, onToggle }: {
   if (menu.length === 0) return null;
 
   return (
-    <div className="gecko-vas-panel">
-      {menu.map(v => {
-        const sellable = isVasSellable(v);
-        const on = ticked.includes(v.chargeCode);
-        return (
-          <label key={v.chargeCode}
-            className={`gecko-vas-item${sellable ? '' : ' gecko-vas-item-unpriced'}`}>
-            <input type="checkbox" className="gecko-checkbox"
-              checked={on} disabled={disabled || !sellable}
-              onChange={() => onToggle(v.chargeCode)} />
-            <span className="gecko-flex-1 gecko-min-w-0">
-              <span className="gecko-text-mono gecko-mono-strong">{v.chargeCode}</span>
-              {v.chargeName && <span className="gecko-vas-name">{v.chargeName}</span>}
-            </span>
-            <span className="gecko-text-mono gecko-vas-price">
-              {sellable
-                ? `${v.currencyCode || currency} ${v.total.toFixed(2)}`
-                : <span className="gecko-cell-meta">no price</span>}
-            </span>
-          </label>
-        );
-      })}
+    <div className="gecko-table-card gecko-vas-table-card">
+      <table className="gecko-table gecko-table-compact gecko-vas-table">
+        <thead>
+          <tr>
+            <th className="gecko-vas-tick-col" aria-label="Sell" />
+            <th>Service</th>
+            <th className="gecko-num">Price</th>
+          </tr>
+        </thead>
+        <tbody>
+          {menu.map(v => {
+            const sellable = isVasSellable(v);
+            const on = ticked.includes(v.chargeCode);
+            const id = `vas-${v.chargeCode}`;
+            return (
+              <tr key={v.chargeCode}
+                className={`${sellable ? '' : 'gecko-vas-row-unpriced'}${on ? ' gecko-vas-row-on' : ''}`.trim() || undefined}>
+                <td className="gecko-vas-tick-col">
+                  <input id={id} type="checkbox" className="gecko-checkbox"
+                    checked={on} disabled={disabled || !sellable}
+                    onChange={() => onToggle(v.chargeCode)} />
+                </td>
+                {/* The whole name is the label, so the row is one target rather
+                    than a checkbox a clerk has to hit exactly. */}
+                <td>
+                  <label htmlFor={id} className="gecko-vas-label">
+                    <span className="gecko-text-mono gecko-mono-strong">{v.chargeCode}</span>
+                    {v.chargeName && <span className="gecko-vas-name">{v.chargeName}</span>}
+                  </label>
+                </td>
+                <td className="gecko-num gecko-text-mono">
+                  {sellable
+                    ? `${v.currencyCode || currency} ${v.total.toFixed(2)}`
+                    : <span className="gecko-cell-meta">no price</span>}
+                </td>
+              </tr>
+            );
+          })}
+        </tbody>
+      </table>
     </div>
   );
 }

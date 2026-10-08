@@ -13,6 +13,14 @@ interface DeleteConfirmModalProps {
   resourceName: string;
   /** Optional bullet list describing what will be permanently removed. */
   consequences?: string[];
+  /** Replaces the default "permanent and cannot be undone" line. */
+  description?: React.ReactNode;
+  /** The API's own minimum for the reason, so the button unlocks when it would be accepted. */
+  minRemarks?: number;
+  /** Button label while the call is in flight. */
+  busy?: boolean;
+  /** A refusal from the server: shown INSIDE the dialog so the typing survives. */
+  problem?: { title: string; detail: string } | null;
   onClose: () => void;
   /** Receives the deletion-remark text the user typed. */
   onConfirm: (remarks: string) => void;
@@ -30,12 +38,19 @@ export function DeleteConfirmModal({
   resourceType,
   resourceName,
   consequences = [],
+  description,
+  minRemarks = 1,
+  busy = false,
+  problem = null,
   onClose,
   onConfirm,
 }: DeleteConfirmModalProps) {
   const [confirmText, setConfirmText] = useState('');
   const [remarks, setRemarks] = useState('');
-  const canDelete = confirmText === resourceName && remarks.trim().length > 0;
+  const canDelete = confirmText === resourceName
+    && remarks.trim().length >= minRemarks
+    && resourceName.length > 0
+    && !busy;
   const heading = title ?? `Delete ${resourceType}`;
 
   return (
@@ -55,8 +70,12 @@ export function DeleteConfirmModal({
           <div>
             <div id="gecko-delete-title" className="gecko-modal-title">{heading}</div>
             <div className="gecko-modal-description">
-              This action is <strong>permanent and cannot be undone.</strong>
-              {consequences.length > 0 && ' The following will be permanently removed:'}
+              {description ?? (
+                <>
+                  This action is <strong>permanent and cannot be undone.</strong>
+                  {consequences.length > 0 && ' The following will be permanently removed:'}
+                </>
+              )}
             </div>
           </div>
         </div>
@@ -91,10 +110,12 @@ export function DeleteConfirmModal({
 
             {/* Type-to-confirm */}
             <div className="gecko-form-group">
+              {/* Name the thing AND say where to find it. "type ___ below" with
+                  an empty code block is a question with no answer on screen. */}
               <label className="gecko-label">
-                To confirm, type{' '}
-                <code className="gecko-code">{resourceName}</code>{' '}
-                below
+                To confirm, type the {resourceType.toLowerCase()} number{' '}
+                <code className="gecko-code">{resourceName || '(unknown)'}</code>{' '}
+                exactly
               </label>
               <input
                 className={`gecko-input gecko-text-mono ${confirmText && confirmText !== resourceName ? 'gecko-input-error' : ''}`}

@@ -42,6 +42,19 @@ export function GatePaymentPanel({
   const lines = pending.flatMap(m => m.due.map(d => ({ ...d, box: m.containerNo })));
   const later = pending.flatMap(m => m.billedLater.map(d => ({ ...d, box: m.containerNo })));
   const laterTotal = later.reduce((n, l) => n + l.total, 0);
+  /**
+   * Charges no tariff prices.
+   *
+   * The API stopped refusing a Save over these on 2026-10-07 (desktop parity):
+   * an unpriced CASH charge is simply NOT charged, and the receipt carries the
+   * priced lines. So they are listed under the money — a clerk has to know the
+   * service happened and was not billed — but they add nothing to the totals
+   * and they do not hold the Save.
+   */
+  const unpriced = pending.flatMap(m => m.noPrice.map(d => ({ ...d, box: m.containerNo })));
+  // A quote that could NOT BE READ is a different thing: that is a failure, not
+  // a price, and it still blocks the Save.
+  const failed = pending.filter(m => m.quoteError);
   const currency = lines[0]?.currencyCode ?? later[0]?.currencyCode ?? 'THB';
 
   // Vector offers withholding only over ฿1,000 (§8).
@@ -88,6 +101,31 @@ export function GatePaymentPanel({
             ))}
           </div>
         )}
+
+        {/* Under the priced lines, with no amount: they are part of what
+            happened to the box, and no part of what is owed. */}
+        {unpriced.length > 0 && (
+          <div className="gecko-stack-xs gecko-visit-unpriced">
+            {unpriced.map((l, i) => (
+              <div key={`np-${l.chargeCode}-${i}`} className="gecko-visit-charge-line">
+                <span className="gecko-flex-1 gecko-min-w-0">
+                  {l.chargeName || l.chargeCode}
+                  <span className="gecko-cell-meta"> · {l.chargeCode}</span>
+                </span>
+                <span className="gecko-cell-meta">no tariff, not charged</span>
+              </div>
+            ))}
+          </div>
+        )}
+
+        {/* A quote that could not be read is NOT a quote of zero. */}
+        {failed.map(m => (
+          <div key={`err-${m.key}`} role="alert" className="gecko-alert gecko-alert-error gecko-visit-quote-problem">
+            <Icon name="alertCircle" size={14} />
+            <span>Could not price {m.containerNo || 'this box'}: {m.quoteError}</span>
+          </div>
+        ))}
+
       </div>
 
       {later.length > 0 && (
@@ -141,8 +179,14 @@ export function GatePaymentPanel({
         </div>
       </div>
 
+      {/* A box whose price could not be read must not be saved: the Save
+          carries expectedTotal, and sending one taken from a failed quote is
+          how a truck leaves having paid the wrong amount. */}
       {!saved && (
-        <button className="gecko-btn gecko-btn-primary" disabled={!canSave || saving} onClick={onSave}>
+        <button className="gecko-btn gecko-btn-primary"
+          disabled={!canSave || saving || failed.length > 0}
+          title={failed.length > 0 ? 'Re-check the box that could not be priced, or remove it' : undefined}
+          onClick={onSave}>
           <Icon name="check" size={14} />
           {saving ? 'Saving…'
             : cashTotal > 0 ? `Save and take ${money(wht ? nett : cashTotal, currency)}`

@@ -135,6 +135,19 @@ export interface MoveDraft {
    * moves its charges off the cash due. Priced and owed, just not owed here.
    */
   billedLater: QuoteLineLike[];
+  /**
+   * Charges no tariff prices. NOT free: the gate refuses a box it cannot
+   * price, so these are the most important lines on the quote and used to be
+   * thrown away — the panel read `due` alone and said "nothing priced yet".
+   */
+  noPrice: QuoteLineLike[];
+  /** The server's own sentence about this box, when it has one. */
+  quoteNote: string | null;
+  /**
+   * Why the price could not be read. A failed quote used to be swallowed and
+   * shown as 0.00, which is the same screen as "this costs nothing".
+   */
+  quoteError: string | null;
   quoteTotal: number;
   quoteTax: number;
 
@@ -232,6 +245,9 @@ export function blankMove(trip: TripType, defaults: {
     vasTicked: [],
     due: [],
     billedLater: [],
+    noPrice: [],
+    quoteNote: null,
+    quoteError: null,
     quoteTotal: 0,
     quoteTax: 0,
     reserved: false,

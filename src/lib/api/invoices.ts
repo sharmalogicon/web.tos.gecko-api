@@ -18,6 +18,8 @@ import { apiSend } from './client';
 
 export const INVOICES_PATH = '/api/revenue/invoices';
 
+export type InvoiceTerm = 'CASH' | 'CREDIT';
+
 export interface InvoiceSummary {
   invoiceId: string;
   invoiceNo: string;
@@ -111,10 +113,15 @@ export const invoicePath = (invoiceId: string) => `${INVOICES_PATH}/${encodeURIC
 
 export interface SendInvoiceRequest {
   chargeIds: string[];
-  /** CREDIT only — CASH answers 400. */
-  paymentTermCode: 'CREDIT';
-  /** Always null: an invoice is issued at once and final; a number here is 409. */
-  invoiceNo: null;
+  /**
+   * CASH or CREDIT. Only CREDIT is accepted today — CASH answers 400, because
+   * cash is collected at the window and its receipt IS the tax invoice. The
+   * screen offers both (the owner's call, 2026-10-07: a Thai clerk calls that
+   * receipt an invoice) and shows the server's refusal when it comes.
+   */
+  paymentTermCode: InvoiceTerm;
+  /** A number appends to that invoice; null raises a new one. An existing number answers 409 today. */
+  invoiceNo: string | null;
   remarks: string;
 }
 

@@ -40,6 +40,27 @@ import {
  *
  * `POST /gate/transactions` is not called from this screen at all any more.
  */
+/**
+ * One box as the window quote answers it. `nextMovementCode` is the step being
+ * priced — the field whose absence from the old call was the whole bug.
+ */
+interface QuoteBox {
+  bookingContainerId: string | null;
+  nextMovementCode: string | null;
+  due?: QuoteLineLike[];
+  billedLater?: QuoteLineLike[];
+  noPrice?: QuoteLineLike[];
+  vasMenu?: VasOption[];
+  note?: string | null;
+  total?: number;
+}
+
+interface WindowQuote {
+  boxes?: QuoteBox[];
+  total?: number;
+  tax?: number;
+}
+
 export default function GateInPage() {
   const { can } = useSession();
   const { branch } = useFacility();
@@ -99,43 +120,129 @@ export default function GateInPage() {
    * movement, each item priced as if ticked (§23.2a), so the panel needs no
    * second request.
    */
-  const priceRow = useCallback(async (key: string) => {
-    const row = moves.find(m => m.key === key);
-    if (!branchId || !row) return;
-    const p = new URLSearchParams({ branchId });
-    const add = (k: string, v: string) => { if (v.trim()) p.set(k, v.trim()); };
-    add('orderTypeCode', row.orderTypeCode);
-    add('lineCode', row.lineCode);
-    add('customerCode', row.customerCode);
-    add('agentCode', row.agentCode);
-    add('equipmentTypeCode', row.equipmentTypeCode);
-    add('containerNo', normaliseBox(row.containerNo));
-    add('truckCategoryCode', truck.truckCategoryCode);
-    add('haulierCode', truck.haulierCode);
-    for (const v of row.vasTicked) p.append('vas', v);
-    try {
-      const q = await apiGet<{
-        boxes: { due?: QuoteLineLike[]; billedLater?: QuoteLineLike[]; vasMenu?: VasOption[] }[];
-        total?: number; tax?: number;
-      }>(`/api/revenue/window/preview?${p}`);
-      const box = q.boxes?.[0];
-      patchMove(key, {
-        due: box?.due ?? [],
-        billedLater: box?.billedLater ?? [],
-        vasMenu: box?.vasMenu ?? [],
-        quoteTotal: q.total ?? 0,
-        quoteTax: q.tax ?? 0,
-      });
-    } catch {
-      // A price that cannot be read must not stop a box being keyed. The Save
-      // is the call that decides what is owed.
-      patchMove(key, { due: [], billedLater: [], vasMenu: [] });
-    }
-  }, [branchId, moves, patchMove, truck.haulierCode, truck.truckCategoryCode]);
+  /**
+   * Price the truck.
+   *
+   * `/window/preview` prices the ORDER TYPE'S FIRST STEP on a dummy booking. For
+   * a box already on a booking that is the wrong move: a pick-up sitting at
+   * MTY_OUT was priced as the MTY_IN drop-off, which prices at nothing — so the
+   * panel showed 0.00, the Save carried no payment, and the desktop charged
+   * S-002 280.37 + 19.63 VAT for the same box. Preview is right only for a
+   * BLIND box, which has no booking and therefore no next step to read.
+   *
+   * So a booked row is priced through `/window/bookings`, which answers each
+   * box at its own `nextMovementCode`. One call per booking on the truck, each
+   * naming the others in `sameTruckAs` so the truck's gate charge is counted
+   * ONCE across the visit rather than once per booking.
+   *
+   * It is also the pricing the SAVE uses, so `expectedTotal` now matches what
+   * was shown and the Save stops answering 409 "the price changed".
+   */
+  const priceTruck = useCallback(async (rows: MoveDraft[]) => {
+    if (!branchId) return;
+    const booked = rows.filter(m => m.bookingContainerId && m.orderNo);
+    const blind = rows.filter(m => !m.bookingContainerId);
+
+    const byOrder = new Map<string, MoveDraft[]>();
+    for (const m of booked) byOrder.set(m.orderNo, [...(byOrder.get(m.orderNo) ?? []), m]);
+    const orderNos = [...byOrder.keys()];
+
+    await Promise.all([
+      ...orderNos.map(async orderNo => {
+        const group = byOrder.get(orderNo) ?? [];
+        const p = new URLSearchParams({ orderNo });
+        if (truck.truckCategoryCode) p.set('truckCategoryCode', truck.truckCategoryCode);
+        if (truck.haulierCode) p.set('haulierCode', truck.haulierCode);
+        for (const m of group) p.append('bookingContainerIds', m.bookingContainerId);
+        // The gate charge belongs to the TRUCK, not to each booking on it.
+        for (const other of orderNos.filter(o => o !== orderNo)) p.append('sameTruckAs', other);
+        for (const v of new Set(group.flatMap(m => m.vasTicked))) p.append('vas', v);
+        try {
+          const q = await apiGet<WindowQuote>(`/api/revenue/window/bookings?${p}`);
+          for (const m of group) {
+            const box = (q.boxes ?? []).find(b => b.bookingContainerId === m.bookingContainerId);
+            patchMove(m.key, {
+              due: box?.due ?? [],
+              billedLater: box?.billedLater ?? [],
+              noPrice: box?.noPrice ?? [],
+              vasMenu: box?.vasMenu ?? [],
+              quoteNote: box?.note ?? null,
+              quoteError: box ? null : 'The quote did not answer for this box.',
+              // The box's own total, so a truck of several boxes adds up once.
+              quoteTotal: box?.total ?? 0,
+              quoteTax: 0,
+              // What the server says the next step is — the move being priced.
+              movementCode: box?.nextMovementCode || m.movementCode,
+            });
+          }
+          // VAT and the gate charge are answered once per booking, so the
+          // booking-level tax is carried on its FIRST box rather than repeated.
+          if (group[0]) patchMove(group[0].key, { quoteTax: q.tax ?? 0 });
+        } catch (e) {
+          const err = e instanceof ApiError ? e : new ApiError(0, 'The Gecko API did not answer.');
+          for (const m of group) {
+            patchMove(m.key, {
+              due: [], billedLater: [], noPrice: [], quoteTotal: 0, quoteTax: 0,
+              quoteError: err.title || err.message,
+            });
+          }
+        }
+      }),
+
+      // A blind box has no booking and no next step, so preview is right for it.
+      ...blind.map(async m => {
+        const p = new URLSearchParams({ branchId });
+        const add = (k: string, v: string) => { if (v.trim()) p.set(k, v.trim()); };
+        add('orderTypeCode', m.orderTypeCode);
+        add('lineCode', m.lineCode);
+        add('customerCode', m.customerCode);
+        add('agentCode', m.agentCode);
+        add('equipmentTypeCode', m.equipmentTypeCode);
+        add('containerNo', normaliseBox(m.containerNo));
+        add('truckCategoryCode', truck.truckCategoryCode);
+        add('haulierCode', truck.haulierCode);
+        for (const v of m.vasTicked) p.append('vas', v);
+        try {
+          const q = await apiGet<WindowQuote>(`/api/revenue/window/preview?${p}`);
+          const box = q.boxes?.[0];
+          patchMove(m.key, {
+            due: box?.due ?? [],
+            billedLater: box?.billedLater ?? [],
+            noPrice: box?.noPrice ?? [],
+            vasMenu: box?.vasMenu ?? [],
+            quoteNote: box?.note ?? null,
+            quoteError: null,
+            quoteTotal: q.total ?? 0,
+            quoteTax: q.tax ?? 0,
+          });
+        } catch (e) {
+          const err = e instanceof ApiError ? e : new ApiError(0, 'The Gecko API did not answer.');
+          patchMove(m.key, {
+            due: [], billedLater: [], noPrice: [], quoteTotal: 0, quoteTax: 0,
+            quoteError: err.title || err.message,
+          });
+        }
+      }),
+    ]);
+  }, [branchId, patchMove, truck.haulierCode, truck.truckCategoryCode]);
+
+  /**
+   * Re-price one row, with the whole truck — the gate charge and the VAT are
+   * answered per booking, so a row cannot be priced on its own without
+   * double-counting them.
+   *
+   * It takes the row rather than reading it from state: `pickBooking` patches
+   * the row and then prices it, and reading `moves` there would see the state
+   * from BEFORE the patch and price the row that was still empty.
+   */
+  const priceRow = useCallback(async (key: string, patched?: Partial<MoveDraft>) => {
+    const rows = moves.map(m => (m.key === key ? { ...m, ...patched } : m));
+    await priceTruck(rows);
+  }, [moves, priceTruck]);
 
   /** The clerk picked a place off a booking. One choice fills the row. */
   const pickBooking = useCallback(async (key: string, box: BookableBox) => {
-    patchMove(key, {
+    const picked: Partial<MoveDraft> = {
       bookingContainerId: box.bookingContainerId,
       bookingId: box.bookingId,
       orderNo: box.orderNo,
@@ -154,8 +261,12 @@ export default function GateInPage() {
       type: (box.equipmentTypeCode ?? '').slice(2),
       reserved: false,
       placeMessage: null,
-    });
-    await priceRow(key);
+    };
+    patchMove(key, picked);
+    // The patch above has not reached `moves` yet, so the picked values are
+    // handed to the pricing directly. Without this the first price is taken on
+    // the row as it was BEFORE the booking was chosen — i.e. on nothing.
+    await priceRow(key, picked);
   }, [patchMove, priceRow]);
 
   /**
@@ -192,13 +303,15 @@ export default function GateInPage() {
   const toggleVas = useCallback(async (key: string, chargeCode: string) => {
     const row = moves.find(m => m.key === key);
     if (!row) return;
-    patchMove(key, {
-      vasTicked: row.vasTicked.includes(chargeCode)
-        ? row.vasTicked.filter(c => c !== chargeCode)
-        : [...row.vasTicked, chargeCode],
-    });
-    // Re-quote: the server moves the ticked item into `due` and prices it.
-    await priceRow(key);
+    const vasTicked = row.vasTicked.includes(chargeCode)
+      ? row.vasTicked.filter(c => c !== chargeCode)
+      : [...row.vasTicked, chargeCode];
+    patchMove(key, { vasTicked });
+    // Re-quote with the NEW tick list, handed over directly. `patchMove` has
+    // not reached `moves` yet, so pricing off state here would send the list as
+    // it was BEFORE the tick — every price one step behind the box, which is
+    // exactly how a ticked service was charged only after it was unticked.
+    await priceRow(key, { vasTicked });
   }, [moves, patchMove, priceRow]);
 
   /**
@@ -214,21 +327,25 @@ export default function GateInPage() {
     patchMove(key, { saving: true, error: null, placeMessage: null });
     setTruckError(null);
     try {
+      // What the hold changed about the row, carried to the pricing directly:
+      // the server can hold a DIFFERENT place, and pricing off state here would
+      // quote the place we asked for rather than the one we got.
+      let held: Partial<MoveDraft> | undefined;
       if (row.bookingContainerId) {
-        const held = await reserveBox({
+        const r = await reserveBox({
           branchId, draftId,
           bookingContainerId: row.bookingContainerId,
           containerNo: normaliseBox(row.containerNo) || null,
         });
-        patchMove(key, {
-          // The server may hold a DIFFERENT place. Carrying on with the one we
-          // asked for is how two trucks end up on one.
-          bookingContainerId: held.bookingContainerId ?? row.bookingContainerId,
-          placeMessage: held.switchedFromBookingContainerId ? held.message : null,
-          findings: held.findings ?? [],
-        });
+        held = {
+          // Carrying on with the place we asked for is how two trucks end up on one.
+          bookingContainerId: r.bookingContainerId ?? row.bookingContainerId,
+          placeMessage: r.switchedFromBookingContainerId ? r.message : null,
+          findings: r.findings ?? [],
+        };
+        patchMove(key, held);
       }
-      await priceRow(key);
+      await priceRow(key, held);
       patchMove(key, { saving: false, reserved: true });
       setOpenKey(cur => (cur === key ? null : cur));
     } catch (e) {

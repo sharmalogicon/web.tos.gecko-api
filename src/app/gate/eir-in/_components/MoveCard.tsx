@@ -505,7 +505,7 @@ export function MoveCard({ move, index, open, branchId, takenBoxes, onToggle, on
           )}
 
           {move.vasMenu.length > 0 && (
-            <Section title="Extras">
+            <Section title="VAS">
               <VasPanel
                 menu={move.vasMenu}
                 ticked={move.vasTicked}

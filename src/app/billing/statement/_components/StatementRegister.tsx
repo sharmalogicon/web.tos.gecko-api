@@ -3,7 +3,7 @@ import React, { useMemo, useState } from 'react';
 import { Icon } from '@/components/ui/Icon';
 import { EmptyState } from '@/components/ui/EmptyState';
 import { FilterPopover, type FilterField } from '@/components/ui/FilterPopover';
-import { usePagination, TablePagination } from '@/components/ui/TablePagination';
+import { TablePagination } from '@/components/ui/TablePagination';
 import { useApi } from '@/lib/api/use-api';
 import { useFacility } from '@/lib/api/facility';
 import {
@@ -31,7 +31,13 @@ export function StatementRegister({ onOpen }: { onOpen: (orderNo: string) => voi
   const [filters, setFilters] = useState<Record<string, string>>({
     query: '', bookingTypeCode: '', orderTypeCode: '', paymentTermCode: '', progress: '',
   });
-  const [sortBy, setSortBy] = useState('unbilled_desc');
+  const [sortBy, setSortBy] = useState('newest');
+
+  // Which page of the register the clerk is on. The API pages, not the screen:
+  // it lists EVERY booking of the branch now, so slicing a 200-row fetch
+  // locally would show the newest 200 and quietly call that "all".
+  const [page, setPage] = useState(1);
+  const PAGE_SIZE = 50;
 
   const path = useMemo(() => {
     const q = { ...blankUnbilledQuery() };
@@ -39,21 +45,37 @@ export function StatementRegister({ onOpen }: { onOpen: (orderNo: string) => voi
     if (filters.orderTypeCode) q.orderTypeCode = filters.orderTypeCode;
     if (filters.paymentTermCode) q.paymentTermCode = filters.paymentTermCode;
     if (filters.progress) q.progress = filters.progress as typeof q.progress;
-    // unbilledParams answers a plain record (the API wants PascalCase keys),
-    // so the page size is added before it becomes a query string.
-    // includeSettled (API 2026-10-07): without it a booking billed or paid in
-    // full has nothing unbilled and so never appears, and the clerk can only
-    // reach it by typing the order number. With it every booking is listed and
-    // each row carries totalBillable / billedAmount / unbilledAmount.
+    // IncludeSettled (API 2026-10-07) turns this from "orders with something
+    // unbilled" into "every booking of the branch, newest first" — including
+    // ones with no charge lines at all, which a clerk opens to add a manual
+    // charge. PascalCase like its neighbours; `page`/`pageSize` are lowercase
+    // on THIS endpoint, unlike /api/tos/bookings.
     const p = new URLSearchParams({
-      ...unbilledParams(q, branchId), pageSize: '200', includeSettled: 'true',
+      ...unbilledParams(q, branchId),
+      IncludeSettled: 'true',
+      page: String(page),
+      pageSize: String(PAGE_SIZE),
     });
     return `${UNBILLED_ORDERS_PATH}?${p.toString()}`;
-  }, [filters, branchId]);
+  }, [filters, branchId, page]);
+
+  // Every filter below the search box narrows by CHARGE LINE, so with one set
+  // the API lists only bookings that have such lines. The empty state has to
+  // say that, or an empty page reads as an empty branch.
+  const anyFilterSet = Boolean(filters.bookingTypeCode || filters.orderTypeCode
+    || filters.paymentTermCode || filters.progress);
 
   const { data, error, loading, reload } = useApi<UnbilledOrdersPage>(path);
-  const orders = data?.items ?? [];
+  const orders = useMemo(() => data?.items ?? [], [data]);
+  const totalCount = data?.totalCount ?? 0;
+  const totalPages = Math.max(1, Math.ceil(totalCount / PAGE_SIZE));
 
+  /**
+   * The text box and the sort act on the PAGE that is loaded, not on the whole
+   * register: this endpoint has no free-text search, and sorting server-side is
+   * not offered either. Saying so in the placeholder is better than a search
+   * that looks global and is not.
+   */
   const rows = useMemo(() => {
     const q = filters.query.trim().toLowerCase();
     const out = orders.filter(o => !q
@@ -63,21 +85,20 @@ export function StatementRegister({ onOpen }: { onOpen: (orderNo: string) => voi
       || (o.customerName ?? '').toLowerCase().includes(q)
       || (o.agentName ?? '').toLowerCase().includes(q));
     const by: Record<string, (a: UnbilledOrder, b: UnbilledOrder) => number> = {
-      unbilled_desc: (a, b) => b.total - a.total,
+      // The API already answers newest first, so this is the order it arrived in.
+      newest: () => 0,
+      unbilled_desc: (a, b) => (b.unbilledAmount ?? b.total) - (a.unbilledAmount ?? a.total),
       orderNo: (a, b) => a.orderNo.localeCompare(b.orderNo),
       customer: (a, b) => (a.customerName ?? '').localeCompare(b.customerName ?? ''),
-      newest: (a, b) => (b.bookedAt ?? '').localeCompare(a.bookedAt ?? ''),
     };
-    return [...out].sort(by[sortBy] ?? by.unbilled_desc);
+    return [...out].sort(by[sortBy] ?? by.newest);
   }, [orders, filters.query, sortBy]);
-
-  const page = usePagination(rows);
 
   const distinct = (pick: (o: UnbilledOrder) => string | null) =>
     [...new Set(orders.map(pick).filter((v): v is string => Boolean(v)))].sort();
 
   const fields: FilterField[] = [
-    { type: 'search', key: 'query', placeholder: 'Order, B/L, customer or agent…' },
+    { type: 'search', key: 'query', placeholder: 'Filter this page: order, B/L, customer…' },
     {
       type: 'select', key: 'bookingTypeCode', label: 'Booking type',
       options: [{ label: 'All', value: '' }, ...distinct(o => o.bookingTypeCode).map(v => ({ label: v, value: v }))],
@@ -107,10 +128,15 @@ export function StatementRegister({ onOpen }: { onOpen: (orderNo: string) => voi
         <div className="gecko-table-toolbar">
           <Icon name="fileText" size={13} />
           <span>
-            <strong>{rows.length}</strong> booking{rows.length === 1 ? '' : 's'}
+            <strong>{totalCount}</strong> booking{totalCount === 1 ? '' : 's'}
+            {rows.length !== orders.length && <> · {rows.length} shown on this page</>}
           </span>
           <span className="gecko-table-toolbar-spacer" />
-          {data && <span>Unbilled <strong className="gecko-mono">{money(data.total, 'THB')}</strong> over {data.lines} lines</span>}
+          {data && (
+            <span title="Counts UNBILLED lines only, across the whole register">
+              Unbilled <strong className="gecko-mono">{money(data.total, 'THB')}</strong> over {data.lines} lines
+            </span>
+          )}
           <button className="gecko-btn gecko-btn-outline gecko-btn-sm" onClick={reload}>
             <Icon name="refreshCcw" size={13} /> Refresh
           </button>
@@ -119,13 +145,13 @@ export function StatementRegister({ onOpen }: { onOpen: (orderNo: string) => voi
             values={filters}
             tone="orange"
             onChange={setFilters}
-            onApply={setFilters}
-            onClear={() => setFilters({ query: '', bookingTypeCode: '', orderTypeCode: '', paymentTermCode: '', progress: '' })}
+            onApply={v => { setFilters(v); setPage(1); }}
+            onClear={() => { setFilters({ query: '', bookingTypeCode: '', orderTypeCode: '', paymentTermCode: '', progress: '' }); setPage(1); }}
             sortOptions={[
+              { label: 'Newest first', value: 'newest' },
               { label: 'Most unbilled first', value: 'unbilled_desc' },
               { label: 'Order number', value: 'orderNo' },
               { label: 'Customer', value: 'customer' },
-              { label: 'Newest booking', value: 'newest' },
             ]}
             sortValue={sortBy}
             onSortChange={setSortBy}
@@ -161,12 +187,18 @@ export function StatementRegister({ onOpen }: { onOpen: (orderNo: string) => voi
             {!loading && rows.length === 0 && (
               <tr>
                 <td colSpan={9} style={{ padding: 0 }}>
-                  <EmptyState icon="checkCircle" title="No bookings with charges"
-                    description="Bookings appear here as their boxes are quoted and gated." />
+                  {/* With a charge-line filter set the API lists only bookings
+                      that HAVE such lines, so an empty result means the filter,
+                      not an empty branch. */}
+                  <EmptyState icon="search"
+                    title={anyFilterSet ? 'No booking matches the filter' : 'No bookings yet'}
+                    description={anyFilterSet
+                      ? 'Payment term, charge, movement, date and progress all filter by CHARGE LINE, so a booking with none is left out. Clear the filter to see every booking.'
+                      : 'Bookings appear here as they are raised.'} />
                 </td>
               </tr>
             )}
-            {page.pageItems.map(o => (
+            {rows.map(o => (
               <tr key={o.orderNo} className="gecko-row-clickable" onClick={() => onOpen(o.orderNo)}>
                 <td>
                   <button className="gecko-mono-strong gecko-link gecko-cell-tight" onClick={e => { e.stopPropagation(); onOpen(o.orderNo); }}>
@@ -190,15 +222,18 @@ export function StatementRegister({ onOpen }: { onOpen: (orderNo: string) => voi
                   <span className="gecko-cell-tight">{o.vesselCode ?? '—'}</span>
                   {o.voyage && <span className="gecko-cell-meta gecko-cell-tight">{o.voyage}</span>}
                 </td>
-                <td className="gecko-num gecko-mono">{o.boxes}</td>
+                {/* No charge lines yet is normal, not missing data: the money
+                    reads 0.00 and the box count a dash. The row still opens —
+                    that is where a manual charge is added. */}
+                <td className="gecko-num gecko-mono">{o.boxes > 0 ? o.boxes : '—'}</td>
                 <td className="gecko-num gecko-mono">
-                  {o.totalBillable == null ? '—' : money(o.totalBillable, o.currencyCode)}
+                  {money(o.totalBillable ?? 0, o.currencyCode)}
                 </td>
                 <td className="gecko-num gecko-mono">
-                  {o.billedAmount == null ? '—' : money(o.billedAmount, o.currencyCode)}
+                  {money(o.billedAmount ?? 0, o.currencyCode)}
                 </td>
                 <td className="gecko-num gecko-mono gecko-register-unbilled">
-                  {money(o.unbilledAmount ?? o.total, o.currencyCode)}
+                  {money(o.unbilledAmount ?? o.total ?? 0, o.currencyCode)}
                 </td>
               </tr>
             ))}
@@ -207,11 +242,19 @@ export function StatementRegister({ onOpen }: { onOpen: (orderNo: string) => voi
 
         </div>
 
-        {rows.length > 0 && (
+        {totalCount > 0 && (
           <TablePagination
-            page={page.page} pageSize={page.pageSize} totalItems={page.totalItems} totalPages={page.totalPages}
-            startRow={page.startRow} endRow={page.endRow}
-            onPageChange={page.setPage} onPageSizeChange={page.setPageSize} noun="bookings"
+            page={page}
+            pageSize={PAGE_SIZE}
+            totalItems={totalCount}
+            totalPages={totalPages}
+            startRow={(page - 1) * PAGE_SIZE + 1}
+            endRow={Math.min(page * PAGE_SIZE, totalCount)}
+            onPageChange={setPage}
+            // The API's page size, not the screen's: changing it would have to
+            // re-ask the server, and 50 is the size the owner set.
+            onPageSizeChange={() => {}}
+            noun="bookings"
           />
         )}
       </div>

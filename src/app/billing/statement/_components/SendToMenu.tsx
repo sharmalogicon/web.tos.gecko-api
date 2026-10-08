@@ -3,24 +3,23 @@ import React, { useEffect, useRef, useState } from 'react';
 import { Icon } from '@/components/ui/Icon';
 
 /**
- * Send the ticked charges to an invoice — Vector's "Send To" button.
+ * Send the ticked charges to an invoice — Vector's "Send To" button, with the
+ * four choices the desktop has and the owner wants (2026-10-07): new or
+ * existing, cash or credit.
  *
- * June offered four choices: new or existing, cash or credit. The API that
- * shipped on 2026-10-07 supports exactly ONE of them, and the other three are
- * not missing features but wrong ideas:
+ * In Thailand the receipt IS the tax invoice, so a clerk asking for a "cash
+ * invoice" is asking for the thing the cash window prints — the words are the
+ * depot's, not a mistake.
  *
- *  - CASH never becomes an invoice. It is collected at the window and its
- *    RECEIPT is the tax invoice. Sending cash lines answers 400.
- *  - There is no EXISTING invoice to add to. An invoice is issued at once and
- *    is final — passing an invoiceNo answers 409. More credit lines make
- *    another invoice.
- *
- * So the menu offers the one real action and says why the others are gone,
- * which is more use to a clerk than three buttons that always refuse.
+ * WHAT THE API TAKES TODAY: `POST /api/revenue/invoices/send` accepts CREDIT
+ * with no invoice number. CASH answers 400 and an invoiceNo answers 409, so
+ * those three paths surface the server's own refusal rather than a message
+ * invented here — see docs/STATEMENT_CHARGE_EDIT_FOR_API.md §7 for what is
+ * still needed.
  */
 
 export type InvoiceTerm = 'CASH' | 'CREDIT';
-export interface SendAction { kind: 'new'; term: 'CREDIT' }
+export interface SendAction { kind: 'new' | 'existing'; term: InvoiceTerm }
 
 export function SendToMenu({ counts, disabled, onPick }: {
   /** How many ticked lines carry each term, so the menu can say so. */
@@ -48,15 +47,17 @@ export function SendToMenu({ counts, disabled, onPick }: {
       </button>
       {open && (
         <div className="gecko-sendto-menu" role="menu">
-          <div className="gecko-sendto-label">Raise an invoice</div>
+          <div className="gecko-sendto-label">Create new invoice</div>
+          <Item term="CASH" count={counts.CASH} icon="plus" label="New cash invoice"
+            onClick={() => pick({ kind: 'new', term: 'CASH' })} />
           <Item term="CREDIT" count={counts.CREDIT} icon="plus" label="New credit invoice"
             onClick={() => pick({ kind: 'new', term: 'CREDIT' })} />
-          {counts.CASH > 0 && (
-            <div className="gecko-sendto-note">
-              {counts.CASH} cash line{counts.CASH === 1 ? ' is' : 's are'} ticked and will not be sent — cash is
-              taken at the cash window, and its receipt is the tax invoice.
-            </div>
-          )}
+          <div className="gecko-filter-divider" />
+          <div className="gecko-sendto-label">Add to an existing invoice</div>
+          <Item term="CASH" count={counts.CASH} icon="fileText" label="Existing cash invoice"
+            onClick={() => pick({ kind: 'existing', term: 'CASH' })} />
+          <Item term="CREDIT" count={counts.CREDIT} icon="fileText" label="Existing credit invoice"
+            onClick={() => pick({ kind: 'existing', term: 'CREDIT' })} />
         </div>
       )}
     </div>

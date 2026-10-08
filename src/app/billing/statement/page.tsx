@@ -32,6 +32,7 @@ import { FilterPopover, type FilterField } from '@/components/ui/FilterPopover';
 import { useToast } from '@/components/ui/Toast';
 import { useApi, useApiList } from '@/lib/api/use-api';
 import { useSession } from '@/lib/auth/session';
+import { useFacility } from '@/lib/api/facility';
 import { saveBlob } from '@/lib/api/client';
 import { formatContainerNo } from '@/lib/api/tos';
 import { toCsv } from '@/lib/api/reports';
@@ -46,6 +47,7 @@ import { ChargeDetailModal } from './_components/ChargeDetailModal';
 import { MoneyCards } from './_components/MoneyCards';
 import { SendToMenu, type SendAction } from './_components/SendToMenu';
 import { StatementRegister } from './_components/StatementRegister';
+import { StatementSearchBox } from './_components/StatementSearchBox';
 import { ChargeAddModal, RegenerateModal, SendToInvoiceModal, WaiveSelectedModal } from './_components/StatementModals';
 
 export default function BookingStatementPage() {
@@ -121,6 +123,7 @@ function Statement() {
 
   const { toast } = useToast();
   const { user } = useSession();
+  const { branch } = useFacility();
   const perms = user?.permissions ?? [];
   const mayEdit = perms.includes('revenue.charge.waive') || perms.includes('revenue.charge.override');
   // revenue.invoice.issue is NEW (2026-10-07). Without it the send answers 403,
@@ -278,7 +281,7 @@ function Statement() {
           <div className="gecko-page-subtitle gecko-mt-1">
             {orderNo
               ? 'Every charge on this booking in one table, and the receipts that paid them.'
-              : 'Bookings with charges still to bill. Open one to price, waive or invoice its lines.'}
+              : 'The latest bookings and what they bill. Open one to price, waive, add or invoice its lines.'}
           </div>
         </div>
         <div className="gecko-toolbar">
@@ -297,11 +300,13 @@ function Statement() {
 
       <form className="gecko-card" style={{ padding: 14 }} onSubmit={submit}>
         <div className="gecko-row" style={{ gap: 12, alignItems: 'flex-end', flexWrap: 'wrap' }}>
-          <div className="gecko-form-group" style={{ flex: '1 1 320px' }}>
-            <label className="gecko-form-label" htmlFor="orderNo">Order number</label>
-            <input id="orderNo" className="gecko-input" autoComplete="off" value={typed}
-                   style={{ fontFamily: 'var(--gecko-font-mono, monospace)', textTransform: 'uppercase' }}
-                   placeholder="Booking / order no." onChange={e => setTyped(e.target.value)} />
+          <div style={{ flex: '1 1 320px' }}>
+            <StatementSearchBox
+              value={typed}
+              onChange={setTyped}
+              onOpen={open}
+              branchId={branch?.branchId ?? ''}
+            />
           </div>
           <button type="submit" className="gecko-btn gecko-btn-primary" disabled={!typed.trim()}>
             <Icon name="search" size={16} /> Open
@@ -570,7 +575,8 @@ function Statement() {
         <RegenerateModal orderNo={s.orderNo} rows={all} onClose={() => setDialog(null)} onDone={done} />
       )}
       {dialog?.kind === 'send' && (
-        <SendToInvoiceModal selected={selected} currency={cur} onClose={() => setDialog(null)} onDone={done} />
+        <SendToInvoiceModal kind={dialog.action.kind} term={dialog.action.term}
+          selected={selected} currency={cur} onClose={() => setDialog(null)} onDone={done} />
       )}
     </div>
   );

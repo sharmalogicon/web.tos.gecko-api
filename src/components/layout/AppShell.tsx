@@ -156,8 +156,9 @@ const NAV = [
     // array, and there is no credit-note endpoint of any kind. Add it the day
     // one exists.
     children: [
-      { id: 'cash-window',     label: 'Cash Window',      path: '/billing/cash-window' },
-      { id: 'service-orders',  label: 'Charge Register',  path: '/billing/service-orders' },
+      // Cash Window and Charge Register are OFF the menu (owner, 2026-10-07).
+      // Both still serve — the statement links to the cash window — they are
+      // just not how a clerk starts. Restore these two lines to bring them back.
       { id: 'statement',       label: 'Booking Statement', path: '/billing/statement' },
       { id: 'unbilled',        label: 'Unbilled Charges', path: '/billing/unbilled' },
       { id: 'invoices',        label: 'Invoices',         path: '/billing/invoices' },

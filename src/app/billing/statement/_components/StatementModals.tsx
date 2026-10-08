@@ -10,7 +10,7 @@ import {
   waiveCharges, WAIVE_REASON_LABEL, WAIVE_REASONS,
   type DiscountType, type WaiveReasonCode,
 } from '@/lib/api/statement-writes';
-import { sendToInvoice } from '@/lib/api/invoices';
+import { sendToInvoice, type InvoiceTerm } from '@/lib/api/invoices';
 import { apiProblem } from './problem';
 
 /**
@@ -377,23 +377,26 @@ export function RegenerateModal({ orderNo, rows, onClose, onDone }: {
 
 // ── send to invoice ──────────────────────────────────────────────────────────
 
-export function SendToInvoiceModal({ selected, currency, onClose, onDone }: {
+export function SendToInvoiceModal({ kind, term, selected, currency, onClose, onDone }: {
+  kind: 'new' | 'existing';
+  term: InvoiceTerm;
   selected: StatementRow[];
   currency: string;
   onClose: () => void;
   onDone: (message: string) => void;
 }) {
+  const [invoiceNo, setInvoiceNo] = useState('');
   const [remarks, setRemarks] = useState('');
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<{ title: string; detail: string } | null>(null);
   const [done, setDone] = useState<{ invoiceNo: string; invoiceId: string } | null>(null);
 
-  // CREDIT only, and only lines that can still go on one. The API refuses the
-  // whole send if any line is wrong, so the screen narrows the selection first
-  // rather than letting twenty good lines fail because of one.
-  const lines = selected.filter(r => r.charge.paymentTermCode === 'CREDIT'
+  // Only lines on THIS term, and only ones that can still go on an invoice.
+  // The API refuses the whole send if one line is wrong, so the selection is
+  // narrowed here rather than letting twenty good lines fail for one.
+  const lines = selected.filter(r => r.charge.paymentTermCode === term
     && (r.charge.status === 'QUOTED' || r.charge.status === 'UNBILLED'));
-  const cash = selected.filter(r => r.charge.paymentTermCode === 'CASH').length;
+  const other = selected.length - lines.length;
   const total = lines.reduce((n, r) => n + r.charge.total, 0);
 
   // One invoice is one payer: the API answers 409 on a mixed selection, and
@@ -401,7 +404,10 @@ export function SendToInvoiceModal({ selected, currency, onClose, onDone }: {
   const payers = [...new Set(lines.map(r => r.charge.payerName ?? r.charge.payerCode ?? 'unnamed'))];
   const mixed = payers.length > 1;
 
-  const ready = lines.length > 0 && !mixed && !busy;
+  const ready = lines.length > 0 && !mixed && !busy
+    && (kind === 'new' || invoiceNo.trim().length > 0);
+
+  const what = `${kind === 'new' ? 'New' : 'Existing'} ${term.toLowerCase()} invoice`;
 
   async function go() {
     if (!ready) return;
@@ -410,8 +416,8 @@ export function SendToInvoiceModal({ selected, currency, onClose, onDone }: {
     try {
       const r = await sendToInvoice({
         chargeIds: lines.map(l => l.charge.chargeId),
-        paymentTermCode: 'CREDIT',
-        invoiceNo: null,
+        paymentTermCode: term,
+        invoiceNo: kind === 'existing' ? invoiceNo.trim() : null,
         remarks: remarks.trim(),
       });
       setDone({ invoiceNo: r.invoiceNo, invoiceId: r.invoiceId });
@@ -425,10 +431,10 @@ export function SendToInvoiceModal({ selected, currency, onClose, onDone }: {
 
   return (
     <Modal isOpen onClose={onClose} size="md" closeOnBackdrop={false}
-      title={done ? `Invoice ${done.invoiceNo} issued` : 'New credit invoice'}
+      title={done ? `Invoice ${done.invoiceNo} issued` : what}
       subtitle={done
         ? 'Issued and final. The lines on it are now INVOICED.'
-        : `${lines.length} credit line${lines.length === 1 ? '' : 's'} · ${amount(total, currency)}`}
+        : `${lines.length} ${term.toLowerCase()} line${lines.length === 1 ? '' : 's'} · ${amount(total, currency)}`}
       footer={done
         ? (
           <>
@@ -442,12 +448,14 @@ export function SendToInvoiceModal({ selected, currency, onClose, onDone }: {
         : (
           <>
             <span className="gecko-modal-footer-note gecko-flex-1">
-              {lines.length === 0 ? 'None of the ticked lines can go on an invoice.'
-                : mixed ? 'One invoice is one payer. Tick the lines for a single payer.' : ''}
+              {lines.length === 0 ? `None of the ticked lines is on ${term.toLowerCase()} terms and still open.`
+                : mixed ? 'One invoice is one payer. Tick the lines for a single payer.'
+                  : kind === 'existing' && !invoiceNo.trim() ? 'Enter the invoice number to add them to.' : ''}
             </span>
             <button className="gecko-btn gecko-btn-outline gecko-btn-sm" onClick={onClose} disabled={busy}>Cancel</button>
             <button className="gecko-btn gecko-btn-primary gecko-btn-sm" disabled={!ready} onClick={go}>
-              <Icon name="send" size={13} /> {busy ? 'Issuing…' : 'Issue the invoice'}
+              <Icon name="send" size={13} />
+              {busy ? 'Sending…' : kind === 'new' ? 'Issue the invoice' : 'Add to it'}
             </button>
           </>
         )}>
@@ -456,20 +464,29 @@ export function SendToInvoiceModal({ selected, currency, onClose, onDone }: {
 
         {!done && (
           <>
-            <div className="gecko-alert gecko-alert-info">
-              <Icon name="alertCircle" size={16} />
-              <span>
-                It is issued at once and is final — there is no draft to check first, and it cannot
-                be added to afterwards. More credit lines make another invoice.
-              </span>
-            </div>
+            {kind === 'new' && (
+              <div className="gecko-alert gecko-alert-info">
+                <Icon name="alertCircle" size={16} />
+                <span>
+                  It is issued at once and is final — there is no draft to check first, and it
+                  cannot be added to afterwards.
+                </span>
+              </div>
+            )}
 
-            {cash > 0 && (
+            {kind === 'existing' && (
+              <Field label="Invoice number" required>
+                <input className="gecko-input gecko-text-mono" value={invoiceNo} autoFocus
+                  onChange={e => setInvoiceNo(e.target.value.toUpperCase())} placeholder="INV-2026-0001" />
+              </Field>
+            )}
+
+            {other > 0 && (
               <div className="gecko-alert gecko-alert-warning">
                 <Icon name="alertCircle" size={16} />
                 <span>
-                  {cash} ticked cash line{cash === 1 ? '' : 's'} will not be sent. Cash is collected at the
-                  cash window, and the receipt it prints is the tax invoice.
+                  {other} other ticked line{other === 1 ? '' : 's'} will not be sent — only
+                  {' '}{term.toLowerCase()} lines that are still open go on this invoice.
                 </span>
               </div>
             )}

@@ -9,6 +9,7 @@ import { useSession } from '@/lib/auth/session';
 import { PartyPicker } from '@/app/tariff/_components/PartyPicker';
 import { useCodeList } from '@/lib/api/lookups';
 import { PortPicker } from './PortPicker';
+import { TransferContainersModal } from './TransferContainersModal';
 import type { Port } from '@/lib/api/logistics';
 import Link from 'next/link';
 import { Icon } from '@/components/ui/Icon';
@@ -55,6 +56,8 @@ interface Container {
   vent: number | null; ventMode: string | null; humidity: number | null; preCool: string;
   stowage: number; remarks: string;
   movements: Movement[]; vas: VASCharge[];
+  /** Why the box left the booking (COMPLETED, CANCELLED…); null while it is on it. */
+  endReason: string | null;
 }
 
 /**
@@ -109,6 +112,7 @@ function containerFromApi(line: ApiContainerLine, requirements: ApiRequirement[]
     handoverMode: line.handoverMode ?? '',
     rowVersion: line.rowVersion,
     clientLineId: line.clientLineId ?? '',
+    endReason: line.endReason ?? null,
   };
 }
 
@@ -165,10 +169,36 @@ interface ApiContainerLine {
   isPreCool: boolean | null;
   remarks: string | null;
   handoverMode: string | null;
+  endReason?: string | null;
   steps: ApiStep[] | null;
 }
 
-interface ApiRequirement { lineNo: number; equipmentTypeCode: string; qty: number; qtyAssigned: number; qtyCompleted: number }
+/**
+ * One requirement line as the API answers it (RequirementResponse). The grid
+ * only reads the first five; the rest are declared because CLONE carries them
+ * across, and a clone that silently dropped a reefer setpoint or a DG class
+ * would look right and price wrong.
+ */
+interface ApiRequirement {
+  lineNo: number;
+  equipmentTypeCode: string;
+  qty: number;
+  qtyAssigned: number;
+  qtyCompleted: number;
+  minGradeCode?: string | null;
+  reeferSetTempC?: number | null;
+  reeferVentPct?: number | null;
+  reeferHumidityPct?: number | null;
+  imdgClass?: string | null;
+  unNumber?: string | null;
+  oogOverHeightCm?: number | null;
+  oogOverWidthLeftCm?: number | null;
+  oogOverWidthRightCm?: number | null;
+  oogOverLengthFrontCm?: number | null;
+  oogOverLengthBackCm?: number | null;
+  declaredGrossWeightKg?: number | null;
+  remarks?: string | null;
+}
 
 interface ApiBookingDetail {
   booking: SavedBooking;
@@ -413,6 +443,7 @@ const BLANK_CONTAINER: Container = {
     { code: 'LOAD',    txNo: '', date: '', status: false, yard: '', truck: '' },
   ],
   vas: [],
+  endReason: null,
 };
 
 const AUDIT_LOG = [
@@ -470,14 +501,22 @@ const STATUS_STYLE: Record<ContainerStatus, { dot: string; label: string; color:
 
 // ─── Container Drawer ─────────────────────────────────────────────────────────
 
-function ContainerDrawer({ container, onClose, onDuplicate, onDelete, onSave, requirements }: {
+/** One row of /api/master/equipment-types: '20GP', '40HC', '45RF'… */
+interface EquipmentTypeRow { typeCode: string; descriptionEn: string; lengthFt: number }
+
+function ContainerDrawer({ container, onClose, onDuplicate, onDelete, onSave, requirements, readOnly = false }: {
   container: Container; onClose: () => void;
+  /** CLOSED or CANCELLED booking: the box can be read, not changed. */
+  readOnly?: boolean;
   onDuplicate: () => void; onDelete: () => void;
   /** Saves ONE box and returns the server's field errors, or null when it took it. */
   onSave: (c: Container) => Promise<Record<string, string[]> | null>;
   requirements: ApiRequirement[];
 }) {
   const [form, setForm] = useState({ ...container });
+  // Every type the depot handles. The drawer must not be narrower than the yard.
+  const { data: equipmentTypeRows } = useApiList<EquipmentTypeRow>('/api/master/equipment-types?pageSize=300');
+  const equipmentTypes = useMemo(() => equipmentTypeRows ?? [], [equipmentTypeRows]);
   const [busy, setBusy] = useState(false);
   const [errors, setErrors] = useState<Record<string, string[]> | null>(null);
   const { toast } = useToast();
@@ -490,22 +529,45 @@ function ContainerDrawer({ container, onClose, onDuplicate, onDelete, onSave, re
    * so the line is found from the type, preferring one that still has room.
    */
   /**
-   * What the dropdowns offer.
+   * What the dropdowns offer: EVERY type the depot handles, always.
    *
-   * The booking's own requirement lines come first — those are what it has asked
-   * for — but a booking raised on this screen starts with NO lines, and a list
-   * narrowed to nothing is an empty dropdown and a dead screen. So when the
-   * booking asks for nothing yet, the full list is offered and the line is
-   * created from whatever the clerk picks (see ensureLine on the page).
+   * These used to be narrowed to the booking's own requirement lines, on the
+   * reasoning that a booking asks for what it asks for. That is wrong about how
+   * a depot works: one booking carries 20GP and 40HC and a reefer, and the
+   * clerk discovers the third when the truck arrives, not when the booking was
+   * raised. The narrowing made the second size unreachable — a booking with
+   * only 20GP and 40GP lines offered GP and nothing else — so a clerk who
+   * needed a 40HC had no way to say so.
+   *
+   * There is no need to restrict: `ensureLineFor` on the page creates or grows
+   * the requirement line for whatever is picked, which is exactly how bulk add
+   * already works.
+   *
+   * The list is the equipment-type MASTER, so an ISO type added in master data
+   * appears here without a code change. The hardcoded set is the fallback for
+   * the moment before it loads, and if the call fails.
    */
-  const asked = [...new Set(requirements.map(r => r.equipmentTypeCode))];
-  const sizesAsked = asked.length > 0
-    ? [...new Set(asked.map(e => e.slice(0, 2)))]
-    : ['20', '40', '45'];
-  const typesForSize = [...new Set(asked.filter(e => e.startsWith(form.size)).map(e => e.slice(2)))];
-  const typesAsked = typesForSize.length > 0
-    ? typesForSize
-    : ['GP', 'HC', 'RF', 'RE', 'HR', 'OT', 'FR', 'TK', 'PL'];
+  const FALLBACK_SIZES = ['20', '40', '45'];
+  const FALLBACK_TYPES = ['GP', 'HC', 'RF', 'RE', 'HR', 'OT', 'FR', 'TK', 'PL'];
+
+  const sizesAsked = useMemo(() => {
+    const fromMaster = [...new Set(equipmentTypes.map(t => t.typeCode.slice(0, 2)))].sort();
+    return fromMaster.length > 0 ? fromMaster : FALLBACK_SIZES;
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [equipmentTypes]);
+
+  const typesAsked = useMemo(() => {
+    // Types that exist at the chosen size, plus any the booking already uses —
+    // a line keyed before the master knew the type must stay selectable.
+    const atSize = equipmentTypes
+      .filter(t => t.typeCode.startsWith(form.size))
+      .map(t => t.typeCode.slice(2));
+    const onBooking = requirements
+      .filter(r => r.equipmentTypeCode.startsWith(form.size))
+      .map(r => r.equipmentTypeCode.slice(2));
+    const merged = [...new Set([...atSize, ...onBooking, form.type].filter(Boolean))].sort();
+    return merged.length > 0 ? merged : FALLBACK_TYPES;
+  }, [equipmentTypes, requirements, form.size, form.type]);
 
   function lineFor(size: string, type: string): number {
     const equip = `${size}${type}`;
@@ -527,7 +589,12 @@ function ContainerDrawer({ container, onClose, onDuplicate, onDelete, onSave, re
   const isReefer = ['RF', 'RE', 'HR', 'RH'].includes(form.type);
   const isDG     = form.cargoCategory === 'DG';
 
-  const set = (k: keyof Container, v: unknown) => setForm(prev => ({ ...prev, [k]: v }));
+  // One guard rather than `disabled` on forty inputs: a frozen booking simply
+  // cannot change the form it is showing.
+  const set = (k: keyof Container, v: unknown) => {
+    if (readOnly) return;
+    setForm(prev => ({ ...prev, [k]: v }));
+  };
 
   return (
     <>
@@ -788,13 +855,21 @@ function ContainerDrawer({ container, onClose, onDuplicate, onDelete, onSave, re
 
         {/* Drawer footer */}
         <div className="gecko-drawer-footer" style={{ justifyContent: 'flex-start' }}>
-          <button onClick={onDuplicate} className="gecko-btn gecko-btn-ghost gecko-btn-sm" style={{ color: 'var(--gecko-text-secondary)' }}><Icon name="copy" size={13} /> Duplicate</button>
-          <button onClick={onDelete}    className="gecko-btn gecko-btn-ghost gecko-btn-sm" style={{ color: 'var(--gecko-danger-600)' }}><Icon name="trash" size={13} /> Delete</button>
+          {/* A box on a closed or cancelled booking can be READ. Nothing here
+              would be accepted, so nothing here is offered. */}
+          {!readOnly && (
+            <>
+              <button onClick={onDuplicate} className="gecko-btn gecko-btn-ghost gecko-btn-sm" style={{ color: 'var(--gecko-text-secondary)' }}><Icon name="copy" size={13} /> Duplicate</button>
+              <button onClick={onDelete}    className="gecko-btn gecko-btn-ghost gecko-btn-sm" style={{ color: 'var(--gecko-danger-600)' }}><Icon name="trash" size={13} /> Delete</button>
+            </>
+          )}
           <div className="gecko-flex-1" />
-          <button onClick={onClose} className="gecko-btn gecko-btn-outline gecko-btn-sm">Cancel</button>
-          <button className="gecko-btn gecko-btn-primary gecko-btn-sm" disabled={busy} onClick={() => void save()}>
-            <Icon name="save" size={13} /> {busy ? 'Saving…' : 'Save Container'}
-          </button>
+          <button onClick={onClose} className="gecko-btn gecko-btn-outline gecko-btn-sm">{readOnly ? 'Close' : 'Cancel'}</button>
+          {!readOnly && (
+            <button className="gecko-btn gecko-btn-primary gecko-btn-sm" disabled={busy} onClick={() => void save()}>
+              <Icon name="save" size={13} /> {busy ? 'Saving…' : 'Save Container'}
+            </button>
+          )}
         </div>
       </div>
     </>
@@ -822,10 +897,14 @@ function Derived({ label, value, mono }: { label: string; value: string | null; 
  * Save button lives up in the sticky bar and because step 1 is ONE call —
  * POST /api/tos/bookings with requirements: [] — not a save per panel.
  */
-function TabVoyage({ form, patch, created, direction, canOverride, needsVessel, portsRequired, onSave, saving, missing, saveError }: {
+function TabVoyage({ form, patch, created, dirty, readOnly, direction, canOverride, needsVessel, portsRequired, onSave, saving, missing, saveError }: {
   form: HeaderForm;
   patch: (p: Partial<HeaderForm>) => void;
   created: SavedBooking | null;
+  /** Something has been typed since the last save. */
+  dirty: boolean;
+  /** CLOSED or CANCELLED: every field reads, nothing writes. */
+  readOnly: boolean;
   direction: string | null;
   canOverride: boolean;
   /** Does this order type run against a sailing? Decides what is marked required. */
@@ -838,9 +917,10 @@ function TabVoyage({ form, patch, created, direction, canOverride, needsVessel, 
   missing: string | null;
   saveError: ApiError | null;
 }) {
-  // A booking that does not exist yet is always being typed into.
+  // A booking that does not exist yet is always being typed into. A CLOSED or
+  // CANCELLED one never is, whatever the toggle was last left on.
   const [editing, setEditing] = useState(true);
-  const editMode = created === null || editing;
+  const editMode = !readOnly && (created === null || editing);
 
   const { data: calls } = useApiList<CallSummary>(CALLS_PATH);
   const call = (calls ?? []).find(c => c.vesselCallId === form.vesselCallId) ?? null;
@@ -885,7 +965,7 @@ function TabVoyage({ form, patch, created, direction, canOverride, needsVessel, 
       <div>
         <div className="gecko-row gecko-row-between gecko-mb-4">
           <div className="gecko-eyebrow gecko-row"><Icon name="users" size={14} /> Parties</div>
-          {created && (
+          {created && !readOnly && (
             <button onClick={() => setEditing(!editing)} className="gecko-btn gecko-btn-ghost gecko-btn-sm" style={{ fontSize: 11 }}>
               <Icon name={editing ? 'x' : 'edit'} size={13} /> {editing ? 'Cancel' : 'Edit'}
             </button>
@@ -1034,18 +1114,31 @@ function TabVoyage({ form, patch, created, direction, canOverride, needsVessel, 
         {!saveError && (
           <div className="gecko-cell-meta gecko-flex-1">
             {created
-              ? <>Saved as <strong>{created.orderNo}</strong>. Containers are next.</>
+              ? (dirty
+                ? <>Unsaved changes to <strong>{created.orderNo}</strong>.</>
+                : <>Saved as <strong>{created.orderNo}</strong>.</>)
               : missing ?? 'Ready — this creates the booking and opens the Containers tab.'}
           </div>
         )}
-        <button className="gecko-btn gecko-btn-primary gecko-btn-sm"
-          disabled={saving || !!missing || created !== null}
-          title={missing ?? undefined}
-          onClick={onSave}>
-          <Icon name="save" size={13} />
-          {saving ? 'Saving…' : created ? 'Saved' : 'Save & proceed to Containers'}
-          {!saving && !created && <Icon name="arrowRight" size={13} />}
-        </button>
+        {/*
+          This used to be hard-disabled once the booking existed — while the
+          Edit toggle above happily unlocked every field. A clerk could change
+          the agent, the ports or the vessel and had NOTHING to save it with;
+          the edit was lost on the next reload and nobody was told. The update
+          call existed the whole time and simply was not wired here.
+        */}
+        {/* THE save. Creating the booking the first time, saving changes after
+            — one button, at the bottom of the form it belongs to. */}
+        {!readOnly && (!created || dirty) && (
+          <button className="gecko-btn gecko-btn-primary gecko-btn-sm"
+            disabled={saving || !!missing}
+            title={missing ?? undefined}
+            onClick={onSave}>
+            <Icon name="save" size={13} />
+            {saving ? 'Saving…' : created ? 'Save changes' : 'Save & proceed to Containers'}
+            {!saving && !created && <Icon name="arrowRight" size={13} />}
+          </button>
+        )}
       </div>
     </div>
   );
@@ -1070,7 +1163,7 @@ function PortField({ label, value, required, editMode, seaportsFirst, onChange }
 }
 
 
-function TabContainers({ containers, requirements, onSelectContainer, onAddContainer, onDeleteContainer, orderTypeCode, selected, setSelected, canAddContainers, onAddMultiple, onDeleteMany, onSetHandover, handoverModes }: {
+function TabContainers({ containers, requirements, onSelectContainer, onAddContainer, onDeleteContainer, orderTypeCode, selected, setSelected, canAddContainers, readOnly, onAddMultiple, onDeleteMany, onSetHandover, handoverModes }: {
   onSelectContainer: (c: Container) => void;
   onAddContainer: () => void;
   onDeleteContainer: (id: string) => void;
@@ -1079,6 +1172,8 @@ function TabContainers({ containers, requirements, onSelectContainer, onAddConta
   setSelected: React.Dispatch<React.SetStateAction<Set<string>>>;
   /** False until the booking exists: a box is assigned TO a booking. */
   canAddContainers: boolean;
+  /** CLOSED or CANCELLED: the grid reads, nothing writes. */
+  readOnly: boolean;
   /** The booking's boxes, as the API has them. */
   containers: Container[];
   requirements: ApiRequirement[];
@@ -1155,7 +1250,7 @@ function TabContainers({ containers, requirements, onSelectContainer, onAddConta
               {selected.size} selected
             </span>
           )}
-          <BulkActionsMenu
+          {!readOnly && <BulkActionsMenu
             selectedCount={selected.size}
             totalCount={filtered.length}
             onSelectAll={() => setSelected(new Set(filtered.map(c => c.id)))}
@@ -1180,7 +1275,7 @@ function TabContainers({ containers, requirements, onSelectContainer, onAddConta
               else if (mode) toast({ variant: 'warning', title: 'Not a mode of this booking', message: mode });
             }}
             onClearDetails={() => { setSelected(new Set()); setExpanded(new Set()); toast({ variant: 'info', title: 'Cleared', message: 'Selection and expanded rows reset.' }); }}
-          />
+          />}
           {/* A box is assigned TO a booking, so there has to be one first. */}
           {canAddContainers && (
             <button className="gecko-btn gecko-btn-primary gecko-btn-sm" onClick={onAddContainer}>
@@ -1261,7 +1356,7 @@ function TabContainers({ containers, requirements, onSelectContainer, onAddConta
                     <td className="gecko-cell-meta" style={{ fontFamily: 'var(--gecko-font-mono)', whiteSpace: 'nowrap' }}>{c.pickupDate}</td>
                     <td onClick={e => e.stopPropagation()}>
                       <div className="gecko-row gecko-row-right" style={{ gap: 2 }}>
-                        <button onClick={() => onSelectContainer(c)} className="gecko-icon-btn-ghost" title="Edit"><Icon name="edit" size={13} /></button>
+                        <button onClick={() => onSelectContainer(c)} className="gecko-icon-btn-ghost" title={readOnly ? 'View' : 'Edit'}><Icon name={readOnly ? 'eye' : 'edit'} size={13} /></button>
                         <button className="gecko-icon-btn-ghost" title="Duplicate"><Icon name="copy" size={13} /></button>
                         <button onClick={() => onDeleteContainer(c.id)} className="gecko-icon-btn-ghost" style={{ color: 'var(--gecko-danger-400)' }} title="Delete"><Icon name="trash" size={13} /></button>
                       </div>
@@ -1334,10 +1429,12 @@ function TabContainers({ containers, requirements, onSelectContainer, onAddConta
  * what actually turned up are different numbers, and the difference is the thing
  * worth seeing. The boxes carry their own weight and volume separately.
  */
-function TabCargo({ form, patch, created, onSave, saving, error }: {
+function TabCargo({ form, patch, created, readOnly, onSave, saving, error }: {
   form: HeaderForm;
   patch: (p: Partial<HeaderForm>) => void;
   created: SavedBooking | null;
+  /** CLOSED or CANCELLED: every field reads, nothing writes. */
+  readOnly: boolean;
   onSave: () => void;
   saving: boolean;
   error: ApiError | null;
@@ -1424,7 +1521,7 @@ function TabCargo({ form, patch, created, onSave, saving, error }: {
         <div className="gecko-cell-meta gecko-flex-1">
           {error && !error.fieldErrors ? error.message : 'Declared by the shipper — not summed from the boxes.'}
         </div>
-        <button className="gecko-btn gecko-btn-primary gecko-btn-sm" disabled={saving || !created} onClick={onSave}>
+        <button className="gecko-btn gecko-btn-primary gecko-btn-sm" disabled={saving || !created || readOnly} onClick={onSave}>
           <Icon name="save" size={13} /> {saving ? 'Saving…' : 'Save Cargo Details'}
         </button>
       </div>
@@ -1515,11 +1612,25 @@ export function BookingWorkspace({ bookingId }: { bookingId?: string }) {
   const [drawerContainer, setDrawerContainer] = useState<Container | null>(null);
   const [moreOpen, setMoreOpen] = useState(false);
   const [showDeleteModal, setShowDeleteModal] = useState(false);
+  const [cloneOpen, setCloneOpen] = useState(false);
+  const [cancelling, setCancelling] = useState(false);
+  const [cancelProblem, setCancelProblem] = useState<{ title: string; detail: string } | null>(null);
   const [orderTypeCode, setOrderTypeCode] = useState<string>(BOOKING.orderType);
 
   // ── step 1: the header ────────────────────────────────────────────────────
   const [form, setForm] = useState<HeaderForm>(EMPTY_HEADER);
-  const patch = useCallback((p: Partial<HeaderForm>) => setForm(f => ({ ...f, ...p })), []);
+  /**
+   * Has the header been touched since it was last saved?
+   *
+   * Without this the top button could only ever say "Saved" — which is what it
+   * used to do, as a permanently disabled badge dressed as a primary button —
+   * and a header edited on an existing booking had nothing to save it with.
+   */
+  const [dirty, setDirty] = useState(false);
+  const patch = useCallback((p: Partial<HeaderForm>) => {
+    setDirty(true);
+    setForm(f => ({ ...f, ...p }));
+  }, []);
   const [created, setCreated] = useState<SavedBooking | null>(null);
   const [saving, setSaving] = useState(false);
   const [saveError, setSaveError] = useState<ApiError | null>(null);
@@ -1585,6 +1696,7 @@ export function BookingWorkspace({ bookingId }: { bookingId?: string }) {
         requirements: [],
       }, idempotencyKey);
       setCreated(answer.booking);
+      setDirty(false);
       toast({ variant: 'success', title: 'Booking created', message: `${answer.booking.orderNo} — now add the containers.` });
       void reloadBooking(answer.booking.bookingId);
       setActiveTab('containers');
@@ -1624,6 +1736,7 @@ export function BookingWorkspace({ bookingId }: { bookingId?: string }) {
       if (seedForm) {
         const full = d.booking as SavedBookingFull;
         setForm(formFromBooking(full));
+        setDirty(false);
         if (full.orderTypeCode) setOrderTypeCode(full.orderTypeCode);
       }
     } catch {
@@ -1640,6 +1753,127 @@ export function BookingWorkspace({ bookingId }: { bookingId?: string }) {
   }, [bookingId]); // eslint-disable-line react-hooks/exhaustive-deps
 
   /** Everything the header carries, in the shape both POST and PUT take. */
+  /**
+   * Copy this booking into a new one.
+   *
+   * It used to be a toast that said "duplicated as a draft" and created
+   * NOTHING — on a live cutover that is a clerk believing a booking exists.
+   *
+   * A clone is the header, the requirement LINES and every box as an EMPTY
+   * PLACE (owner 2026-10-07): the box's details come across, but never its
+   * container number, its seals or its reefer temperature/vent/humidity (a set
+   * on the line still applies to the new place). Each new place gets the order
+   * type's moves as PENDING; the source's gate transactions do not come across.
+   *
+   * The CARRIER REFERENCE (the Booking / B/L number) is always asked for and
+   * never copied: it is the carrier's own number for one shipment, and two
+   * bookings sharing it is the kind of mistake nobody finds until invoicing.
+   */
+  /**
+   * Cancel the booking — the desktop's Delete (Vector usp_BookingHeaderDelete).
+   *
+   * It was a toast that said "has been permanently removed" and called nothing:
+   * the booking stayed OPEN and the clerk had no way to know. Nothing is erased
+   * here either — the booking is marked CANCELLED, its open containers are
+   * released and Revenue drops the quoted lines.
+   *
+   * Success is reported only after the 200. A refusal keeps the dialog open
+   * with the server's own words, because it knows WHICH rule stopped it (a gate
+   * move already done, a charge already paid, a truck in the yard) and a
+   * friendlier sentence would lose that.
+   */
+  async function cancelBooking(reason: string) {
+    if (!created) return;
+    setCancelling(true);
+    setCancelProblem(null);
+    try {
+      const detail = await apiSend<ApiBookingDetail>(
+        'POST', `/api/tos/bookings/${created.bookingId}/cancel`,
+        { reason: reason.trim(), rowVersion: created.rowVersion });
+      setShowDeleteModal(false);
+      setCreated(detail.booking);
+      setRequirements(detail.requirements ?? []);
+      setContainers((detail.containers ?? []).map(l => containerFromApi(l, detail.requirements ?? [])));
+      setSelectedContainerIds(new Set());
+      toast({ variant: 'success', title: 'Booking cancelled', message: `${detail.booking.orderNo} is now CANCELLED.` });
+    } catch (e) {
+      const err = e instanceof ApiError ? e : new ApiError(0, 'The booking could not be cancelled.');
+      setCancelProblem(
+        err.status === 400 && err.forField('rowVersion')
+          ? { title: 'Someone changed this booking', detail: 'Reload the page and try again.' }
+          : { title: err.title || 'Could not cancel it', detail: err.explanation ?? err.message });
+    } finally {
+      setCancelling(false);
+    }
+  }
+
+  async function cloneBooking(carrierRef: string, customerRef: string) {
+    if (!branch) throw new ApiError(0, 'No branch is selected.');
+    const answer = await apiSend<{ booking: SavedBooking }>('POST', '/api/tos/bookings', {
+      ...headerBody(),
+      carrierRef: carrierRef.trim(),
+      customerRef: customerRef.trim() || null,
+      // With each place's source box below, Revenue copies the source statement's
+      // manual lines and price corrections (discounts) onto the clone.
+      clonedFromBookingId: created?.bookingId ?? null,
+      // The lines are what make it the same KIND of booking; the boxes are not.
+      // POST /api/tos/bookings takes a full RequirementItem on create, so the
+      // reefer setpoints, the DG details and the out-of-gauge measurements come
+      // across too — a clone that dropped them would look right and price wrong.
+      // lineNo is NOT copied: the new booking numbers its own lines.
+      requirements: requirements.map(r => ({
+        equipmentTypeCode: r.equipmentTypeCode,
+        qty: r.qty,
+        minGradeCode: r.minGradeCode ?? null,
+        reeferSetTempC: r.reeferSetTempC ?? null,
+        reeferVentPct: r.reeferVentPct ?? null,
+        reeferHumidityPct: r.reeferHumidityPct ?? null,
+        imdgClass: r.imdgClass ?? null,
+        unNumber: r.unNumber ?? null,
+        oogOverHeightCm: r.oogOverHeightCm ?? null,
+        oogOverWidthLeftCm: r.oogOverWidthLeftCm ?? null,
+        oogOverWidthRightCm: r.oogOverWidthRightCm ?? null,
+        oogOverLengthFrontCm: r.oogOverLengthFrontCm ?? null,
+        oogOverLengthBackCm: r.oogOverLengthBackCm ?? null,
+        declaredGrossWeightKg: r.declaredGrossWeightKg ?? null,
+        remarks: r.remarks ?? null,
+      })),
+      // The new booking numbers its lines 1, 2, 3… in this order, so a box goes
+      // to the line at the same position. A box that left the booking other than
+      // by finishing (cancelled, released, taken off) is not part of its shape.
+      containers: containers
+        .filter(c => c.endReason === null || c.endReason === 'COMPLETED')
+        .map(c => {
+          // The requirements above are sent in THIS order, and the new booking
+          // numbers its lines 1..n from it — so a box belongs at its line's
+          // position. A box whose line is no longer on the booking has no
+          // position to take; it falls to line 1, which exists whenever there
+          // is anything to clone at all. `findIndex` answering -1 would
+          // otherwise make lineNo 0, which is not a line.
+          const at = requirements.findIndex(r => r.lineNo === c.lineNo);
+          return {
+            // newClientLineId, not crypto.randomUUID: the helper falls back
+            // when randomUUID is missing, which it is outside a secure context.
+            ...containerToApi(c, newClientLineId()),
+            lineNo: at >= 0 ? at + 1 : 1,
+            containerNo: null,
+            declaredSealNo: null,
+            customerSealNo: null,
+            reeferSetTempC: null,
+            reeferVentPct: null,
+            reeferHumidityPct: null,
+            // The source box this place copies: its manual lines and discounts
+            // follow it. `id` is only the API's bookingContainerId once the row
+            // has been saved — before that it is a temporary client key, and
+            // sending one would ask Revenue to copy from a box that does not
+            // exist. An unsaved row simply carries nothing to copy.
+            clonedFromBookingContainerId: c.rowVersion ? c.id : null,
+          };
+        }),
+    }, newIdempotencyKey());
+    return answer.booking;
+  }
+
   function headerBody() {
     const nil = (v: string) => (v.trim() === '' ? null : v.trim());
     const num = (v: string) => (v.trim() === '' ? null : Number(v));
@@ -1685,6 +1919,7 @@ export function BookingWorkspace({ bookingId }: { bookingId?: string }) {
         'PUT', `/api/tos/bookings/${created.bookingId}`,
         { ...headerBody(), rowVersion: created.rowVersion });
       setCreated(answer.booking);
+      setDirty(false);
       toast({ variant: 'success', title: 'Booking updated', message: answer.booking.orderNo });
     } catch (e) {
       setSaveError(e instanceof ApiError ? e : new ApiError(0, 'The booking could not be updated.'));
@@ -2004,6 +2239,20 @@ export function BookingWorkspace({ bookingId }: { bookingId?: string }) {
     }
   };
 
+  /**
+   * A booking that is CLOSED or CANCELLED is READ-ONLY, everywhere.
+   *
+   * One flag, because the alternative is a dozen separate checks that drift:
+   * cancelling a booking used to leave Save changes, Clone, Transfer and Add
+   * Container all live, so a clerk could keep working on something the server
+   * would refuse — and nothing on screen even said it was cancelled.
+   */
+  const bookingStatus = created?.status ?? 'OPEN';
+  const readOnly = bookingStatus === 'CLOSED' || bookingStatus === 'CANCELLED';
+
+  /** Boxes still on the booking — what "at least one must stay" counts. */
+  const activeContainerCount = containers.filter(c => c.endReason === null || c.endReason === 'COMPLETED').length;
+
   const b = BOOKING;
   const cutoffDays = daysUntil(b.cutoffs.cyDry);
   const urgency    = urgencyColor(cutoffDays);
@@ -2105,22 +2354,57 @@ export function BookingWorkspace({ bookingId }: { bookingId?: string }) {
               <Icon name="fileText" size={13} /> Billing Statement
             </Link>
           )}
-          <button className="gecko-btn gecko-btn-outline gecko-btn-sm" onClick={() => toast({ variant: 'info', title: 'Booking cloned', message: `${b.bookingNo} duplicated as a draft.` })}><Icon name="copy" size={13} /> Clone</button>
+          {/* Nothing to clone until the booking exists: cloning a blank form would
+              POST an empty booking and call it a copy. */}
+          {readOnly && (
+            <span className={`gecko-badge ${bookingStatus === 'CANCELLED' ? 'gecko-badge-error' : 'gecko-badge-gray'}`}>
+              {bookingStatus.toLowerCase()}
+            </span>
+          )}
+          <button className="gecko-btn gecko-btn-outline gecko-btn-sm"
+            disabled={!created || readOnly}
+            title={readOnly ? `This booking is ${bookingStatus.toLowerCase()}` : created ? 'Copy this booking under a new B/L' : 'Save the booking first'}
+            onClick={() => setCloneOpen(true)}>
+            <Icon name="copy" size={13} /> Clone
+          </button>
 
           {/* More menu */}
           <div style={{ position: 'relative' }}>
-            <button className="gecko-btn gecko-btn-ghost gecko-btn-sm gecko-btn-icon" onClick={() => setMoreOpen(!moreOpen)} title="More actions">
+            <button className="gecko-btn gecko-btn-ghost gecko-btn-sm gecko-btn-icon"
+              disabled={readOnly}
+              title={readOnly ? `This booking is ${bookingStatus.toLowerCase()}` : 'More actions'}
+              onClick={() => setMoreOpen(!moreOpen)}>
               <Icon name="moreHorizontal" size={15} />
             </button>
-            {moreOpen && (
+            {moreOpen && !readOnly && (
               <>
                 <div onClick={() => setMoreOpen(false)} style={{ position: 'fixed', inset: 0, zIndex: 30 }} />
                 <div className="gecko-floating-card" style={{ position: 'absolute', right: 0, top: '110%', zIndex: 40, minWidth: 220, overflow: 'hidden' }}>
                   {[
-                    { icon: 'transferH', label: 'Transfer to New Order',      color: 'var(--gecko-text-primary)', requiresSelection: true,  action: () => toast({ variant: 'info', title: 'Transfer to New Order', message: 'Coming soon — new-booking creation workflow.' }) },
-                    { icon: 'transferH', label: 'Transfer to Existing Order',  color: 'var(--gecko-text-primary)', requiresSelection: true,  action: () => setTransferOpen(true) },
-                    { icon: 'edit',      label: 'Change Order Type',           color: 'var(--gecko-text-primary)', requiresSelection: false, action: () => setChangeOrderTypeOpen(true) },
-                    { icon: 'trash',     label: 'Delete Booking',              color: 'var(--gecko-danger-600)',   requiresSelection: false, action: () => setShowDeleteModal(true) },
+                    {
+                      icon: 'transferH', label: 'Transfer to Existing Order',
+                      color: 'var(--gecko-text-primary)', requiresSelection: true, danger: false,
+                      action: () => {
+                        // A booking with one box cannot give it away: at least one
+                        // has to stay, so there is nothing to move. Said when the
+                        // menu is pressed, not after the clerk has searched for a
+                        // target and picked one.
+                        if (activeContainerCount <= 1) {
+                          toast({
+                            variant: 'warning',
+                            title: 'Nothing can be transferred',
+                            message: `This booking has only ${activeContainerCount} container — at least one must stay on the order.`,
+                          });
+                          return;
+                        }
+                        setTransferOpen(true);
+                      },
+                    },
+                    ...(created && created.status !== 'OPEN' ? [] : [{
+                      icon: 'trash', label: 'Delete Booking',
+                      color: 'var(--gecko-text-primary)', requiresSelection: false, danger: true,
+                      action: () => setShowDeleteModal(true),
+                    }]),
                   ].map(item => (
                     <button key={item.label} onClick={() => {
                       setMoreOpen(false);
@@ -2129,8 +2413,8 @@ export function BookingWorkspace({ bookingId }: { bookingId?: string }) {
                         return;
                       }
                       item.action();
-                    }} className="gecko-row" style={{ width: '100%', gap: 10, padding: '11px 16px', background: 'none', border: 'none', cursor: 'pointer', color: item.color, fontSize: 13, fontFamily: 'inherit', textAlign: 'left' }}>
-                      <Icon name={item.icon} size={14} style={{ color: item.color }} /> {item.label}
+                    }} className="gecko-row" style={{ width: '100%', gap: 10, padding: '11px 16px', background: item.danger ? 'var(--gecko-error-600)' : 'none', border: 'none', cursor: 'pointer', color: item.danger ? '#fff' : item.color, fontSize: 13, fontFamily: 'inherit', textAlign: 'left' }}>
+                      <Icon name={item.icon} size={14} style={{ color: item.danger ? '#fff' : item.color }} /> {item.label}
                     </button>
                   ))}
                 </div>
@@ -2138,13 +2422,34 @@ export function BookingWorkspace({ bookingId }: { bookingId?: string }) {
             )}
           </div>
 
-          <button className="gecko-btn gecko-btn-primary gecko-btn-sm"
-            disabled={saving || !!missing || created !== null}
-            title={missing ?? (created ? 'Already created' : 'Create the booking header')}
-            onClick={() => void saveHeader()}>
-            <Icon name="save" size={13} /> {saving ? 'Saving…' : created ? 'Saved' : 'Save'}
-          </button>
+          {/*
+            This was ONE button that read "Save" before the booking existed and
+            then sat disabled forever reading "Saved" — a status badge shaped
+            like a primary action, next to tabs that each save their own part.
+            Worse, Voyage & Parties could be put into edit mode with nothing
+            able to save it: putHeader existed and nothing called it.
+
+            Now it says what it will do, and when there is nothing to do it
+            shows NOTHING — a control that cannot be pressed is a question the
+            clerk has to answer for themselves (owner, 2026-10-07).
+          */}
+          {/* No save here: the one at the FOOTER of the form is the save
+              (owner, 2026-10-07). Two buttons doing the same thing on one
+              screen is a question the clerk has to answer. */}
         </div>
+
+        {/* Why the screen is frozen. A read-only page that will not say why
+            reads as a broken one. */}
+        {readOnly && (
+          <div className="gecko-booking-frozen" role="status">
+            <Icon name="lock" size={14} />
+            <span>
+              {bookingStatus === 'CANCELLED'
+                ? 'This booking is cancelled. It stays on record and can be read, but nothing on it can be changed.'
+                : 'This booking is closed. It can be read, but nothing on it can be changed.'}
+            </span>
+          </div>
+        )}
 
         {/* Row 2: vessel info + cut-off urgency */}
         <div className="gecko-row" style={{ gap: 20, padding: '8px 20px', background: 'var(--gecko-bg-subtle)', fontSize: 12 }}>
@@ -2220,17 +2525,19 @@ export function BookingWorkspace({ bookingId }: { bookingId?: string }) {
           {/* Tab content */}
           <div style={{ background: 'var(--gecko-bg-surface)' }}>
             {activeTab === 'voyage' && (
-              <TabVoyage form={form} patch={patch} created={created} direction={direction}
-                canOverride={canOverride} onSave={() => void saveHeader()} saving={saving}
+              <TabVoyage form={form} patch={patch} created={created} dirty={dirty} readOnly={readOnly} direction={direction}
+                canOverride={canOverride} saving={saving}
+                onSave={() => void (created ? putHeader() : saveHeader())}
                 missing={missing} saveError={saveError} needsVessel={needsVessel} portsRequired={portsRequired} />
             )}
             {activeTab === 'containers' && (
               <TabContainers
+                readOnly={readOnly}
                 onSelectContainer={c => setDrawerContainer(c)}
                 onAddContainer={() => setDrawerContainer(blankContainer())}
                 onDeleteContainer={id => setDeleteContainerId(id)}
                 orderTypeCode={orderTypeCode}
-                canAddContainers={created !== null}
+                canAddContainers={created !== null && !readOnly}
                 containers={containers}
                 requirements={requirements}
                 onAddMultiple={onAddMultiple}
@@ -2242,7 +2549,7 @@ export function BookingWorkspace({ bookingId }: { bookingId?: string }) {
               />
             )}
             {activeTab === 'cargo' && (
-              <TabCargo form={form} patch={patch} created={created}
+              <TabCargo form={form} patch={patch} created={created} readOnly={readOnly}
                 onSave={() => void putHeader()} saving={saving} error={saveError} />
             )}
             {activeTab === 'audit'      && <TabAudit />}
@@ -2355,6 +2662,7 @@ export function BookingWorkspace({ bookingId }: { bookingId?: string }) {
       {/* ── Container Drawer ── */}
       {drawerContainer && (
         <ContainerDrawer
+          readOnly={readOnly}
           container={drawerContainer}
           requirements={requirements}
           onSave={saveContainer}
@@ -2364,22 +2672,55 @@ export function BookingWorkspace({ bookingId }: { bookingId?: string }) {
         />
       )}
 
+      {/* ── Clone ── */}
+      {cloneOpen && (
+        <CloneBookingDialog
+          sourceOrderNo={created?.orderNo ?? form.carrierRef}
+          lines={requirements.length}
+          boxes={containers.filter(c => c.endReason === null || c.endReason === 'COMPLETED').length}
+          onClose={() => setCloneOpen(false)}
+          onClone={cloneBooking}
+          onDone={booking => {
+            toast({
+              variant: 'success',
+              title: 'Booking cloned',
+              message: `${booking.orderNo} created from ${b.bookingNo}.`,
+            });
+            setCloneOpen(false);
+            router.push(`/bookings/${booking.bookingId}`);
+          }}
+        />
+      )}
+
       {/* ── Delete Booking Modal ── */}
       {showDeleteModal && (
         <DeleteConfirmModal
           resourceType="Booking"
-          resourceName={b.bookingNo}
+          // `b` is the BLANK template — reading bookingNo off it left the
+          // type-to-confirm box asking for an empty string, which nobody can
+          // type and which matched on the first keystroke.
+          resourceName={created?.orderNo ?? form.carrierRef}
+          // Cancel does NOT erase anything, and the old wording promised that it
+          // did: "permanent", "EIR records / billing statement / EDI history /
+          // stow slot will be permanently removed". None of that is true, and a
+          // clerk who believed it would never press the button.
+          description={
+            <>
+              The booking is <strong>cancelled</strong>, not erased. It stays on record with
+              status CANCELLED and its history is kept.
+            </>
+          }
           consequences={[
-            `${containers.length} containers and all gate-in / EIR records`,
-            'Billing statement and all associated charges',
-            'EDI message history and audit log',
-            'Vessel stow slot assignment',
+            'Its open containers are released',
+            'Its expected (quoted) charges are dropped',
+            'Gate records, receipts and the audit log are kept',
+            'A booking with gate moves or payments cannot be cancelled',
           ]}
-          onClose={() => setShowDeleteModal(false)}
-          onConfirm={remarks => {
-            setShowDeleteModal(false);
-            toast({ variant: 'danger', title: 'Booking deleted', message: `${b.bookingNo} has been permanently removed.` });
-          }}
+          minRemarks={5}
+          busy={cancelling}
+          problem={cancelProblem}
+          onClose={() => { setShowDeleteModal(false); setCancelProblem(null); }}
+          onConfirm={reason => void cancelBooking(reason)}
         />
       )}
 
@@ -2394,22 +2735,30 @@ export function BookingWorkspace({ bookingId }: { bookingId?: string }) {
       )}
 
       {/* ── Transfer Containers modal ── */}
-      {transferOpen && (
-        <TransferContainersModal
-          sourceBookingNo={b.bookingNo}
-          sourceVessel={b.vessel.name}
-          sourceVoyage={b.voyageNo}
-          containerCount={selectedContainerIds.size}
+      {transferOpen && created && (
+        <TransferContainersModal<ApiBookingDetail>
+          sourceBookingId={created.bookingId}
+          sourceOrderNo={created.orderNo}
+          sourceOrderTypeCode={orderTypeCode}
+          sourceVesselCallId={form.vesselCallId || null}
+          branchId={branch?.branchId ?? ''}
+          selectedIds={[...selectedContainerIds]}
+          activeCount={activeContainerCount}
           onCancel={() => setTransferOpen(false)}
-          onTransfer={target => {
+          onTransferred={(detail, target) => {
             setTransferOpen(false);
             const n = selectedContainerIds.size;
+            // The API answers the SOURCE booking whole, so the grid is replaced
+            // from the server rather than guessed at locally.
+            setCreated(detail.booking);
+            setRequirements(detail.requirements ?? []);
+            setContainers((detail.containers ?? []).map(l => containerFromApi(l, detail.requirements ?? [])));
+            setSelectedContainerIds(new Set());
             toast({
               variant: 'success',
-              title: 'Containers transferred',
-              message: `${n} container${n === 1 ? '' : 's'} moved from ${b.bookingNo} → ${target.bookingNo}.`,
+              title: `${n} container${n === 1 ? '' : 's'} moved`,
+              message: `Now on ${target.orderNo}. Open it from the booking register.`,
             });
-            setSelectedContainerIds(new Set());
           }}
         />
       )}
@@ -2948,168 +3297,6 @@ function OrderTypeChangeConfirm({ from, to, onCancel, onConfirm }: {
    Transfer Containers — modal with candidate bookings + free search
    ────────────────────────────────────────────────────────────────────────── */
 
-interface CandidateBooking {
-  bookingNo: string;
-  blNo: string;
-  customer: string;
-  agent: string;
-  vessel: string;
-  voyage: string;
-  etd: string;
-  orderType: string;
-  containerCount: number;
-}
-
-const CANDIDATE_BOOKINGS: CandidateBooking[] = [
-  // Top — same vessel + voyage as the source booking (EVER WEB / 0344-022B)
-  { bookingNo: 'EGLV148710233102', blNo: 'EGLV148710233102', customer: 'TCL ELECTRONICS (THAILAND) CO., LTD',  agent: 'EVERGREEN', vessel: 'EVER WEB', voyage: '0344-022B', etd: '2026-06-21', orderType: 'EXP CY/CY', containerCount: 4 },
-  { bookingNo: 'EGLV149612498744', blNo: 'EGLV149612498744', customer: 'THAI UNION GROUP PCL',                 agent: 'EVERGREEN', vessel: 'EVER WEB', voyage: '0344-022B', etd: '2026-06-21', orderType: 'EXP CY/CY', containerCount: 12 },
-  { bookingNo: 'EGLV149600114985', blNo: 'EGLV149600114985', customer: 'PTT GLOBAL CHEMICAL PCL',              agent: 'EVERGREEN', vessel: 'EVER WEB', voyage: '0344-022B', etd: '2026-06-21', orderType: 'EXP CY/CY', containerCount: 6 },
-  { bookingNo: 'EGLV149800223071', blNo: 'EGLV149800223071', customer: 'CP FOODS CO., LTD',                    agent: 'EVERGREEN', vessel: 'EVER WEB', voyage: '0344-022B', etd: '2026-06-21', orderType: 'EXP CY/CY', containerCount: 2 },
-  { bookingNo: 'EGLV149991002883', blNo: 'EGLV149991002883', customer: 'BETAGRO PUBLIC CO.',                   agent: 'EVERGREEN', vessel: 'EVER WEB', voyage: '0344-022B', etd: '2026-06-21', orderType: 'EXP CY/CY', containerCount: 8 },
-  // Other bookings (different vessel/voyage) — surface via search
-  { bookingNo: 'MAEU2200448712', blNo: 'MAEU2200448712', customer: 'SIAM CEMENT GROUP (SCG)',     agent: 'MAERSK',    vessel: 'MAERSK EDINBURGH', voyage: 'M-512N', etd: '2026-06-28', orderType: 'EXP CY/CY', containerCount: 16 },
-  { bookingNo: 'ONEY1187220046', blNo: 'ONEY1187220046', customer: 'AEON (THAILAND) CO.',         agent: 'ONE',       vessel: 'ONE COMMITMENT',   voyage: 'C-308S', etd: '2026-07-02', orderType: 'EXP CY/CY', containerCount: 3 },
-  { bookingNo: 'CMAU8842339001', blNo: 'CMAU8842339001', customer: 'CHAROEN POKPHAND FOODS PCL',  agent: 'CMA-CGM',   vessel: 'CMA MARCO POLO',   voyage: '0712E',  etd: '2026-06-25', orderType: 'EXP CY/CY', containerCount: 9 },
-];
-
-function TransferContainersModal({
-  sourceBookingNo, sourceVessel, sourceVoyage, containerCount,
-  onCancel, onTransfer,
-}: {
-  sourceBookingNo: string;
-  sourceVessel: string;
-  sourceVoyage: string;
-  containerCount: number;
-  onCancel: () => void;
-  onTransfer: (target: CandidateBooking) => void;
-}) {
-  const [search, setSearch] = useState('');
-  const [picked, setPicked] = useState<string | null>(null);
-
-  const similar = useMemo(
-    () => CANDIDATE_BOOKINGS
-      .filter(c => c.bookingNo !== sourceBookingNo && c.vessel === sourceVessel && c.voyage === sourceVoyage)
-      .slice(0, 5),
-    [sourceBookingNo, sourceVessel, sourceVoyage]
-  );
-
-  const searchResults = useMemo(() => {
-    const q = search.trim().toLowerCase();
-    if (q.length < 2) return [];
-    return CANDIDATE_BOOKINGS
-      .filter(c => c.bookingNo !== sourceBookingNo)
-      .filter(c =>
-        c.bookingNo.toLowerCase().includes(q) ||
-        c.customer.toLowerCase().includes(q)   ||
-        c.vessel.toLowerCase().includes(q)     ||
-        c.voyage.toLowerCase().includes(q));
-  }, [search, sourceBookingNo]);
-
-  const pickedBooking = picked ? CANDIDATE_BOOKINGS.find(c => c.bookingNo === picked) ?? null : null;
-
-  return (
-    <div className="gecko-modal-shell" onClick={onCancel}>
-      <div className="gecko-modal-card gecko-modal-card-xl" onClick={(e) => e.stopPropagation()}>
-        <div className="gecko-row" style={{ padding: '16px 20px', borderBottom: '1px solid var(--gecko-border)', gap: 10 }}>
-          <Icon name="transferH" size={18} style={{ color: 'var(--gecko-primary-600)' }} />
-          <div className="gecko-flex-1">
-            <div style={{ fontSize: 15, fontWeight: 700 }}>Transfer containers</div>
-            <div className="gecko-cell-meta">
-              Moving <strong>{containerCount} container{containerCount === 1 ? '' : 's'}</strong> from <span style={{ fontFamily: 'var(--gecko-font-mono)', fontWeight: 700, color: 'var(--gecko-text-primary)' }}>{sourceBookingNo}</span> ({sourceVessel} · {sourceVoyage}) → pick a destination booking below.
-            </div>
-          </div>
-          <button onClick={onCancel} className="gecko-btn gecko-btn-ghost gecko-btn-sm gecko-btn-icon">
-            <Icon name="x" size={14} />
-          </button>
-        </div>
-
-        <div className="gecko-stack gecko-flex-1" style={{ overflowY: 'auto', padding: 20, gap: 18 }}>
-
-          <div>
-            <div className="gecko-eyebrow gecko-row gecko-mb-2">
-              <Icon name="anchor" size={11} />
-              Same vessel · voyage — top {similar.length}
-              <span style={{ fontWeight: 500, color: 'var(--gecko-text-disabled)', textTransform: 'none', letterSpacing: 0 }}>
-                {sourceVessel} / {sourceVoyage}
-              </span>
-            </div>
-            {similar.length === 0 ? (
-              <div className="gecko-empty-card" style={{ fontStyle: 'italic', fontSize: 11 }}>
-                No other bookings on this vessel / voyage.
-              </div>
-            ) : (
-              <CandidateTable items={similar} pickedId={picked} onPick={setPicked} />
-            )}
-          </div>
-
-          <div>
-            <div className="gecko-eyebrow gecko-row gecko-mb-2">
-              <Icon name="search" size={11} />
-              Or search any booking
-            </div>
-            <div style={{ position: 'relative' }}>
-              <Icon name="search" size={14} style={{ position: 'absolute', left: 10, top: '50%', transform: 'translateY(-50%)', color: 'var(--gecko-text-disabled)', pointerEvents: 'none' }} />
-              <input
-                className="gecko-input"
-                placeholder="Type a booking no, customer, vessel, or voyage…"
-                value={search}
-                onChange={e => setSearch(e.target.value)}
-                style={{ paddingLeft: 34 }}
-                autoFocus
-              />
-            </div>
-            {search.trim().length >= 2 && (
-              <div className="gecko-mt-3">
-                {searchResults.length === 0 ? (
-                  <div className="gecko-empty-card" style={{ fontStyle: 'italic', fontSize: 11 }}>
-                    No bookings match <strong>&ldquo;{search}&rdquo;</strong>.
-                  </div>
-                ) : (
-                  <CandidateTable items={searchResults} pickedId={picked} onPick={setPicked} />
-                )}
-              </div>
-            )}
-          </div>
-        </div>
-
-        <div className="gecko-row" style={{ padding: '14px 20px', borderTop: '1px solid var(--gecko-border)', background: 'var(--gecko-bg-subtle)', gap: 12 }}>
-          <div className="gecko-flex-1 gecko-page-subtitle">
-            {pickedBooking ? (
-              <>
-                Destination: <strong className="gecko-mono" style={{ color: 'var(--gecko-text-primary)' }}>{pickedBooking.bookingNo}</strong>
-                <span style={{ marginLeft: 6, color: 'var(--gecko-text-disabled)' }}>· {pickedBooking.customer}</span>
-              </>
-            ) : (
-              <span style={{ color: 'var(--gecko-text-disabled)' }}>Select a destination booking to enable Transfer.</span>
-            )}
-          </div>
-          <button className="gecko-btn gecko-btn-outline gecko-btn-sm" onClick={onCancel}>Cancel</button>
-          <button
-            className="gecko-btn gecko-btn-primary gecko-btn-sm"
-            disabled={!pickedBooking}
-            onClick={() => pickedBooking && onTransfer(pickedBooking)}
-          >
-            <Icon name="transferH" size={13} /> Transfer now
-          </button>
-        </div>
-      </div>
-    </div>
-  );
-}
-
-/* ──────────────────────────────────────────────────────────────────────────
-   Change Order Type — booking-level cascading change.
-
-   Type-to-confirm pattern: the user picks a new order type, then must type
-   the booking B/L number exactly to arm the apply button. Same protective
-   pattern used by GitHub (delete repo), Vercel (delete project), AWS
-   (delete resource) etc. — appropriate because:
-     - cascades across ALL containers
-     - re-seeds movement templates
-     - refreshes the VAS catalog
-     - changes billing eligibility
-   ────────────────────────────────────────────────────────────────────────── */
 
 function ChangeOrderTypeModal({
   bookingNo, bookingType, currentOrderTypeCode, totalContainers, containersWithRecordedMoves,
@@ -3392,64 +3579,98 @@ function DeleteContainerModal({ container, onCancel, onConfirm }: {
   );
 }
 
-function CandidateTable({ items, pickedId, onPick }: {
-  items: CandidateBooking[];
-  pickedId: string | null;
-  onPick: (id: string) => void;
+function CloneBookingDialog({ sourceOrderNo, lines, boxes, onClose, onClone, onDone }: {
+  sourceOrderNo: string;
+  lines: number;
+  boxes: number;
+  onClose: () => void;
+  onClone: (carrierRef: string, customerRef: string) => Promise<SavedBooking>;
+  onDone: (booking: SavedBooking) => void;
 }) {
+  const [carrierRef, setCarrierRef] = useState('');
+  const [customerRef, setCustomerRef] = useState('');
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  const ready = carrierRef.trim().length > 0 && !busy;
+
+  async function go() {
+    if (!ready) return;
+    setBusy(true);
+    setError(null);
+    try {
+      onDone(await onClone(carrierRef, customerRef));
+    } catch (e) {
+      const err = e instanceof ApiError ? e : new ApiError(0, 'The booking could not be cloned.');
+      setError(err.forField('carrierRef') ?? err.explanation ?? err.message);
+    } finally {
+      setBusy(false);
+    }
+  }
+
   return (
-    <div style={{ border: '1px solid var(--gecko-border)', borderRadius: 8, overflow: 'hidden' }}>
-      <table className="gecko-table gecko-table-compact" style={{ fontSize: 12 }}>
-        <thead>
-          <tr>
-            <th style={{ width: 32 }} aria-label="Pick" />
-            <th>Booking</th>
-            <th>Customer</th>
-            <th>Agent</th>
-            <th>Vessel · Voyage</th>
-            <th style={{ textAlign: 'right' }}>Cntrs</th>
-            <th>ETD</th>
-          </tr>
-        </thead>
-        <tbody>
-          {items.map(c => {
-            const isPicked = c.bookingNo === pickedId;
-            return (
-              <tr
-                key={c.bookingNo}
-                onClick={() => onPick(c.bookingNo)}
-                className="gecko-row-clickable"
-                style={{ background: isPicked ? 'var(--gecko-primary-50)' : undefined }}
-              >
-                <td>
-                  <input
-                    type="radio"
-                    name="transfer-target"
-                    checked={isPicked}
-                    onChange={() => onPick(c.bookingNo)}
-                    onClick={e => e.stopPropagation()}
-                  />
-                </td>
-                <td><span className="gecko-id-link">{c.bookingNo}</span></td>
-                <td>
-                  <div className="gecko-cell-primary gecko-truncate" style={{ maxWidth: 200 }}>
-                    {c.customer}
-                  </div>
-                </td>
-                <td className="gecko-mono-strong">{c.agent}</td>
-                <td>
-                  <div className="gecko-cell-two-line">
-                    <div style={{ fontSize: 11.5, fontWeight: 600, color: 'var(--gecko-text-primary)' }}>{c.vessel}</div>
-                    <div className="gecko-cell-sub">{c.voyage}</div>
-                  </div>
-                </td>
-                <td className="gecko-money">{c.containerCount}</td>
-                <td className="gecko-cell-meta" style={{ fontFamily: 'var(--gecko-font-mono)', whiteSpace: 'nowrap' }}>{c.etd}</td>
-              </tr>
-            );
-          })}
-        </tbody>
-      </table>
-    </div>
+    <Modal
+      isOpen
+      onClose={onClose}
+      size="md"
+      closeOnBackdrop={false}
+      title={`Clone ${sourceOrderNo}`}
+      subtitle="A new booking of the same shape, under its own carrier reference."
+      footer={
+        <>
+          <span className="gecko-modal-footer-note gecko-flex-1">
+            {carrierRef.trim() ? '' : 'The new Booking / B/L number is required.'}
+          </span>
+          <button className="gecko-btn gecko-btn-outline gecko-btn-sm" onClick={onClose} disabled={busy}>Cancel</button>
+          <button className="gecko-btn gecko-btn-primary gecko-btn-sm" disabled={!ready} onClick={go}>
+            <Icon name="copy" size={13} /> {busy ? 'Cloning…' : 'Create the booking'}
+          </button>
+        </>
+      }
+    >
+      <div className="gecko-stack">
+        {error && (
+          <div role="alert" className="gecko-alert gecko-alert-error">
+            <Icon name="alertCircle" size={18} />
+            <div><strong>Could not clone it</strong><div>{error}</div></div>
+          </div>
+        )}
+
+        <div className="gecko-form-group">
+          <label className="gecko-label gecko-label-required" htmlFor="cloneCarrierRef">
+            New Booking / B/L number
+          </label>
+          <input id="cloneCarrierRef" className="gecko-input gecko-text-mono" autoFocus value={carrierRef}
+            maxLength={50} placeholder="e.g. 2338258831"
+            onChange={e => setCarrierRef(e.target.value.toUpperCase())} />
+          <div className="gecko-helper-text">
+            The carrier&apos;s number for the new shipment. It is never copied from {sourceOrderNo} —
+            two bookings on one B/L is a mistake nobody finds until invoicing.
+          </div>
+        </div>
+
+        <div className="gecko-form-group">
+          <label className="gecko-label" htmlFor="cloneCustomerRef">Customer reference</label>
+          <input id="cloneCustomerRef" className="gecko-input gecko-text-mono" value={customerRef}
+            maxLength={50} placeholder="optional"
+            onChange={e => setCustomerRef(e.target.value.toUpperCase())} />
+        </div>
+
+        <div className="gecko-alert gecko-alert-info gecko-clone-note">
+          <Icon name="alertCircle" size={14} />
+          <div>
+            <div>
+              <strong>Copied:</strong> the booking details, {lines} line{lines === 1 ? '' : 's'}
+              {' '}and {boxes} empty container place{boxes === 1 ? '' : 's'} with their moves.
+            </div>
+            <div>
+              <strong>Not copied:</strong> container numbers, seals, box temperature and vent,
+              and anything already done at the gate.
+            </div>
+          </div>
+        </div>
+      </div>
+    </Modal>
   );
 }
+

@@ -229,7 +229,9 @@ export function GateOutForm() {
       </div>
 
       {/* ── 1 · the truck in front of the clerk ─────────────────────────── */}
-      <div className="gecko-card gecko-card-padded gecko-stack">
+      {/* -menus: the registration field opens a picker, and a card that clips
+          would cut it off at its own edge. */}
+      <div className="gecko-card gecko-card-padded gecko-stack gecko-card-menus">
         <div className="gecko-row gecko-row-between gecko-row-start">
           <div className="gecko-row gecko-gap-2h">
             <div className="gecko-step-badge">1</div>
