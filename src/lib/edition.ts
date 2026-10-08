@@ -54,6 +54,7 @@ export const LIVE_PATHS: readonly string[] = [
   '/billing/service-orders',     // the charge register, /api/revenue/charges
   '/billing/statement',          // one booking's charge lines and receipts (?orderNo=)
   '/billing/invoices',           // credit invoices: the register and one document
+  '/billing/receipts',           // one cash receipt — Vector's Customer Cash Bill
   '/billing/unbilled',           // the billing worklist: orders, then their charge lines
   '/reports/operational',        // the report catalogue; each card says if it can run
   '/reports/accounts',

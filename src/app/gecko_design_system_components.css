@@ -9499,11 +9499,20 @@ label.gecko-toggle.gecko-toggle-sm input:checked ~ .gecko-toggle-track .gecko-to
 }
 .gecko-table-fixed td,
 .gecko-table-fixed th { overflow-wrap: anywhere; }
+/* Truncate to one line. `display: block` is what makes ellipsis work on an
+   inline span — but on a TD it takes the cell out of the table layout and the
+   whole row stacks vertically, which is exactly what happened to the statement's
+   receipts. A cell keeps being a cell and truncates all the same. */
 .gecko-cell-tight {
   display: block;
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
+}
+td.gecko-cell-tight,
+th.gecko-cell-tight {
+  display: table-cell;
+  max-width: 0;        /* with table-layout: fixed this is what lets it clip */
 }
 .gecko-select-col { width: 34px; text-align: center; }
 
@@ -9979,4 +9988,44 @@ label.gecko-toggle.gecko-toggle-sm input:checked ~ .gecko-toggle-track .gecko-to
   text-align: right;
   min-width: 0;
   overflow-wrap: anywhere;
+}
+
+/* ── §41  The customer cash bill ────────────────────────────────────────────
+   In Thailand the receipt IS the tax invoice, so this reads like the document
+   it becomes: who it is made out to on the left, its numbers on the right, the
+   charges in the middle, and what it comes to at the bottom right where a
+   reader looks for a total. */
+
+.gecko-bill-head {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 24px;
+  align-items: start;
+}
+.gecko-bill-party-name {
+  margin: 2px 0 4px;
+  font-size: 15px;
+  font-weight: 700;
+  color: var(--gecko-text-primary);
+}
+.gecko-bill-address { line-height: 1.5; white-space: pre-line; }
+.gecko-bill-meta { align-content: start; }
+
+.gecko-bill-foot {
+  display: grid;
+  grid-template-columns: 1fr 360px;
+  gap: 16px;
+  align-items: start;
+}
+
+.gecko-bill-payment {
+  padding: 8px 0;
+  border-bottom: 1px solid var(--gecko-border);
+  font-size: 13px;
+}
+.gecko-bill-payment:last-child { border-bottom: 0; }
+
+@media (max-width: 860px) {
+  .gecko-bill-head,
+  .gecko-bill-foot { grid-template-columns: 1fr; }
 }

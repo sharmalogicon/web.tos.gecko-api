@@ -298,7 +298,9 @@ function Statement() {
         </div>
       </div>
 
-      <form className="gecko-card" style={{ padding: 14 }} onSubmit={submit}>
+      {/* -menus: the order-number box opens a type-ahead, and gecko-card sets
+          overflow hidden for its corners — which would slice the list off. */}
+      <form className="gecko-card gecko-card-menus" style={{ padding: 14 }} onSubmit={submit}>
         <div className="gecko-row" style={{ gap: 12, alignItems: 'flex-end', flexWrap: 'wrap' }}>
           <div style={{ flex: '1 1 320px' }}>
             <StatementSearchBox
@@ -536,7 +538,11 @@ function Statement() {
                 )}
                 {s.receipts.map(r => (
                   <tr key={r.receiptId} className={r.status === 'VOIDED' ? 'gecko-statement-row-muted' : undefined}>
-                    <td className="gecko-mono-strong gecko-cell-tight">{r.receiptNo}</td>
+                    <td className="gecko-cell-tight">
+                      <Link href={`/billing/receipts/${encodeURIComponent(r.receiptId)}`} className="gecko-mono-strong gecko-link">
+                        {r.receiptNo}
+                      </Link>
+                    </td>
                     <td className="gecko-cell-tight">{r.receiptAt.slice(0, 16).replace('T', ' ')}</td>
                     <td className="gecko-cell-tight">{r.payerName}</td>
                     <td className="gecko-num gecko-mono">{amount(r.subtotal, r.currencyCode)}</td>
