@@ -117,6 +117,26 @@ function containerFromApi(line: ApiContainerLine, requirements: ApiRequirement[]
 }
 
 /** What this screen sends for one box. */
+/**
+ * The boxes a booking HAS.
+ *
+ * Deleting a box does not erase it: the API answers 200 and the row comes back
+ * with `endReason: 'UNASSIGNED'`. The grid filtered on the search box alone, so
+ * a deleted box reappeared on the next read and "delete" looked broken.
+ *
+ * Filtered HERE rather than in the grid, so the count badges, the selection,
+ * Clone and Transfer cannot disagree with what is on screen. COMPLETED boxes
+ * stay: those finished their job and belong on the record.
+ */
+function boxesOfBooking(
+  lines: ApiContainerLine[] | undefined,
+  requirements: ApiRequirement[],
+): Container[] {
+  return (lines ?? [])
+    .filter(l => l.endReason !== 'UNASSIGNED')
+    .map(l => containerFromApi(l, requirements));
+}
+
 function containerToApi(c: Container, clientLineId: string) {
   const n = (v: number) => (v === 0 ? null : v);
   return {
@@ -1730,7 +1750,7 @@ export function BookingWorkspace({ bookingId }: { bookingId?: string }) {
       const d = await apiGet<ApiBookingDetail>(`/api/tos/bookings/${id}`);
       setCreated(d.booking);
       setRequirements(d.requirements ?? []);
-      setContainers((d.containers ?? []).map(l => containerFromApi(l, d.requirements ?? [])));
+      setContainers(boxesOfBooking(d.containers, d.requirements ?? []));
       // Only on the first load: later reloads must not overwrite what the clerk
       // is in the middle of typing.
       if (seedForm) {
@@ -1793,7 +1813,7 @@ export function BookingWorkspace({ bookingId }: { bookingId?: string }) {
       setShowDeleteModal(false);
       setCreated(detail.booking);
       setRequirements(detail.requirements ?? []);
-      setContainers((detail.containers ?? []).map(l => containerFromApi(l, detail.requirements ?? [])));
+      setContainers(boxesOfBooking(detail.containers, detail.requirements ?? []));
       setSelectedContainerIds(new Set());
       toast({ variant: 'success', title: 'Booking cancelled', message: `${detail.booking.orderNo} is now CANCELLED.` });
     } catch (e) {
@@ -1999,6 +2019,26 @@ export function BookingWorkspace({ bookingId }: { bookingId?: string }) {
       lineNo = await ensureLineFor(`${c.size}${c.type}`);
       if (!lineNo) return { containerNo: [`The booking could not be made to ask for a ${c.size}${c.type}.`] };
     }
+    // The PUT cannot move a box to another TYPE: UpdateContainerLineRequest has
+    // no equipment type, no size and no lineNo — a box's type is the
+    // requirement line it sits on. Changing Size/Type in the drawer and saving
+    // therefore returned 200 and changed nothing, which read as a save that
+    // worked. Refused here, in the clerk's words, until the API can express it.
+    // Reported in docs/BOOKING_CONTAINER_TYPE_FOR_API.md.
+    if (c.rowVersion) {
+      const was = containers.find(x => x.id === c.id);
+      const wasType = `${was?.size ?? ''}${was?.type ?? ''}`;
+      const now = `${c.size}${c.type}`;
+      if (was && wasType && wasType !== now) {
+        return {
+          containerNo: [
+            `This box is on the booking's ${wasType} line and cannot be changed to ${now} here. `
+            + `Remove it and add a ${now} box instead.`,
+          ],
+        };
+      }
+    }
+
     try {
       if (c.rowVersion) {
         const { clientLineId: _c, lineNo: _l, ...rest } = containerToApi(c, c.clientLineId);
@@ -2076,6 +2116,7 @@ export function BookingWorkspace({ bookingId }: { bookingId?: string }) {
         await apiSend('DELETE', `/api/tos/bookings/${created.bookingId}/containers/${id}`);
         gone += 1;
       } catch {
+        // Usually a 409: that box has already made a gate move. The rest still go.
         failed.push(containers.find(c => c.id === id)?.containerNo || id.slice(0, 8));
       }
     }
@@ -2201,18 +2242,42 @@ export function BookingWorkspace({ bookingId }: { bookingId?: string }) {
     });
   }
 
-  /** Take a box off the booking, then re-read. */
+  /**
+   * Take a box off the booking.
+   *
+   * The DELETE answers the booking WHOLE, so the grid is rebuilt from that
+   * answer rather than from a second read — one round trip, and no window in
+   * which the screen shows a box the server has already let go.
+   *
+   * A 409 means the box has already made a gate move. It stays on the booking
+   * and the server says why; re-reading would only redraw the same row.
+   */
   async function removeContainer(id: string) {
     if (!created) return;
+    const box = containers.find(c => c.id === id);
     try {
-      await apiSend('DELETE', `/api/tos/bookings/${created.bookingId}/containers/${id}`);
-      await reloadBooking(created.bookingId);
-      toast({ variant: 'success', title: 'Container removed', message: 'The box is off the booking.' });
+      const detail = await apiSend<ApiBookingDetail>(
+        'DELETE', `/api/tos/bookings/${created.bookingId}/containers/${id}`);
+      setCreated(detail.booking);
+      setRequirements(detail.requirements ?? []);
+      setContainers(boxesOfBooking(detail.containers, detail.requirements ?? []));
+      setSelectedContainerIds(prev => {
+        const next = new Set(prev);
+        next.delete(id);
+        return next;
+      });
+      toast({
+        variant: 'success',
+        title: 'Container removed',
+        message: `${box?.containerNo || 'The box'} is off ${detail.booking.orderNo}.`,
+      });
     } catch (e) {
-      // 409 = the page is out of date (the gate took it, or it already left).
       const err = e instanceof ApiError ? e : new ApiError(0, 'The container could not be removed.');
-      toast({ variant: 'warning', title: 'Not removed', message: err.message });
-      if (err.status === 409) await reloadBooking(created.bookingId);
+      toast({
+        variant: 'warning',
+        title: err.title || 'Not removed',
+        message: err.explanation ?? err.message,
+      });
     }
   }
   const router = useRouter();
@@ -2752,7 +2817,7 @@ export function BookingWorkspace({ bookingId }: { bookingId?: string }) {
             // from the server rather than guessed at locally.
             setCreated(detail.booking);
             setRequirements(detail.requirements ?? []);
-            setContainers((detail.containers ?? []).map(l => containerFromApi(l, detail.requirements ?? [])));
+            setContainers(boxesOfBooking(detail.containers, detail.requirements ?? []));
             setSelectedContainerIds(new Set());
             toast({
               variant: 'success',
@@ -2788,6 +2853,7 @@ export function BookingWorkspace({ bookingId }: { bookingId?: string }) {
       {deleteContainerId !== null && (
         <DeleteContainerModal
           container={containers.find(c => c.id === deleteContainerId) ?? null}
+          orderNo={created?.orderNo ?? form.carrierRef}
           onCancel={() => setDeleteContainerId(null)}
           onConfirm={() => {
             // The API has no reason field on an unassign, so the remark the
@@ -3501,8 +3567,10 @@ function ChangeOrderTypeModal({
    Same UX shape as the booking DeleteConfirmModal, scoped to one container.
    ────────────────────────────────────────────────────────────────────────── */
 
-function DeleteContainerModal({ container, onCancel, onConfirm }: {
+function DeleteContainerModal({ container, orderNo, onCancel, onConfirm }: {
   container: Container | null;
+  /** The booking it is coming off — the clerk is told which. */
+  orderNo: string;
   onCancel: () => void;
   onConfirm: (remarks: string) => void;
 }) {
@@ -3518,7 +3586,12 @@ function DeleteContainerModal({ container, onCancel, onConfirm }: {
           <Icon name="trash" size={16} style={{ color: 'var(--gecko-error-600)' }} />
           <div className="gecko-flex-1">
             <div style={{ fontSize: 15, fontWeight: 700, color: 'var(--gecko-error-700)' }}>Delete container</div>
-            <div style={{ fontSize: 11, color: 'var(--gecko-error-700)', marginTop: 2 }}>This will permanently remove the container from the booking.</div>
+            {/* "Permanently remove" was wrong: the box is unassigned, not
+                erased — it leaves the booking and the record keeps it. */}
+            <div style={{ fontSize: 11, color: 'var(--gecko-error-700)', marginTop: 2 }}>
+              Remove {container.containerNo || 'this box'} from {orderNo}? It comes off the booking;
+              a box that has already been through the gate cannot be removed.
+            </div>
           </div>
         </div>
 
