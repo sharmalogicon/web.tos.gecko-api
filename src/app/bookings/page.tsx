@@ -3,6 +3,7 @@ import React, { useState, useMemo } from 'react';
 import Link from 'next/link';
 import { Icon } from '@/components/ui/Icon';
 import { usePagination, TablePagination } from '@/components/ui/TablePagination';
+import { TableSkeleton } from '@/components/ui/TableSkeleton';
 import { useApiList } from '@/lib/api/use-api';
 import { formatDate } from '@/lib/format';
 
@@ -154,7 +155,11 @@ export default function BookingRegisterPage() {
           <div key={k.label} className="gecko-card gecko-card-tight gecko-row gecko-stack-md">
             <Icon name={k.icon} size={18} style={{ color: k.color }} />
             <div>
-              <div className="gecko-page-title" style={{ fontFamily: 'var(--gecko-font-mono)', lineHeight: 1 }}>{loading && !data ? '…' : k.value}</div>
+              <div className="gecko-page-title" style={{ fontFamily: 'var(--gecko-font-mono)', lineHeight: 1 }}>
+                {loading && !data
+                  ? <span className="gecko-skeleton gecko-skeleton-kpi" />
+                  : k.value}
+              </div>
               <div className="gecko-stat-block-sub" style={{ marginTop: 2 }}>{k.label}</div>
             </div>
           </div>
@@ -214,8 +219,11 @@ export default function BookingRegisterPage() {
             </tr>
           </thead>
           <tbody>
-            {loading && !data ? (
-              <tr><td colSpan={10} style={{ textAlign: 'center', padding: 28, color: 'var(--gecko-text-secondary)' }}>Loading bookings…</td></tr>
+            {/* `loading` alone, not `loading && !data`: a SEARCH re-fetches with
+                the old rows still in hand, and leaving them on screen made the
+                register look like it had answered already. */}
+            {loading ? (
+              <TableSkeleton columns={10} />
             ) : rows.length === 0 ? (
               <tr><td colSpan={10} style={{ textAlign: 'center', padding: 28, color: 'var(--gecko-text-secondary)' }}>No bookings match these filters.</td></tr>
             ) : pageItems.map(b => (
@@ -246,7 +254,8 @@ export default function BookingRegisterPage() {
           </tbody>
         </table>
         <TablePagination page={page} pageSize={pageSize} totalItems={totalItems} totalPages={totalPages}
-          startRow={startRow} endRow={endRow} onPageChange={setPage} onPageSizeChange={setPageSize} noun="bookings" />
+          startRow={startRow} endRow={endRow} onPageChange={setPage} onPageSizeChange={setPageSize}
+          noun="bookings" loading={loading} />
       </div>
       {totalCount > rows.length && (
         <div className="gecko-cell-meta">Showing the newest {rows.length} of {totalCount}; narrow the filters to see the rest.</div>

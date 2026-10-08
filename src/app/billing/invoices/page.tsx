@@ -23,6 +23,7 @@ import { Icon } from '@/components/ui/Icon';
 import { EmptyState } from '@/components/ui/EmptyState';
 import { FilterPopover, type FilterField } from '@/components/ui/FilterPopover';
 import { usePagination, TablePagination } from '@/components/ui/TablePagination';
+import { TableSkeleton } from '@/components/ui/TableSkeleton';
 import { useApi } from '@/lib/api/use-api';
 import { useFacility } from '@/lib/api/facility';
 import { useSession } from '@/lib/auth/session';
@@ -182,9 +183,7 @@ function Invoices() {
             </tr>
           </thead>
           <tbody>
-            {loading && !data && (
-              <tr><td colSpan={9} className="gecko-cell-meta" style={{ textAlign: 'center', padding: 28 }}>Loading invoices…</td></tr>
-            )}
+            {loading && <TableSkeleton columns={9} />}
             {!loading && rows.length === 0 && (
               <tr>
                 <td colSpan={9} style={{ padding: 0 }}>
@@ -228,7 +227,7 @@ function Invoices() {
           <TablePagination
             page={page.page} pageSize={page.pageSize} totalItems={page.totalItems} totalPages={page.totalPages}
             startRow={page.startRow} endRow={page.endRow}
-            onPageChange={page.setPage} onPageSizeChange={page.setPageSize} noun="invoices"
+            onPageChange={page.setPage} onPageSizeChange={page.setPageSize} noun="invoices" loading={loading}
           />
         )}
       </div>

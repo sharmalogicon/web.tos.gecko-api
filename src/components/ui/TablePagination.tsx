@@ -48,6 +48,8 @@ interface TablePaginationProps {
   onPageSizeChange:(s: number) => void;
   pageSizeOptions?: number[];
   noun?:           string;   // e.g. "countries", "ports" — shown in "X records" label
+  /** Still fetching: say so instead of "No X found", which is a different answer. */
+  loading?:        boolean;
 }
 
 export function TablePagination({
@@ -61,6 +63,7 @@ export function TablePagination({
   onPageSizeChange,
   pageSizeOptions = [10, 25, 50, 100],
   noun = 'records',
+  loading = false,
 }: TablePaginationProps) {
 
   // Build page number list with ellipsis
@@ -106,7 +109,7 @@ export function TablePagination({
       {/* Left: showing X–Y of Z */}
       <div style={{ fontSize: 12, color: 'var(--gecko-text-secondary)', whiteSpace: 'nowrap' }}>
         {totalItems === 0
-          ? <span>No {noun} found</span>
+          ? <span>{loading ? `Looking for ${noun}…` : `No ${noun} found`}</span>
           : <>Showing <strong style={{ color: 'var(--gecko-text-primary)', fontFamily: 'var(--gecko-font-mono)' }}>{startRow}–{endRow}</strong> of <strong style={{ color: 'var(--gecko-text-primary)', fontFamily: 'var(--gecko-font-mono)' }}>{totalItems.toLocaleString()}</strong> {noun}</>
         }
       </div>

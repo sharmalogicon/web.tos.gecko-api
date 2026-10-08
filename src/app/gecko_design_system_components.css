@@ -9928,3 +9928,30 @@ label.gecko-toggle.gecko-toggle-sm input:checked ~ .gecko-toggle-track .gecko-to
    rescues it. The card stops clipping; nothing inside it needed the corners. */
 
 .gecko-card-menus { overflow: visible; }
+
+/* ── §39  A table that is still loading ─────────────────────────────────────
+   One line of text saying "Loading…" tells the reader nothing about how much
+   is coming, and on a slow list it reads as a stuck screen. Shimmer rows in the
+   shape of the real ones say "data, shortly" and keep the table from jumping
+   when it arrives. */
+
+.gecko-skeleton-row td { padding-top: 12px; padding-bottom: 12px; }
+.gecko-skeleton-cell {
+  height: 11px;
+  border-radius: 4px;
+}
+/* Staggered, so it reads as a list filling in rather than one block flashing. */
+.gecko-skeleton-row:nth-child(2) .gecko-skeleton-cell { animation-delay: 0.12s; }
+.gecko-skeleton-row:nth-child(3) .gecko-skeleton-cell { animation-delay: 0.24s; }
+.gecko-skeleton-row:nth-child(4) .gecko-skeleton-cell { animation-delay: 0.36s; }
+.gecko-skeleton-row:nth-child(5) .gecko-skeleton-cell { animation-delay: 0.48s; }
+
+/* A figure that has not arrived. An ellipsis reads as a value the server sent;
+   a shimmer reads as one still coming. */
+.gecko-skeleton-kpi {
+  display: inline-block;
+  width: 42px;
+  height: 20px;
+  border-radius: 5px;
+  vertical-align: middle;
+}

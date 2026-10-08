@@ -4,6 +4,7 @@ import { Icon } from '@/components/ui/Icon';
 import { EmptyState } from '@/components/ui/EmptyState';
 import { FilterPopover, type FilterField } from '@/components/ui/FilterPopover';
 import { TablePagination } from '@/components/ui/TablePagination';
+import { TableSkeleton } from '@/components/ui/TableSkeleton';
 import { useApi } from '@/lib/api/use-api';
 import { useFacility } from '@/lib/api/facility';
 import {
@@ -181,9 +182,7 @@ export function StatementRegister({ onOpen }: { onOpen: (orderNo: string) => voi
             </tr>
           </thead>
           <tbody>
-            {loading && !data && (
-              <tr><td colSpan={9} className="gecko-cell-meta" style={{ textAlign: 'center', padding: 28 }}>Loading statements…</td></tr>
-            )}
+            {loading && <TableSkeleton columns={9} />}
             {!loading && rows.length === 0 && (
               <tr>
                 <td colSpan={9} style={{ padding: 0 }}>
@@ -250,6 +249,7 @@ export function StatementRegister({ onOpen }: { onOpen: (orderNo: string) => voi
             totalPages={totalPages}
             startRow={(page - 1) * PAGE_SIZE + 1}
             endRow={Math.min(page * PAGE_SIZE, totalCount)}
+            loading={loading}
             onPageChange={setPage}
             // The API's page size, not the screen's: changing it would have to
             // re-ask the server, and 50 is the size the owner set.
