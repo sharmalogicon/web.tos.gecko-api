@@ -426,11 +426,19 @@ function Section({ title, children }: { title: string; children: React.ReactNode
   );
 }
 
+/**
+ * One fact about the move.
+ *
+ * The value carried NO size class, so it inherited the page base and rendered
+ * at roughly twice the app's own key-value size — a 20RF the size of a heading
+ * next to a 10px label. It is on `gecko-kv-value` now, the same 13px every
+ * other detail screen uses, so this page reads like the rest of Gecko.
+ */
 function Line({ label, value }: { label: string; value: React.ReactNode }) {
   return (
-    <div className="gecko-row" style={{ justifyContent: 'space-between', gap: 12, padding: '4px 0' }}>
-      <span className="gecko-cell-meta">{label}</span>
-      <span style={{ textAlign: 'right' }}>{value}</span>
+    <div className="gecko-eir-line">
+      <span className="gecko-eir-line-label">{label}</span>
+      <span className="gecko-kv-value gecko-eir-line-value">{value}</span>
     </div>
   );
 }

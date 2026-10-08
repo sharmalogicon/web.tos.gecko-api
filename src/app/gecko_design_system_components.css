@@ -9955,3 +9955,28 @@ label.gecko-toggle.gecko-toggle-sm input:checked ~ .gecko-toggle-track .gecko-to
   border-radius: 5px;
   vertical-align: middle;
 }
+
+/* ── §40  The EIR detail's fact rows ────────────────────────────────────────
+   Label left, value right, on the same 13px every other detail screen uses.
+   The value used to carry no size class at all and inherited the page base,
+   which made a container type render like a heading beside a 10px label. */
+
+.gecko-eir-line {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 5px 0;
+  border-bottom: 1px solid var(--gecko-border-subtle, var(--gecko-border));
+}
+.gecko-eir-line:last-child { border-bottom: 0; }
+.gecko-eir-line-label {
+  font-size: 11px;
+  color: var(--gecko-text-secondary);
+  white-space: nowrap;
+}
+.gecko-eir-line-value {
+  text-align: right;
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
