@@ -539,6 +539,7 @@ function ContainerDrawer({ container, onClose, onDuplicate, onDelete, onSave, re
   const equipmentTypes = useMemo(() => equipmentTypeRows ?? [], [equipmentTypeRows]);
   const [busy, setBusy] = useState(false);
   const [errors, setErrors] = useState<Record<string, string[]> | null>(null);
+  const typeError = errors?.equipmentTypeCode?.join(' ') ?? null;
   const { toast } = useToast();
 
   /**
@@ -652,12 +653,16 @@ function ContainerDrawer({ container, onClose, onDuplicate, onDelete, onSave, re
 
             {/* Container No (full width) */}
             {/* The server's answer, where the clerk is already looking. */}
-            {errors && Object.keys(errors).length > 0 && (
+            {errors && Object.keys(errors).filter(f => f !== 'equipmentTypeCode').length > 0 && (
               <div role="alert" className="gecko-alert gecko-alert-error gecko-mb-3">
                 <ul style={{ margin: 0, paddingLeft: 16 }}>
-                  {Object.entries(errors).map(([field, msgs]) => (
-                    <li key={field}><strong className="gecko-text-mono">{field}: </strong>{msgs.join(' ')}</li>
-                  ))}
+                  {Object.entries(errors)
+                    /* equipmentTypeCode is shown at the Type — Size control it
+                       is about; repeating it here would say it twice. */
+                    .filter(([field]) => field !== 'equipmentTypeCode')
+                    .map(([field, msgs]) => (
+                      <li key={field}><strong className="gecko-text-mono">{field}: </strong>{msgs.join(' ')}</li>
+                    ))}
                 </ul>
               </div>
             )}
@@ -672,13 +677,19 @@ function ContainerDrawer({ container, onClose, onDuplicate, onDelete, onSave, re
               <div className="gecko-form-group">
                 <label className="gecko-label gecko-label-required">Type — Size</label>
                 <div className="gecko-grid-2 gecko-stack-sm" style={{ gap: 6 }}>
-                  <select className="gecko-input" value={form.size} onChange={e => set('size', e.target.value)}>
+                  <select className={`gecko-input${typeError ? ' gecko-input-error' : ''}`}
+                    value={form.size} onChange={e => set('size', e.target.value)}>
                     {sizesAsked.map(s => <option key={s}>{s}</option>)}
                   </select>
-                  <select className="gecko-input" value={form.type} onChange={e => set('type', e.target.value)}>
+                  <select className={`gecko-input${typeError ? ' gecko-input-error' : ''}`}
+                    value={form.type} onChange={e => set('type', e.target.value)}>
                     {typesAsked.map(t => <option key={t}>{t}</option>)}
                   </select>
                 </div>
+                {/* The API refuses a type change on a box that has passed the
+                    gate or been paid for, and names the field. Said here, where
+                    the change was made. */}
+                {typeError && <div className="gecko-field-error">{typeError}</div>}
               </div>
               <div className="gecko-form-group">
                 <label className="gecko-label">P/U Mode</label>
@@ -2019,33 +2030,21 @@ export function BookingWorkspace({ bookingId }: { bookingId?: string }) {
       lineNo = await ensureLineFor(`${c.size}${c.type}`);
       if (!lineNo) return { containerNo: [`The booking could not be made to ask for a ${c.size}${c.type}.`] };
     }
-    // The PUT cannot move a box to another TYPE: UpdateContainerLineRequest has
-    // no equipment type, no size and no lineNo — a box's type is the
-    // requirement line it sits on. Changing Size/Type in the drawer and saving
-    // therefore returned 200 and changed nothing, which read as a save that
-    // worked. Refused here, in the clerk's words, until the API can express it.
-    // Reported in docs/BOOKING_CONTAINER_TYPE_FOR_API.md.
-    if (c.rowVersion) {
-      const was = containers.find(x => x.id === c.id);
-      const wasType = `${was?.size ?? ''}${was?.type ?? ''}`;
-      const now = `${c.size}${c.type}`;
-      if (was && wasType && wasType !== now) {
-        return {
-          containerNo: [
-            `This box is on the booking's ${wasType} line and cannot be changed to ${now} here. `
-            + `Remove it and add a ${now} box instead.`,
-          ],
-        };
-      }
-    }
-
     try {
       if (c.rowVersion) {
         const { clientLineId: _c, lineNo: _l, ...rest } = containerToApi(c, c.clientLineId);
         void _c; void _l;
         // containerNo IS sent: it is how an unnominated box is nominated later.
+        // equipmentTypeCode moves the box to the booking's line of that type —
+        // a line is added when there is none, and the old one loses a place and
+        // disappears at zero. Until the API took this field (2026-10-08) the
+        // PUT answered 200 and dropped the change, so the screen had to refuse
+        // the edit outright.
         await apiSend('PUT', `/api/tos/bookings/${created.bookingId}/containers/${c.id}`,
-          { rowVersion: c.rowVersion, ...rest });
+          { rowVersion: c.rowVersion, equipmentTypeCode: `${c.size}${c.type}`, ...rest });
+        // The requirement lines and the booking's rowVersion moved with it, so
+        // the whole booking is re-read rather than just this row.
+        await reloadBooking(created.bookingId);
       } else {
         const clientLineId = c.clientLineId || newClientLineId();
         const answer = await apiSend<BatchAnswer>(
