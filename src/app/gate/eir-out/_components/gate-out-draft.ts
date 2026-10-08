@@ -19,6 +19,7 @@ import type { GateFinding, GatePreflight } from '@/lib/api/tos';
 import { textOrNull } from '@/lib/api/tos';
 import type { TripRow, VisitPickup } from '@/lib/api/gate-trips';
 import type { ApiError } from '@/lib/api/problem';
+import { DEFAULT_CONDITION } from '../../eir-in/_components/visit-moves';
 
 /** The truck, read off its visit. Nothing here is typed by the clerk. */
 export interface GateOutTruck {
@@ -73,7 +74,8 @@ export const rowFor = (pickup: VisitPickup): ReleaseRow => ({
   pickup,
   containerNo: pickup.containerNo ?? '',
   sealNo1: '', sealNo2: '',
-  conditionCode: '', gradeCode: '', remarks: '',
+  // AV, as at Gate In: the clerk changes it only when something is wrong (owner, 2026-10-09).
+  conditionCode: DEFAULT_CONDITION, gradeCode: '', remarks: '',
   known: null, looking: false, findings: [], error: null,
   releasedEirNo: null, releasedPdfUrl: null,
 });

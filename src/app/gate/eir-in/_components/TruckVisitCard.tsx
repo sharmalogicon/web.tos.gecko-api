@@ -2,7 +2,7 @@
 import React from 'react';
 import { Icon } from '@/components/ui/Icon';
 import { GateField } from '../../_components/GateField';
-import { useApiList } from '@/lib/api/use-api';
+import { PartyPicker } from '@/app/tariff/_components/PartyPicker';
 import { useTruckCategories } from '@/lib/api/lookups';
 import type { TruckDetails } from './visit-moves';
 
@@ -27,8 +27,6 @@ import type { TruckDetails } from './visit-moves';
  * clutter at a gate. Put them back the day VBS ships.
  */
 
-interface PartyRow { partyCode: string; nameEn: string }
-
 export function TruckVisitCard({ truck, onChange, locked, visitNo, modeLabel, fieldError }: {
   truck: TruckDetails;
   onChange: (patch: Partial<TruckDetails>) => void;
@@ -38,14 +36,12 @@ export function TruckVisitCard({ truck, onChange, locked, visitNo, modeLabel, fi
   modeLabel: string;
   fieldError: (field: string) => string | undefined;
 }) {
-  const { data: haulierRows } = useApiList<PartyRow>('/api/master/parties?role=HAULIER&pageSize=200');
   const { categories } = useTruckCategories();
 
-  // Null until the first page lands; an empty list renders the same.
-  const hauliers = haulierRows ?? [];
-
+  // -menus: .gecko-card sets overflow:hidden for its rounded corners, which
+  // clips the haulier search's dropdown.
   return (
-    <div className="gecko-card gecko-card-padded gecko-stack">
+    <div className="gecko-card gecko-card-padded gecko-card-menus gecko-stack">
       <div className="gecko-row gecko-row-start gecko-row-between">
         <div className="gecko-row gecko-gap-2h">
           <div className="gecko-step-badge">1</div>
@@ -74,12 +70,12 @@ export function TruckVisitCard({ truck, onChange, locked, visitNo, modeLabel, fi
             onChange={e => onChange({ trailerPlate: e.target.value.toUpperCase() })} />
         </GateField>
 
+        {/* A search, not a list: the depot has thousands of hauliers and a
+            dropdown holds one page of them (it showed KORAKIT's first 200 of 5,336). */}
         <GateField label="Transporter (haulier)" error={fieldError('truck.haulierCode')}>
-          <select className="gecko-input" value={truck.haulierCode} disabled={locked}
-            onChange={e => onChange({ haulierCode: e.target.value })}>
-            <option value="">Not stated</option>
-            {hauliers.map(h => <option key={h.partyCode} value={h.partyCode}>{h.partyCode} - {h.nameEn}</option>)}
-          </select>
+          <PartyPicker role="HAULIER" value={truck.haulierCode || null} disabled={locked}
+            placeholder="Search haulier code or name…"
+            onChange={code => onChange({ haulierCode: code ?? '' })} />
         </GateField>
 
         <GateField label="Truck category" error={fieldError('truck.truckCategoryCode')}>

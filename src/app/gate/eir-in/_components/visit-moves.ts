@@ -179,6 +179,9 @@ export interface QuoteLineLike {
   currencyCode?: string | null;
 }
 
+/** The condition a box arrives in unless the clerk says otherwise. */
+export const DEFAULT_CONDITION = 'AV';
+
 let seq = 0;
 export const newMoveKey = () => `m${++seq}-${Date.now().toString(36)}`;
 
@@ -206,7 +209,9 @@ export function blankMove(trip: TripType, defaults: {
     bookingTypeCode: '',
     movementCode: '',
     fullEmpty: null,
-    conditionCode: '',
+    // AV — a sound box is what rolls through the gate nearly every time, so the
+    // clerk changes it only when something is wrong (owner, 2026-10-09).
+    conditionCode: DEFAULT_CONDITION,
     gradeCode: '',
     materialCode: '',
     heightCode: '',
