@@ -2,7 +2,7 @@
 import React, { useState, useMemo } from 'react';
 import Link from 'next/link';
 import { Icon } from '@/components/ui/Icon';
-import { usePagination, TablePagination } from '@/components/ui/TablePagination';
+import { TablePagination } from '@/components/ui/TablePagination';
 import { TableSkeleton } from '@/components/ui/TableSkeleton';
 import { useApiList } from '@/lib/api/use-api';
 import { formatDate } from '@/lib/format';
@@ -93,28 +93,66 @@ const EMPTY_FILTERS = { search: '', status: '', progress: '', orderTypeCode: '',
 export default function BookingRegisterPage() {
   const [filters, setFilters] = useState(EMPTY_FILTERS);
   const [searchDraft, setSearchDraft] = useState('');
-  const set = (patch: Partial<typeof EMPTY_FILTERS>) => setFilters(f => ({ ...f, ...patch }));
+
+
+  // The API pages, not the browser. It used to ask for 200 rows and slice them
+  // here, which is slow on a depot with thousands of bookings and quietly wrong
+  // past row 200 — the pager said "1–10 of 200" when there were 2,617.
+  const [page, setPage] = useState(1);
+  const [pageSize, setPageSize] = useState(50);
 
   const path = useMemo(() => {
-    const params = new URLSearchParams({ pageSize: '200' });
-    for (const [k, v] of Object.entries(filters)) if (v) params.set(k, v);
+    // Page and PageSize are PascalCase on this endpoint; the filters are not.
+    // The wrong casing is ignored silently and the clerk gets an unfiltered list.
+    const params = new URLSearchParams({ Page: String(page), PageSize: String(pageSize) });
+    for (const [k, v] of Object.entries(filters)) {
+      if (!v) continue;
+      params.set(k === 'search' ? 'Search' : k, v);
+    }
     return `/api/tos/bookings?${params.toString()}`;
-  }, [filters]);
+  }, [filters, page, pageSize]);
+
   const { data, error, loading, reload, totalCount } = useApiList<BookingRow>(path);
   const { data: branches } = useApiList<Branch>('/api/branches?pageSize=100');
   const rows = useMemo(() => data ?? [], [data]);
 
-  const kpis = useMemo(() => ({
-    open: rows.filter(r => r.status === 'OPEN').length,
-    inProgress: rows.filter(r => r.progress === 'IN_PROGRESS').length,
-    expired: rows.filter(r => r.progress === 'EXPIRED').length,
-    boxesOpen: rows.filter(r => r.status === 'OPEN').reduce((s, r) => s + Math.max(0, r.qtyRequired - r.qtyAssigned - r.qtyCompleted), 0),
-  }), [rows]);
+  /**
+   * The KPI figures are COUNTS, not sums of what is on screen.
+   *
+   * They were counted from the loaded rows, which is one page: on page 2 of a
+   * filtered list "Open bookings" would have read 7. Each is its own call
+   * asking for a single row and reading `totalCount` — the cheapest question
+   * the API can answer — and they load AFTER the grid, so the table never waits
+   * on them.
+   */
+  const countPath = (extra: Record<string, string>) => {
+    const p = new URLSearchParams({ Page: '1', PageSize: '1' });
+    if (filters.branchId) p.set('branchId', filters.branchId);
+    for (const [k, v] of Object.entries(extra)) p.set(k, v);
+    return `/api/tos/bookings?${p.toString()}`;
+  };
+  const openCount = useApiList<BookingRow>(countPath({ status: 'OPEN' }));
+  const inProgressCount = useApiList<BookingRow>(countPath({ progress: 'IN_PROGRESS' }));
+  const expiredCount = useApiList<BookingRow>(countPath({ progress: 'EXPIRED' }));
 
-  const lines = useMemo(() => [...new Set(rows.map(r => r.lineCode))].sort(), [rows]);
-  const orderTypes = useMemo(() => [...new Set(rows.map(r => r.orderTypeCode))].sort(), [rows]);
+  // Filter lists come from MASTER DATA. Built from the loaded rows they only
+  // ever offered what happened to be on the current page, so filtering by a
+  // line you could see was possible and by one you could not was not.
+  const { data: orderTypeRows } = useApiList<{ orderTypeCode: string }>('/api/master/order-types?pageSize=200');
+  const { data: lineRows } = useApiList<{ partyCode: string }>('/api/master/shipping-lines?pageSize=200');
+  const orderTypes = useMemo(
+    () => [...new Set((orderTypeRows ?? []).map(o => o.orderTypeCode))].sort(), [orderTypeRows]);
+  const lines = useMemo(
+    () => [...new Set((lineRows ?? []).map(l => l.partyCode))].sort(), [lineRows]);
 
-  const { page, setPage, pageSize, setPageSize, totalPages, pageItems, totalItems, startRow, endRow } = usePagination(rows);
+  // A filter change asks a different question; page 7 of the old answer is not
+  // part of it, and staying there shows an empty table that reads as "none".
+  const setAndReset = (patch: Partial<typeof EMPTY_FILTERS>) => { setFilters(f => ({ ...f, ...patch })); setPage(1); };
+
+  const totalPages = Math.max(1, Math.ceil(totalCount / pageSize));
+  const startRow = totalCount === 0 ? 0 : (page - 1) * pageSize + 1;
+  const endRow = Math.min(page * pageSize, totalCount);
+
 
   return (
     <div className="gecko-stack">
@@ -123,7 +161,7 @@ export default function BookingRegisterPage() {
         <div className="gecko-page-header-left">
           <div className="gecko-row">
             <h1 className="gecko-page-title">Booking Register</h1>
-            <span className="gecko-count-badge">{loading && !data ? '…' : `${totalCount} bookings`}</span>
+            <span className="gecko-count-badge">{loading && !data ? '…' : `${totalCount.toLocaleString()} bookings`}</span>
           </div>
           <p className="gecko-page-subtitle">
             Every order the depot has been asked to carry out — status is what a person decided, progress is what the gate has done.
@@ -145,20 +183,20 @@ export default function BookingRegisterPage() {
         </div>
       )}
 
-      <div className="gecko-grid-4" style={{ gap: 10 }}>
+      <div className="gecko-grid-3" style={{ gap: 10 }}>
         {[
-          { label: 'Open bookings', value: kpis.open, icon: 'clipboardList', color: 'var(--gecko-primary-600)' },
-          { label: 'In progress', value: kpis.inProgress, icon: 'activity', color: 'var(--gecko-info-600)' },
-          { label: 'Expired releases', value: kpis.expired, icon: 'clock', color: 'var(--gecko-warning-600)' },
-          { label: 'Boxes still to name', value: kpis.boxesOpen, icon: 'box', color: 'var(--gecko-text-secondary)' },
+          // Each is its own count call. "Boxes still to name" is gone: it summed
+          // the loaded page, so it answered a different question on every page,
+          // and there is no endpoint that counts it across the register.
+          { label: 'Open bookings', value: openCount.totalCount, busy: openCount.loading, icon: 'clipboardList', color: 'var(--gecko-primary-600)' },
+          { label: 'In progress', value: inProgressCount.totalCount, busy: inProgressCount.loading, icon: 'activity', color: 'var(--gecko-info-600)' },
+          { label: 'Expired releases', value: expiredCount.totalCount, busy: expiredCount.loading, icon: 'clock', color: 'var(--gecko-warning-600)' },
         ].map(k => (
           <div key={k.label} className="gecko-card gecko-card-tight gecko-row gecko-stack-md">
             <Icon name={k.icon} size={18} style={{ color: k.color }} />
             <div>
               <div className="gecko-page-title" style={{ fontFamily: 'var(--gecko-font-mono)', lineHeight: 1 }}>
-                {loading && !data
-                  ? <span className="gecko-skeleton gecko-skeleton-kpi" />
-                  : k.value}
+                {k.busy ? <span className="gecko-skeleton gecko-skeleton-kpi" /> : k.value}
               </div>
               <div className="gecko-stat-block-sub" style={{ marginTop: 2 }}>{k.label}</div>
             </div>
@@ -167,31 +205,31 @@ export default function BookingRegisterPage() {
       </div>
 
       <div className="gecko-row gecko-row-wrap" style={{ gap: 8 }}>
-        <form className="gecko-row" style={{ gap: 6 }} onSubmit={e => { e.preventDefault(); set({ search: searchDraft.trim() }); }}>
+        <form className="gecko-row" style={{ gap: 6 }} onSubmit={e => { e.preventDefault(); setAndReset({ search: searchDraft.trim() }); }}>
           <input className="gecko-input gecko-input-sm" aria-label="Search bookings" style={{ width: 300 }}
             placeholder="Order no, carrier ref, customer ref or container no…"
             value={searchDraft} onChange={e => setSearchDraft(e.target.value)} />
           <button type="submit" className="gecko-btn gecko-btn-outline gecko-btn-sm"><Icon name="search" size={13} /> Search</button>
         </form>
-        <select className="gecko-input gecko-input-sm" aria-label="Progress" value={filters.progress} onChange={e => set({ progress: e.target.value })} style={{ width: 150 }}>
+        <select className="gecko-input gecko-input-sm" aria-label="Progress" value={filters.progress} onChange={e => setAndReset({ progress: e.target.value })} style={{ width: 150 }}>
           <option value="">All progress</option>
           {Object.entries(PROGRESS).map(([k, v]) => <option key={k} value={k}>{v.label}</option>)}
         </select>
-        <select className="gecko-input gecko-input-sm" aria-label="Status" value={filters.status} onChange={e => set({ status: e.target.value })} style={{ width: 130 }}>
+        <select className="gecko-input gecko-input-sm" aria-label="Status" value={filters.status} onChange={e => setAndReset({ status: e.target.value })} style={{ width: 130 }}>
           <option value="">All statuses</option>
           <option value="OPEN">Open</option>
           <option value="CANCELLED">Cancelled</option>
           <option value="CLOSED">Closed</option>
         </select>
-        <select className="gecko-input gecko-input-sm" aria-label="Depot" value={filters.branchId} onChange={e => set({ branchId: e.target.value })} style={{ width: 150 }}>
+        <select className="gecko-input gecko-input-sm" aria-label="Depot" value={filters.branchId} onChange={e => setAndReset({ branchId: e.target.value })} style={{ width: 150 }}>
           <option value="">All depots</option>
           {(branches ?? []).map(b => <option key={b.branchId} value={b.branchId}>{b.branchCode}</option>)}
         </select>
-        <select className="gecko-input gecko-input-sm" aria-label="Order type" value={filters.orderTypeCode} onChange={e => set({ orderTypeCode: e.target.value })} style={{ width: 170 }}>
+        <select className="gecko-input gecko-input-sm" aria-label="Order type" value={filters.orderTypeCode} onChange={e => setAndReset({ orderTypeCode: e.target.value })} style={{ width: 170 }}>
           <option value="">All order types</option>
           {(filters.orderTypeCode && !orderTypes.includes(filters.orderTypeCode) ? [filters.orderTypeCode, ...orderTypes] : orderTypes).map(o => <option key={o} value={o}>{o}</option>)}
         </select>
-        <select className="gecko-input gecko-input-sm" aria-label="Line" value={filters.lineCode} onChange={e => set({ lineCode: e.target.value })} style={{ width: 110 }}>
+        <select className="gecko-input gecko-input-sm" aria-label="Line" value={filters.lineCode} onChange={e => setAndReset({ lineCode: e.target.value })} style={{ width: 110 }}>
           <option value="">All lines</option>
           {(filters.lineCode && !lines.includes(filters.lineCode) ? [filters.lineCode, ...lines] : lines).map(l => <option key={l} value={l}>{l}</option>)}
         </select>
@@ -226,7 +264,7 @@ export default function BookingRegisterPage() {
               <TableSkeleton columns={10} />
             ) : rows.length === 0 ? (
               <tr><td colSpan={10} style={{ textAlign: 'center', padding: 28, color: 'var(--gecko-text-secondary)' }}>No bookings match these filters.</td></tr>
-            ) : pageItems.map(b => (
+            ) : rows.map(b => (
               <tr key={b.bookingId} style={{ opacity: b.status === 'CANCELLED' ? 0.6 : 1 }}>
                 <td>
                   <Link href={`/bookings/${b.bookingId}`} className="gecko-id-link">{b.orderNo}</Link>
@@ -253,8 +291,12 @@ export default function BookingRegisterPage() {
             ))}
           </tbody>
         </table>
-        <TablePagination page={page} pageSize={pageSize} totalItems={totalItems} totalPages={totalPages}
-          startRow={startRow} endRow={endRow} onPageChange={setPage} onPageSizeChange={setPageSize}
+        {/* Each change here is a new API call, not a local slice. */}
+        <TablePagination page={page} pageSize={pageSize} totalItems={totalCount} totalPages={totalPages}
+          startRow={startRow} endRow={endRow}
+          onPageChange={setPage}
+          onPageSizeChange={n => { setPageSize(n); setPage(1); }}
+          pageSizeOptions={[25, 50, 100]}
           noun="bookings" loading={loading} />
       </div>
       {totalCount > rows.length && (
