@@ -1,5 +1,5 @@
 "use client";
-import React, { useEffect, useRef, useState } from 'react';
+import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { Icon } from '@/components/ui/Icon';
 import { apiGet } from '@/lib/api/client';
 import { ApiError } from '@/lib/api/problem';
@@ -19,6 +19,19 @@ import { formatDateTime } from '@/lib/format';
  * retyping it at the exit is how one arrival becomes two trucks.
  */
 
+/**
+ * A box this truck is here to COLLECT. PLANNED is the one that still stands —
+ * the others were released or cancelled.
+ */
+export interface VisitPickup {
+  visitPickupId: string;
+  bookingContainerId: string | null;
+  orderNo: string | null;
+  containerNo: string | null;
+  equipmentTypeCode: string | null;
+  status: string;
+}
+
 export interface OpenVisit {
   truckVisitId: string;
   visitNo: string;
@@ -31,6 +44,8 @@ export interface OpenVisit {
   pickupDropoffMode: string | null;
   arrivedAt: string | null;
   gateInAt: string | null;
+  /** Always answered by /gate/visits; this screen simply never read it. */
+  pickups?: VisitPickup[] | null;
 }
 
 export function TruckInYardPicker({ branchId, value, disabled, error, onPick, onClear }: {
@@ -59,7 +74,9 @@ export function TruckInYardPicker({ branchId, value, disabled, error, onPick, on
     const timer = setTimeout(() => {
       setBusy(true);
       const params = new URLSearchParams({ branchId, openOnly: 'true', pageSize: '25' });
-      if (q) params.set('Search', q);
+      // The server matches plate, visit no, and the pickups' container and
+      // order numbers. Debounced above; one request per settled value.
+      if (q) params.set('search', q);
       apiGet<{ items: OpenVisit[] }>(`/api/tos/gate/visits?${params}`)
         .then(page => {
           if (cancelled) return;
@@ -82,6 +99,24 @@ export function TruckInYardPicker({ branchId, value, disabled, error, onPick, on
     document.addEventListener('mousedown', away);
     return () => document.removeEventListener('mousedown', away);
   }, [open]);
+
+  /**
+   * ONLY THE TRUCKS THAT CAME TO COLLECT SOMETHING (owner, 2026-10-08).
+   *
+   * Gate Out releases boxes, so a truck that came only to drop off has no
+   * business in this list — offering it makes the clerk read every plate to
+   * find the handful that matter. A visit qualifies on a PLANNED pickup; one
+   * already released or cancelled does not count.
+   *
+   * THE SEARCH IS THE SERVER'S (API 2026-10-08): `search` on /gate/visits now
+   * matches the container and order numbers of PLANNED pickups as well as the
+   * plate and visit number, on part of a number and ignoring spaces, dashes and
+   * case. Filtering pickups here as well only looked right — it searched the
+   * page that had come back, and quietly stopped being true past the first one.
+   */
+  const shown = useMemo(
+    () => rows.filter(v => (v.pickups ?? []).some(p => p.status === 'PLANNED')),
+    [rows]);
 
   if (value && !open) {
     return (
@@ -113,10 +148,16 @@ export function TruckInYardPicker({ branchId, value, disabled, error, onPick, on
         <div className="gecko-card gecko-booking-drop" role="listbox">
           {busy && <div className="gecko-cell-meta gecko-booking-drop-note">Looking…</div>}
           {failure && <div className="gecko-field-error gecko-booking-drop-note">{failure}</div>}
-          {!busy && !failure && rows.length === 0 && (
-            <div className="gecko-cell-meta gecko-booking-drop-note">No truck is in the yard.</div>
+          {!busy && !failure && shown.length === 0 && (
+            <div className="gecko-cell-meta gecko-booking-drop-note">
+              {rows.length === 0
+                ? 'No truck is in the yard.'
+                : text.trim()
+                  ? `No truck here is collecting “${text.trim()}”.`
+                  : 'No truck here is waiting to collect a box.'}
+            </div>
           )}
-          {rows.map(v => (
+          {shown.map(v => (
             <button key={v.truckVisitId} type="button" role="option" aria-selected={false}
               className="gecko-booking-row" onClick={() => { onPick(v); setOpen(false); setText(''); }}>
               <span className="gecko-text-mono gecko-booking-row-ref">{v.truckPlate}</span>
@@ -124,7 +165,10 @@ export function TruckInYardPicker({ branchId, value, disabled, error, onPick, on
                 {v.visitNo}
                 {v.haulierCode ? <span className="gecko-cell-meta"> · {v.haulierCode}</span> : null}
               </span>
-              <span className="gecko-cell-meta">{v.truckCategoryCode}</span>
+              <span className="gecko-cell-meta gecko-truck-row-boxes">
+                {(v.pickups ?? []).filter(p => p.status === 'PLANNED')
+                  .map(p => p.containerNo || p.equipmentTypeCode || '—').join(', ')}
+              </span>
               <span className="gecko-cell-meta gecko-booking-row-step">
                 in {formatDateTime(v.gateInAt ?? v.arrivedAt)}
               </span>

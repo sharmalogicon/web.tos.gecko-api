@@ -432,6 +432,14 @@ export interface Receipt {
   replacesReceiptNo?: string | null;
   replacedByReceiptNo?: string | null;
   /**
+   * GATE | WINDOW | CASH_BILL … Only a GATE receipt of today may be split
+   * between payers, and any issued receipt can change payer — see
+   * `canDivide` / `canChangePayer` in receipts.ts.
+   */
+  issuedFrom?: string | null;
+  splitFromReceiptNo?: string | null;
+  splitIntoReceiptNos?: string[] | null;
+  /**
    * Withholding tax, when the clerk applied it. `total` above is still the tax
    * invoice's total; `nettAmount` is what the customer actually handed over,
    * and what the drawer expects. Null/0 rate = none applied.

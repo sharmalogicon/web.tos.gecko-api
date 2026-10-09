@@ -973,7 +973,7 @@ function TabVoyage({ form, patch, created, dirty, readOnly, direction, canOverri
         <div className="gecko-eyebrow gecko-row gecko-mb-4"><Icon name="fileText" size={14} /> References</div>
         <div className="gecko-grid-2" style={{ gap: 18, padding: '16px 20px', background: 'var(--gecko-bg-subtle)', borderRadius: 10, border: '1px solid var(--gecko-border)' }}>
           <div>
-            <div className="gecko-eyebrow gecko-mb-1">
+            <div className="gecko-eyebrow gecko-eyebrow-set gecko-mb-1">
               Booking / B&#47;L No <span style={{ color: 'var(--gecko-danger-600)' }}>*</span>
             </div>
             {editMode
@@ -1004,14 +1004,14 @@ function TabVoyage({ form, patch, created, dirty, readOnly, direction, canOverri
         </div>
         <div className="gecko-grid-2" style={{ gap: 18, padding: '16px 20px', background: 'var(--gecko-bg-subtle)', borderRadius: 10, border: '1px solid var(--gecko-border)' }}>
           <div>
-            <div className="gecko-eyebrow gecko-mb-1">Shipping Agent / Line</div>
+            <div className="gecko-eyebrow gecko-eyebrow-set gecko-mb-1">Shipping Agent / Line</div>
             {editMode
               ? <PartyPicker role="SHIPPING_LINE" value={form.agentCode || null}
                   onChange={v => patch({ agentCode: v ?? '' })} placeholder="Search agent or line…" />
               : <div className="gecko-readonly-value">{form.agentCode || '—'}</div>}
           </div>
           <div>
-            <div className="gecko-eyebrow gecko-mb-1">
+            <div className="gecko-eyebrow gecko-eyebrow-set gecko-mb-1">
               {customerLabel} <span style={{ color: 'var(--gecko-danger-600)' }}>*</span>
             </div>
             {editMode
@@ -3063,7 +3063,12 @@ function AddMultipleContainersModal({ onCancel, onConfirm, requirements, onBooki
   /** Boxes already on the booking — the 500 is counted against the whole of it. */
   onBooking: number;
 }) {
-  const [mode, setMode] = useState<'numbers' | 'count'>('numbers');
+  /**
+   * COUNT first (owner, 2026-10-08). A booking is raised before the boxes
+   * exist: the clerk knows "two 40HC" and the numbers arrive later, at the
+   * gate. Opening on the number list asked for something nobody has yet.
+   */
+  const [mode, setMode] = useState<'numbers' | 'count'>('count');
   const [text, setText] = useState('');
   const [count, setCount] = useState('5');
   const [size, setSize] = useState('40');

@@ -35,6 +35,13 @@ interface BookingRow {
   directionCode: string;
   lineCode: string;
   customerCode: string | null;
+  /**
+   * ASKED FOR 2026-10-08 (docs/BOOKING_REGISTER_CUSTOMER_FOR_API.md).
+   * `BookingSummaryResponse` carries the code only, and a clerk does not read
+   * 20241267 as a customer. Optional and nullable so the column falls back to
+   * the code until the API answers it.
+   */
+  customerName?: string | null;
   vesselCallId: string | null;
   callRef: string | null;
   voyage: string | null;
@@ -244,7 +251,7 @@ export default function BookingRegisterPage() {
         <table className="gecko-table">
           <thead>
             <tr>
-              <th>Order No / Carrier Ref</th>
+              <th>Carrier Ref / Order No</th>
               <th>Order Type</th>
               <th>Line</th>
               <th>Customer</th>
@@ -266,16 +273,36 @@ export default function BookingRegisterPage() {
               <tr><td colSpan={10} style={{ textAlign: 'center', padding: 28, color: 'var(--gecko-text-secondary)' }}>No bookings match these filters.</td></tr>
             ) : rows.map(b => (
               <tr key={b.bookingId} style={{ opacity: b.status === 'CANCELLED' ? 0.6 : 1 }}>
+                {/* THE CARRIER REF LEADS (owner, 2026-10-08): it is the number
+                    the agent and the driver quote. Gecko's order number is how
+                    the booking is filed, so it sits underneath in small type.
+                    A booking with no carrier ref puts the order number back on
+                    top rather than leading with a dash. */}
                 <td>
-                  <Link href={`/bookings/${b.bookingId}`} className="gecko-id-link">{b.orderNo}</Link>
-                  <div className="gecko-cell-meta">{b.carrierRef ?? '—'}{b.branchCode ? ` · ${b.branchCode}` : ''}</div>
+                  <Link href={`/bookings/${b.bookingId}`} className="gecko-id-link">
+                    {b.carrierRef ?? b.orderNo}
+                  </Link>
+                  <div className="gecko-cell-meta">
+                    {b.carrierRef ? b.orderNo : ''}{b.branchCode ? `${b.carrierRef ? ' · ' : ''}${b.branchCode}` : ''}
+                  </div>
                 </td>
                 <td>
                   <div style={{ fontFamily: 'var(--gecko-font-mono)', fontWeight: 600 }}>{b.orderTypeCode}</div>
                   <div className="gecko-cell-meta">{b.directionCode}</div>
                 </td>
                 <td className="gecko-text-mono">{b.lineCode}</td>
-                <td className="gecko-text-mono">{b.customerCode ?? '—'}</td>
+                {/* The name is what a clerk recognises; the code is filing.
+                    Falls back to the code alone while the API sends no name. */}
+                <td>
+                  {b.customerName
+                    ? (
+                      <>
+                        <span className="gecko-cell-tight">{b.customerName}</span>
+                        <span className="gecko-cell-meta gecko-text-mono">{b.customerCode}</span>
+                      </>
+                    )
+                    : <span className="gecko-text-mono">{b.customerCode ?? '—'}</span>}
+                </td>
                 <td>
                   {b.vesselCallId
                     ? <Link href={`/masters/vessels/schedule/${b.vesselCallId}`} className="gecko-id-link">{b.callRef}</Link>

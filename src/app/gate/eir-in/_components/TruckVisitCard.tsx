@@ -39,7 +39,8 @@ export function TruckVisitCard({ truck, onChange, locked, visitNo, modeLabel, fi
   const { categories } = useTruckCategories();
 
   // -menus: .gecko-card sets overflow:hidden for its rounded corners, which
-  // clips the haulier search's dropdown.
+  // CLIPS the haulier search's dropdown. Clipping is not stacking — no z-index
+  // rescues it.
   return (
     <div className="gecko-card gecko-card-padded gecko-card-menus gecko-stack">
       <div className="gecko-row gecko-row-start gecko-row-between">
@@ -65,16 +66,18 @@ export function TruckVisitCard({ truck, onChange, locked, visitNo, modeLabel, fi
             onChange={e => onChange({ plate: e.target.value.toUpperCase() })} />
         </GateField>
 
-        <GateField label="Trailer / chassis" error={fieldError('truck.trailerPlate')}>
-          <input className="gecko-input gecko-text-mono" value={truck.trailerPlate} disabled={locked} maxLength={20}
-            onChange={e => onChange({ trailerPlate: e.target.value.toUpperCase() })} />
-        </GateField>
+        {/* Trailer / chassis is OFF the form (owner, 2026-10-09): KORAKIT does
+            not key it, and its slot is better spent on the haulier, whose Thai
+            company names do not fit a quarter of the row. The field is not
+            deleted — `trailerPlate` stays on the draft and is sent as null, so
+            putting it back is one block of JSX. */}
 
-        {/* A search, not a list: the depot has thousands of hauliers and a
-            dropdown holds one page of them (it showed KORAKIT's first 200 of 5,336). */}
-        <GateField label="Transporter (haulier)" error={fieldError('truck.haulierCode')}>
-          <PartyPicker role="HAULIER" value={truck.haulierCode || null} disabled={locked}
-            placeholder="Search haulier code or name…"
+        {/* A SEARCH, not a list: the depot has thousands of hauliers and a
+            dropdown holds one page of them. Required — every truck at the
+            barrier belongs to someone. Two columns wide so the name fits. */}
+        <GateField label="Transporter (haulier)" required span={2} error={fieldError('truck.haulierCode')}>
+          <PartyPicker role="HAULIER" value={truck.haulierCode || null} disabled={locked} nameFirst
+            placeholder="Search haulier name or code…"
             onChange={code => onChange({ haulierCode: code ?? '' })} />
         </GateField>
 

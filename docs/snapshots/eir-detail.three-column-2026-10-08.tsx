@@ -11,9 +11,6 @@ import { useSession } from '@/lib/auth/session';
 import { TOS_PERMISSIONS, formatContainerNo, formatDateTime, type TruckVisit } from '@/lib/api/tos';
 import { WINDOW_PERMISSIONS, formatBaht, visitQuotePath, type VisitQuote } from '@/lib/api/window';
 import { codeLabel, useCodeList } from '@/lib/api/lookups';
-import { EIR_PRINT_NOTE, openPdf } from '@/lib/api/open-pdf';
-import { couponPdfPath } from '@/lib/api/receipts';
-import { receiptByNo } from '@/lib/api/cash-bills';
 import {
   GATE_API, attachmentsPath, eirPath, formatBytes, formatKg,
   type ContainerHolds, type EirDetail, type GateAttachment, type Survey,
@@ -43,73 +40,16 @@ export function EirDetailView({ id }: { id: string }) {
     e && canAt(WINDOW_PERMISSIONS.collect, e.branchId) ? visitQuotePath(e.truckVisitId) : null);
   const [voiding, setVoiding] = useState(false);
   const [printing, setPrinting] = useState(false);
-  /** Which of the other two documents is being fetched, if either. */
-  const [printingDoc, setPrintingDoc] = useState<'truck-in' | 'coupon' | null>(null);
 
   const register = e?.direction === 'OUT' ? '/gate/eir-out' : '/gate/eir-in';
   const mayVoid = !!e && e.status !== 'VOIDED' && canAt(TOS_PERMISSIONS.gateOverride, e.branchId);
-  // The coupon is a cash document: without the permission the API answers 403,
-  // so the button is not offered rather than shown and refused.
-  const mayCollect = !!e && canAt(WINDOW_PERMISSIONS.collect, e.branchId);
-
-  /**
-   * The other two papers a gate clerk hands over.
-   *
-   * TRUCK-IN FORM is the visit's, not the EIR's — one truck, one form, however
-   * many boxes it brought — so it is keyed on truckVisitId.
-   *
-   * COUPON is the RECEIPT's: it is what a driver spends at the barrier to take
-   * a box out, so it only exists where money was taken. The quote answers a
-   * receipt NUMBER and the PDF wants an id, so the number is resolved first —
-   * the same lookup the receipts register uses.
-   *
-   * Both are authorised endpoints, so both fetch the bytes with the token and
-   * hand over a blob. A plain link would answer 401.
-   */
-  const receiptNo = charges.data?.boxes
-    ?.flatMap(b => b.lines ?? [])
-    .map(l => l.receiptNo)
-    .find((n): n is string => Boolean(n)) ?? null;
-
-  const printTruckIn = async () => {
-    if (!e) return;
-    setPrintingDoc('truck-in');
-    try {
-      await openPdf(`${GATE_API}/visits/${e.truckVisitId}/truck-in.pdf`, `${e.visitNo}-truck-in.pdf`);
-    } catch (err: unknown) {
-      toast.toast({ variant: 'danger', title: 'Truck-in form not printed',
-        message: err instanceof ApiError ? err.title : 'Could not reach the Gecko API.' });
-    } finally {
-      setPrintingDoc(null);
-    }
-  };
-
-  const printCoupon = async () => {
-    if (!receiptNo) return;
-    setPrintingDoc('coupon');
-    try {
-      const receipt = await receiptByNo(receiptNo);
-      await openPdf(couponPdfPath(receipt.receiptId), `${receiptNo}-coupon.pdf`);
-    } catch (err: unknown) {
-      const api = err instanceof ApiError ? err : null;
-      toast.toast({ variant: 'danger', title: 'Coupon not printed',
-        message: api?.status === 404
-          ? `No coupon was issued on ${receiptNo}.`
-          : api?.status === 403
-            ? 'Printing a cash bill needs the cash-collect permission.'
-            : api?.title ?? 'Could not reach the Gecko API.' });
-    } finally {
-      setPrintingDoc(null);
-    }
-  };
 
   const printEir = async () => {
     if (!e) return;
     setPrinting(true);
     try {
-      // Values only, onto the depot's pre-printed stationery — so it OPENS for
-      // printing rather than landing in Downloads for someone to find later.
-      await openPdf(`${GATE_API}/transactions/${e.gateTransactionId}/eir.pdf`, `${e.eirNo}.pdf`);
+      const file = await apiDownload(`${GATE_API}/transactions/${e.gateTransactionId}/eir.pdf`);
+      saveBlob(file.blob, file.filename ?? `${e.eirNo}.pdf`);
     } catch (err: unknown) {
       toast.toast({ variant: 'danger', title: 'EIR not printed', message: err instanceof ApiError ? err.title : 'Could not reach the Gecko API.' });
     } finally {
@@ -152,34 +92,12 @@ export function EirDetailView({ id }: { id: string }) {
           </div>
         </div>
         <div className="gecko-toolbar">
-          {/* Enabled on a VOIDED EIR too: it prints with a VOID mark, and a
-              clerk asked to show why a move was cancelled needs that paper. */}
           <button className="gecko-btn gecko-btn-outline gecko-btn-sm" onClick={printEir} disabled={printing}>
-            <Icon name="print" size={14} /> {printing ? 'Preparing…' : 'Print EIR (pre-printed form)'}
+            <Icon name="download" size={14} /> {printing ? 'Preparing…' : 'EIR PDF'}
           </button>
-          <button className="gecko-btn gecko-btn-outline gecko-btn-sm"
-            onClick={printTruckIn} disabled={printingDoc !== null}
-            title="One form for the whole truck visit, however many boxes it brought">
-            <Icon name="download" size={14} />
-            {printingDoc === 'truck-in' ? 'Preparing…' : 'Truck-in form'}
-          </button>
-          {/* Only where money was taken: a coupon is what the driver spends at
-              the barrier, so a visit that was charged nothing has none. */}
-          {receiptNo && mayCollect && (
-            <button className="gecko-btn gecko-btn-outline gecko-btn-sm"
-              onClick={printCoupon} disabled={printingDoc !== null}
-              title={`The cash bill for receipt ${receiptNo}`}>
-              <Icon name="print" size={14} />
-              {printingDoc === 'coupon' ? 'Preparing…' : 'Coupon (cash bill)'}
-            </button>
-          )}
           {mayVoid && (
             <button className="gecko-btn gecko-btn-outline gecko-btn-sm" onClick={() => setVoiding(true)}>Void EIR</button>
           )}
-          {/* The EIR prints VALUES ONLY onto pre-printed stationery. At "Fit to
-              page" every value lands a few millimetres out and the whole form
-              is wrong — which nobody notices until a driver is holding it. */}
-          <div className="gecko-print-note">{EIR_PRINT_NOTE}</div>
         </div>
       </div>
 
@@ -193,10 +111,47 @@ export function EirDetailView({ id }: { id: string }) {
         </div>
       )}
 
-      {/* The truck first and full width: it is the thing in front of the clerk,
-          and everything below is about the box it brought. */}
+      <div className="gecko-grid-3" style={{ gap: 20 }}>
+        <Section title="The move">
+          <Line label="Booking" value={<Link href={`/bookings/${e.bookingId}`} className="gecko-link">{e.orderNo}</Link>} />
+          <Line label="Line" value={e.lineCode} />
+          <Line label="Equipment" value={[e.equipmentTypeCode, e.isoCode].filter(Boolean).join(' · ') || '—'} />
+          <Line label="Position" value={e.positionText ?? '—'} />
+          <Line label="Recorded" value={formatDateTime(e.recordedAt)} />
+          {e.replacesGateTransactionId && (
+            <Line label="Reissue of" value={<Link href={eirPath(e.direction, e.replacesGateTransactionId)} className="gecko-link">the voided EIR</Link>} />
+          )}
+          {e.remarks && <Line label="Remarks" value={e.remarks} />}
+        </Section>
+
+        <Section title="Weight and condition">
+          <Line label="Gross" value={formatKg(e.grossWeightKg)} />
+          <Line label="Tare" value={formatKg(e.tareWeightKg)} />
+          <Line label="VGM" value={e.vgmKg == null ? '—' : `${formatKg(e.vgmKg)}${e.vgmMethod ? ` (${e.vgmMethod})` : ''}`} />
+          <Line label="Max gross" value={formatKg(e.maxGrossWeightKg)} />
+          <Line label="Cargo" value={formatKg(e.cargoWeightKg)} />
+          <Line label="Weight source" value={e.weightSource ?? '—'} />
+          {/* Container class IS the grade — there is no separate field. */}
+          <Line label="Condition / class" value={[e.conditionCode, e.gradeCode].filter(Boolean).join(' / ') || '—'} />
+          <Line label="Material" value={e.materialCode ?? '—'} />
+          {e.tempObservedC != null && <Line label="Temperature seen" value={`${e.tempObservedC} °C`} />}
+          {(e.ventSetting || e.humidityPct != null || e.gensetNo || e.clipOnNo) && (
+            <Line label="Reefer" value={[
+              e.ventSetting && `vent ${e.ventSetting}`,
+              e.humidityPct != null && `${e.humidityPct}% RH`,
+              e.gensetNo && `genset ${e.gensetNo}`,
+              e.clipOnNo && `clip-on ${e.clipOnNo}`,
+            ].filter(Boolean).join(' · ')} />
+          )}
+        </Section>
+
+        <Section title="Documents">
+          <Line label="Customs permit" value={e.customsPermitNo ?? '—'} />
+          <Line label="Paperless code" value={e.paperlessCode ?? '—'} />
+          <Line label="Next location" value={e.nextLocationCode ?? '—'} />
+        </Section>
+
         <Section title="Truck">
-          <Facts>
           <Line label="Plate" value={e.truckPlate} />
           <Line label="Visit" value={e.visitNo} />
           <Line label="Trip" value={e.tripType === 'PICK_UP_CONT' ? 'Pick-up' : 'Drop-off'} />
@@ -218,77 +173,7 @@ export function EirDetailView({ id }: { id: string }) {
               ))}
             </>
           )}
-          </Facts>
-        
         </Section>
-
-      {/* Then the move on the left, the BOX on the right. Seals, reefer and
-          weights are one subject and used to be split across two cards and two
-          rows, so a clerk checking a reefer read half of it above the fold. */}
-      <div className="gecko-grid-2" style={{ gap: 20 }}>
-        <Section title="The move">
-          <Facts>
-          <Line label="Booking" value={<Link href={`/bookings/${e.bookingId}`} className="gecko-link">{e.orderNo}</Link>} />
-          <Line label="Line" value={e.lineCode} />
-          <Line label="Equipment" value={[e.equipmentTypeCode, e.isoCode].filter(Boolean).join(' · ') || '—'} />
-          <Line label="Position" value={e.positionText ?? '—'} />
-          <Line label="Recorded" value={formatDateTime(e.recordedAt)} />
-          {e.replacesGateTransactionId && (
-            <Line label="Reissue of" value={<Link href={eirPath(e.direction, e.replacesGateTransactionId)} className="gecko-link">the voided EIR</Link>} />
-          )}
-          {e.remarks && <Line label="Remarks" value={e.remarks} />}
-          <Line label="Customs permit" value={e.customsPermitNo ?? '—'} />
-          <Line label="Paperless code" value={e.paperlessCode ?? '—'} />
-          <Line label="Next location" value={e.nextLocationCode ?? '—'} />
-          </Facts>
-        
-        </Section>
-
-        <Section title="The box">
-          <Facts>
-          <Line label="Gross" value={formatKg(e.grossWeightKg)} />
-          <Line label="Tare" value={formatKg(e.tareWeightKg)} />
-          <Line label="VGM" value={e.vgmKg == null ? '—' : `${formatKg(e.vgmKg)}${e.vgmMethod ? ` (${e.vgmMethod})` : ''}`} />
-          <Line label="Max gross" value={formatKg(e.maxGrossWeightKg)} />
-          <Line label="Cargo" value={formatKg(e.cargoWeightKg)} />
-          <Line label="Weight source" value={e.weightSource ?? '—'} />
-          {/* Container class IS the grade — there is no separate field. */}
-          <Line label="Condition / class" value={[e.conditionCode, e.gradeCode].filter(Boolean).join(' / ') || '—'} />
-          <Line label="Material" value={e.materialCode ?? '—'} />
-          {e.tempObservedC != null && <Line label="Temperature seen" value={`${e.tempObservedC} °C`} />}
-          {(e.ventSetting || e.humidityPct != null || e.gensetNo || e.clipOnNo) && (
-            <Line label="Reefer" value={[
-              e.ventSetting && `vent ${e.ventSetting}`,
-              e.humidityPct != null && `${e.humidityPct}% RH`,
-              e.gensetNo && `genset ${e.gensetNo}`,
-              e.clipOnNo && `clip-on ${e.clipOnNo}`,
-            ].filter(Boolean).join(' · ')} />
-          )}
-          </Facts>
-
-          {/* The seals belong with the box they are on, not in a card of their
-              own two rows further down. */}
-          <div className="gecko-eir-seals">
-            <div className="gecko-stat-label gecko-mb-1">Seals ({e.seals.length})</div>
-            {e.seals.length === 0 ? <div className="gecko-cell-meta">No seal recorded.</div> : (
-              <table className="gecko-table gecko-table-compact">
-                <thead><tr><th>Seal</th><th>Type</th><th>Intact</th><th>Matches</th></tr></thead>
-                <tbody>
-                  {e.seals.map(sl => (
-                    <tr key={sl.sealNo}>
-                      <td className="gecko-mono">{sl.sealNo}</td>
-                      <td>{sl.sealType.toLowerCase()}</td>
-                      <td>{sl.isIntact ? 'yes' : <span className="gecko-badge gecko-badge-xs gecko-badge-warning">broken</span>}</td>
-                      <td>{sl.matchesDeclared == null ? '—' : sl.matchesDeclared ? 'yes' : <span className="gecko-badge gecko-badge-xs gecko-badge-warning">no</span>}</td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            )}
-          </div>
-        </Section>
-
-
       </div>
 
       {charges.data && (
@@ -325,21 +210,67 @@ export function EirDetailView({ id }: { id: string }) {
         </Section>
       )}
 
-      <Section title="Overrides and cut-off">
-          <Facts>
-        <Line label="Cut-off applied" value={e.cutoffKindApplied ? `${e.cutoffKindApplied} · ${formatDateTime(e.cutoffAtApplied)}` : '—'} />
-        <Line label="Late override" value={e.lateOverrideReason ?? '—'} />
-        <Line label="Check-digit override" value={e.checkDigitOverrideReason ?? '—'} />
-        <Line label="Paid by coupon" value={e.gateAuthorizationId ? 'yes' : '—'} />
-          </Facts>
-        
+      <div className="gecko-grid-2" style={{ gap: 20 }}>
+        <Section title={`Seals (${e.seals.length})`}>
+          {e.seals.length === 0 ? <div className="gecko-cell-meta">No seal recorded.</div> : (
+            <table className="gecko-table">
+              <thead><tr><th>Seal</th><th>Type</th><th>Intact</th><th>Matches the booking</th></tr></thead>
+              <tbody>
+                {e.seals.map(s => (
+                  <tr key={s.sealNo}>
+                    <td style={{ fontFamily: 'var(--gecko-font-mono, monospace)' }}>{s.sealNo}</td>
+                    <td>{s.sealType.toLowerCase()}</td>
+                    <td>{s.isIntact ? 'yes' : <span className="gecko-badge gecko-badge-xs gecko-badge-warning">broken</span>}</td>
+                    <td>{s.matchesDeclared == null ? '—' : s.matchesDeclared ? 'yes' : <span className="gecko-badge gecko-badge-xs gecko-badge-warning">no</span>}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          )}
+        </Section>
+
+        <Section title="Overrides and cut-off">
+          <Line label="Cut-off applied" value={e.cutoffKindApplied ? `${e.cutoffKindApplied} · ${formatDateTime(e.cutoffAtApplied)}` : '—'} />
+          <Line label="Late override" value={e.lateOverrideReason ?? '—'} />
+          <Line label="Check-digit override" value={e.checkDigitOverrideReason ?? '—'} />
+          <Line label="Paid by coupon" value={e.gateAuthorizationId ? 'yes' : '—'} />
+        </Section>
+      </div>
+
+      <Section title="Survey">
+        {surveys.error ? <div className="gecko-field-error">{surveys.error.title}</div>
+          : surveyRows.length === 0 ? <div className="gecko-cell-meta">{surveys.loading ? 'Loading…' : 'This move was not surveyed.'}</div>
+          : surveyRows.map(s => <SurveyBlock key={s.surveyId} survey={s} />)}
       </Section>
 
-      {/* HIDDEN on the owner's call (2026-10-08): Survey, Photos and scans,
-          and Holds on this box. The reads that fed them are left in place above
-          — they cost one call each and the day these come back it is this block
-          that returns, not the plumbing. Restore from
-          docs/snapshots/eir-detail.three-column-2026-10-08.tsx */}
+      <Section title="Photos and scans">
+        <AttachmentList rows={photos.data} error={photos.error} empty="No photo was taken with this EIR." />
+      </Section>
+
+      {can(TOS_PERMISSIONS.holdView) && (
+        <Section title="Holds on this box now">
+          {holds.error ? <div className="gecko-field-error">{holds.error.title}</div>
+            : !holds.data ? <div className="gecko-cell-meta">Loading…</div>
+            : holds.data.holds.length === 0 ? <div className="gecko-cell-meta">Not held.</div>
+            : (
+              <table className="gecko-table">
+                <thead><tr><th>Hold</th><th>Via</th><th>Placed</th><th>Why</th></tr></thead>
+                <tbody>
+                  {holds.data.holds.map(h => (
+                    <tr key={h.containerHoldId}>
+                      <td><span className="gecko-badge gecko-badge-xs" style={{ background: h.displayColorHex ?? undefined, color: h.displayColorHex ? '#fff' : undefined }}>{h.holdCode}</span>
+                        <div className="gecko-cell-meta">{h.description}</div></td>
+                      <td>{h.heldVia === 'BOOKING' ? `booking ${h.orderNo ?? ''}` : 'the box'}</td>
+                      <td>{formatDateTime(h.appliedAt)}</td>
+                      <td>{h.applyReason}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            )}
+          <div className="gecko-cell-meta gecko-mt-1"><Link href="/gate/holds" className="gecko-link">Holds board</Link></div>
+        </Section>
+      )}
 
       {voiding && (
         <VoidModal eir={e} onClose={() => setVoiding(false)}
@@ -503,27 +434,11 @@ function Section({ title, children }: { title: string; children: React.ReactNode
  * next to a 10px label. It is on `gecko-kv-value` now, the same 13px every
  * other detail screen uses, so this page reads like the rest of Gecko.
  */
-/**
- * The facts of a move, as a TABLE.
- *
- * They were label/value flex rows, which meant every card set its own column
- * width by eye and none of them lined up — and a label with no width of its own
- * sat straight against its value. A table column is one width for every row in
- * it, decided by the browser, and it is what the rest of Gecko already uses.
- */
-function Facts({ children }: { children: React.ReactNode }) {
-  return (
-    <table className="gecko-table gecko-table-compact gecko-eir-facts">
-      <tbody>{children}</tbody>
-    </table>
-  );
-}
-
 function Line({ label, value }: { label: string; value: React.ReactNode }) {
   return (
-    <tr>
-      <th scope="row" className="gecko-eir-fact-label">{label}</th>
-      <td className="gecko-eir-fact-value">{value}</td>
-    </tr>
+    <div className="gecko-eir-line">
+      <span className="gecko-eir-line-label">{label}</span>
+      <span className="gecko-kv-value gecko-eir-line-value">{value}</span>
+    </div>
   );
 }

@@ -185,20 +185,43 @@ export const TRUCK_CATEGORY_PATH = `${CODE_LISTS_PATH}/TRUCK_CATEGORY`;
  * that needs the direction of a pending step — the gate's booking picker, for
  * one — joins to this rather than reading meaning into the string "FULL_OUT".
  */
+/**
+ * SOME MASTER LISTS ANSWER A BARE ARRAY, NOT THE PAGED ENVELOPE.
+ *
+ * `/container-conditions` and `/movements` are declared
+ * `Ok<IReadOnlyList<…>>` in Gecko.MasterData — no `items`, no `totalCount` —
+ * while most other lists are paged. Reading `.items` off those gave `undefined`
+ * every time, so Gate Out's Status dropdown and every movement list were
+ * silently EMPTY: no error, no spinner, just nothing to choose.
+ *
+ * Taking either shape is the honest fix. It costs nothing when the API is
+ * paged and it cannot break if one of these is paged later.
+ */
+type ListOrPage<T> = T[] | { items: T[] };
+const rowsOf = <T,>(data: ListOrPage<T> | null): T[] | null =>
+  data === null ? null : Array.isArray(data) ? data : data.items ?? null;
+
 /** The box conditions a clerk may put on an EIR — Vector's "Status". */
 export function useConditions(): { conditions: ContainerCondition[]; loading: boolean } {
-  const { data, loading } = useApi<{ items: ContainerCondition[] }>(`${CONDITIONS_PATH}?pageSize=200`);
-  return { conditions: data?.items ?? NO_CONDITIONS, loading };
+  const { data, loading } = useApi<ListOrPage<ContainerCondition>>(`${CONDITIONS_PATH}?pageSize=200`);
+  return { conditions: rowsOf(data) ?? NO_CONDITIONS, loading };
 }
 
 const NO_CONDITIONS: ContainerCondition[] = [];
 
 export function useMovements(): { movements: Movement[]; loading: boolean } {
-  const { data, loading } = useApi<{ items: Movement[] }>(`${MOVEMENTS_PATH}?pageSize=200`);
-  return { movements: data?.items ?? NO_MOVEMENTS, loading };
+  const { data, loading } = useApi<ListOrPage<Movement>>(`${MOVEMENTS_PATH}?pageSize=200`);
+  return { movements: rowsOf(data) ?? NO_MOVEMENTS, loading };
 }
 
 const NO_MOVEMENTS: Movement[] = [];
+
+/**
+ * What rolls up to a Thai depot gate nearly every time, so Gate In opens on it
+ * rather than on "Depot default" (owner, 2026-10-08). Only used when the
+ * depot's own code list carries it — never sent blind.
+ */
+export const DEFAULT_TRUCK_CATEGORY = '18_WHEEL';
 
 export function useTruckCategories(): { categories: CodeListValue[]; loading: boolean } {
   const { data, loading } = useApi<CodeListValue[]>(TRUCK_CATEGORY_PATH);

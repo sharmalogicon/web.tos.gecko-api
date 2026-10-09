@@ -114,10 +114,14 @@ export const invoicePath = (invoiceId: string) => `${INVOICES_PATH}/${encodeURIC
 export interface SendInvoiceRequest {
   chargeIds: string[];
   /**
-   * CASH or CREDIT. Only CREDIT is accepted today — CASH answers 400, because
-   * cash is collected at the window and its receipt IS the tax invoice. The
-   * screen offers both (the owner's call, 2026-10-07: a Thai clerk calls that
-   * receipt an invoice) and shows the server's refusal when it comes.
+   * CREDIT in practice. CASH answers 400, because cash is collected at the
+   * window and its receipt IS the tax invoice.
+   *
+   * The Booking Statement used to offer CASH here and show the server's
+   * refusal. It no longer does (API owner, 2026-10-08): "New cash invoice"
+   * opens the Customer Cash Bill instead, which is where the money is actually
+   * taken, and "Existing cash invoice" is gone — a receipt is final, so it is
+   * voided and re-issued rather than appended to.
    */
   paymentTermCode: InvoiceTerm;
   /** A number appends to that invoice; null raises a new one. An existing number answers 409 today. */

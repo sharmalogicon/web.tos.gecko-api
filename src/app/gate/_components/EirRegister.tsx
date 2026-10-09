@@ -46,9 +46,10 @@ export function EirRegister({ direction }: { direction: GateDirection }) {
   const clear = () => { list.setSearch(''); setFromDay(''); setToDay(''); setContainerNo(''); setTruck(''); setStatus(''); setLateOnly(false); };
 
   const exportCsv = () => {
-    const head = ['EIR', 'Time', 'Container', 'Movement', 'F/E', 'Order', 'Line', 'Truck', 'Late', 'Status'];
+    const head = ['EIR', 'Time', 'Container', 'Movement', 'F/E', 'Booking / B/L', 'Order', 'Line', 'Truck', 'Late', 'Status'];
     const cell = (v: string) => `"${v.replace(/"/g, '""')}"`;
-    const lines = rows.map(r => [r.eirNo, r.transactionAt, r.containerNo, r.movementCode, r.fullEmpty, r.orderNo, r.lineCode, r.truckPlate, r.isLate ? 'yes' : '', r.status].map(cell).join(','));
+    const lines = rows.map(r => [r.eirNo, r.transactionAt, r.containerNo, r.movementCode, r.fullEmpty,
+      r.carrierRef || r.subBlNo || '', r.orderNo, r.lineCode, r.truckPlate, r.isLate ? 'yes' : '', r.status].map(cell).join(','));
     saveBlob(new Blob([[head.join(','), ...lines].join('\r\n')], { type: 'text/csv;charset=utf-8' }), `eir-${direction.toLowerCase()}.csv`);
   };
 
@@ -155,7 +156,16 @@ export function EirRegister({ direction }: { direction: GateDirection }) {
                   <td>{formatDateTime(r.transactionAt)}</td>
                   <td style={{ fontFamily: 'var(--gecko-font-mono, monospace)' }}>{formatContainerNo(r.containerNo)}</td>
                   <td>{r.movementCode}<div className="gecko-cell-meta">{r.fullEmpty.toLowerCase()}</div></td>
-                  <td>{r.orderNo}</td>
+                  {/* The number the depot quotes on top, Gecko's own filing
+                      number under it — the Booking Statement register reads the
+                      same way. A booking with neither shows the order number
+                      big and nothing beneath, rather than an empty heading. */}
+                  <td>
+                    <span className="gecko-cell-tight">{r.carrierRef || r.subBlNo || r.orderNo}</span>
+                    {(r.carrierRef || r.subBlNo) && (
+                      <span className="gecko-cell-meta gecko-mono gecko-cell-tight">{r.orderNo}</span>
+                    )}
+                  </td>
                   <td>{r.lineCode}</td>
                   <td>{r.truckPlate}</td>
                   <td>

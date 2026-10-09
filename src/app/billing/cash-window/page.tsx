@@ -18,6 +18,8 @@ import { useSetting, useTruckCategories } from '@/lib/api/lookups';
 import { DrawerBar } from './DrawerBar';
 import { ShiftReceipts } from './ShiftReceipts';
 import { VoidReceiptModal } from '../_components/VoidReceiptModal';
+import { SplitReceiptModal } from '../_components/SplitReceiptModal';
+import { canChangePayer } from '@/lib/api/receipts';
 import { ReceiptView, usePrintReceipt } from './ReceiptView';
 import { formatDate } from '@/lib/format';
 
@@ -121,6 +123,7 @@ export default function CashWindowPage() {
   // Paying again after a void: which voided receipt of this booking the new one replaces ('' = none).
   const [replaces, setReplaces] = useState('');
   const [voidingReceipt, setVoidingReceipt] = useState<Receipt | null>(null);
+  const [splittingReceipt, setSplittingReceipt] = useState<Receipt | null>(null);
   /**
    * One key per driver at the window, replaced when the next one steps up.
    * Taking a customer's money twice is the worst version of a double submit,
@@ -389,9 +392,39 @@ export default function CashWindowPage() {
           }} />
       )}
 
+      {splittingReceipt && (
+        <SplitReceiptModal receiptId={splittingReceipt.receiptId}
+          onClose={() => setSplittingReceipt(null)}
+          onDone={made => {
+            setSplittingReceipt(null);
+            // One part is a change of payer in place: same id, same number.
+            // Several keep the original as the first and add new numbers —
+            // nothing is voided either way.
+            if (made.length === 1) {
+              toast.toast({
+                variant: 'success',
+                title: 'Payer changed',
+                message: `${made[0].receiptNo} is now made out to ${made[0].payerName ?? 'the new payer'}.`,
+              });
+            } else {
+              const [first, ...rest] = made;
+              toast.toast({
+                variant: 'success',
+                title: `Split into ${made.length} receipts`,
+                message: `${first.receiptNo} kept the first part; new: ${rest.map(x => x.receiptNo).join(' · ')}.`,
+              });
+            }
+            loadShift();
+          }} />
+      )}
+
       {receipt ? (
         <ReceiptView receipt={receipt} depot={depotName} onPrint={printReceipt} onNext={nextDriver}
-          onVoid={mayVoid && receipt.status === 'ISSUED' ? () => setVoidingReceipt(receipt) : undefined} />
+          mayCollect={mayCollect}
+          onVoid={mayVoid && receipt.status === 'ISSUED' ? () => setVoidingReceipt(receipt) : undefined}
+          // Splitting voids the original and issues its parts, so it is the
+          // same right as voiding — and only where the API will take it.
+          onSplit={mayVoid && canChangePayer(receipt) ? () => setSplittingReceipt(receipt) : undefined} />
       ) : (
         <>
           {/* ── the number ─────────────────────────────────────────── */}

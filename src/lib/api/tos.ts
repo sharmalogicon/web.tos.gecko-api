@@ -120,6 +120,16 @@ export interface GateTransactionSummary {
   gateTransactionId: string; eirNo: string; direction: GateDirection; movementCode: string; fullEmpty: string;
   containerNo: string; orderNo: string; lineCode: string; truckPlate: string;
   transactionAt: string; isLate: boolean; status: string;
+  /**
+   * The numbers the depot actually quotes — the carrier's booking number and
+   * the B/L (API 2026-10-08). `orderNo` beside them is Gecko's own filing
+   * number: right for a URL, wrong for the heading of a register column.
+   *
+   * Optional and nullable: plenty of bookings carry neither, and this type is
+   * also read from `transactions[]` on a truck visit.
+   */
+  carrierRef?: string | null;
+  subBlNo?: string | null;
 }
 
 export interface YardContainer {

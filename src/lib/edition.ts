@@ -48,12 +48,14 @@ export const LIVE_PATHS: readonly string[] = [
   '/gate/holds',                 // holds board: active, released history, release
   '/gate/reefer-ops',            // reefer plug log, /new plug-in
   '/gate/yard-view',             // yard fill, areas, stock by type / customer / dwell
+  '/units/container-inquiry',    // every box through the depot, one row each
   '/units/unit-inquiry',         // one box's story (?no=); /gate/container-status redirects here
   '/units/equipment-pool',       // stock pools: type × line × grade × condition
   '/billing/cash-window',
   '/billing/service-orders',     // the charge register, /api/revenue/charges
   '/billing/statement',          // one booking's charge lines and receipts (?orderNo=)
   '/billing/invoices',           // credit invoices: the register and one document
+  '/billing/cash-bills',         // raise one: tick a customer's open cash charges
   '/billing/receipts',           // one cash receipt — Vector's Customer Cash Bill
   '/billing/unbilled',           // the billing worklist: orders, then their charge lines
   '/reports/operational',        // the report catalogue; each card says if it can run

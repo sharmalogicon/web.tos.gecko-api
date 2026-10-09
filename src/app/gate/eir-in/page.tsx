@@ -1,6 +1,7 @@
 "use client";
 import React, { useCallback, useMemo, useState } from 'react';
 import { Icon } from '@/components/ui/Icon';
+import { DEFAULT_TRUCK_CATEGORY, useTruckCategories } from '@/lib/api/lookups';
 import { useToast } from '@/components/ui/Toast';
 import { apiGet } from '@/lib/api/client';
 import { ApiError } from '@/lib/api/problem';
@@ -22,7 +23,7 @@ import { SavedTripPanel } from './_components/SavedTripPanel';
 import type { BookableBox } from '../_components/BookingPicker';
 import {
   MODE_LABELS, blankMove, boxLooksRight, derivedMode, moveToTripRow, normaliseBox,
-  type MoveDraft, type QuoteLineLike, type TruckDetails,
+  type MoveDraft, type QuoteLineLike, type SettledLike, type TruckDetails,
 } from './_components/visit-moves';
 
 /**
@@ -50,6 +51,8 @@ interface QuoteBox {
   due?: QuoteLineLike[];
   billedLater?: QuoteLineLike[];
   noPrice?: QuoteLineLike[];
+  /** Charges already paid in advance or waived — listed, never totalled. */
+  tried?: SettledLike[];
   vasMenu?: VasOption[];
   note?: string | null;
   total?: number;
@@ -87,6 +90,19 @@ export default function GateInPage() {
   const [saving, setSaving] = useState(false);
 
   const [payerName, setPayerName] = useState('');
+
+  /**
+   * THE TRUCK THAT TURNS UP IS AN 18-WHEELER (owner, 2026-10-08). Starting on
+   * "Depot default" meant the clerk set the same value on every truck all day.
+   *
+   * DERIVED, not written into state: if this depot's code list does not carry
+   * `18_WHEEL` the fallback is nothing at all, and the API is never sent a code
+   * it would refuse. The clerk choosing anything overrides it, including going
+   * back to the depot default.
+   */
+  const { categories } = useTruckCategories();
+  const truckCategoryCode = truck.truckCategoryCode
+    || (categories.some(c => c.code === DEFAULT_TRUCK_CATEGORY) ? DEFAULT_TRUCK_CATEGORY : '');
   const [wht, setWht] = useState(false);
 
   const patchMove = useCallback((key: string, patch: Partial<MoveDraft>) => {
@@ -94,7 +110,10 @@ export default function GateInPage() {
   }, []);
 
   const takenBoxes = moves.map(m => m.bookingContainerId).filter(Boolean);
-  const truckReady = truck.plate.trim().length > 0;
+  // A truck is ready when it has a plate AND a haulier: every truck at the
+  // barrier belongs to someone, and the charge terms follow the haulier
+  // (owner, 2026-10-09).
+  const truckReady = truck.plate.trim().length > 0 && truck.haulierCode.trim().length > 0;
   const pending = moves.filter(m => !m.result);
 
   // What the clerk owes, from the rows the quote priced.
@@ -151,7 +170,7 @@ export default function GateInPage() {
       ...orderNos.map(async orderNo => {
         const group = byOrder.get(orderNo) ?? [];
         const p = new URLSearchParams({ orderNo });
-        if (truck.truckCategoryCode) p.set('truckCategoryCode', truck.truckCategoryCode);
+        if (truckCategoryCode) p.set('truckCategoryCode', truckCategoryCode);
         if (truck.haulierCode) p.set('haulierCode', truck.haulierCode);
         for (const m of group) p.append('bookingContainerIds', m.bookingContainerId);
         // The gate charge belongs to the TRUCK, not to each booking on it.
@@ -165,6 +184,9 @@ export default function GateInPage() {
               due: box?.due ?? [],
               billedLater: box?.billedLater ?? [],
               noPrice: box?.noPrice ?? [],
+              // Only SETTLED is news to the clerk; the other outcomes are the
+              // quote's own working and already show up as due or no-price lines.
+              settled: (box?.tried ?? []).filter(t => t.outcome === 'SETTLED'),
               vasMenu: box?.vasMenu ?? [],
               quoteNote: box?.note ?? null,
               quoteError: box ? null : 'The quote did not answer for this box.',
@@ -182,7 +204,7 @@ export default function GateInPage() {
           const err = e instanceof ApiError ? e : new ApiError(0, 'The Gecko API did not answer.');
           for (const m of group) {
             patchMove(m.key, {
-              due: [], billedLater: [], noPrice: [], quoteTotal: 0, quoteTax: 0,
+              due: [], billedLater: [], noPrice: [], settled: [], quoteTotal: 0, quoteTax: 0,
               quoteError: err.title || err.message,
             });
           }
@@ -199,7 +221,7 @@ export default function GateInPage() {
         add('agentCode', m.agentCode);
         add('equipmentTypeCode', m.equipmentTypeCode);
         add('containerNo', normaliseBox(m.containerNo));
-        add('truckCategoryCode', truck.truckCategoryCode);
+        add('truckCategoryCode', truckCategoryCode);
         add('haulierCode', truck.haulierCode);
         for (const v of m.vasTicked) p.append('vas', v);
         try {
@@ -209,6 +231,7 @@ export default function GateInPage() {
             due: box?.due ?? [],
             billedLater: box?.billedLater ?? [],
             noPrice: box?.noPrice ?? [],
+            settled: (box?.tried ?? []).filter(t => t.outcome === 'SETTLED'),
             vasMenu: box?.vasMenu ?? [],
             quoteNote: box?.note ?? null,
             quoteError: null,
@@ -218,13 +241,13 @@ export default function GateInPage() {
         } catch (e) {
           const err = e instanceof ApiError ? e : new ApiError(0, 'The Gecko API did not answer.');
           patchMove(m.key, {
-            due: [], billedLater: [], noPrice: [], quoteTotal: 0, quoteTax: 0,
+            due: [], billedLater: [], noPrice: [], settled: [], quoteTotal: 0, quoteTax: 0,
             quoteError: err.title || err.message,
           });
         }
       }),
     ]);
-  }, [branchId, patchMove, truck.haulierCode, truck.truckCategoryCode]);
+  }, [branchId, patchMove, truck.haulierCode, truckCategoryCode]);
 
   /**
    * Re-price one row, with the whole truck — the gate charge and the VAT are
@@ -286,7 +309,7 @@ export default function GateInPage() {
         branchId,
         containerNo: normaliseBox(row.containerNo),
         direction: row.trip === 'DROP_OFF_CONT' ? 'IN' : 'OUT',
-        truckCategoryCode: truck.truckCategoryCode || null,
+        truckCategoryCode: truckCategoryCode || null,
         haulierCode: truck.haulierCode || null,
       }));
       patchMove(key, {
@@ -298,7 +321,7 @@ export default function GateInPage() {
     } catch {
       patchMove(key, { looking: false, known: null });
     }
-  }, [branchId, moves, patchMove, truck.haulierCode, truck.truckCategoryCode]);
+  }, [branchId, moves, patchMove, truck.haulierCode, truckCategoryCode]);
 
   const toggleVas = useCallback(async (key: string, chargeCode: string) => {
     const row = moves.find(m => m.key === key);
@@ -395,7 +418,7 @@ export default function GateInPage() {
           driverName: truck.driverName.trim() || null,
           driverLicence: truck.driverLicenceNo.trim() || null,
           haulierCode: truck.haulierCode || null,
-          truckCategoryCode: truck.truckCategoryCode || null,
+          truckCategoryCode: truckCategoryCode || null,
         },
         rows: rows.map(m => moveToTripRow(acceptTypeChange ? { ...m, acceptTypeChange: true } : m, branchId)),
         vas: [...new Set(rows.flatMap(m => m.vasTicked))],
@@ -491,6 +514,27 @@ export default function GateInPage() {
 
   return (
     <div className="gecko-stack gecko-stack-lg gecko-eirin-page">
+      {/* THE SAVE IS THE SLOWEST THING ON THIS SCREEN and the only one that
+          takes money. It gates every box, raises any blind booking, waits for
+          the cash window to catch up, and issues the receipt — seconds, not
+          milliseconds. A disabled button alone left the clerk unable to tell
+          "working" from "hung", so the page says so and takes the keyboard
+          away: a second Save while the first is in flight is the one thing
+          nobody wants at a barrier. */}
+      {saving && (
+        <div className="gecko-loading-overlay" role="status" aria-live="assertive">
+          <div className="gecko-gate-saving">
+            <span className="gecko-spinner gecko-spinner-lg" />
+            <div className="gecko-gate-saving-title">Gating the truck…</div>
+            <div className="gecko-cell-meta">
+              {cashTotal > 0
+                ? 'Taking the payment and issuing the receipt. Do not close this page.'
+                : 'Recording the gate transactions. Do not close this page.'}
+            </div>
+          </div>
+        </div>
+      )}
+
       <div className="gecko-page-header">
         <div className="gecko-page-header-left">
           <h1 className="gecko-page-title">Gate In</h1>
@@ -510,7 +554,7 @@ export default function GateInPage() {
       <div className="gecko-gate-visit-layout">
         <div className="gecko-stack gecko-stack-lg gecko-min-w-0">
           <TruckVisitCard
-            truck={truck}
+            truck={{ ...truck, truckCategoryCode }}
             onChange={patch => setTruck(t => ({ ...t, ...patch }))}
             locked={moves.length > 0 || !!result}
             visitNo={visit?.visitNo ?? null}
@@ -531,6 +575,34 @@ export default function GateInPage() {
                   )}
                 </div>
               </div>
+              {/* ERRORS BELONG AT THE TOP (owner, 2026-10-08), beside the
+                  heading the clerk is already looking at — not under twenty
+                  rows of form, where a refusal was found only by scrolling.
+                  Small, because it sits in a header: the detail is one line. */}
+              <div className="gecko-gatein-top-errors">
+                {overLimit && (
+                  <span className="gecko-gatein-top-error">
+                    <Icon name="alertCircle" size={12} />
+                    A truck carries 1 × 40 ft or 2 × 20 ft each way. Take a box off.
+                  </span>
+                )}
+                {saveError && (
+                  <span className="gecko-gatein-top-error">
+                    <Icon name="alertCircle" size={12} />
+                    <span>
+                      <strong>{saveError.title ?? saveError.message}</strong>
+                      {' '}{saveError.explanation ?? 'Nothing was charged.'}
+                      {saveError.status === 409 && (
+                        <button className="gecko-gatein-top-retry" disabled={saving}
+                          onClick={() => void save(false)}>
+                          {saving ? 'Saving…' : 'Save again'}
+                        </button>
+                      )}
+                    </span>
+                  </span>
+                )}
+              </div>
+
               <div className="gecko-row gecko-gap-2">
                 {/* Two actions, not a choice. Styling one as primary made it
                     look already chosen, so a clerk could not tell which they
@@ -547,21 +619,13 @@ export default function GateInPage() {
               </div>
             </div>
 
-            {!truckReady && <div className="gecko-cell-meta">Key the truck plate first.</div>}
+            {!truckReady && (
+              <div className="gecko-cell-meta">
+                {truck.plate.trim() ? 'Choose the transporter (haulier) first.' : 'Key the truck plate first.'}
+              </div>
+            )}
             {moves.length === 0 && truckReady && (
               <div className="gecko-dash-placeholder">Nothing on this truck yet.</div>
-            )}
-
-            {overLimit && (
-              <div className="gecko-alert gecko-alert-error">
-                A truck carries 1 × 40 ft or 2 × 20 ft each way. Take a box off before saving.
-              </div>
-            )}
-
-            {saveError && (
-              <div className="gecko-alert gecko-alert-error">
-                {saveError.title ?? saveError.message} — nothing was charged.
-              </div>
             )}
 
             <div className="gecko-stack-sm">

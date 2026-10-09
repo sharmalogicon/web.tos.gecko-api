@@ -4,6 +4,8 @@ import { Icon } from '@/components/ui/Icon';
 import { apiDownload, saveBlob } from '@/lib/api/client';
 import { ProblemAlert, problemOf, type Problem } from './ProblemAlert';
 import { CHANNEL_LABEL, formatBaht, receiptPdfPath, taxBranchLabel, type Receipt } from '@/lib/api/window';
+import { couponPdfPath } from '@/lib/api/receipts';
+import { openPdf } from '@/lib/api/open-pdf';
 import { formatDateTime } from '@/lib/format';
 
 /**
@@ -43,15 +45,42 @@ export function usePrintReceipt() {
   }, []);
 }
 
-export function ReceiptView({ receipt, depot, onPrint, onNext, onVoid }: {
+export function ReceiptView({ receipt, depot, onPrint, onNext, onVoid, onSplit, mayCollect }: {
   receipt: Receipt; depot: string; onPrint: () => void; onNext: () => void;
   /** Present when the user may void it (revenue.receipt.void at the depot). */
   onVoid?: () => void;
+  /**
+   * Present when this receipt may be split between payers — a GATE receipt of
+   * today, still issued. The driver says at the counter that two of the boxes
+   * are the haulier's, which is exactly when it is wanted.
+   */
+  onSplit?: () => void;
+  /** revenue.cash.collect at this depot — the coupon endpoint insists on it. */
+  mayCollect?: boolean;
 }) {
   const [downloading, setDownloading] = useState(false);
+  const [coupon, setCoupon] = useState(false);
   const [pdfError, setPdfError] = useState<Problem | null>(null);
   const seller = receipt.seller;
   const voided = receipt.status === 'VOIDED';
+
+  /**
+   * The cash bill — Vector's Tms_CouponReceipt_KPS, "บิลเงินสด / CASH SALE".
+   *
+   * One bill per RECEIPT listing every container and charge on it; it is no
+   * longer a slip per box. US Letter landscape, and the clerk prints it on the
+   * spot, so it opens rather than lands in Downloads.
+   */
+  async function printCoupon() {
+    setCoupon(true); setPdfError(null);
+    try {
+      await openPdf(couponPdfPath(receipt.receiptId), `${receipt.receiptNo}-coupon.pdf`);
+    } catch (e) {
+      setPdfError(problemOf(e, `No coupon was issued on ${receipt.receiptNo}.`));
+    } finally {
+      setCoupon(false);
+    }
+  }
 
   async function downloadPdf() {
     setDownloading(true); setPdfError(null);
@@ -87,6 +116,14 @@ export function ReceiptView({ receipt, depot, onPrint, onNext, onVoid }: {
             {receipt.replacedByReceiptNo && (
               <div className="gecko-text-muted" style={{ fontSize: 13 }}>Replaced by {receipt.replacedByReceiptNo}</div>
             )}
+            {receipt.splitFromReceiptNo && (
+              <div className="gecko-text-muted" style={{ fontSize: 13 }}>One part of {receipt.splitFromReceiptNo}</div>
+            )}
+            {(receipt.splitIntoReceiptNos?.length ?? 0) > 0 && (
+              <div className="gecko-text-muted" style={{ fontSize: 13 }}>
+                Split into {receipt.splitIntoReceiptNos!.join(', ')}
+              </div>
+            )}
           </div>
           <div style={{ textAlign: 'right' }}>
             <div className="gecko-text-muted" style={{ fontSize: 12 }}>{receipt.withholdingTaxRate ? 'Net paid' : 'Total paid'}</div>
@@ -120,9 +157,23 @@ export function ReceiptView({ receipt, depot, onPrint, onNext, onVoid }: {
           <button className="gecko-btn gecko-btn-outline" onClick={() => void downloadPdf()} disabled={downloading}>
             <Icon name="download" size={16} /> {downloading ? 'Preparing PDF…' : 'Download PDF'}
           </button>
+          {/* Only where the user may take money: the endpoint answers 403
+              otherwise, so the button is not offered rather than refused. */}
+          {mayCollect && (
+            <button className="gecko-btn gecko-btn-outline" onClick={() => void printCoupon()} disabled={coupon}>
+              {coupon ? <span className="gecko-spinner gecko-spinner-sm" /> : <Icon name="print" size={16} />}
+              {coupon ? 'Preparing…' : 'Coupon (cash bill)'}
+            </button>
+          )}
           <button className="gecko-btn gecko-btn-outline" onClick={onNext}>
             Next driver
           </button>
+          {onSplit && (
+            <button className="gecko-btn gecko-btn-outline" onClick={onSplit}
+              title="Share the charges between payers, or change who the whole receipt is made out to">
+              <Icon name="transferH" size={16} /> Split / change payer
+            </button>
+          )}
           {onVoid && !voided && (
             <button className="gecko-btn gecko-btn-ghost" onClick={onVoid} title="Keyed wrong? Void it before the box moves, then take the payment again">
               <Icon name="x" size={16} /> Void

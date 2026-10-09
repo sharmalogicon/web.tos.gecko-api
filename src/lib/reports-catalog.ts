@@ -52,6 +52,26 @@ export interface ReportDef {
    * Set this the moment a report gets a real endpoint.
    */
   live?: string;
+  /**
+   * The report the API actually renders, as a PDF or a workbook.
+   *
+   * `path` is the endpoint without its extension — the format is appended
+   * (`.pdf` / `.xlsx`). `params` names the query parameter each drawer field
+   * maps to, because the three endpoints do NOT agree with each other:
+   * empty-in-yard takes `size`/`type` and `fromDate`, full-in-yard takes
+   * `containerSize`/`containerType`, and gate-in-out takes `dateFrom`/`dateTo`.
+   * Spelling that out per report is better than a shared guess.
+   */
+  document?: ReportDocument;
+}
+
+export interface ReportDocument {
+  /** e.g. '/api/tos/reports/empty-in-yard' — the format is appended. */
+  path: string;
+  /** Drawer field → API query parameter. A field left out is not sent. */
+  params: Partial<Record<ReportParamKey | 'dateFrom' | 'dateTo', string>>;
+  /** Parameters the API refuses the call without. */
+  required?: ('dateFrom' | 'dateTo')[];
 }
 
 /* ──────────────────────────────────────────────────────────────────────────
@@ -66,11 +86,34 @@ export const OPERATIONAL_REPORTS: ReportDef[] = [
 
   { id: 'op-empty-in-yard', title: 'Empty in Yard', description: 'Inventory of empty containers currently parked, by line/owner and yard block.',
     category: 'operational', group: 'Out-Bound Reports', icon: 'box',
-    params: ['agent', 'owner', 'yardLocation', 'typeSize', 'containerClass'], live: '/gate/yard-view' },
+    params: ['agent', 'owner', 'forwarder', 'customer', 'vessel', 'voyage', 'yardLocation', 'typeSize',
+      'bookingType', 'orderType', 'blNo', 'haulier'],
+    document: {
+      path: '/api/tos/reports/empty-in-yard',
+      params: {
+        agent: 'agentCode', owner: 'ownerCode', forwarder: 'forwarderCode', customer: 'customerCode',
+        vessel: 'vesselCode', voyage: 'voyageNo', yardLocation: 'yardId',
+        typeSize: 'size', bookingType: 'bookingType', orderType: 'orderType',
+        blNo: 'bookingBlNo', haulier: 'haulierCode',
+        dateFrom: 'fromDate', dateTo: 'toDate',
+      },
+    } },
 
   { id: 'op-full-in-yard', title: 'Full in Yard', description: 'Laden containers awaiting outbound — by customer, line, and yard slot.',
     category: 'operational', group: 'Out-Bound Reports', icon: 'package',
-    params: ['agent', 'customer', 'owner', 'yardLocation', 'typeSize', 'emptyLoaded'], live: '/gate/yard-view' },
+    params: ['agent', 'forwarder', 'customer', 'vessel', 'voyage', 'yardLocation', 'typeSize',
+      'containerClass', 'bookingType', 'orderType', 'blNo', 'haulier'],
+    document: {
+      path: '/api/tos/reports/full-in-yard',
+      params: {
+        agent: 'agentCode', forwarder: 'forwarderCode', customer: 'customerCode',
+        vessel: 'vesselCode', voyage: 'voyageNo', yardLocation: 'yardId',
+        typeSize: 'containerSize', containerClass: 'containerGrade',
+        bookingType: 'bookingType', orderType: 'orderType',
+        blNo: 'bookingBlNo', haulier: 'haulierCode',
+        dateFrom: 'fromDate', dateTo: 'toDate',
+      },
+    } },
 
   { id: 'op-export-booking-order', title: 'Export Booking Order', description: 'Booking-level listing of containers committed to outbound vessels.',
     category: 'operational', group: 'Out-Bound Reports', icon: 'fileText',
@@ -143,7 +186,20 @@ export const OPERATIONAL_REPORTS: ReportDef[] = [
 
   { id: 'op-gate-in-out', title: 'Gate-In / Gate-Out', description: 'All gate movements (both directions) in the date range.',
     category: 'operational', group: 'In-Bound Reports', icon: 'truck',
-    params: ['agent', 'customer', 'haulier', 'movementCode'], live: '/reports/operational-api' },
+    params: ['agent', 'forwarder', 'customer', 'vessel', 'voyage', 'typeSize', 'emptyLoaded',
+      'bookingType', 'orderType', 'blNo', 'haulier', 'movementCode', 'yardLocation'],
+    document: {
+      path: '/api/tos/reports/gate-in-out',
+      params: {
+        agent: 'agentCode', forwarder: 'forwarderCode', customer: 'customerCode',
+        vessel: 'vesselCode', voyage: 'voyageNo', typeSize: 'size', emptyLoaded: 'fullEmpty',
+        bookingType: 'bookingType', orderType: 'orderType', blNo: 'bookingBlNo',
+        haulier: 'haulierCode', movementCode: 'movementCode', yardLocation: 'yardId',
+        dateFrom: 'dateFrom', dateTo: 'dateTo',
+      },
+      // The only one of the three that insists on a range, and it caps at 366 days.
+      required: ['dateFrom', 'dateTo'],
+    } },
 
   { id: 'op-gate-in-out-agent', title: 'Gate-In / Gate-Out (By Agent)', description: 'Gate movements grouped by shipping line / agent.',
     category: 'operational', group: 'In-Bound Reports', icon: 'truck',

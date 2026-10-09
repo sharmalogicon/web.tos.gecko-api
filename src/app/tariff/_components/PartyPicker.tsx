@@ -9,13 +9,21 @@ import { searchParties, type PartySummary, type PartyRole } from '@/lib/api/part
  * is the PARTY CODE, which is what a tariff stores (ScheduleEndpoints resolves
  * it to the party and checks it plays the role).
  */
-export function PartyPicker({ role, value, onChange, placeholder, error, disabled }: {
+export function PartyPicker({ role, value, onChange, placeholder, error, disabled, nameFirst }: {
   role: PartyRole;
   value: string | null;
   onChange: (code: string | null, party?: PartySummary) => void;
   placeholder?: string;
   error?: string;
   disabled?: boolean;
+  /**
+   * Show the NAME and put the code in brackets behind it.
+   *
+   * Opt-in, not the default: the tariff and booking screens have read
+   * code-first for months and nobody asked for those to move. The gate asked
+   * (owner, 2026-10-09) — a clerk there knows the haulier by name.
+   */
+  nameFirst?: boolean;
 }) {
   const [text, setText] = useState('');
   const [open, setOpen] = useState(false);
@@ -59,9 +67,21 @@ export function PartyPicker({ role, value, onChange, placeholder, error, disable
   if (value) {
     return (
       <div>
-        <div className="gecko-input gecko-row" style={{ gap: 8 }}>
-          <span className="gecko-mono-strong">{value}</span>
-          <span className="gecko-flex-1 gecko-cell-meta">{label ?? ''}</span>
+        <div className="gecko-input gecko-row gecko-party-chosen">
+          {nameFirst ? (
+            <>
+              {/* The NAME is what a clerk recognises; the code is filing. The
+                  name takes the width and ellipsises rather than spilling out
+                  of the box, which a long Thai company name did. */}
+              <span className="gecko-party-chosen-name">{label ?? value}</span>
+              <span className="gecko-cell-meta gecko-mono gecko-party-chosen-code">({value})</span>
+            </>
+          ) : (
+            <>
+              <span className="gecko-mono-strong">{value}</span>
+              <span className="gecko-flex-1 gecko-cell-meta gecko-party-chosen-name">{label ?? ''}</span>
+            </>
+          )}
           {!disabled && (
             <button type="button" className="gecko-btn gecko-btn-ghost gecko-btn-sm gecko-btn-icon" aria-label="Clear"
               onClick={() => { onChange(null); setLabel(null); setText(''); }}>
@@ -99,9 +119,11 @@ export function PartyPicker({ role, value, onChange, placeholder, error, disable
         aria-invalid={error ? true : undefined}
       />
       {error && <div className="gecko-field-error">{error}</div>}
+      {/* The panel's z-index was 30 — the APP HEADER's level — so the list
+          fought with the chrome. It sits at the ladder's menu level now: above
+          every card on the page, below a modal. */}
       {open && (
-        <div className="gecko-card" role="listbox"
-          style={{ position: 'absolute', left: 0, right: 0, top: '100%', zIndex: 30, marginTop: 4, maxHeight: 280, overflowY: 'auto', padding: 4 }}>
+        <div className="gecko-card gecko-party-pick-menu" role="listbox">
           {loading && <div className="gecko-cell-meta" style={{ padding: 8 }}>Searching…</div>}
           {!loading && failure && (
             <div style={{ padding: 8 }}>
@@ -115,16 +137,34 @@ export function PartyPicker({ role, value, onChange, placeholder, error, disable
           )}
           {!loading && !failure && items.length === 0 && <div className="gecko-cell-meta" style={{ padding: 8 }}>No matching {role.toLowerCase().replace('_', ' ')}.</div>}
           {!loading && items.map(p => (
+            // NOT a .gecko-btn any more: that is one line tall and nowrap, so a
+            // Thai company name overran its row and printed over the next one.
             <button key={p.partyId} type="button" role="option" aria-selected={false}
-              className="gecko-btn gecko-btn-ghost gecko-btn-sm"
-              style={{ width: '100%', justifyContent: 'flex-start', gap: 10, opacity: p.isActive ? 1 : 0.5 }}
+              className={`gecko-party-pick-row${p.isActive ? '' : ' gecko-party-pick-row-off'}`}
               disabled={!p.isActive}
-              onClick={() => { onChange(p.partyCode, p); setLabel(p.nameEn); setOpen(false); }}>
-              <span className="gecko-mono-strong">{p.partyCode}</span>
-              <span className="gecko-flex-1" style={{ textAlign: 'left' }}>
-                {p.nameEn}{p.nameLocal ? <span className="gecko-cell-meta"> · {p.nameLocal}</span> : null}
-              </span>
-              {p.taxId && <span className="gecko-cell-meta">{p.taxId}{p.branchNo ? `/${p.branchNo}` : ''}</span>}
+              onClick={() => {
+                onChange(p.partyCode, p);
+                setLabel(nameFirst ? (p.nameLocal?.trim() || p.nameEn) : p.nameEn);
+                setOpen(false);
+              }}>
+              {nameFirst ? (
+                <>
+                  <span className="gecko-party-pick-name">
+                    {p.nameLocal?.trim() || p.nameEn}
+                  </span>
+                  <span className="gecko-cell-meta gecko-mono gecko-party-pick-tax">({p.partyCode})</span>
+                </>
+              ) : (
+                <>
+                  <span className="gecko-mono-strong gecko-party-pick-code">{p.partyCode}</span>
+                  <span className="gecko-party-pick-name">
+                    {p.nameEn}{p.nameLocal ? <span className="gecko-cell-meta"> · {p.nameLocal}</span> : null}
+                  </span>
+                  {p.taxId && (
+                    <span className="gecko-cell-meta gecko-party-pick-tax">{p.taxId}{p.branchNo ? `/${p.branchNo}` : ''}</span>
+                  )}
+                </>
+              )}
               {!p.isActive && <span className="gecko-pill gecko-pill-neutral">inactive</span>}
             </button>
           ))}

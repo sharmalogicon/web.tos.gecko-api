@@ -138,6 +138,10 @@ const NAV = [
       // a gate-in now lives on EIR-In below. The route still resolves for anyone
       // who has it bookmarked, and nothing about it was deleted.
       { id: 'gate-stock', label: 'Yard Stock (live)', path: '/gate/stock' },
+      // Yard Stock knows only what is INSIDE. The inquiry knows every box that
+      // has ever been through, which is what a clerk needs when asked where one
+      // went (API 2026-10-08, GET /api/tos/containers).
+      { id: 'container-inquiry', label: 'Container Inquiry', path: '/units/container-inquiry' },
       { id: 'eir-in', label: 'Gate In (EIR)', path: '/gate/eir-in' },
       { id: 'eir-out', label: 'Gate Out (EIR)', path: '/gate/eir-out' },
       { id: 'eir-in-register', label: 'EIR-In Register', path: '/gate/eir-in-register' },
@@ -161,6 +165,15 @@ const NAV = [
       // just not how a clerk starts. Restore these two lines to bring them back.
       { id: 'statement',       label: 'Booking Statement', path: '/billing/statement' },
       { id: 'unbilled',        label: 'Unbilled Charges', path: '/billing/unbilled' },
+      // Customer Cash Bill is OFF the menu (owner, 2026-10-08) and still LIVE:
+      // a clerk arrives at it from Cash Receipts ("New cash bill"), from the
+      // Booking Statement and from Unbilled Charges ("New cash invoice"), which
+      // is where they already are when they decide to raise one. Restore this
+      // line to bring it back.
+      // { id: 'cash-bills',   label: 'Customer Cash Bill', path: '/billing/cash-bills' },
+      // The register of what was taken, wherever it was taken: gate, window or
+      // cash bill. Every receipt link in Gecko lands under this path.
+      { id: 'receipts',        label: 'Cash Receipts',    path: '/billing/receipts' },
       { id: 'invoices',        label: 'Invoices',         path: '/billing/invoices' },
     ]
   },

@@ -3,6 +3,7 @@ import React, { useCallback, useState } from 'react';
 import Link from 'next/link';
 import { Icon } from '@/components/ui/Icon';
 import { useToast } from '@/components/ui/Toast';
+import { openPdf } from '@/lib/api/open-pdf';
 import { apiGet } from '@/lib/api/client';
 import { ApiError } from '@/lib/api/problem';
 import { useFacility } from '@/lib/api/facility';
@@ -52,6 +53,29 @@ export function GateOutForm() {
   const [rows, setRows] = useState<ReleaseRow[]>([]);
   const [loadingVisit, setLoadingVisit] = useState(false);
   const [saving, setSaving] = useState(false);
+  /** Which released EIR is being fetched — the pressed link spins, not all of them. */
+  const [printingEir, setPrintingEir] = useState<string | null>(null);
+
+  /**
+   * The released EIR, fetched with the token.
+   *
+   * It was a plain `<a href>` to the URL the release answered with, which 401s:
+   * the PDF endpoint is authorised and a browser navigation carries no token.
+   * Values only, onto pre-printed stationery — so it opens for printing.
+   */
+  const printReleasedEir = async (key: string, url: string, eirNo: string | null) => {
+    setPrintingEir(key);
+    try {
+      await openPdf(url, `${eirNo ?? 'eir'}.pdf`);
+    } catch (e) {
+      toast.toast({
+        variant: 'danger', title: 'EIR not printed',
+        message: e instanceof ApiError ? e.title : 'Could not reach the Gecko API.',
+      });
+    } finally {
+      setPrintingEir(null);
+    }
+  };
   const [departing, setDeparting] = useState(false);
   const [idempotencyKey, setIdempotencyKey] = useState<string | null>(null);
   const [result, setResult] = useState<TripSaveResult | null>(null);
@@ -305,7 +329,10 @@ export function GateOutForm() {
                           <Icon name="shieldCheck" size={13} />
                           <span className="gecko-text-mono">{r.releasedEirNo}</span>
                           {r.releasedPdfUrl && (
-                            <a className="gecko-link" href={r.releasedPdfUrl} target="_blank" rel="noreferrer">print</a>
+                            <button className="gecko-link gecko-link-button" disabled={printingEir !== null}
+                              onClick={() => void printReleasedEir(r.key, r.releasedPdfUrl!, r.releasedEirNo)}>
+                              {printingEir === r.key ? 'preparing…' : 'print'}
+                            </button>
                           )}
                         </span>
                       ) : (

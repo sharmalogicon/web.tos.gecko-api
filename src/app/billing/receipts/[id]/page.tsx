@@ -29,8 +29,9 @@ import { ApiError } from '@/lib/api/problem';
 import { amount } from '@/lib/api/charges';
 import { formatContainerNo } from '@/lib/api/tos';
 import {
-  channelLabel, receiptPath, receiptPdfPath, voidReceipt, type Receipt,
+  canChangePayer, canDivide, channelLabel, downloadReceiptPdf, receiptPath, voidReceipt, type Receipt,
 } from '@/lib/api/receipts';
+import { SplitReceiptModal } from '../../_components/SplitReceiptModal';
 
 export default function CashBillPage() {
   const params = useParams<{ id: string }>();
@@ -40,8 +41,12 @@ export default function CashBillPage() {
   const { user } = useSession();
   const { toast } = useToast();
   const [voiding, setVoiding] = useState(false);
+  const [splitting, setSplitting] = useState(false);
 
   const mayVoid = (user?.permissions ?? []).includes('revenue.receipt.void');
+  // Changing who a receipt is made out to re-points a tax document, so it is
+  // the same right as voiding one.
+  const maySplit = mayVoid;
   const r = data;
   const voided = r?.status === 'VOIDED';
   const m = (v: number) => amount(v, r?.currencyCode ?? 'THB');
@@ -72,14 +77,26 @@ export default function CashBillPage() {
         </div>
         <div className="gecko-toolbar gecko-no-print">
           {r && (
-            <a className="gecko-btn gecko-btn-outline gecko-btn-sm" target="_blank" rel="noreferrer"
-              href={receiptPdfPath(r.receiptId)}>
+            <button className="gecko-btn gecko-btn-outline gecko-btn-sm"
+              onClick={() => void downloadReceiptPdf(r.receiptId, r.receiptNo)}>
               <Icon name="print" size={14} /> Receipt PDF
-            </a>
+            </button>
           )}
           <button className="gecko-btn gecko-btn-outline gecko-btn-sm" onClick={reload} disabled={!r}>
             <Icon name="refreshCcw" size={14} /> Refresh
           </button>
+          {/* Any issued receipt can be made out to somebody else; only a gate
+              receipt of today can have its lines shared out, so the label says
+              which of the two is on offer. */}
+          {r && maySplit && canChangePayer(r) && (
+            <button className="gecko-btn gecko-btn-outline gecko-btn-sm" onClick={() => setSplitting(true)}
+              title={canDivide(r)
+                ? 'Share the charges between payers, or change who the whole receipt is made out to'
+                : 'Change who this receipt is made out to — it keeps its number'}>
+              <Icon name="transferH" size={14} />
+              {canDivide(r) ? 'Split / change payer' : 'Change payer'}
+            </button>
+          )}
           {r && mayVoid && !voided && (
             <button className="gecko-btn gecko-btn-outline gecko-btn-sm" onClick={() => setVoiding(true)}>
               <Icon name="fileX" size={14} /> Void
@@ -114,6 +131,25 @@ export default function CashBillPage() {
                 This receipt was voided{r.voidedAt ? ` on ${r.voidedAt.slice(0, 10)}` : ''}
                 {r.voidReason ? ` — ${r.voidReason}` : ''}.
                 {r.replacedByReceiptNo && <> It was replaced by <strong>{r.replacedByReceiptNo}</strong>.</>}
+                {/* A split names several replacements, each its own document. */}
+                {(r.splitIntoReceiptNos?.length ?? 0) > 0 && (
+                  <span className="gecko-split-trail">
+                    It was split into
+                    {r.splitIntoReceiptNos!.map(no => (
+                      <Link key={no} className="gecko-link gecko-mono" href={`/billing/receipts/by-no/${encodeURIComponent(no)}`}>{no}</Link>
+                    ))}
+                  </span>
+                )}
+              </span>
+            </div>
+          )}
+
+          {r.splitFromReceiptNo && (
+            <div role="status" className="gecko-alert gecko-alert-info">
+              <Icon name="transferH" size={16} />
+              <span>
+                This is one part of <strong className="gecko-mono">{r.splitFromReceiptNo}</strong>, a gate
+                receipt that was split between its payers. No money moved — only who it is made out to.
               </span>
             </div>
           )}
@@ -251,6 +287,32 @@ export default function CashBillPage() {
             </section>
           </div>
         </>
+      )}
+
+      {r && splitting && (
+        <SplitReceiptModal receiptId={r.receiptId}
+          onClose={() => setSplitting(false)}
+          onDone={made => {
+            setSplitting(false);
+            // One part is a change of payer IN PLACE — same id, same number —
+            // so this page is simply re-read. Several parts keep the original
+            // as the first and add new numbers; nothing is voided either way.
+            if (made.length === 1) {
+              toast({
+                variant: 'success',
+                title: 'Payer changed',
+                message: `${made[0].receiptNo} is now made out to ${made[0].payerName ?? 'the new payer'}.`,
+              });
+            } else {
+              const [first, ...rest] = made;
+              toast({
+                variant: 'success',
+                title: `Split into ${made.length} receipts`,
+                message: `${first.receiptNo} kept the first part; new: ${rest.map(x => x.receiptNo).join(' · ')}.`,
+              });
+            }
+            reload();
+          }} />
       )}
 
       {r && voiding && (

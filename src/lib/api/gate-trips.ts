@@ -24,7 +24,7 @@
  * `POST /api/tos/gate/transactions` is not called from the gate screens at all
  * any more. It remains for corrections and for other callers.
  */
-import { apiSend } from './client';
+import { apiGet, apiSend } from './client';
 import type { GateFinding, GateTransactionRequest } from './tos';
 
 /* ── reserving a place ──────────────────────────────────────────────────── */
@@ -55,8 +55,40 @@ export interface Reservation {
   findings: GateFinding[] | null;
 }
 
+export const RESERVATIONS_PATH = '/api/tos/gate/reservations';
+
+/**
+ * HOLD A BOX FOR THIS TRUCK.
+ *
+ * 201 a new hold, 200 the same draft asking again — which EXTENDS it. That is
+ * how a hold is renewed: there is no separate endpoint, the same call again.
+ * 409 means another lane holds it.
+ *
+ * A hold lapses after 15 minutes, so an abandoned screen frees its boxes by
+ * itself. While one stands, `/gate/bookable-boxes` does not offer that box to
+ * any other draft — which is what stops two lanes gating the same container.
+ */
 export const reserveBox = (body: ReserveRequest) =>
-  apiSend<Reservation>('POST', '/api/tos/gate/reservations', body);
+  apiSend<Reservation>('POST', RESERVATIONS_PATH, body);
+
+/**
+ * Give a held box back at once, rather than leaving it locked for the rest of
+ * its 15 minutes. Called when a row is removed and when the truck is finished —
+ * a box nobody is keying should be pickable by the next lane immediately.
+ *
+ * 204 also when it was already released, so this never needs a guard.
+ */
+export const releaseBox = (boxReservationId: string, draftId: string) =>
+  apiSend<void>('DELETE', `${RESERVATIONS_PATH}/${encodeURIComponent(boxReservationId)}?draftId=${encodeURIComponent(draftId)}`);
+
+/**
+ * The holds this draft still has — what a reloaded screen asks for.
+ *
+ * Without it a refresh strands every hold until it lapses: the boxes stay
+ * locked, and the screen that locked them cannot see or release them.
+ */
+export const listReservations = (branchId: string, draftId: string) =>
+  apiGet<Reservation[]>(`${RESERVATIONS_PATH}?branchId=${encodeURIComponent(branchId)}&draftId=${encodeURIComponent(draftId)}`);
 
 /* ── the Save ───────────────────────────────────────────────────────────── */
 

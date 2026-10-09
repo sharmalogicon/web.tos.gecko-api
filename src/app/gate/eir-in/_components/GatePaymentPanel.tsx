@@ -1,5 +1,5 @@
 "use client";
-import React from 'react';
+import React, { useState } from 'react';
 import { Icon } from '@/components/ui/Icon';
 import { TRUCK_LIMIT_NOTE } from '@/lib/api/gate-trips';
 import type { MoveDraft } from './visit-moves';
@@ -36,6 +36,9 @@ export function GatePaymentPanel({
   saved: boolean;
   onSave: () => void;
 }) {
+  // Shut by default: they are not money, and the clerk opens them only to
+  // check what the depot did for free.
+  const [showUnpriced, setShowUnpriced] = useState(false);
   const pending = moves.filter(m => !m.result);
   const drops = moves.filter(m => m.trip === 'DROP_OFF_CONT').length;
   const picks = moves.filter(m => m.trip === 'PICK_UP_CONT').length;
@@ -52,6 +55,15 @@ export function GatePaymentPanel({
    * and they do not hold the Save.
    */
   const unpriced = pending.flatMap(m => m.noPrice.map(d => ({ ...d, box: m.containerNo })));
+  /**
+   * Charges already dealt with — prepaid on an earlier receipt, or waived.
+   *
+   * They owe nothing and are in no total; they are here because a box whose
+   * lift was paid last week looks, without them, exactly like a box nobody
+   * charged for it. The note is the server's own sentence, receipt number and
+   * all, so the clerk can quote it to a driver who argues.
+   */
+  const settled = pending.flatMap(m => m.settled.map(d => ({ ...d, box: m.containerNo })));
   // A quote that could NOT BE READ is a different thing: that is a failure, not
   // a price, and it still blocks the Save.
   const failed = pending.filter(m => m.quoteError);
@@ -86,7 +98,12 @@ export function GatePaymentPanel({
               /* Not "unpriced": every charge has a price and is owed — a
                  haulier on credit terms simply does not pay it at the gate. */
               ? 'Nothing to pay now — it all goes on the account below.'
-              : 'Nothing priced yet. Record a box to see what it costs.'}
+              /* A box whose charges were all settled earlier is NOT a box
+                 nobody priced. Saying "nothing priced yet" there would send the
+                 clerk hunting for a tariff that did its job weeks ago. */
+              : settled.length > 0
+                ? 'Nothing to pay — paid in advance.'
+                : 'Nothing priced yet. Record a box to see what it costs.'}
           </div>
         ) : (
           <div className="gecko-stack-sm">
@@ -102,19 +119,50 @@ export function GatePaymentPanel({
           </div>
         )}
 
-        {/* Under the priced lines, with no amount: they are part of what
-            happened to the box, and no part of what is owed. */}
-        {unpriced.length > 0 && (
-          <div className="gecko-stack-xs gecko-visit-unpriced">
-            {unpriced.map((l, i) => (
-              <div key={`np-${l.chargeCode}-${i}`} className="gecko-visit-charge-line">
+        {/* Already dealt with: listed under what IS owed, muted, with the
+            server's own note. A waiver carries no amount — nothing was taken —
+            so none is printed, rather than a misleading ฿0.00. */}
+        {settled.length > 0 && (
+          <div className="gecko-stack-xs gecko-visit-settled">
+            {settled.map((l, i) => (
+              <div key={`st-${l.chargeCode}-${i}`} className="gecko-visit-charge-line">
                 <span className="gecko-flex-1 gecko-min-w-0">
                   {l.chargeName || l.chargeCode}
-                  <span className="gecko-cell-meta"> · {l.chargeCode}</span>
+                  {l.note && <span className="gecko-cell-meta"> · {l.note}</span>}
                 </span>
-                <span className="gecko-cell-meta">no tariff, not charged</span>
+                {l.amount !== null && l.amount > 0 && (
+                  <span className="gecko-text-mono gecko-cell-meta">{money(l.amount, currency)}</span>
+                )}
               </div>
             ))}
+          </div>
+        )}
+
+        {/* FOLDED AWAY (owner, 2026-10-08). These are not money: they add
+            nothing to the total and they do not hold the Save, and listing
+            three of them under a two-line bill made the panel read as though
+            something were wrong. One quiet line says how many, and opens them
+            — the service still happened and was still not billed. */}
+        {unpriced.length > 0 && (
+          <div className="gecko-visit-unpriced">
+            <button className="gecko-visit-unpriced-toggle" aria-expanded={showUnpriced}
+              onClick={() => setShowUnpriced(v => !v)}>
+              <Icon name={showUnpriced ? 'chevronDown' : 'chevronRight'} size={11} />
+              {unpriced.length} charge{unpriced.length === 1 ? '' : 's'} not billed — no tariff
+            </button>
+            {showUnpriced && (
+              <div className="gecko-stack-xs gecko-mt-1">
+                {unpriced.map((l, i) => (
+                  <div key={`np-${l.chargeCode}-${i}`} className="gecko-visit-charge-line">
+                    <span className="gecko-flex-1 gecko-min-w-0">
+                      {l.chargeName || l.chargeCode}
+                      <span className="gecko-cell-meta"> · {l.chargeCode}</span>
+                    </span>
+                    <span className="gecko-cell-meta">not charged</span>
+                  </div>
+                ))}
+              </div>
+            )}
           </div>
         )}
 
@@ -187,10 +235,14 @@ export function GatePaymentPanel({
           disabled={!canSave || saving || failed.length > 0}
           title={failed.length > 0 ? 'Re-check the box that could not be priced, or remove it' : undefined}
           onClick={onSave}>
-          <Icon name="check" size={14} />
+          {saving ? <span className="gecko-spinner gecko-spinner-sm gecko-spinner-white" /> : <Icon name="check" size={14} />}
           {saving ? 'Saving…'
             : cashTotal > 0 ? `Save and take ${money(wht ? nett : cashTotal, currency)}`
             : later.length > 0 ? 'Save — nothing to collect'
+            // Nothing to take because it was taken already. The Save sends no
+            // payment at all (page.tsx: `payment: cashTotal > 0 ? … : null`),
+            // and the button should say which kind of nothing this is.
+            : settled.length > 0 ? 'Save — paid in advance'
             : 'Save gate transactions'}
         </button>
       )}

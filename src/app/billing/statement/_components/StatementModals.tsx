@@ -377,10 +377,43 @@ export function RegenerateModal({ orderNo, rows, onClose, onDone }: {
 
 // ── send to invoice ──────────────────────────────────────────────────────────
 
+/**
+ * The only facts this modal needs about a charge.
+ *
+ * It is fed from two screens with two row shapes — the Booking Statement's
+ * `StatementRow` and Unbilled Charges' `UnbilledLine` — and neither should have
+ * to become the other to raise an invoice.
+ */
+export interface InvoiceCandidate {
+  chargeId: string;
+  paymentTermCode: string;
+  /** QUOTED or UNBILLED can still be invoiced. Absent means the list is already filtered. */
+  status?: string;
+  total: number;
+  payerCode: string | null;
+  payerName: string | null;
+  /** Shown in the preview list, so a clerk can see what is going on the invoice. */
+  chargeCode: string;
+  containerNo: string | null;
+  currencyCode?: string | null;
+}
+
+export const candidateOf = (r: StatementRow): InvoiceCandidate => ({
+  chargeId: r.charge.chargeId,
+  paymentTermCode: r.charge.paymentTermCode,
+  status: r.charge.status,
+  total: r.charge.total,
+  payerCode: r.charge.payerCode,
+  payerName: r.charge.payerName,
+  chargeCode: r.charge.chargeCode,
+  containerNo: r.containerNo,
+  currencyCode: r.charge.currencyCode,
+});
+
 export function SendToInvoiceModal({ kind, term, selected, currency, onClose, onDone }: {
   kind: 'new' | 'existing';
   term: InvoiceTerm;
-  selected: StatementRow[];
+  selected: InvoiceCandidate[];
   currency: string;
   onClose: () => void;
   onDone: (message: string) => void;
@@ -394,14 +427,14 @@ export function SendToInvoiceModal({ kind, term, selected, currency, onClose, on
   // Only lines on THIS term, and only ones that can still go on an invoice.
   // The API refuses the whole send if one line is wrong, so the selection is
   // narrowed here rather than letting twenty good lines fail for one.
-  const lines = selected.filter(r => r.charge.paymentTermCode === term
-    && (r.charge.status === 'QUOTED' || r.charge.status === 'UNBILLED'));
+  const lines = selected.filter(r => r.paymentTermCode === term
+    && (r.status === undefined || r.status === 'QUOTED' || r.status === 'UNBILLED'));
   const other = selected.length - lines.length;
-  const total = lines.reduce((n, r) => n + r.charge.total, 0);
+  const total = lines.reduce((n, r) => n + r.total, 0);
 
   // One invoice is one payer: the API answers 409 on a mixed selection, and
   // naming the payers here is more use than that refusal.
-  const payers = [...new Set(lines.map(r => r.charge.payerName ?? r.charge.payerCode ?? 'unnamed'))];
+  const payers = [...new Set(lines.map(r => r.payerName ?? r.payerCode ?? 'unnamed'))];
   const mixed = payers.length > 1;
 
   const ready = lines.length > 0 && !mixed && !busy
@@ -415,7 +448,7 @@ export function SendToInvoiceModal({ kind, term, selected, currency, onClose, on
     setError(null);
     try {
       const r = await sendToInvoice({
-        chargeIds: lines.map(l => l.charge.chargeId),
+        chargeIds: lines.map(l => l.chargeId),
         paymentTermCode: term,
         invoiceNo: kind === 'existing' ? invoiceNo.trim() : null,
         remarks: remarks.trim(),
@@ -500,10 +533,10 @@ export function SendToInvoiceModal({ kind, term, selected, currency, onClose, on
 
             <div className="gecko-waive-list">
               {lines.slice(0, 8).map(r => (
-                <div key={r.charge.chargeId} className="gecko-waive-line">
-                  <span className="gecko-mono-strong">{r.charge.chargeCode}</span>
+                <div key={r.chargeId} className="gecko-waive-line">
+                  <span className="gecko-mono-strong">{r.chargeCode}</span>
                   <span className="gecko-cell-meta gecko-flex-1">{r.containerNo ?? 'no box'}</span>
-                  <span className="gecko-mono">{amount(r.charge.total, r.charge.currencyCode)}</span>
+                  <span className="gecko-mono">{amount(r.total, r.currencyCode ?? currency)}</span>
                 </div>
               ))}
               {lines.length > 8 && <div className="gecko-cell-meta">…and {lines.length - 8} more</div>}

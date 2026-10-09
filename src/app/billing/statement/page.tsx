@@ -43,12 +43,13 @@ import {
   type BookingStatement, type StatementRow,
 } from '@/lib/api/charges';
 import type { InvoiceTerm } from './_components/SendToMenu';
+import { CASH_BILL_PERMISSION } from '@/lib/api/cash-bills';
 import { ChargeDetailModal } from './_components/ChargeDetailModal';
 import { MoneyCards } from './_components/MoneyCards';
-import { SendToMenu, type SendAction } from './_components/SendToMenu';
+import { SendToMenu, type InvoiceSendAction } from './_components/SendToMenu';
 import { StatementRegister } from './_components/StatementRegister';
 import { StatementSearchBox } from './_components/StatementSearchBox';
-import { ChargeAddModal, RegenerateModal, SendToInvoiceModal, WaiveSelectedModal } from './_components/StatementModals';
+import { candidateOf, ChargeAddModal, RegenerateModal, SendToInvoiceModal, WaiveSelectedModal } from './_components/StatementModals';
 
 export default function BookingStatementPage() {
   return (
@@ -106,7 +107,8 @@ type Dialog =
   | { kind: 'add'; mode: 'manual' | 'ADD' | 'UPDATE' }
   | { kind: 'waive' }
   | { kind: 'regenerate' }
-  | { kind: 'send'; action: SendAction };
+  // 'cash-bill' never reaches a dialog — it leaves for the cash-bill screen.
+  | { kind: 'send'; action: InvoiceSendAction };
 
 function Statement() {
   const router = useRouter();
@@ -130,6 +132,9 @@ function Statement() {
   // so the button is not offered — a clerk should never be shown an action the
   // server will refuse.
   const mayInvoice = perms.includes('revenue.invoice.issue');
+  // Taking the money is a different permission from sending an invoice: a cash
+  // clerk has one and not the other, so the menu offers only what they may do.
+  const mayCashBill = perms.includes(CASH_BILL_PERMISSION);
 
   const statement = useApi<BookingStatement>(orderNo ? statementPath(orderNo) : null);
   const s = orderNo ? statement.data : null;
@@ -238,6 +243,34 @@ function Statement() {
   };
   const submit = (e: React.FormEvent) => { e.preventDefault(); open(typed.trim().toUpperCase()); };
 
+  /**
+   * Hand the ticked CASH lines to the Customer Cash Bill screen.
+   *
+   * That screen is keyed by CUSTOMER, not by booking — one bill can settle
+   * charges across several bookings — so the payer of the ticked lines is what
+   * goes in the URL, falling back to the booking's customer for lines the API
+   * answers with no payer of their own. Lines belonging to a second payer
+   * cannot go on the same receipt, so they are left behind and said so.
+   */
+  const toCashBill = () => {
+    const cash = selected.filter(r => r.charge.paymentTermCode === 'CASH');
+    const payerOf = (r: StatementRow) => r.charge.payerCode ?? s?.customerCode ?? '';
+    const payers = [...new Set(cash.map(payerOf).filter(Boolean))];
+    const payer = payers[0] ?? '';
+    if (!payer) {
+      toast({ variant: 'warning', title: 'No customer on these lines',
+        message: 'A cash bill is made out to a customer; these charges name none.' });
+      return;
+    }
+    const mine = cash.filter(r => payerOf(r) === payer);
+    if (payers.length > 1) {
+      toast({ variant: 'warning', title: 'One customer per cash bill',
+        message: `Billing ${mine.length} of ${cash.length} ticked lines — the rest belong to another payer.` });
+    }
+    const p = new URLSearchParams({ customerCode: payer, orderNo, charges: mine.map(r => r.charge.chargeId).join(',') });
+    router.push(`/billing/cash-bills?${p.toString()}`);
+  };
+
   const click = (key: SortKey) =>
     setSort(prev => ({ key, dir: prev.key === key && prev.dir === 'asc' ? 'desc' : 'asc' }));
 
@@ -290,8 +323,15 @@ function Statement() {
               <button className="gecko-btn gecko-btn-outline gecko-btn-sm" onClick={exportCsv} disabled={!s}>
                 <Icon name="download" size={14} /> Export
               </button>
-              <button className="gecko-btn gecko-btn-outline gecko-btn-sm" onClick={statement.reload}>
-                <Icon name="refreshCcw" size={14} /> Refresh
+              {/* `useApi` keeps the rows on screen while it re-reads, so a
+                  refresh that changes nothing looked exactly like a refresh
+                  that never fired. The button has to say it went. */}
+              <button className="gecko-btn gecko-btn-outline gecko-btn-sm"
+                onClick={statement.reload} disabled={statement.loading}>
+                {statement.loading
+                  ? <span className="gecko-spinner gecko-spinner-sm" />
+                  : <Icon name="refreshCcw" size={14} />}
+                {statement.loading ? 'Refreshing…' : 'Refresh'}
               </button>
             </>
           )}
@@ -333,7 +373,16 @@ function Statement() {
       {s && (
         <>
           <div className="gecko-card" style={{ padding: 16 }}>
-            <div className="gecko-mono-strong" style={{ fontSize: 18 }}>{s.orderNo}</div>
+            {/* The booking or B/L number is what a customer rings up about;
+                Gecko's order number is how it is filed, so it goes in brackets
+                behind it. Until the API carries the first two the order number
+                stands alone — the same fallback the registers use. */}
+            <div className="gecko-statement-heading">
+              <span className="gecko-mono-strong">{s.carrierRef || s.subBlNo || s.orderNo}</span>
+              {(s.carrierRef || s.subBlNo) && (
+                <span className="gecko-statement-heading-order gecko-mono">({s.orderNo})</span>
+              )}
+            </div>
             <div className="gecko-cell-meta gecko-mb-3">
               {s.orderTypeCode} · {s.bookingStatus.toLowerCase()} · {payerLabel(s.customerCode, s.customerName)}
               {s.customerName && s.customerCode ? <span className="gecko-mono"> ({s.customerCode})</span> : null}
@@ -387,9 +436,13 @@ function Statement() {
                 </div>
               )}
 
-              {mayInvoice && (
+              {(mayInvoice || mayCashBill) && (
                 <SendToMenu counts={termCounts} disabled={selected.length === 0}
-                  onPick={action => setDialog({ kind: 'send', action })} />
+                  allowInvoice={mayInvoice} allowCashBill={mayCashBill}
+                  onPick={action => {
+                    if (action.kind === 'cash-bill') toCashBill();
+                    else setDialog({ kind: 'send', action });
+                  }} />
               )}
               <FilterPopover
                 fields={fields} values={filters} defaultValues={DEFAULTS} tone="orange"
@@ -582,7 +635,7 @@ function Statement() {
       )}
       {dialog?.kind === 'send' && (
         <SendToInvoiceModal kind={dialog.action.kind} term={dialog.action.term}
-          selected={selected} currency={cur} onClose={() => setDialog(null)} onDone={done} />
+          selected={selected.map(candidateOf)} currency={cur} onClose={() => setDialog(null)} onDone={done} />
       )}
     </div>
   );

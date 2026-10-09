@@ -2,41 +2,41 @@
 import React, { useState } from 'react';
 import { Icon } from '../ui/Icon';
 import { DateField } from '../ui/DateField';
-import { EntitySearch, type EntityOption } from '../ui/EntitySearch';
+import { useApiList } from '@/lib/api/use-api';
+import { useFacility } from '@/lib/api/facility';
+import { useMovements } from '@/lib/api/lookups';
+import { yardsPath, type Yard } from '@/lib/api/yards';
 import { PARAM_LABELS, type ReportDef, type ReportParamKey } from '@/lib/reports-catalog';
 
 /**
- * Side drawer that renders only the parameter fields declared by the selected
- * report. The user fills them in and clicks Generate — for Phase 1 we just
- * confirm with a toast (the parent handler decides what to do with the values).
+ * The parameters one report is run with.
+ *
+ * EVERY DROPDOWN HERE IS MASTER DATA (2026-10-08). It used to search a
+ * hardcoded CATALOGUE of invented companies and offer yard blocks like
+ * "IMP-A1" and movements like "EMTY IN" that exist nowhere in Gecko — so a
+ * clerk could fill the drawer in completely and describe a depot that does not
+ * exist. The lists are the real ones now, and what they hand back are the codes
+ * the API filters on.
+ *
+ * The values leave as plain strings: a report is a query, and a query takes a
+ * code, not an object.
  */
-
-const BRANCHES        = ['All Branches', 'Laem Chabang ICD', 'Bangkok Inland', 'Songkhla Depot'];
-const BOOKING_TYPES   = ['All', 'IMPORT', 'EXPORT', 'TRANSSHIPMENT'];
-const ORDER_TYPES_OPT = ['All', 'EXP CY/CY', 'IMP CY/CY', 'EXP CFS', 'TRANS-SHIP', 'BLIND GATE IN', 'REPO OUT', 'IMP LOLO CR'];
-const SIZES           = ['Any', '20', '40', '45'];
-const TYPES           = ['Any', 'GP', 'HC', 'RF', 'RE', 'HR', 'OT', 'FR', 'TK'];
-const TRIP_TYPES      = ['Any', 'ROUND', 'ONE-WAY'];
-const CONTAINER_CLASSES = ['Any', 'NONE', 'A', 'B', 'C'];
-const EMPTY_LOADED    = ['Any', 'EMPTY', 'LOADED'];
-const YARD_LOCATIONS  = ['Any', 'IMP-A1', 'IMP-A2', 'EXP-B1', 'EXP-B2', 'MT-E1', 'RF-C1', 'HAZ-D1'];
-const TRUCK_CATS      = ['Any', '6W', '10W', '18W', '22W'];
-const MOVEMENT_CODES  = ['Any', 'FULL IN', 'FULL OUT', 'EMTY IN', 'EMTY OUT', 'LOAD', 'DISCHARGE'];
-
-interface ParamValues {
+export interface ParamValues {
   branch?: string;
   bookingType?: string;
   orderType?: string;
-  agent?: EntityOption | null;
-  owner?: EntityOption | null;
-  forwarder?: EntityOption | null;
-  customer?: EntityOption | null;
-  haulier?: EntityOption | null;
-  vessel?: EntityOption | null;
+  agent?: string;
+  owner?: string;
+  forwarder?: string;
+  customer?: string;
+  haulier?: string;
+  vessel?: string;
   voyage?: string;
   yardLocation?: string;
   loadingPort?: string;
-  size?: string;
+  /** Sent as `size` or `containerSize`, depending on the report. */
+  typeSize?: string;
+  /** The equipment TYPE half of the Type — Size pair. */
   type?: string;
   tripType?: string;
   containerClass?: string;
@@ -52,197 +52,245 @@ interface ParamValues {
 
 const BLANK: ParamValues = { dateFrom: '', dateTo: '' };
 
+/** The API's own vocabularies, not invented ones. */
+const BOOKING_TYPES: Opt[] = [
+  { value: '', label: 'Any' },
+  { value: 'IMPORT', label: 'Import' },
+  { value: 'EXPORT', label: 'Export' },
+  { value: 'INTERNAL', label: 'Internal' },
+  { value: 'REPO', label: 'Repo' },
+];
+const SIZES: Opt[] = [
+  { value: '', label: 'Any' }, { value: '20', label: '20' }, { value: '40', label: '40' }, { value: '45', label: '45' },
+];
+const EMPTY_LOADED: Opt[] = [
+  { value: '', label: 'Any' }, { value: 'EMPTY', label: 'Empty' }, { value: 'FULL', label: 'Loaded' },
+];
+const GRADES: Opt[] = [
+  { value: '', label: 'Any' }, { value: 'A', label: 'A' }, { value: 'B', label: 'B' },
+  { value: 'C', label: 'C' }, { value: 'D', label: 'D' },
+];
+const TRIP_TYPES: Opt[] = [{ value: '', label: 'Any' }, { value: 'ROUND', label: 'Round' }, { value: 'ONE-WAY', label: 'One-way' }];
+const TRUCK_CATS: Opt[] = [{ value: '', label: 'Any' }];
+
+interface Opt { value: string; label: string }
+interface PartyRow { partyCode: string; nameEn: string }
+interface OrderTypeRow { orderTypeCode: string; descriptionEn: string; isActive?: boolean }
+interface EquipmentTypeRow { typeCode: string; descriptionEn: string; isActive: boolean }
+interface VesselRow { vesselCode: string; nameEn: string }
+
 /** The local day as yyyy-MM-dd. toISOString would shift it a day in Bangkok. */
 function dayOf(d: Date): string {
   const pad = (n: number) => String(n).padStart(2, '0');
   return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`;
 }
 
-export function ReportParamsDrawer({ report, onClose, onGenerate }: {
+export function ReportParamsDrawer({ report, onClose, onGenerate, busy, problem }: {
   report: ReportDef | null;
   onClose: () => void;
-  onGenerate: (report: ReportDef, params: ParamValues) => void;
+  /** The format is the caller's to act on: these endpoints render both. */
+  onGenerate: (report: ReportDef, params: ParamValues, format: 'pdf' | 'xlsx') => void;
+  /** True while the API is rendering — a big depot's PDF takes seconds. */
+  busy?: boolean;
+  /** What the server refused, and the field it named. */
+  problem?: { message: string; field?: string } | null;
 }) {
   const [vals, setVals] = useState<ParamValues>(BLANK);
   const [forReport, setForReport] = useState<string | null>(null);
+  const { branch } = useFacility();
+  const branchId = branch?.branchId ?? '';
+
+  const { data: lines } = useApiList<PartyRow>('/api/master/parties?role=SHIPPING_LINE&pageSize=200');
+  const { data: customers } = useApiList<PartyRow>('/api/master/parties?role=CUSTOMER&pageSize=200');
+  const { data: forwarders } = useApiList<PartyRow>('/api/master/parties?role=FORWARDER&pageSize=200');
+  const { data: hauliers } = useApiList<PartyRow>('/api/master/parties?role=HAULIER&pageSize=200');
+  const { data: orderTypes } = useApiList<OrderTypeRow>('/api/master/order-types?pageSize=200');
+  const { data: equipTypes } = useApiList<EquipmentTypeRow>('/api/master/equipment-types?pageSize=200');
+  const { data: vessels } = useApiList<VesselRow>('/api/master/vessels?pageSize=200');
+  const { data: yards } = useApiList<Yard>(branchId ? yardsPath(branchId) : null);
+  const { movements } = useMovements();
+
+  const parties = (rows: PartyRow[] | null): Opt[] => [
+    { value: '', label: 'Any' },
+    ...(rows ?? []).map(p => ({ value: p.partyCode, label: `${p.partyCode} — ${p.nameEn}` })),
+  ];
 
   /**
    * Fresh parameters each time a different report is opened.
    *
    * Done during render rather than in an effect — React's own way of resetting
-   * state when a prop changes, and the one the compiler allows. An effect here
-   * rendered the drawer once with the previous report's dates still in it.
-   *
-   * The range used to be anchored to a hardcoded "2026-05-16", so every report
-   * opened on the same two dates whatever the day. It is the last 30 days now.
+   * state when a prop changes, and the one the compiler allows.
    */
   if (report && forReport !== report.id) {
     setForReport(report.id);
     const today = new Date();
     const from = new Date(today);
     from.setDate(from.getDate() - 30);
-    setVals({
-      ...BLANK,
-      dateFrom: dayOf(from),
-      dateTo: dayOf(today),
-      branch: 'All Branches',
-      bookingType: 'All',
-      orderType: 'All',
-    });
+    setVals({ ...BLANK, dateFrom: dayOf(from), dateTo: dayOf(today) });
   }
 
   if (!report) return null;
   const set = <K extends keyof ParamValues>(k: K, v: ParamValues[K]) => setVals(p => ({ ...p, [k]: v }));
-
   const need = (k: ReportParamKey) => report.params.includes(k);
+  const real = Boolean(report.document);
 
   return (
     <>
-      <div onClick={onClose} style={{ position: 'fixed', inset: 0, background: 'rgba(15, 23, 42, 0.45)', zIndex: 60 }} />
-      <div style={{
-        position: 'fixed', top: 0, right: 0, bottom: 0, width: 540, maxWidth: '95vw',
-        background: 'var(--gecko-bg-surface)', borderLeft: '1px solid var(--gecko-border)',
-        zIndex: 61, display: 'flex', flexDirection: 'column',
-        boxShadow: '-12px 0 36px rgba(0, 0, 0, 0.18)',
-        animation: 'gecko-slide-in-right 220ms ease',
-      }}>
+      <div onClick={busy ? undefined : onClose} className="gecko-report-drawer-scrim" />
+      <div className="gecko-report-drawer">
         {/* Header */}
-        <div className="gecko-row gecko-row-start" style={{ padding: '16px 20px', borderBottom: '1px solid var(--gecko-border)', gap: 12 }}>
+        <div className="gecko-row gecko-row-start gecko-report-drawer-head">
           <Icon name={report.icon} size={18} style={{ color: 'var(--gecko-primary-600)', marginTop: 2 }} />
           <div className="gecko-flex-1">
-            <div style={{ fontSize: 16, fontWeight: 700, color: 'var(--gecko-text-primary)' }}>{report.title}</div>
-            <div className="gecko-eyebrow gecko-mt-1">
-              {report.group}
-            </div>
+            <div className="gecko-report-drawer-title">{report.title}</div>
+            <div className="gecko-eyebrow gecko-mt-1">{report.group}</div>
           </div>
-          <button onClick={onClose} className="gecko-btn gecko-btn-ghost gecko-btn-sm gecko-btn-icon">
+          <button onClick={onClose} disabled={busy} className="gecko-btn gecko-btn-ghost gecko-btn-sm gecko-btn-icon">
             <Icon name="x" size={14} />
           </button>
         </div>
 
-        {/* Body */}
-        <div className="gecko-grid-2" style={{ flex: 1, overflowY: 'auto', padding: 18, alignContent: 'start' }}>
+        {problem && (
+          <div role="alert" className="gecko-alert gecko-alert-error gecko-report-drawer-problem">
+            <Icon name="alertCircle" size={16} />
+            <span>{problem.message}</span>
+          </div>
+        )}
 
-          {need('branch') && (
-            <SelectField label={PARAM_LABELS.branch}
-              value={vals.branch ?? ''} onChange={v => set('branch', v)} opts={BRANCHES} />
-          )}
+        {/* Body */}
+        <div className="gecko-grid-2 gecko-report-drawer-body">
           {need('bookingType') && (
-            <SelectField label={PARAM_LABELS.bookingType}
-              value={vals.bookingType ?? ''} onChange={v => set('bookingType', v)} opts={BOOKING_TYPES} />
+            <SelectField label={PARAM_LABELS.bookingType} value={vals.bookingType ?? ''}
+              onChange={v => set('bookingType', v)} opts={BOOKING_TYPES} />
           )}
           {need('orderType') && (
-            <SelectField label={PARAM_LABELS.orderType}
-              value={vals.orderType ?? ''} onChange={v => set('orderType', v)} opts={ORDER_TYPES_OPT} />
+            <SelectField label={PARAM_LABELS.orderType} value={vals.orderType ?? ''}
+              onChange={v => set('orderType', v)}
+              opts={[{ value: '', label: 'Any' }, ...(orderTypes ?? [])
+                .filter(t => t.isActive !== false)
+                .map(t => ({ value: t.orderTypeCode, label: `${t.orderTypeCode} — ${t.descriptionEn}` }))]} />
           )}
           {need('agent') && (
-            <EntityField label={PARAM_LABELS.agent} entityType="agent"
-              value={vals.agent ?? null} onChange={v => set('agent', v)} />
+            <SelectField label={PARAM_LABELS.agent} value={vals.agent ?? ''}
+              onChange={v => set('agent', v)} opts={parties(lines)} />
           )}
           {need('owner') && (
-            <EntityField label={PARAM_LABELS.owner} entityType="agent"
-              value={vals.owner ?? null} onChange={v => set('owner', v)} />
+            <SelectField label={PARAM_LABELS.owner} value={vals.owner ?? ''}
+              onChange={v => set('owner', v)} opts={parties(lines)} />
           )}
           {need('forwarder') && (
-            <EntityField label={PARAM_LABELS.forwarder} entityType="forwarder"
-              value={vals.forwarder ?? null} onChange={v => set('forwarder', v)} />
+            <SelectField label={PARAM_LABELS.forwarder} value={vals.forwarder ?? ''}
+              onChange={v => set('forwarder', v)} opts={parties(forwarders)} />
           )}
           {need('customer') && (
-            <EntityField label={PARAM_LABELS.customer} entityType="customer"
-              value={vals.customer ?? null} onChange={v => set('customer', v)} />
+            <SelectField label={PARAM_LABELS.customer} value={vals.customer ?? ''}
+              onChange={v => set('customer', v)} opts={parties(customers)} />
           )}
           {need('haulier') && (
-            <EntityField label={PARAM_LABELS.haulier} entityType="haulier"
-              value={vals.haulier ?? null} onChange={v => set('haulier', v)} />
+            <SelectField label={PARAM_LABELS.haulier} value={vals.haulier ?? ''}
+              onChange={v => set('haulier', v)} opts={parties(hauliers)} />
           )}
           {need('vessel') && (
-            <EntityField label={PARAM_LABELS.vessel} entityType="vessel"
-              value={vals.vessel ?? null} onChange={v => set('vessel', v)} />
+            <SelectField label={PARAM_LABELS.vessel} value={vals.vessel ?? ''}
+              onChange={v => set('vessel', v)}
+              opts={[{ value: '', label: 'Any' }, ...(vessels ?? [])
+                .map(v => ({ value: v.vesselCode, label: `${v.vesselCode} — ${v.nameEn}` }))]} />
           )}
           {need('voyage') && (
             <InputField label={PARAM_LABELS.voyage} placeholder="e.g. 017S"
               value={vals.voyage ?? ''} onChange={v => set('voyage', v)} mono />
           )}
           {need('yardLocation') && (
-            <SelectField label={PARAM_LABELS.yardLocation}
-              value={vals.yardLocation ?? ''} onChange={v => set('yardLocation', v)} opts={YARD_LOCATIONS} />
+            <SelectField label={PARAM_LABELS.yardLocation} value={vals.yardLocation ?? ''}
+              onChange={v => set('yardLocation', v)}
+              opts={[{ value: '', label: 'Any' }, ...(yards ?? [])
+                .map(y => ({ value: y.yardId, label: `${y.yardCode} — ${y.nameEn}` }))]} />
           )}
           {need('loadingPort') && (
             <InputField label={PARAM_LABELS.loadingPort} placeholder="e.g. THLCH / SGSIN"
               value={vals.loadingPort ?? ''} onChange={v => set('loadingPort', v)} mono />
           )}
 
-          {/* Type-Size — two side-by-side selects in one slot */}
+          {/* Size and type: two selects in one slot, as the desktop has them. */}
           {need('typeSize') && (
-            <div className="gecko-field" style={{ gridColumn: 'span 2' }}>
+            <div className="gecko-field gecko-field-span-2">
               <div className="gecko-field-label">{PARAM_LABELS.typeSize}</div>
-              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8 }}>
-                <select className="gecko-select" value={vals.size ?? 'Any'} onChange={e => set('size', e.target.value)}>
-                  {SIZES.map(s => <option key={s} value={s}>{s}</option>)}
+              <div className="gecko-report-pair">
+                <select className="gecko-select" aria-label="Size"
+                  value={vals.typeSize ?? ''} onChange={e => set('typeSize', e.target.value)}>
+                  {SIZES.map(s => <option key={s.value} value={s.value}>{s.label}</option>)}
                 </select>
-                <select className="gecko-select" value={vals.type ?? 'Any'} onChange={e => set('type', e.target.value)}>
-                  {TYPES.map(t => <option key={t} value={t}>{t}</option>)}
+                <select className="gecko-select" aria-label="Type"
+                  value={vals.type ?? ''} onChange={e => set('type', e.target.value)}>
+                  <option value="">Any</option>
+                  {(equipTypes ?? []).filter(t => t.isActive)
+                    .map(t => <option key={t.typeCode} value={t.typeCode}>{t.typeCode} — {t.descriptionEn}</option>)}
                 </select>
               </div>
             </div>
           )}
 
           {need('tripType') && (
-            <SelectField label={PARAM_LABELS.tripType}
-              value={vals.tripType ?? ''} onChange={v => set('tripType', v)} opts={TRIP_TYPES} />
+            <SelectField label={PARAM_LABELS.tripType} value={vals.tripType ?? ''}
+              onChange={v => set('tripType', v)} opts={TRIP_TYPES} />
           )}
           {need('containerClass') && (
-            <SelectField label={PARAM_LABELS.containerClass}
-              value={vals.containerClass ?? ''} onChange={v => set('containerClass', v)} opts={CONTAINER_CLASSES} />
+            <SelectField label={real ? 'Grade' : PARAM_LABELS.containerClass} value={vals.containerClass ?? ''}
+              onChange={v => set('containerClass', v)} opts={GRADES} />
           )}
           {need('emptyLoaded') && (
-            <SelectField label={PARAM_LABELS.emptyLoaded}
-              value={vals.emptyLoaded ?? ''} onChange={v => set('emptyLoaded', v)} opts={EMPTY_LOADED} />
+            <SelectField label={PARAM_LABELS.emptyLoaded} value={vals.emptyLoaded ?? ''}
+              onChange={v => set('emptyLoaded', v)} opts={EMPTY_LOADED} />
           )}
           {need('blNo') && (
-            <InputField label={PARAM_LABELS.blNo} placeholder="e.g. EGLV14960…"
+            <InputField label={PARAM_LABELS.blNo} placeholder="Booking or B/L number"
               value={vals.blNo ?? ''} onChange={v => set('blNo', v)} mono />
           )}
-          {need('bookingDate') && (
-            <DateFieldSlot label={PARAM_LABELS.bookingDate}
-              value={vals.bookingDate ?? ''} onChange={v => set('bookingDate', v)} />
-          )}
           {need('truckCategory') && (
-            <SelectField label={PARAM_LABELS.truckCategory}
-              value={vals.truckCategory ?? ''} onChange={v => set('truckCategory', v)} opts={TRUCK_CATS} />
+            <SelectField label={PARAM_LABELS.truckCategory} value={vals.truckCategory ?? ''}
+              onChange={v => set('truckCategory', v)} opts={TRUCK_CATS} />
           )}
           {need('movementCode') && (
-            <SelectField label={PARAM_LABELS.movementCode}
-              value={vals.movementCode ?? ''} onChange={v => set('movementCode', v)} opts={MOVEMENT_CODES} />
-          )}
-          {need('userId') && (
-            <InputField label={PARAM_LABELS.userId} placeholder="Username"
-              value={vals.userId ?? ''} onChange={v => set('userId', v)} mono />
+            <SelectField label={PARAM_LABELS.movementCode} value={vals.movementCode ?? ''}
+              onChange={v => set('movementCode', v)}
+              opts={[{ value: '', label: 'Any' }, ...movements
+                .map(m => ({ value: m.movementCode, label: `${m.movementCode} — ${m.descriptionEn}` }))]} />
           )}
 
-          {/* Date Range — always shown, spans full row */}
-          <div className="gecko-field" style={{ gridColumn: 'span 2' }}>
-            <div className="gecko-field-label gecko-field-required">Date Range</div>
-            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8 }}>
-              <DateField value={vals.dateFrom} onChange={v => set('dateFrom', v)} placeholder="From" />
-              <DateField value={vals.dateTo}   onChange={v => set('dateTo',   v)} placeholder="To" />
+          {/* Every report takes a range; only some insist on one. */}
+          <div className="gecko-field gecko-field-span-2">
+            <div className="gecko-field-label">
+              Date Range
+              {report.document?.required?.length ? <span className="gecko-report-required"> *</span> : null}
+            </div>
+            <div className="gecko-report-pair">
+              <DateField value={vals.dateFrom} onChange={v => set('dateFrom', v)} />
+              <DateField value={vals.dateTo} onChange={v => set('dateTo', v)} />
             </div>
           </div>
         </div>
 
         {/* Footer */}
-        <div className="gecko-row" style={{ padding: '14px 20px', borderTop: '1px solid var(--gecko-border)', background: 'var(--gecko-bg-subtle)' }}>
+        <div className="gecko-row gecko-report-drawer-foot">
           <button
             className="gecko-btn gecko-btn-ghost gecko-btn-sm"
+            disabled={busy}
             onClick={() => setVals({ ...BLANK, dateFrom: vals.dateFrom, dateTo: vals.dateTo })}
-            style={{ color: 'var(--gecko-text-secondary)' }}
           >
             Clear filters
           </button>
           <div className="gecko-flex-1" />
-          <button className="gecko-btn gecko-btn-outline gecko-btn-sm" onClick={onClose}>Cancel</button>
-          <button className="gecko-btn gecko-btn-primary gecko-btn-sm" onClick={() => onGenerate(report, vals)}>
-            <Icon name="fileText" size={13} /> Generate Report
+          <button className="gecko-btn gecko-btn-outline gecko-btn-sm" onClick={onClose} disabled={busy}>Cancel</button>
+          {real && (
+            <button className="gecko-btn gecko-btn-outline gecko-btn-sm" disabled={busy}
+              onClick={() => onGenerate(report, vals, 'xlsx')}>
+              <Icon name="download" size={13} /> Excel
+            </button>
+          )}
+          <button className="gecko-btn gecko-btn-primary gecko-btn-sm" disabled={busy}
+            onClick={() => onGenerate(report, vals, 'pdf')}>
+            {busy ? <span className="gecko-spinner gecko-spinner-sm gecko-spinner-white" /> : <Icon name="fileText" size={13} />}
+            {busy ? 'Generating…' : real ? 'Generate PDF' : 'Generate Report'}
           </button>
         </div>
       </div>
@@ -250,7 +298,18 @@ export function ReportParamsDrawer({ report, onClose, onGenerate }: {
   );
 }
 
-/* ── Tiny field helpers ─────────────────────────────────────────────────── */
+function SelectField({ label, value, onChange, opts }: {
+  label: string; value: string; onChange: (v: string) => void; opts: Opt[];
+}) {
+  return (
+    <div className="gecko-field">
+      <div className="gecko-field-label">{label}</div>
+      <select className="gecko-select" value={value} onChange={e => onChange(e.target.value)}>
+        {opts.map(o => <option key={o.value} value={o.value}>{o.label}</option>)}
+      </select>
+    </div>
+  );
+}
 
 function InputField({ label, value, onChange, placeholder, mono }: {
   label: string; value: string; onChange: (v: string) => void; placeholder?: string; mono?: boolean;
@@ -258,52 +317,9 @@ function InputField({ label, value, onChange, placeholder, mono }: {
   return (
     <div className="gecko-field">
       <div className="gecko-field-label">{label}</div>
-      <input
-        className={`gecko-input gecko-input-sm${mono ? ' gecko-text-mono' : ''}`}
-        value={value} onChange={e => onChange(e.target.value)} placeholder={placeholder}
-      />
-    </div>
-  );
-}
-
-function SelectField({ label, value, onChange, opts }: {
-  label: string; value: string; onChange: (v: string) => void; opts: string[];
-}) {
-  return (
-    <div className="gecko-field">
-      <div className="gecko-field-label">{label}</div>
-      <select className="gecko-select gecko-input-sm" value={value} onChange={e => onChange(e.target.value)}>
-        {opts.map(o => <option key={o} value={o}>{o}</option>)}
-      </select>
-    </div>
-  );
-}
-
-function EntityField({ label, entityType, value, onChange }: {
-  label: string; entityType: 'agent' | 'forwarder' | 'customer' | 'haulier' | 'vessel';
-  value: EntityOption | null; onChange: (v: EntityOption | null) => void;
-}) {
-  return (
-    <div className="gecko-field">
-      <div className="gecko-field-label">{label}</div>
-      <EntitySearch
-        entityType={entityType}
-        value={value}
-        onChange={onChange}
-        size="sm"
-        placeholder={`Search ${label.toLowerCase()}…`}
-      />
-    </div>
-  );
-}
-
-function DateFieldSlot({ label, value, onChange }: {
-  label: string; value: string; onChange: (v: string) => void;
-}) {
-  return (
-    <div className="gecko-field">
-      <div className="gecko-field-label">{label}</div>
-      <DateField value={value} onChange={onChange} placeholder="Pick date" />
+      <input className={`gecko-input gecko-input-sm${mono ? ' gecko-text-mono' : ''}`}
+        value={value} placeholder={placeholder}
+        onChange={e => onChange(e.target.value.toUpperCase())} />
     </div>
   );
 }

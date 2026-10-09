@@ -148,7 +148,9 @@ export function MoveCard({ move, index, open, branchId, takenBoxes, onToggle, on
             <button type="button" className="gecko-btn gecko-btn-success gecko-btn-sm"
               disabled={!canRecord || move.saving || issues.length > 0 || pickupHasNoOrder(move)}
               onClick={onRecord}>
-              <Icon name="plus" size={13} />
+              {/* Holding a place and pricing the box is a round trip too, so it
+                  spins rather than just greying out. */}
+              {move.saving ? <span className="gecko-spinner gecko-spinner-sm gecko-spinner-white" /> : <Icon name="plus" size={13} />}
               {move.saving ? 'Adding…' : held ? 'Re-check' : 'Add trip'}
             </button>
             <button type="button" className="gecko-btn gecko-btn-ghost gecko-btn-sm gecko-btn-icon gecko-btn-icon-danger"
@@ -208,7 +210,7 @@ export function MoveCard({ move, index, open, branchId, takenBoxes, onToggle, on
         <div className="gecko-move-body">
           {/* The order, raised with the box when it is on none. */}
           {!carries && drop && (
-            <Section title="Blind gate-in">
+            <Section title="Blind gate-in" wide>
               <div className="gecko-gate-grid-4">
                 <GateField label="Shipping line" required error={err('lineCode')}>
                   <select className="gecko-input" value={move.lineCode}
@@ -592,9 +594,19 @@ function FindingLine({ finding }: { finding: GateFinding }) {
   );
 }
 
-function Section({ title, desc, children }: { title: string; desc?: string; children: React.ReactNode }) {
+/**
+ * A block of the move card.
+ *
+ * By default the title sits in a 190px gutter on the left, which reads well for
+ * a short block. `wide` stacks it instead and gives the fields the whole width:
+ * the blind gate-in row has four selects in it and, indented, it did not line
+ * up with the Trip information grid directly beneath it (owner, 2026-10-09).
+ */
+function Section({ title, desc, wide, children }: {
+  title: string; desc?: string; wide?: boolean; children: React.ReactNode;
+}) {
   return (
-    <section className="gecko-move-section">
+    <section className={wide ? 'gecko-move-section-wide' : 'gecko-move-section'}>
       <div className="gecko-move-section-head">
         <div className="gecko-field-label">{title}</div>
         {desc && <div className="gecko-cell-meta">{desc}</div>}

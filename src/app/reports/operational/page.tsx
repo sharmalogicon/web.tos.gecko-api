@@ -9,12 +9,20 @@ import {
   OPERATIONAL_REPORTS, groupReports,
   type ReportDef,
 } from '@/lib/reports-catalog';
+import type { ParamValues } from '@/components/reports/ReportParamsDrawer';
+import { useFacility } from '@/lib/api/facility';
+import { ApiError } from '@/lib/api/problem';
+import { downloadReport, missingRequired, rangeTooLong, RANGE_LIMIT_DAYS } from '@/lib/api/report-documents';
 
 export default function OperationalReportsPage() {
   const { toast } = useToast();
   const router = useRouter();
   const [activeReport, setActiveReport] = useState<ReportDef | null>(null);
   const [search, setSearch] = useState('');
+  const [busy, setBusy] = useState(false);
+  const [problem, setProblem] = useState<{ message: string; field?: string } | null>(null);
+  const { branch } = useFacility();
+  const branchId = branch?.branchId ?? '';
 
   const filtered = useMemo(() => {
     const q = search.trim().toLowerCase();
@@ -34,7 +42,42 @@ export default function OperationalReportsPage() {
    * ever arrived. On a live cutover that is the worst kind of bug: the clerk
    * believes it worked and waits.
    */
-  const onGenerate = (r: ReportDef) => {
+  const onGenerate = async (r: ReportDef, vals: ParamValues, format: 'pdf' | 'xlsx') => {
+    // A real document: the API renders it and the browser is handed the file.
+    if (r.document) {
+      const missing = missingRequired(r, vals as unknown as Record<string, string>);
+      if (missing.length > 0) {
+        setProblem({ message: 'This report needs a date range.', field: missing[0] });
+        return;
+      }
+      if (rangeTooLong(vals.dateFrom, vals.dateTo)) {
+        setProblem({ message: `The range is longer than ${RANGE_LIMIT_DAYS} days, which the API refuses.`, field: 'dateTo' });
+        return;
+      }
+      setBusy(true);
+      setProblem(null);
+      try {
+        await downloadReport(r, format, branchId, {
+          ...(vals as unknown as Record<string, string>),
+          // The two halves of Type — Size are separate parameters on the API.
+          type: vals.type ?? '',
+        });
+        toast({ variant: 'success', title: `${r.title} ready`, message: `Downloaded as ${format.toUpperCase()}.` });
+        setActiveReport(null);
+      } catch (e) {
+        const err = e instanceof ApiError ? e : null;
+        setProblem({
+          message: err?.status === 403
+            ? 'That depot is not one you cover.'
+            : err?.status === 404
+              ? 'That depot is not known.'
+              : err?.explanation ?? err?.message ?? 'The report could not be generated.',
+        });
+      } finally {
+        setBusy(false);
+      }
+      return;
+    }
     if (r.live) {
       router.push(r.live);
       setActiveReport(null);
@@ -104,8 +147,10 @@ export default function OperationalReportsPage() {
 
       <ReportParamsDrawer
         report={activeReport}
-        onClose={() => setActiveReport(null)}
-        onGenerate={onGenerate}
+        busy={busy}
+        problem={problem}
+        onClose={() => { setActiveReport(null); setProblem(null); }}
+        onGenerate={(r, v, f) => void onGenerate(r, v, f)}
       />
     </div>
   );

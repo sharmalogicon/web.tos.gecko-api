@@ -215,6 +215,14 @@ export interface StatementReceipt {
 export interface BookingStatement {
   bookingId: string;
   orderNo: string;
+  /**
+   * The numbers the depot quotes. ASKED FOR 2026-10-08
+   * (docs/STATEMENT_BOOKING_REF_FOR_API.md) — `BookingStatementResponse` does
+   * not carry them yet, so the header falls back to `orderNo` until it does and
+   * flips the moment they arrive.
+   */
+  carrierRef?: string | null;
+  subBlNo?: string | null;
   branchId: string;
   bookingStatus: string;
   orderTypeCode: string;

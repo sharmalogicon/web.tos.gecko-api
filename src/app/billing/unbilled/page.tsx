@@ -1,6 +1,9 @@
 "use client";
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import Link from 'next/link';
+import { useRouter } from 'next/navigation';
+import { useToast } from '@/components/ui/Toast';
+import { SendToInvoiceModal, type InvoiceCandidate } from '../statement/_components/StatementModals';
 import { Icon } from '@/components/ui/Icon';
 import { DateField } from '@/components/ui/DateField';
 import { apiDownload, apiGet, saveBlob } from '@/lib/api/client';
@@ -36,6 +39,9 @@ interface PartyRow { partyCode: string; nameEn: string }
 interface OrderTypeRow { orderTypeCode: string; descriptionEn: string; bookingTypeCode?: string | null; isActive?: boolean }
 
 export default function UnbilledOrdersPage_() {
+  const router = useRouter();
+  const [invoicing, setInvoicing] = useState(false);
+  const toast = useToast();
   const { can } = useSession();
   const { branch } = useFacility();
   const branchId = branch?.branchId ?? '';
@@ -80,7 +86,9 @@ export default function UnbilledOrdersPage_() {
    */
   const [loaded, setLoaded] = useState<{ key: string; lines: UnbilledLine[]; error: string | null }>(
     { key: '', lines: [], error: null });
-  const readKey = `${shown.join(',')}|${JSON.stringify(applied)}`;
+  /** Bumped after an invoice is raised: those lines are INVOICED and must go. */
+  const [linesNonce, setLinesNonce] = useState(0);
+  const readKey = `${shown.join(',')}|${JSON.stringify(applied)}|${linesNonce}`;
   const shownKey = shown.join(',');
 
   // Nothing selected is handled at render, not by clearing state here: a
@@ -116,6 +124,42 @@ export default function UnbilledOrdersPage_() {
     const blank = blankUnbilledQuery();
     setForm(blank); setApplied(blank); setPicked(new Set()); setOpenOrder(null);
   };
+
+  /**
+   * The CASH lines of whatever is shown, and the customer they are owed by.
+   *
+   * A cash bill is one receipt made out to one customer, so lines from a second
+   * payer cannot ride along: the button bills the first payer's lines and says
+   * how many it left behind. The charges go in the URL by id, which is what the
+   * cash-bill screen ticks.
+   */
+  const cashBill = useMemo(() => {
+    const cash = visibleLines.filter(l => l.paymentTermCode === 'CASH');
+    const payers = [...new Set(cash.map(l => l.payerCode).filter((v): v is string => Boolean(v)))];
+    const payer = payers[0] ?? '';
+    const mine = payer ? cash.filter(l => l.payerCode === payer) : [];
+    return { payer, lines: mine, left: cash.length - mine.length, payers: payers.length };
+  }, [visibleLines]);
+
+  /**
+   * The CREDIT lines of whatever is shown, for `/invoices/send`.
+   *
+   * One invoice is one payer, one branch, one currency — the API refuses a
+   * mixed send outright — so the modal narrows to the first payer and says how
+   * many it left behind, the same way the Booking Statement does.
+   */
+  const creditLines = useMemo<InvoiceCandidate[]>(
+    () => visibleLines.filter(l => l.paymentTermCode === 'CREDIT').map(l => ({
+      chargeId: l.chargeId,
+      paymentTermCode: l.paymentTermCode,
+      total: l.total,
+      payerCode: l.payerCode,
+      payerName: l.payerName,
+      chargeCode: l.chargeCode,
+      containerNo: l.containerNo,
+      currencyCode: l.currencyCode,
+    })),
+    [visibleLines]);
 
   const toggle = (orderNo: string) => setPicked(cur => {
     const next = new Set(cur);
@@ -468,17 +512,56 @@ export default function UnbilledOrdersPage_() {
           <Fact label="Total" value={money(totals.total, totals.currencyCode)} strong />
         </div>
         <div className="gecko-row gecko-gap-2 gecko-flex-wrap">
-          {[
-            'New cash invoice', 'Existing cash invoice',
-            'New credit invoice', 'Existing credit invoice',
-          ].map(label => (
-            <button key={label} className="gecko-btn gecko-btn-outline gecko-btn-sm" disabled
-              title="Credit invoicing is not built yet">
-              {label}
-            </button>
-          ))}
+          {/* Cash does not go to an invoice at all (API owner, 2026-10-08):
+              POST /invoices/send is credit only, and a receipt is final, so
+              "Existing cash invoice" was removed rather than left disabled.
+              This is the whole cash side now, and it works end to end. */}
+          <button
+            className="gecko-btn gecko-btn-primary gecko-btn-sm"
+            disabled={cashBill.lines.length === 0}
+            title={cashBill.lines.length === 0
+              ? 'Tick an order with open CASH charges.'
+              : cashBill.payers > 1
+                ? `One customer per receipt — ${cashBill.left} line(s) of another payer are left behind.`
+                : `${cashBill.lines.length} cash line(s) of ${cashBill.payer}`}
+            onClick={() => router.push(`/billing/cash-bills?${new URLSearchParams({
+              customerCode: cashBill.payer,
+              charges: cashBill.lines.map(l => l.chargeId).join(','),
+            }).toString()}`)}>
+            <Icon name="print" size={13} /> New cash invoice
+          </button>
+          {/* CREDIT, now real. `POST /api/revenue/invoices/send` has issued credit
+              invoices since 2026-10-07; this page simply never called it and kept
+              a disabled placeholder saying it was not built.
+
+              "Existing credit invoice" is GONE rather than disabled: the API
+              refuses an invoiceNo outright — InvoiceEndpoints.cs:51, "… is
+              issued and final." An invoice is raised once and never appended
+              to, exactly as a receipt is. */}
+          <button className="gecko-btn gecko-btn-outline gecko-btn-sm"
+            disabled={creditLines.length === 0}
+            title={creditLines.length === 0
+              ? 'Tick an order with open CREDIT charges.'
+              : `${creditLines.length} credit line(s) on the shown orders`}
+            onClick={() => setInvoicing(true)}>
+            <Icon name="send" size={13} /> New credit invoice
+          </button>
         </div>
       </div>
+
+      {invoicing && (
+        <SendToInvoiceModal
+          kind="new" term="CREDIT" selected={creditLines}
+          currency={creditLines[0]?.currencyCode ?? 'THB'}
+          onClose={() => setInvoicing(false)}
+          onDone={message => {
+            setInvoicing(false);
+            toast.toast({ variant: 'success', title: 'Credit invoice issued', message });
+            // The lines are INVOICED now, so the worklist they came from has to
+            // be re-read or it still offers them.
+            setLinesNonce(n => n + 1);
+          }} />
+      )}
     </div>
   );
 }

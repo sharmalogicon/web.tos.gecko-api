@@ -5,6 +5,12 @@ import { Icon } from '@/components/ui/Icon';
 export type FilterField =
   | { type: 'search'; key: string; placeholder: string }
   | { type: 'select'; key: string; label: string; options: { label: string; value: string }[] }
+  /**
+   * A plain date, for a range made of two of them. Added for the Container
+   * Inquiry's gate-in range (2026-10-08): a register that reaches back years
+   * needs a date before it needs another dropdown.
+   */
+  | { type: 'date'; key: string; label: string }
 
 export type SortOption = { label: string; value: string }
 
@@ -41,6 +47,7 @@ export function FilterPopover({
   }).length;
   const searchField = fields.find(f => f.type === 'search');
   const selectFields = fields.filter(f => f.type === 'select') as Extract<FilterField, { type: 'select' }>[];
+  const dateFields = fields.filter(f => f.type === 'date') as Extract<FilterField, { type: 'date' }>[];
 
   useEffect(() => {
     function handleOutside(e: MouseEvent) {
@@ -93,7 +100,7 @@ export function FilterPopover({
           )}
 
           {/* Filter By */}
-          {selectFields.length > 0 && (
+          {(selectFields.length > 0 || dateFields.length > 0) && (
             <>
               <div className="gecko-filter-section-label">Filter by</div>
               <div className="gecko-filter-body">
@@ -109,6 +116,20 @@ export function FilterPopover({
                         <option key={opt.value} value={opt.value}>{opt.label}</option>
                       ))}
                     </select>
+                  </div>
+                ))}
+
+                {/* Dates sit with the selects: they narrow the same list, and a
+                    clerk reads them as one block of "what am I looking at". */}
+                {dateFields.map(field => (
+                  <div key={field.key} className="gecko-filter-row">
+                    <span className="gecko-filter-row-label">{field.label}</span>
+                    <input
+                      type="date"
+                      className={`gecko-filter-select${values[field.key] ? ' gecko-filter-select-active' : ''}`}
+                      value={values[field.key] ?? ''}
+                      onChange={e => onChange({ ...values, [field.key]: e.target.value })}
+                    />
                   </div>
                 ))}
               </div>

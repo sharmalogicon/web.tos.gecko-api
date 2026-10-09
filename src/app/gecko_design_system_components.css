@@ -9919,15 +9919,30 @@ th.gecko-cell-tight {
   line-height: 1.45;
 }
 
-/* Charges no tariff prices: listed under what IS owed, muted and with no
-   amount. The service happened and was not billed — a clerk needs to see that,
-   and must never read it as part of the total. */
+/* Charges no tariff prices. They are not money — nothing is owed and the Save
+   is not held — so they fold away to one quiet line under what IS owed, and
+   open when a clerk wants to know what the depot did for free. Listed open,
+   three of them under a two-line bill read as though something were wrong. */
 .gecko-visit-unpriced {
   margin-top: 6px;
   padding-top: 6px;
   border-top: 1px dashed var(--gecko-border);
   color: var(--gecko-text-secondary);
 }
+.gecko-visit-unpriced-toggle {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  width: 100%;
+  padding: 0;
+  border: 0;
+  background: none;
+  font-size: 11px;
+  color: var(--gecko-text-secondary);
+  text-align: left;
+  cursor: pointer;
+}
+.gecko-visit-unpriced-toggle:hover { color: var(--gecko-text-primary); }
 
 
 /* ── §38  A card whose field opens a dropdown ───────────────────────────────
@@ -9970,23 +9985,26 @@ th.gecko-cell-tight {
    The value used to carry no size class at all and inherited the page base,
    which made a container type render like a heading beside a 10px label. */
 
-.gecko-eir-line {
-  display: flex;
-  align-items: baseline;
-  justify-content: space-between;
-  gap: 12px;
-  padding: 5px 0;
-  border-bottom: 1px solid var(--gecko-border-subtle, var(--gecko-border));
-}
-.gecko-eir-line:last-child { border-bottom: 0; }
-.gecko-eir-line-label {
+/* The facts of a move, as a table: one column width per card, decided by the
+   browser rather than by each card guessing. The label column is the narrower
+   one and does not wrap — a wrapped "Arrived / left" over two lines pushes
+   every value out of line. */
+.gecko-eir-facts { width: 100%; }
+.gecko-eir-facts td,
+.gecko-eir-facts th { padding: 5px 0; vertical-align: baseline; }
+.gecko-eir-fact-label {
+  width: 40%;
   font-size: 11px;
+  font-weight: 400;
+  text-align: left;
   color: var(--gecko-text-secondary);
   white-space: nowrap;
+  padding-right: 12px !important;
 }
-.gecko-eir-line-value {
+.gecko-eir-fact-value {
+  font-size: 13px;
+  color: var(--gecko-text-primary);
   text-align: right;
-  min-width: 0;
   overflow-wrap: anywhere;
 }
 
@@ -10029,3 +10047,533 @@ th.gecko-cell-tight {
   .gecko-bill-head,
   .gecko-bill-foot { grid-template-columns: 1fr; }
 }
+
+/* The seals, inside the box card they belong to rather than in one of their own. */
+.gecko-eir-seals {
+  margin-top: 10px;
+  padding-top: 10px;
+  border-top: 1px solid var(--gecko-border);
+}
+
+/* ── §42  The customer cash bill, being written ─────────────────────────────
+   §41 lays out a receipt that EXISTS. This is the form that issues one, and it
+   has two jobs §41 does not: a payment block where the figures are typed, and a
+   shortfall that has to be visible while the clerk is still ticking lines —
+   never discovered on Save. */
+
+.gecko-cashbill-page {
+  max-width: 1240px;
+  margin: 0 auto;
+  padding-bottom: 48px;
+}
+
+/* Open a saved bill by its number, from the page header. */
+.gecko-cashbill-lookup {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+.gecko-cashbill-lookup .gecko-input { width: 170px; }
+
+/* A field the API fills: shown in its place, so the form reads in the order the
+   receipt does, but plainly not something to type in. */
+.gecko-readonly-field {
+  padding: 7px 10px;
+  border: 1px dashed var(--gecko-border);
+  border-radius: 6px;
+  background: var(--gecko-bg-subtle);
+  font-size: 13px;
+  color: var(--gecko-text-secondary);
+}
+
+/* Money is read right-aligned and compared digit by digit. */
+.gecko-input-money { text-align: right; }
+
+.gecko-cashbill-payment {
+  padding: 10px 0;
+  border-bottom: 1px solid var(--gecko-border);
+}
+.gecko-cashbill-payment:last-of-type { border-bottom: 0; }
+
+/* Channel, amount and then whatever that channel needs — a tendered box for
+   cash, a reference and bank for everything else. The columns shift with the
+   channel on purpose: a greyed-out reference field on a cash payment is a field
+   the clerk still has to read past. */
+.gecko-cashbill-payment-row {
+  display: flex;
+  align-items: flex-end;
+  gap: 10px;
+}
+.gecko-cashbill-payment-row .gecko-form-group { flex: 1 1 0; margin: 0; }
+.gecko-cashbill-payment-row .gecko-select { min-width: 110px; }
+.gecko-cashbill-payment-drop { margin-bottom: 4px; }
+
+.gecko-cashbill-balance {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin-top: 8px;
+  padding: 7px 10px;
+  border-radius: 6px;
+  font-size: 12px;
+  line-height: 1.45;
+}
+.gecko-cashbill-short {
+  background: var(--gecko-error-50);
+  color: var(--gecko-error-700);
+}
+.gecko-cashbill-over {
+  background: var(--gecko-warning-50);
+  color: var(--gecko-warning-700);
+}
+
+/* W/H tax sits inside the totals, between the total and the nett, because that
+   is where it acts: it is the customer's own tax, deducted from what they hand
+   over without changing what was invoiced. */
+.gecko-cashbill-wht {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  margin: 10px 0 4px;
+  padding-top: 10px;
+  border-top: 1px solid var(--gecko-border);
+}
+.gecko-cashbill-wht .gecko-form-label { margin: 0; }
+
+/* The one irreversible action on the screen, on its own line at the end, with
+   the amount on the button — nobody should have to look up to check it. */
+.gecko-cashbill-save {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  padding: 14px 20px;
+  border: 1px solid var(--gecko-border);
+  border-radius: 10px;
+  background: var(--gecko-bg-surface);
+}
+
+@media (max-width: 860px) {
+  .gecko-cashbill-payment-row { flex-wrap: wrap; }
+  .gecko-cashbill-save { flex-direction: column; align-items: stretch; }
+}
+
+/* An empty state fills the row it stands in, so the cell lends it the width and
+   keeps none of the padding. */
+.gecko-cell-bleed { padding: 0; }
+
+/* A page waiting on its search params, before any of it can be drawn. */
+.gecko-page-loading { padding: 24px; }
+
+/* ── §43  Splitting a gate receipt ──────────────────────────────────────────
+   One truck, several payers. The dialog is wide because the clerk is reading
+   three things at once: which line goes where, what each part comes to, and
+   whether the drawer still holds what it held. */
+
+/* A part's own totals beside its own payments: they are one question. */
+.gecko-split-money {
+  display: grid;
+  grid-template-columns: 300px 1fr;
+  gap: 16px;
+  align-items: start;
+  padding-top: 10px;
+  border-top: 1px solid var(--gecko-border);
+}
+
+.gecko-split-wht {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 4px 0;
+  font-size: 12px;
+  color: var(--gecko-text-secondary);
+}
+.gecko-split-wht input:disabled + span { color: var(--gecko-text-disabled); }
+
+.gecko-split-payment {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+.gecko-split-payment .gecko-select { flex: 0 0 110px; }
+.gecko-split-payment .gecko-input { flex: 1 1 0; min-width: 0; }
+
+/* Said where the clerk is typing, not only in the footer. */
+.gecko-split-gap { color: var(--gecko-error-700); }
+
+/* The one row of the before/after table that does not agree. */
+.gecko-split-off td { background: var(--gecko-error-50); }
+
+/* The receipts a split produced, and the one it came from. */
+.gecko-split-trail {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  flex-wrap: wrap;
+  font-size: 13px;
+}
+
+@media (max-width: 860px) {
+  .gecko-split-money { grid-template-columns: 1fr; }
+  .gecko-split-payment { flex-wrap: wrap; }
+}
+
+/* Charges already paid in advance or waived (API 2026-10-08). Listed under what
+   IS owed so the clerk can answer a driver who argues, muted because nothing is
+   owed, and never totalled. A waiver prints no amount at all: ฿0.00 would read
+   as a charge of nothing rather than as money already taken. */
+.gecko-visit-settled {
+  margin-top: 6px;
+  padding-top: 6px;
+  border-top: 1px dashed var(--gecko-border);
+  color: var(--gecko-text-secondary);
+}
+
+/* The payer a split KEEPS: the receipt's own, shown rather than picked. */
+.gecko-split-payer-kept {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+/* The search box in a register's own toolbar: wide enough for a receipt
+   number, not so wide it pushes the buttons off the end. */
+.gecko-cashbill-lookup-input { width: 220px; }
+
+/* ── §44  The gate Save, in flight ──────────────────────────────────────────
+   The one action on Gate In that takes money and cannot be repeated safely by
+   accident. It is slow enough that a disabled button reads as a hung page, so
+   the save says what it is doing and covers the form while it does it. */
+.gecko-gate-saving {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 10px;
+  padding: 24px 32px;
+  border: 1px solid var(--gecko-border);
+  border-radius: 12px;
+  background: var(--gecko-bg-surface);
+  box-shadow: var(--gecko-shadow-lg, 0 10px 30px rgba(0, 0, 0, 0.12));
+  text-align: center;
+}
+.gecko-gate-saving-title {
+  font-size: 15px;
+  font-weight: 700;
+  color: var(--gecko-text-primary);
+}
+
+/* Split or re-issue: two jobs, one dialog, chosen at the top. */
+.gecko-split-modes { display: flex; gap: 8px; flex-wrap: wrap; }
+
+/* A type-ahead listing MASTER DATA rather than a handful of bookings: one line
+   per row, code first, at the size the booking header's customer picker uses.
+   Forty companies whose names all end "(Thailand) Co.,Ltd." are read by their
+   code and their tax id, not by a heading-sized name. */
+.gecko-search-compact { max-height: 260px; }
+.gecko-search-compact .gecko-search-row {
+  gap: 10px;
+  padding: 5px 10px;
+  font-size: 12px;
+  line-height: 1.35;
+}
+.gecko-search-compact .gecko-search-empty { padding: 10px; font-size: 11px; }
+.gecko-party-row-name {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* What a truck is at Gate Out to collect — the reason it is in the list. */
+.gecko-truck-row-boxes {
+  max-width: 240px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* ── §45  Gate In refusals, at the top ──────────────────────────────────────
+   They sat under the form, so a clerk with four boxes keyed found out why the
+   Save failed only by scrolling past all of them. Beside the heading instead,
+   and small: it is a header, and the server's sentence is one line. */
+.gecko-gatein-top-errors {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  flex: 1 1 auto;
+  min-width: 0;
+  margin: 0 12px;
+}
+.gecko-gatein-top-error {
+  display: flex;
+  align-items: flex-start;
+  gap: 5px;
+  padding: 4px 8px;
+  border-radius: 6px;
+  background: var(--gecko-error-50);
+  color: var(--gecko-error-700);
+  font-size: 11px;
+  line-height: 1.4;
+}
+.gecko-gatein-top-error strong { font-weight: 700; }
+.gecko-gatein-top-retry {
+  margin-left: 6px;
+  padding: 0;
+  border: 0;
+  background: none;
+  color: var(--gecko-error-700);
+  font: inherit;
+  font-weight: 700;
+  text-decoration: underline;
+  cursor: pointer;
+}
+.gecko-gatein-top-retry:disabled { opacity: 0.6; cursor: default; }
+
+/* The statement's heading: the number the customer quotes, with Gecko's own
+   order number in brackets behind it at the size of a footnote. */
+.gecko-statement-heading {
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+  flex-wrap: wrap;
+  font-size: 18px;
+}
+.gecko-statement-heading-order {
+  font-size: 12px;
+  font-weight: 500;
+  color: var(--gecko-text-secondary);
+}
+
+/* ── §46  The container inquiry ─────────────────────────────────────────────
+   A register that reaches back over every box the depot has handled, and a
+   pop-up that tells one box's whole story. */
+
+.gecko-inquiry-search { width: 260px; flex: 0 0 260px; }
+/* The sort sits in the toolbar beside the filter, not across it: a select with
+   no width of its own takes the whole row and pushes Filter onto the next. */
+.gecko-inquiry-sort { width: 170px; flex: 0 0 170px; }
+
+/* A hold, in master data's own colour: a depot that paints CUSTOMS red expects
+   it red wherever it appears. */
+.gecko-inquiry-hold {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 6px 0;
+  border-bottom: 1px solid var(--gecko-border);
+  font-size: 12px;
+}
+.gecko-inquiry-hold:last-child { border-bottom: 0; }
+.gecko-inquiry-hold-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  flex-shrink: 0;
+}
+
+/* One stay, with its events under it. Stays stack; the timeline is indented so
+   an event is plainly part of the stay above it, not a stay of its own. */
+.gecko-inquiry-stays { padding: 12px 20px; }
+.gecko-inquiry-stay {
+  padding: 10px 0;
+  border-bottom: 1px solid var(--gecko-border);
+}
+.gecko-inquiry-stay:last-child { border-bottom: 0; }
+
+.gecko-inquiry-events {
+  margin: 8px 0 0;
+  padding: 0 0 0 14px;
+  border-left: 2px solid var(--gecko-border);
+  list-style: none;
+}
+.gecko-inquiry-event {
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+  padding: 3px 0;
+  font-size: 11px;
+  line-height: 1.45;
+}
+.gecko-inquiry-event-when { white-space: nowrap; }
+.gecko-inquiry-event strong { text-transform: capitalize; }
+
+/* A field label on the booking header, in blue (owner, 2026-10-08). The whole
+   header used one grey for labels and values alike; blue separates what the
+   field IS from what it holds, at a glance and all the time — not only once a
+   value has been keyed. */
+.gecko-eyebrow-set { color: var(--gecko-primary-600); }
+
+/* ── §47  The report parameters drawer ──────────────────────────────────────
+   A side panel of filters over the catalogue. Its chrome used to be a dozen
+   inline style objects; it is classes now so a report drawer looks the same
+   wherever one is opened from. */
+
+.gecko-report-drawer-scrim {
+  position: fixed;
+  inset: 0;
+  z-index: 60;
+  background: rgba(15, 23, 42, 0.45);
+}
+.gecko-report-drawer {
+  position: fixed;
+  top: 0;
+  right: 0;
+  bottom: 0;
+  z-index: 61;
+  display: flex;
+  flex-direction: column;
+  width: 540px;
+  max-width: 95vw;
+  border-left: 1px solid var(--gecko-border);
+  background: var(--gecko-bg-surface);
+  box-shadow: -12px 0 36px rgba(0, 0, 0, 0.18);
+  animation: gecko-slide-in-right 220ms ease;
+}
+.gecko-report-drawer-head {
+  gap: 12px;
+  padding: 16px 20px;
+  border-bottom: 1px solid var(--gecko-border);
+}
+.gecko-report-drawer-title {
+  font-size: 16px;
+  font-weight: 700;
+  color: var(--gecko-text-primary);
+}
+.gecko-report-drawer-problem { margin: 12px 18px 0; }
+.gecko-report-drawer-body {
+  flex: 1;
+  overflow-y: auto;
+  padding: 18px;
+  align-content: start;
+}
+.gecko-report-drawer-foot {
+  gap: 8px;
+  padding: 14px 18px;
+  border-top: 1px solid var(--gecko-border);
+}
+
+/* Size beside type, date-from beside date-to: pairs that are one question. */
+.gecko-report-pair {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 8px;
+}
+.gecko-field-span-2 { grid-column: span 2; }
+.gecko-report-required { color: var(--gecko-error-600); }
+
+/* How a document has to be printed, said beside the button that prints it.
+   The EIR goes onto pre-printed stationery: at "Fit to page" every value lands
+   out of its box, and nobody finds out until a driver is holding the form. */
+.gecko-print-note {
+  flex-basis: 100%;
+  max-width: 460px;
+  margin-top: 2px;
+  font-size: 11px;
+  line-height: 1.45;
+  color: var(--gecko-text-secondary);
+  text-align: right;
+  margin-left: auto;
+}
+
+/* The print note reads left where it sits under a left-aligned row of buttons. */
+.gecko-print-note-left { text-align: left; margin-left: 0; }
+
+/* A link that is really a button: same look, but it can carry a disabled state
+   and a busy label, which an <a> to an authorised PDF cannot. */
+.gecko-link-button {
+  padding: 0;
+  border: 0;
+  background: none;
+  font: inherit;
+  cursor: pointer;
+}
+.gecko-link-button:disabled { opacity: 0.6; cursor: default; }
+
+/* ── §48  The party search's dropdown ───────────────────────────────────────
+   Its rows used to be `.gecko-btn`s: one line tall, nowrap, fixed height. A
+   Thai company name overran its own row and printed over the next one, and the
+   panel sat at the APP HEADER's z-index so it fought with the chrome. */
+
+.gecko-party-pick-menu {
+  position: absolute;
+  left: 0;
+  right: 0;
+  top: 100%;
+  z-index: var(--gecko-z-menu);
+  margin-top: 4px;
+  /* Same shape as the booking / B-L search on this screen (.gecko-booking-drop):
+     a company name plus a tax id does not fit the FIELD's width, and truncating
+     both leaves two codes the clerk cannot tell apart. */
+  min-width: 420px;
+  max-height: 300px;
+  overflow-y: auto;
+  padding: 4px;
+  box-shadow: var(--gecko-shadow-lg, 0 12px 30px rgba(0, 0, 0, 0.16));
+}
+
+.gecko-party-pick-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  width: 100%;
+  padding: 7px 10px;
+  border: 0;
+  border-radius: var(--gecko-radius-sm);
+  background: none;
+  font-family: inherit;
+  /* 12px flat, NOT --gecko-text-sm: that token clamps to 0.80–0.95rem and made
+     these rows a size bigger than every other dropdown on the gate screen. */
+  font-size: 12px;
+  line-height: 1.4;
+  text-align: left;
+  cursor: pointer;
+}
+.gecko-party-pick-row:hover,
+.gecko-party-pick-row:focus-visible { background: var(--gecko-surface-hover); }
+.gecko-party-pick-row-off { opacity: 0.5; cursor: default; }
+
+.gecko-party-pick-code {
+  flex: 0 0 auto;
+  min-width: 96px;
+  font-weight: 700;
+  white-space: nowrap;
+}
+/* The name takes what is left and ellipsises; it never pushes the tax id off. */
+.gecko-party-pick-name {
+  flex: 1 1 auto;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.gecko-party-pick-tax { flex: 0 0 auto; white-space: nowrap; }
+
+@media (max-width: 620px) {
+  .gecko-party-pick-menu { min-width: 0; }
+}
+
+/* A move-card block whose fields need the whole width. The side-label layout
+   indents by 190px, which left the blind gate-in row out of line with the Trip
+   information grid right beneath it — four selects crowded into the remainder
+   while a third of the card sat empty. */
+.gecko-move-section-wide {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+/* The party a field is set to, inside the box rather than spilling out of it:
+   a Thai company name is longer than the control and used to print over its
+   neighbours. The name takes the room, the code keeps its own. */
+.gecko-party-chosen { gap: 8px; min-width: 0; font-size: 12px; }
+.gecko-party-chosen-name {
+  flex: 1 1 auto;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.gecko-party-chosen-code { flex: 0 0 auto; white-space: nowrap; }

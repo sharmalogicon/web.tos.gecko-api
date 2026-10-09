@@ -141,6 +141,15 @@ export interface MoveDraft {
    * thrown away — the panel read `due` alone and said "nothing priced yet".
    */
   noPrice: QuoteLineLike[];
+  /**
+   * Charges that are ALREADY DEALT WITH — paid in advance on an earlier
+   * receipt, or waived at the window (API 2026-10-08).
+   *
+   * They are not owed and never enter a total, but a clerk taking money at the
+   * barrier has to see them: a box whose lift was prepaid looks, without this,
+   * exactly like a box that was never charged for it.
+   */
+  settled: SettledLike[];
   /** The server's own sentence about this box, when it has one. */
   quoteNote: string | null;
   /**
@@ -156,6 +165,16 @@ export interface MoveDraft {
    * `placeMessage` says so, and is shown blue — it is news, not a fault.
    */
   reserved: boolean;
+  /**
+   * The hold itself, so it can be GIVEN BACK and RENEWED.
+   *
+   * Thrown away until 2026-10-08, which meant a removed row left its box locked
+   * for the rest of its 15 minutes and a long truck quietly lost its holds
+   * halfway through keying.
+   */
+  boxReservationId: string | null;
+  /** When the hold lapses unless renewed — shown on the row. */
+  holdExpiresAt: string | null;
   placeMessage: string | null;
 
   saving: boolean;
@@ -164,6 +183,23 @@ export interface MoveDraft {
   error: ApiError | null;
   /** What the barrier said — from Record, or carried by a refusal. */
   findings: GateFinding[];
+}
+
+/**
+ * A charge the quote TRIED and found already dealt with.
+ *
+ * `outcome` is SETTLED; the note says how — "Paid in advance on CAKTC261000004."
+ * or "Waived at the window." — and a waiver carries no amount, because nothing
+ * was taken.
+ */
+export interface SettledLike {
+  chargeCode: string;
+  chargeName?: string | null;
+  billTo?: string | null;
+  outcome: string;
+  amount: number | null;
+  note?: string | null;
+  paymentTermCode?: string | null;
 }
 
 /** Only the parts of a quote line this screen shows. */
@@ -251,11 +287,14 @@ export function blankMove(trip: TripType, defaults: {
     due: [],
     billedLater: [],
     noPrice: [],
+    settled: [],
     quoteNote: null,
     quoteError: null,
     quoteTotal: 0,
     quoteTax: 0,
     reserved: false,
+    boxReservationId: null,
+    holdExpiresAt: null,
     placeMessage: null,
     saving: false,
     result: null,

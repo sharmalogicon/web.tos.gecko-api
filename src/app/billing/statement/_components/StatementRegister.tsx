@@ -199,11 +199,24 @@ export function StatementRegister({ onOpen }: { onOpen: (orderNo: string) => voi
             )}
             {rows.map(o => (
               <tr key={o.orderNo} className="gecko-row-clickable" onClick={() => onOpen(o.orderNo)}>
+                {/* THE NUMBER THE DEPOT QUOTES COMES FIRST (owner, 2026-10-08):
+                    the carrier's booking number, or the B/L. Gecko's own order
+                    number is underneath in small type — it is how the system
+                    files the booking, not how anyone asks for it. The row still
+                    OPENS on the order number, which is what the API takes. */}
                 <td>
-                  <button className="gecko-mono-strong gecko-link gecko-cell-tight" onClick={e => { e.stopPropagation(); onOpen(o.orderNo); }}>
-                    {o.orderNo}
+                  <button className="gecko-mono-strong gecko-link gecko-cell-tight"
+                    onClick={e => { e.stopPropagation(); onOpen(o.orderNo); }}>
+                    {o.carrierRef || o.subBlNo || o.orderNo}
                   </button>
-                  {o.subBlNo && <div className="gecko-cell-meta gecko-mono gecko-cell-tight">{o.subBlNo}</div>}
+                  {(o.carrierRef || o.subBlNo) && (
+                    <div className="gecko-cell-meta gecko-mono gecko-cell-tight">{o.orderNo}</div>
+                  )}
+                  {/* Both of them exist on plenty of bookings; the one not used
+                      as the heading still has to be findable. */}
+                  {o.carrierRef && o.subBlNo && (
+                    <div className="gecko-cell-meta gecko-mono gecko-cell-tight">{o.subBlNo}</div>
+                  )}
                 </td>
                 <td>
                   <span className="gecko-badge gecko-badge-xs gecko-badge-gray">{o.bookingTypeCode}</span>
