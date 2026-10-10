@@ -33,8 +33,9 @@ export default function LoginPage() {
 
   const validate = () => {
     const e: typeof errors = {};
-    if (!email.trim()) e.email = 'Email is required.';
-    else if (!/^\S+@\S+\.\S+$/.test(email)) e.email = 'Enter a valid email address.';
+    // Either the e-mail or the user name: the API reads an identifier without '@' as a user name.
+    if (!email.trim()) e.email = 'Email or user name is required.';
+    else if (email.includes('@') && !/^\S+@\S+\.\S+$/.test(email.trim())) e.email = 'Enter a valid email address.';
     if (!password) e.password = 'Password is required.';
     else if (password.length < 6) e.password = 'Password must be at least 6 characters.';
     setErrors(e);
@@ -201,13 +202,13 @@ export default function LoginPage() {
               </div>
             )}
 
-            {/* Email */}
+            {/* Email or user name */}
             <div style={{ marginBottom: 18 }}>
               <label htmlFor="email" style={{
                 display: 'block', fontSize: 13, fontWeight: 600,
                 marginBottom: 6, color: 'var(--gecko-text-primary)',
               }}>
-                Email
+                Email or user name
               </label>
               <div style={{ position: 'relative' }}>
                 <span aria-hidden style={{
@@ -219,10 +220,12 @@ export default function LoginPage() {
                 </span>
                 <input
                   id="email"
-                  type="email"
-                  autoComplete="email"
+                  type="text"
+                  autoComplete="username"
+                  autoCapitalize="none"
+                  spellCheck={false}
                   className="gecko-input"
-                  placeholder="email@example.com"
+                  placeholder="email@example.com or user name"
                   value={email}
                   onChange={(e) => { setEmail(e.target.value); if (errors.email) setErrors({ ...errors, email: undefined }); }}
                   aria-invalid={!!errors.email}
