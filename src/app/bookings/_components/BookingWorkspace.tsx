@@ -7,6 +7,7 @@ import { ApiError } from '@/lib/api/problem';
 import { useFacility } from '@/lib/api/facility';
 import { useSession } from '@/lib/auth/session';
 import { PartyPicker } from '@/app/tariff/_components/PartyPicker';
+import { BookingPrintMenu } from './BookingPrintMenu';
 import { useCodeList } from '@/lib/api/lookups';
 import { PortPicker } from './PortPicker';
 import { TransferContainersModal } from './TransferContainersModal';
@@ -2412,7 +2413,9 @@ export function BookingWorkspace({ bookingId }: { bookingId?: string }) {
           <div className="gecko-flex-1" />
 
           {/* Actions */}
-          <button className="gecko-btn gecko-btn-ghost gecko-btn-sm" onClick={() => window.print()}><Icon name="print" size={13} /> Print</button>
+          {/* The booking's OWN forms, from the API, rather than the browser
+              printing this screen. Thirteen of them, in the desktop's order. */}
+          <BookingPrintMenu bookingId={created?.bookingId ?? null} cancelled={bookingStatus === 'CANCELLED'} />
           {created && (
             <Link href={`/billing/statement?orderNo=${encodeURIComponent(created?.orderNo ?? '')}`} className="gecko-btn gecko-btn-ghost gecko-btn-sm" style={{ color: 'var(--gecko-info-600)', textDecoration: 'none' }}>
               <Icon name="fileText" size={13} /> Billing Statement

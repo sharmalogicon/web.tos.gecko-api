@@ -4,7 +4,7 @@ import { Icon } from '@/components/ui/Icon';
 import { apiDownload, saveBlob } from '@/lib/api/client';
 import { ProblemAlert, problemOf, type Problem } from './ProblemAlert';
 import { CHANNEL_LABEL, formatBaht, receiptPdfPath, taxBranchLabel, type Receipt } from '@/lib/api/window';
-import { couponPdfPath } from '@/lib/api/receipts';
+import { cashInvoicePdfPath, couponPdfPath } from '@/lib/api/receipts';
 import { openPdf } from '@/lib/api/open-pdf';
 import { formatDateTime } from '@/lib/format';
 
@@ -60,6 +60,7 @@ export function ReceiptView({ receipt, depot, onPrint, onNext, onVoid, onSplit, 
 }) {
   const [downloading, setDownloading] = useState(false);
   const [coupon, setCoupon] = useState(false);
+  const [cashInvoice, setCashInvoice] = useState(false);
   const [pdfError, setPdfError] = useState<Problem | null>(null);
   const seller = receipt.seller;
   const voided = receipt.status === 'VOIDED';
@@ -79,6 +80,18 @@ export function ReceiptView({ receipt, depot, onPrint, onNext, onVoid, onSplit, 
       setPdfError(problemOf(e, `No coupon was issued on ${receipt.receiptNo}.`));
     } finally {
       setCoupon(false);
+    }
+  }
+
+  /** The cash-invoice overlay, beside the receipt it belongs to. */
+  async function printCashInvoice() {
+    setCashInvoice(true); setPdfError(null);
+    try {
+      await openPdf(cashInvoicePdfPath(receipt.receiptId), `${receipt.receiptNo}-cash-invoice.pdf`);
+    } catch (e) {
+      setPdfError(problemOf(e, 'The cash invoice could not be printed.'));
+    } finally {
+      setCashInvoice(false);
     }
   }
 
@@ -159,6 +172,12 @@ export function ReceiptView({ receipt, depot, onPrint, onNext, onVoid, onSplit, 
           </button>
           {/* Only where the user may take money: the endpoint answers 403
               otherwise, so the button is not offered rather than refused. */}
+          {mayCollect && (
+            <button className="gecko-btn gecko-btn-outline" onClick={() => void printCashInvoice()} disabled={cashInvoice}>
+              {cashInvoice ? <span className="gecko-spinner gecko-spinner-sm" /> : <Icon name="print" size={16} />}
+              {cashInvoice ? 'Preparing…' : 'Cash invoice'}
+            </button>
+          )}
           {mayCollect && (
             <button className="gecko-btn gecko-btn-outline" onClick={() => void printCoupon()} disabled={coupon}>
               {coupon ? <span className="gecko-spinner gecko-spinner-sm" /> : <Icon name="print" size={16} />}

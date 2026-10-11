@@ -173,6 +173,16 @@ export const UNBILLED_LINES_PATH = '/api/revenue/charges/unbilled/lines';
 export const unbilledExportPath = (q: UnbilledQuery, branchId: string) =>
   `${UNBILLED_ORDERS_PATH}.xlsx?${new URLSearchParams(unbilledParams(q, branchId))}`;
 
+/**
+ * The CHARGES report — every charge line behind the worklist, as a printed
+ * document rather than the orders workbook above.
+ *
+ * It takes the same query the grid already sends, so what prints is what the
+ * clerk is looking at.
+ */
+export const unbilledChargesReportPath = (q: UnbilledQuery, branchId: string, format: 'pdf' | 'xlsx') =>
+  `/api/revenue/charges/unbilled/charges.${format}?${new URLSearchParams(unbilledParams(q, branchId))}`;
+
 /** The lines read is per order — it answers 400 without one. */
 export const unbilledLinesPath = (q: UnbilledQuery, branchId: string, orderNo: string) =>
   `${UNBILLED_LINES_PATH}?${new URLSearchParams({ ...unbilledParams(q, branchId), OrderNo: orderNo })}`;

@@ -5,6 +5,7 @@ import { useRouter } from 'next/navigation';
 import { Icon } from '../../components/ui/Icon';
 import { useSession } from '../../lib/auth/session';
 import { ApiError } from '../../lib/api/problem';
+import { changePassword } from '../../lib/api/client';
 import { LANDING_PATH } from '../../lib/edition';
 
 /**
@@ -28,8 +29,20 @@ export default function LoginPage() {
   const [password, setPassword] = useState(DEV_PASSWORD);
   const [showPassword, setShowPassword] = useState(false);
   const [remember, setRemember] = useState(true);
-  const [errors, setErrors] = useState<{ email?: string; password?: string; general?: string }>({});
+  const [errors, setErrors] = useState<{ email?: string; current?: string; password?: string; general?: string }>({});
   const [submitting, setSubmitting] = useState(false);
+
+  /**
+   * The card flips rather than routing: a clerk who mistypes a password is in
+   * the middle of signing in, and sending them to another URL and back loses
+   * the address they already keyed.
+   */
+  const [view, setView] = useState<'signIn' | 'reset'>('signIn');
+  /** The password they have now — their own, or the one-time one from an admin. */
+  const [currentPassword, setCurrentPassword] = useState('');
+  const [newPassword, setNewPassword] = useState('');
+  const [confirmPassword, setConfirmPassword] = useState('');
+  const [resetDone, setResetDone] = useState(false);
 
   const validate = () => {
     const e: typeof errors = {};
@@ -46,6 +59,56 @@ export default function LoginPage() {
   useEffect(() => {
     if (status === 'authenticated') router.replace(LANDING_PATH);
   }, [status, router]);
+
+  /**
+   * Reset the password of the account named in the form.
+   *
+   * No current password and no emailed link — the owner's decision
+   * (2026-10-10). The API is the only thing checking anything here, so its
+   * refusals are shown as it words them rather than softened.
+   */
+  const onReset = async (event: FormEvent) => {
+    event.preventDefault();
+    const e: typeof errors = {};
+    if (!email.trim()) e.email = 'Email or user name is required.';
+    if (!currentPassword) e.current = 'Enter the password you have now.';
+    if (!newPassword) e.password = 'Enter a new password.';
+    else if (newPassword.length < 6) e.password = 'Password must be at least 6 characters.';
+    else if (newPassword !== confirmPassword) e.password = 'The two passwords do not match.';
+    setErrors(e);
+    if (Object.keys(e).length > 0) return;
+
+    setSubmitting(true);
+    try {
+      await changePassword(email.trim(), currentPassword, newPassword);
+      setResetDone(true);
+      setCurrentPassword('');
+      setNewPassword('');
+      setConfirmPassword('');
+    } catch (error) {
+      const api = error instanceof ApiError ? error : null;
+      // A 400 names the field it refused — the password policy lives on the
+      // server, so its sentence is better than one invented here.
+      const field = api?.forField('newPassword');
+      if (field) setErrors({ password: field });
+      // 401 is a wrong current password, worded as login words it so nothing
+      // leaks about which accounts exist.
+      else if (api?.status === 401) setErrors({ current: 'That password is not right.' });
+      else setErrors({ general: api?.explanation ?? api?.message ?? 'The password could not be changed.' });
+    } finally {
+      setSubmitting(false);
+    }
+  };
+
+  /** Back to signing in, with the form cleared of anything the reset left. */
+  const backToSignIn = () => {
+    setView('signIn');
+    setErrors({});
+    setResetDone(false);
+    setCurrentPassword('');
+    setNewPassword('');
+    setConfirmPassword('');
+  };
 
   const onSubmit = async (event: FormEvent) => {
     event.preventDefault();
@@ -172,15 +235,34 @@ export default function LoginPage() {
             color: 'var(--gecko-text-primary)',
             margin: 0, letterSpacing: '-0.02em', lineHeight: 1.2,
           }}>
-            Welcome back
+            {view === 'signIn' ? 'Welcome back' : 'Change password'}
           </h1>
           <p style={{
             color: 'var(--gecko-text-secondary)',
             marginTop: 6, marginBottom: 32, fontSize: 14,
           }}>
-            Sign in to your account
+            {view === 'signIn'
+              ? 'Sign in to your account'
+              : 'Use the password you have now — or the one-time one your administrator gave you.'}
           </p>
 
+          {view === 'reset' ? (
+            <ResetCard
+              email={email}
+              onEmail={v => { setEmail(v); if (errors.email) setErrors({ ...errors, email: undefined }); }}
+              currentPassword={currentPassword}
+              onCurrentPassword={v => { setCurrentPassword(v); if (errors.current) setErrors({ ...errors, current: undefined }); }}
+              newPassword={newPassword}
+              onNewPassword={v => { setNewPassword(v); if (errors.password) setErrors({ ...errors, password: undefined }); }}
+              confirmPassword={confirmPassword}
+              onConfirmPassword={v => { setConfirmPassword(v); if (errors.password) setErrors({ ...errors, password: undefined }); }}
+              errors={errors}
+              submitting={submitting}
+              done={resetDone}
+              onSubmit={onReset}
+              onBack={backToSignIn}
+            />
+          ) : (
           <form onSubmit={onSubmit} noValidate>
             {errors.general && (
               <div role="alert" style={{
@@ -320,7 +402,8 @@ export default function LoginPage() {
               </label>
               <a
                 href="#forgot"
-                onClick={(e) => { e.preventDefault(); alert('Password reset is not built yet — ADR-006 lists forgot-password and reset-password as part of the auth surface.'); }}
+                onClick={(e) => { e.preventDefault(); setErrors({}); setView('reset'); }}
+                title="Ask an administrator to reset it; they will give you a one-time password to sign in with"
                 style={{
                   fontSize: 13, color: 'var(--gecko-primary-600)',
                   textDecoration: 'none', fontWeight: 500,
@@ -370,6 +453,7 @@ export default function LoginPage() {
               </button>
             </div>
           </form>
+          )}
         </div>
       </div>
 
@@ -382,5 +466,210 @@ export default function LoginPage() {
         }
       `}</style>
     </div>
+  );
+}
+
+/**
+ * THE CHANGE-PASSWORD CARD — the login card, flipped.
+ *
+ * Email (carried from the sign-in form), the password they have now, a new one,
+ * a confirmation. The current password is the proof: it is either their own or
+ * the one-time one an administrator issued, and the API checks it the same way
+ * either way. There is no emailed link and no reset token — the administrator
+ * is the human check, which is how a depot with no mail server does this.
+ *
+ * It is also what satisfies `password_change_required`: the API has been able
+ * to demand a change since LoginService was written, and nothing could answer.
+ *
+ * The two new passwords are matched here because the server never sees the
+ * confirmation; everything else it refuses is shown in its own words.
+ */
+function ResetCard({
+  email, onEmail, currentPassword, onCurrentPassword,
+  newPassword, onNewPassword, confirmPassword, onConfirmPassword,
+  errors, submitting, done, onSubmit, onBack,
+}: {
+  email: string;
+  onEmail: (v: string) => void;
+  currentPassword: string;
+  onCurrentPassword: (v: string) => void;
+  newPassword: string;
+  onNewPassword: (v: string) => void;
+  confirmPassword: string;
+  onConfirmPassword: (v: string) => void;
+  errors: { email?: string; current?: string; password?: string; general?: string };
+  submitting: boolean;
+  done: boolean;
+  onSubmit: (e: FormEvent) => void;
+  onBack: () => void;
+}) {
+  // One per box rather than one for both: a clerk checking a typo usually
+  // wants to read the confirmation against a hidden original.
+  const [showCurrent, setShowCurrent] = useState(false);
+  const [showNew, setShowNew] = useState(false);
+  const [showConfirm, setShowConfirm] = useState(false);
+
+  const label: React.CSSProperties = {
+    display: 'block', fontSize: 13, fontWeight: 600,
+    marginBottom: 6, color: 'var(--gecko-text-primary)',
+  };
+  // Room on the right for the eye, as the sign-in box has.
+  const box: React.CSSProperties = { width: '100%', height: 42, paddingLeft: 36, paddingRight: 40 };
+  const eye: React.CSSProperties = {
+    position: 'absolute', right: 8, top: '50%', transform: 'translateY(-50%)',
+    background: 'transparent', border: 'none',
+    color: 'var(--gecko-text-disabled)', cursor: 'pointer',
+    padding: 6, display: 'flex', alignItems: 'center',
+    borderRadius: 4,
+  };
+
+  if (done) {
+    return (
+      <div>
+        <div role="status" style={{
+          padding: '11px 14px', borderRadius: 8, fontSize: 13,
+          background: 'rgba(22, 163, 74, 0.08)',
+          border: '1px solid rgba(22, 163, 74, 0.25)',
+          color: 'var(--gecko-success-700, #15803d)',
+          display: 'flex', gap: 10, alignItems: 'flex-start',
+        }}>
+          <span style={{ flexShrink: 0, marginTop: 1 }}><Icon name="checkCircle" size={16} /></span>
+          <span>
+            The password for <strong>{email.trim()}</strong> has been changed. Any other device signed
+            in as that account has been signed out.
+          </span>
+        </div>
+        <button type="button" className="gecko-btn gecko-btn-primary" onClick={onBack}
+          style={{ width: '100%', height: 44, fontSize: 14, fontWeight: 600, marginTop: 18 }}>
+          Sign in
+        </button>
+      </div>
+    );
+  }
+
+  return (
+    <form onSubmit={onSubmit} noValidate>
+      {errors.general && (
+        <div role="alert" style={{
+          padding: '11px 14px', borderRadius: 8, fontSize: 13, marginBottom: 18,
+          background: 'rgba(220, 38, 38, 0.07)',
+          border: '1px solid rgba(220, 38, 38, 0.25)',
+          color: 'var(--gecko-error-700, #b91c1c)',
+          display: 'flex', gap: 10, alignItems: 'flex-start',
+        }}>
+          <span style={{ flexShrink: 0, marginTop: 1 }}><Icon name="alertCircle" size={16} /></span>
+          <span>{errors.general}</span>
+        </div>
+      )}
+
+      <div style={{ marginBottom: 18 }}>
+        <label htmlFor="reset-email" style={label}>Email or user name</label>
+        <div style={{ position: 'relative' }}>
+          <span aria-hidden style={{
+            position: 'absolute', left: 12, top: '50%', transform: 'translateY(-50%)',
+            color: 'var(--gecko-text-disabled)', pointerEvents: 'none', display: 'flex',
+          }}>
+            <Icon name="mail" size={16} />
+          </span>
+          <input id="reset-email" type="text" autoComplete="username" className="gecko-input"
+            placeholder="email@example.com" value={email}
+            onChange={e => onEmail(e.target.value)}
+            aria-invalid={!!errors.email}
+            style={{ ...box, borderColor: errors.email ? 'var(--gecko-error-600)' : undefined }} />
+        </div>
+        {errors.email && (
+          <div style={{ color: 'var(--gecko-error-700, #b91c1c)', fontSize: 12, marginTop: 5 }}>{errors.email}</div>
+        )}
+      </div>
+
+      {/* The proof. Their own password, or the one-time one an administrator
+          gave them — the API checks it the same way either way. */}
+      <div style={{ marginBottom: 14 }}>
+        <label htmlFor="reset-current" style={label}>Current or one-time password</label>
+        <div style={{ position: 'relative' }}>
+          <span aria-hidden style={{
+            position: 'absolute', left: 12, top: '50%', transform: 'translateY(-50%)',
+            color: 'var(--gecko-text-disabled)', pointerEvents: 'none', display: 'flex',
+          }}>
+            <Icon name="lock" size={16} />
+          </span>
+          <input id="reset-current" type={showCurrent ? 'text' : 'password'} autoComplete="current-password"
+            className="gecko-input"
+            placeholder="The password you have now" value={currentPassword}
+            onChange={e => onCurrentPassword(e.target.value)}
+            aria-invalid={!!errors.current}
+            style={{ ...box, borderColor: errors.current ? 'var(--gecko-error-600)' : undefined }} />
+          <button type="button" onClick={() => setShowCurrent(v => !v)} tabIndex={-1}
+            aria-label={showCurrent ? 'Hide password' : 'Show password'} style={eye}>
+            <Icon name={showCurrent ? 'eyeOff' : 'eye'} size={16} />
+          </button>
+        </div>
+        {errors.current && (
+          <div style={{ color: 'var(--gecko-error-700, #b91c1c)', fontSize: 12, marginTop: 5 }}>{errors.current}</div>
+        )}
+      </div>
+
+      <div style={{ marginBottom: 14 }}>
+        <label htmlFor="reset-new" style={label}>New password</label>
+        <div style={{ position: 'relative' }}>
+          <span aria-hidden style={{
+            position: 'absolute', left: 12, top: '50%', transform: 'translateY(-50%)',
+            color: 'var(--gecko-text-disabled)', pointerEvents: 'none', display: 'flex',
+          }}>
+            <Icon name="lock" size={16} />
+          </span>
+          <input id="reset-new" type={showNew ? 'text' : 'password'} autoComplete="new-password"
+            className="gecko-input"
+            placeholder="At least 6 characters" value={newPassword}
+            onChange={e => onNewPassword(e.target.value)}
+            aria-invalid={!!errors.password}
+            style={{ ...box, borderColor: errors.password ? 'var(--gecko-error-600)' : undefined }} />
+          <button type="button" onClick={() => setShowNew(v => !v)} tabIndex={-1}
+            aria-label={showNew ? 'Hide password' : 'Show password'} style={eye}>
+            <Icon name={showNew ? 'eyeOff' : 'eye'} size={16} />
+          </button>
+        </div>
+      </div>
+
+      <div style={{ marginBottom: 18 }}>
+        <label htmlFor="reset-confirm" style={label}>Confirm password</label>
+        <div style={{ position: 'relative' }}>
+          <span aria-hidden style={{
+            position: 'absolute', left: 12, top: '50%', transform: 'translateY(-50%)',
+            color: 'var(--gecko-text-disabled)', pointerEvents: 'none', display: 'flex',
+          }}>
+            <Icon name="lock" size={16} />
+          </span>
+          <input id="reset-confirm" type={showConfirm ? 'text' : 'password'} autoComplete="new-password"
+            className="gecko-input"
+            placeholder="Type it again" value={confirmPassword}
+            onChange={e => onConfirmPassword(e.target.value)}
+            aria-invalid={!!errors.password}
+            style={{ ...box, borderColor: errors.password ? 'var(--gecko-error-600)' : undefined }} />
+          <button type="button" onClick={() => setShowConfirm(v => !v)} tabIndex={-1}
+            aria-label={showConfirm ? 'Hide password' : 'Show password'} style={eye}>
+            <Icon name={showConfirm ? 'eyeOff' : 'eye'} size={16} />
+          </button>
+        </div>
+        {errors.password && (
+          <div style={{ color: 'var(--gecko-error-700, #b91c1c)', fontSize: 12, marginTop: 5 }}>{errors.password}</div>
+        )}
+      </div>
+
+      <button type="submit" className="gecko-btn gecko-btn-primary" disabled={submitting}
+        style={{ width: '100%', height: 44, fontSize: 14, fontWeight: 600 }}>
+        {submitting ? 'Updating…' : 'Update password'}
+      </button>
+
+      <p style={{ marginTop: 20, fontSize: 13, textAlign: 'center' }}>
+        <button type="button" onClick={onBack}
+          style={{
+            background: 'none', border: 0, padding: 0, cursor: 'pointer',
+            color: 'var(--gecko-primary-600)', fontSize: 13, fontWeight: 500,
+          }}>
+          ← Back to sign in
+        </button>
+      </p>
+    </form>
   );
 }

@@ -12,7 +12,10 @@ import type { ReportDef } from '@/lib/reports-catalog';
  * for "Daily Unstuffing" needs to know it is coming, not wonder where it went.
  */
 export function ReportCard({ report, onRun }: { report: ReportDef; onRun: () => void }) {
-  const live = !!report.live;
+  // A report the API RENDERS is runnable too — `document` arrived after this
+  // card was written, so Empty in Yard and the whole accounting set were still
+  // saying "Not available yet" while their endpoints worked.
+  const live = !!report.live || !!report.document;
   return (
     <button onClick={onRun} type="button"
       className={`gecko-report-card${live ? '' : ' gecko-report-card-soon'}`}>

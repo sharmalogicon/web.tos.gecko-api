@@ -90,6 +90,12 @@ export const RECEIPTS_PATH = '/api/revenue/window/receipts';
 export const receiptPath = (id: string) => `${RECEIPTS_PATH}/${encodeURIComponent(id)}`;
 export const receiptPdfPath = (id: string) => `${receiptPath(id)}/receipt.pdf`;
 export const couponPdfPath = (id: string) => `${receiptPath(id)}/coupon.pdf`;
+/**
+ * The CASH INVOICE form — an overlay for the depot's pre-printed stationery, so
+ * it prints values at fixed places and looks sparse on plain paper. Needs
+ * `revenue.cash.collect`, like the coupon.
+ */
+export const cashInvoicePdfPath = (id: string) => `${receiptPath(id)}/cash-invoice.pdf`;
 
 /**
  * HAND THE RECEIPT PDF TO THE BROWSER — the only correct way to do it.

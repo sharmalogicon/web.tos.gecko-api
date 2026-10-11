@@ -9,12 +9,20 @@ import {
   ACCOUNTS_REPORTS, groupReports,
   type ReportDef,
 } from '@/lib/reports-catalog';
+import type { ParamValues } from '@/components/reports/ReportParamsDrawer';
+import { useFacility } from '@/lib/api/facility';
+import { ApiError } from '@/lib/api/problem';
+import { downloadReport, missingRequired, rangeTooLong, RANGE_LIMIT_DAYS } from '@/lib/api/report-documents';
 
 export default function AccountsReportsPage() {
   const { toast } = useToast();
   const router = useRouter();
   const [activeReport, setActiveReport] = useState<ReportDef | null>(null);
   const [search, setSearch] = useState('');
+  const [busy, setBusy] = useState(false);
+  const [problem, setProblem] = useState<{ message: string; field?: string } | null>(null);
+  const { branch } = useFacility();
+  const branchId = branch?.branchId ?? '';
 
   const filtered = useMemo(() => {
     const q = search.trim().toLowerCase();
@@ -34,7 +42,49 @@ export default function AccountsReportsPage() {
    * ever arrived. On a live cutover that is the worst kind of bug: the clerk
    * believes it worked and waits.
    */
-  const onGenerate = (r: ReportDef) => {
+  const onGenerate = async (r: ReportDef, vals: ParamValues, format: 'pdf' | 'xlsx') => {
+    // A report the API renders wins over any `live` screen: two of the cash
+    // receipt cards keep their link to /reports/accounts-api as well.
+    if (r.document) {
+      const bag = vals as unknown as Record<string, string>;
+      const missing = missingRequired(r, bag);
+      if (missing.length > 0) {
+        setProblem({ message: 'This report needs a date range.', field: missing[0] });
+        return;
+      }
+      if (rangeTooLong(vals.dateFrom, vals.dateTo)) {
+        setProblem({ message: `The range is longer than ${RANGE_LIMIT_DAYS} days, which the API refuses.`, field: 'dateTo' });
+        return;
+      }
+      setBusy(true);
+      setProblem(null);
+      try {
+        await downloadReport(r, format, branchId, {
+          ...bag,
+          /**
+           * The accounting endpoints want the two halves of Type — Size apart:
+           * `size=40` and `type=HC`. The drawer's second select holds a whole
+           * equipment typeCode (`40HC`, `20RF`), so the size prefix comes off.
+           * The operational reports take the typeCode whole and are untouched.
+           */
+          type: (vals.type ?? '').replace(/^\d+/, ''),
+        });
+        toast({ variant: 'success', title: `${r.title} ready`, message: `Downloaded as ${format.toUpperCase()}.` });
+        setActiveReport(null);
+      } catch (e) {
+        const err = e instanceof ApiError ? e : null;
+        setProblem({
+          message: err?.status === 403
+            ? 'That depot is not one you cover.'
+            : err?.status === 404
+              ? 'That depot is not known.'
+              : err?.explanation ?? err?.message ?? 'The report could not be generated.',
+        });
+      } finally {
+        setBusy(false);
+      }
+      return;
+    }
     if (r.live) {
       router.push(r.live);
       setActiveReport(null);
@@ -102,8 +152,10 @@ export default function AccountsReportsPage() {
 
       <ReportParamsDrawer
         report={activeReport}
-        onClose={() => setActiveReport(null)}
-        onGenerate={onGenerate}
+        busy={busy}
+        problem={problem}
+        onClose={() => { setActiveReport(null); setProblem(null); }}
+        onGenerate={(r, v, f) => void onGenerate(r, v, f)}
       />
     </div>
   );

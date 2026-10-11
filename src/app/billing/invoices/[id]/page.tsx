@@ -20,13 +20,16 @@
  * when the data actually carries it.
  */
 
-import React from 'react';
+import React, { useState } from 'react';
 import Link from 'next/link';
 import { useParams } from 'next/navigation';
 import { Icon } from '@/components/ui/Icon';
 import { EmptyState } from '@/components/ui/EmptyState';
 import { BarcodeDisplay } from '@/components/ui/BarcodeDisplay';
 import { useApi } from '@/lib/api/use-api';
+import { useToast } from '@/components/ui/Toast';
+import { ApiError } from '@/lib/api/problem';
+import { openPdf } from '@/lib/api/open-pdf';
 import { useFacility } from '@/lib/api/facility';
 import { amount } from '@/lib/api/charges';
 import { INVOICE_STATUS, invoicePath, lineView, type InvoiceDetail } from '@/lib/api/invoices';
@@ -39,6 +42,27 @@ export default function InvoiceDetailPage() {
 
   const { branch, company } = useFacility();
   const { data, error, loading } = useApi<InvoiceDetail>(invoiceId ? invoicePath(invoiceId) : null);
+  const [busy, setBusy] = useState<'credit' | 'cash' | null>(null);
+  const { toast } = useToast();
+
+  /**
+   * The invoice form the API renders. `?format=cash` is the same document laid
+   * out for the cash stationery; the clerk picks which paper is in the printer.
+   */
+  const printInvoice = async (which: 'credit' | 'cash', name: string) => {
+    if (!invoiceId) return;
+    setBusy(which);
+    try {
+      const q = which === 'cash' ? '?format=cash' : '';
+      await openPdf(`${invoicePath(invoiceId)}/invoice.pdf${q}`, name);
+    } catch (e) {
+      const err = e instanceof ApiError ? e : null;
+      toast({ variant: 'danger', title: 'Invoice not printed',
+        message: err?.explanation ?? err?.title ?? 'Could not reach the Gecko API.' });
+    } finally {
+      setBusy(null);
+    }
+  };
   const inv = data?.invoice;
   const lines = (data?.lines ?? []).map(lineView);
 
@@ -58,8 +82,22 @@ export default function InvoiceDetailPage() {
           <span className="gecko-breadcrumb-current gecko-mono">{inv?.invoiceNo ?? invoiceId}</span>
         </nav>
         <div className="gecko-row gecko-stack-md gecko-no-print">
-          <button className="gecko-btn gecko-btn-outline gecko-btn-sm" onClick={() => window.print()} disabled={!inv}>
-            <Icon name="printer" size={15} /> Print
+          {/* The API's own documents, not the browser printing this screen.
+              Both are overlays for the depot's pre-printed stationery: values
+              at fixed places, so they look sparse on plain paper. */}
+          <button className="gecko-btn gecko-btn-outline gecko-btn-sm" disabled={!inv || busy !== null}
+            onClick={() => void printInvoice('credit', `${inv?.invoiceNo ?? invoiceId}.pdf`)}>
+            {busy === 'credit'
+              ? <span className="gecko-spinner gecko-spinner-sm" />
+              : <Icon name="printer" size={15} />}
+            {busy === 'credit' ? 'Preparing…' : 'Print'}
+          </button>
+          <button className="gecko-btn gecko-btn-outline gecko-btn-sm" disabled={!inv || busy !== null}
+            onClick={() => void printInvoice('cash', `${inv?.invoiceNo ?? invoiceId}-cash.pdf`)}>
+            {busy === 'cash'
+              ? <span className="gecko-spinner gecko-spinner-sm" />
+              : <Icon name="printer" size={15} />}
+            {busy === 'cash' ? 'Preparing…' : 'Print cash format'}
           </button>
         </div>
       </div>

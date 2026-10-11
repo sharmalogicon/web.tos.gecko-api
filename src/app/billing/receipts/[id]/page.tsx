@@ -29,9 +29,11 @@ import { ApiError } from '@/lib/api/problem';
 import { amount } from '@/lib/api/charges';
 import { formatContainerNo } from '@/lib/api/tos';
 import {
-  canChangePayer, canDivide, channelLabel, downloadReceiptPdf, receiptPath, voidReceipt, type Receipt,
+  canChangePayer, canDivide, cashInvoicePdfPath, channelLabel, downloadReceiptPdf,
+  receiptPath, voidReceipt, type Receipt,
 } from '@/lib/api/receipts';
 import { SplitReceiptModal } from '../../_components/SplitReceiptModal';
+import { openPdf } from '@/lib/api/open-pdf';
 
 export default function CashBillPage() {
   const params = useParams<{ id: string }>();
@@ -42,8 +44,24 @@ export default function CashBillPage() {
   const { toast } = useToast();
   const [voiding, setVoiding] = useState(false);
   const [splitting, setSplitting] = useState(false);
+  const [cashInvoice, setCashInvoice] = useState(false);
 
   const mayVoid = (user?.permissions ?? []).includes('revenue.receipt.void');
+  const mayCollect = (user?.permissions ?? []).includes('revenue.cash.collect');
+
+  const printCashInvoice = async () => {
+    if (!r) return;
+    setCashInvoice(true);
+    try {
+      await openPdf(cashInvoicePdfPath(r.receiptId), `${r.receiptNo}-cash-invoice.pdf`);
+    } catch (e) {
+      const err = e instanceof ApiError ? e : null;
+      toast({ variant: 'danger', title: 'Cash invoice not printed',
+        message: err?.explanation ?? err?.title ?? 'Could not reach the Gecko API.' });
+    } finally {
+      setCashInvoice(false);
+    }
+  };
   // Changing who a receipt is made out to re-points a tax document, so it is
   // the same right as voiding one.
   const maySplit = mayVoid;
@@ -80,6 +98,17 @@ export default function CashBillPage() {
             <button className="gecko-btn gecko-btn-outline gecko-btn-sm"
               onClick={() => void downloadReceiptPdf(r.receiptId, r.receiptNo)}>
               <Icon name="print" size={14} /> Receipt PDF
+            </button>
+          )}
+          {/* The cash-invoice overlay for the depot's pre-printed stationery.
+              Needs revenue.cash.collect, so it is not offered without it. */}
+          {r && mayCollect && (
+            <button className="gecko-btn gecko-btn-outline gecko-btn-sm" disabled={cashInvoice}
+              onClick={() => void printCashInvoice()}>
+              {cashInvoice
+                ? <span className="gecko-spinner gecko-spinner-sm" />
+                : <Icon name="print" size={14} />}
+              {cashInvoice ? 'Preparing…' : 'Cash invoice'}
             </button>
           )}
           <button className="gecko-btn gecko-btn-outline gecko-btn-sm" onClick={reload} disabled={!r}>

@@ -2,7 +2,8 @@
 import React, { useState } from 'react';
 import { Icon } from '../ui/Icon';
 import { DateField } from '../ui/DateField';
-import { useApiList } from '@/lib/api/use-api';
+import { useApi, useApiList } from '@/lib/api/use-api';
+import { RECEIPTS_PATH, reportPath, type ReceiptsReport } from '@/lib/api/reports';
 import { useFacility } from '@/lib/api/facility';
 import { useMovements } from '@/lib/api/lookups';
 import { yardsPath, type Yard } from '@/lib/api/yards';
@@ -45,6 +46,10 @@ export interface ParamValues {
   bookingDate?: string;
   truckCategory?: string;
   movementCode?: string;
+  /** A user GUID, not a code — the cash-receipt listings group by cashier. */
+  cashierUser?: string;
+  /** A calendar year, for the two reports that summarise one. */
+  year?: string;
   userId?: string;
   dateFrom: string;
   dateTo: string;
@@ -110,6 +115,20 @@ export function ReportParamsDrawer({ report, onClose, onGenerate, busy, problem 
   const { data: yards } = useApiList<Yard>(branchId ? yardsPath(branchId) : null);
   const { movements } = useMovements();
 
+  /**
+   * The cashiers to choose from.
+   *
+   * NOT /api/users: that is gated on user-manage, which an accounts clerk does
+   * not have — the dropdown would be empty for exactly the people running this
+   * report. The receipts report needs `revenue.charge.view`, the same as the
+   * report itself, and answers the cashiers who took money in the range.
+   */
+  const wantsCashier = Boolean(report?.params.includes('cashierUser'));
+  const { data: receiptsReport } = useApi<ReceiptsReport>(
+    wantsCashier && branchId && vals.dateFrom && vals.dateTo
+      ? reportPath(RECEIPTS_PATH, branchId, vals.dateFrom.slice(0, 10), vals.dateTo.slice(0, 10))
+      : null);
+
   const parties = (rows: PartyRow[] | null): Opt[] => [
     { value: '', label: 'Any' },
     ...(rows ?? []).map(p => ({ value: p.partyCode, label: `${p.partyCode} — ${p.nameEn}` })),
@@ -126,12 +145,23 @@ export function ReportParamsDrawer({ report, onClose, onGenerate, busy, problem 
     const today = new Date();
     const from = new Date(today);
     from.setDate(from.getDate() - 30);
-    setVals({ ...BLANK, dateFrom: dayOf(from), dateTo: dayOf(today) });
+    // A timed report opens on the whole of each day; the clerk narrows to the
+    // shift. `datetime-local` will not accept a bare date.
+    const thisYear = String(today.getFullYear());
+    setVals(report.dateTime
+      ? { ...BLANK, year: thisYear, dateFrom: `${dayOf(from)}T00:00`, dateTo: `${dayOf(today)}T23:59` }
+      : { ...BLANK, year: thisYear, dateFrom: dayOf(from), dateTo: dayOf(today) });
   }
 
   if (!report) return null;
   const set = <K extends keyof ParamValues>(k: K, v: ParamValues[K]) => setVals(p => ({ ...p, [k]: v }));
   const need = (k: ReportParamKey) => report.params.includes(k);
+  /**
+   * Booking Container List takes EITHER a booking number or a range, never
+   * both — the API refuses the pair — so the range disappears once a number is
+   * keyed, and `onGenerate` drops it from the query.
+   */
+  const hideRange = Boolean(report.datesUnless && (vals[report.datesUnless] ?? '').trim());
   const real = Boolean(report.document);
 
   return (
@@ -154,6 +184,15 @@ export function ReportParamsDrawer({ report, onClose, onGenerate, busy, problem 
           <div role="alert" className="gecko-alert gecko-alert-error gecko-report-drawer-problem">
             <Icon name="alertCircle" size={16} />
             <span>{problem.message}</span>
+          </div>
+        )}
+
+        {/* What the report will and will not print, before the clerk waits for
+            it. Three of them have no data in Gecko yet and print headings. */}
+        {report.note && (
+          <div role="status" className="gecko-alert gecko-alert-info gecko-report-drawer-problem">
+            <Icon name="alertCircle" size={16} />
+            <span>{report.note}</span>
           </div>
         )}
 
@@ -250,6 +289,21 @@ export function ReportParamsDrawer({ report, onClose, onGenerate, busy, problem 
             <SelectField label={PARAM_LABELS.truckCategory} value={vals.truckCategory ?? ''}
               onChange={v => set('truckCategory', v)} opts={TRUCK_CATS} />
           )}
+          {need('year') && (
+            <div className="gecko-field">
+              <div className="gecko-field-label">
+                {PARAM_LABELS.year}<span className="gecko-report-required"> *</span>
+              </div>
+              <input type="number" min={2000} max={2100} className="gecko-input gecko-input-sm"
+                value={vals.year ?? ''} onChange={e => set('year', e.target.value)} />
+            </div>
+          )}
+          {need('cashierUser') && (
+            <SelectField label={PARAM_LABELS.cashierUser} value={vals.cashierUser ?? ''}
+              onChange={v => set('cashierUser', v)}
+              opts={[{ value: '', label: 'Any' }, ...(receiptsReport?.cashiers ?? [])
+                .map(c => ({ value: c.cashierUserId, label: c.cashierName ?? c.cashierUserId }))]} />
+          )}
           {need('movementCode') && (
             <SelectField label={PARAM_LABELS.movementCode} value={vals.movementCode ?? ''}
               onChange={v => set('movementCode', v)}
@@ -257,17 +311,34 @@ export function ReportParamsDrawer({ report, onClose, onGenerate, busy, problem 
                 .map(m => ({ value: m.movementCode, label: `${m.movementCode} — ${m.descriptionEn}` }))]} />
           )}
 
-          {/* Every report takes a range; only some insist on one. */}
-          <div className="gecko-field gecko-field-span-2">
-            <div className="gecko-field-label">
-              Date Range
-              {report.document?.required?.length ? <span className="gecko-report-required"> *</span> : null}
+          {/* Monitoring (Day) is a snapshot: its RDL has no dates, so offering
+              a range would offer a filter the server ignores. */}
+          {!report.noDates && !hideRange && (
+            <div className="gecko-field gecko-field-span-2">
+              <div className="gecko-field-label">
+                {report.dateLabel ?? 'Date Range'}
+                {report.document?.required?.length ? <span className="gecko-report-required"> *</span> : null}
+                {report.dateTime && <span className="gecko-cell-meta"> · a shift, not a day</span>}
+              </div>
+              <div className="gecko-report-pair">
+                {report.dateTime ? (
+                  <>
+                    <input type="datetime-local" className="gecko-input gecko-input-sm"
+                      aria-label="From" value={vals.dateFrom}
+                      onChange={e => set('dateFrom', e.target.value)} />
+                    <input type="datetime-local" className="gecko-input gecko-input-sm"
+                      aria-label="To" value={vals.dateTo}
+                      onChange={e => set('dateTo', e.target.value)} />
+                  </>
+                ) : (
+                  <>
+                    <DateField value={vals.dateFrom} onChange={v => set('dateFrom', v)} />
+                    <DateField value={vals.dateTo} onChange={v => set('dateTo', v)} />
+                  </>
+                )}
+              </div>
             </div>
-            <div className="gecko-report-pair">
-              <DateField value={vals.dateFrom} onChange={v => set('dateFrom', v)} />
-              <DateField value={vals.dateTo} onChange={v => set('dateTo', v)} />
-            </div>
-          </div>
+          )}
         </div>
 
         {/* Footer */}

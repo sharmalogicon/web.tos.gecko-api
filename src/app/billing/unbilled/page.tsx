@@ -7,6 +7,7 @@ import { SendToInvoiceModal, type InvoiceCandidate } from '../statement/_compone
 import { Icon } from '@/components/ui/Icon';
 import { DateField } from '@/components/ui/DateField';
 import { apiDownload, apiGet, saveBlob } from '@/lib/api/client';
+import { openPdf } from '@/lib/api/open-pdf';
 import { useApi, useApiList } from '@/lib/api/use-api';
 import { useServerList } from '@/lib/api/use-server-list';
 import { useFacility } from '@/lib/api/facility';
@@ -17,7 +18,7 @@ import { formatDate } from '@/lib/format';
 import { CHARGE_PERMISSIONS, unbilledPath, type Unbilled } from '@/lib/api/charges';
 import {
   PROGRESS_LABELS, UNBILLED_ORDERS_PATH, UNBILLED_PROGRESS, blankUnbilledQuery, money,
-  selectionTotals, unbilledExportPath, unbilledLinesPath, unbilledParams,
+  selectionTotals, unbilledChargesReportPath, unbilledExportPath, unbilledLinesPath, unbilledParams,
   type UnbilledLine, type UnbilledOrder, type UnbilledOrdersPage, type UnbilledProgress,
   type UnbilledQuery,
 } from '@/lib/api/unbilled-orders';
@@ -177,6 +178,22 @@ export default function UnbilledOrdersPage_() {
     finally { setExporting(false); }
   }, [applied, branchId]);
 
+  /**
+   * The CHARGES report, as a document.
+   *
+   * It takes the same query the grid is showing, so what prints is what the
+   * clerk is looking at — not the whole branch.
+   */
+  const [reporting, setReporting] = useState<'pdf' | 'xlsx' | null>(null);
+  const printReport = useCallback(async (format: 'pdf' | 'xlsx') => {
+    setReporting(format);
+    try {
+      await openPdf(unbilledChargesReportPath(applied, branchId, format),
+        `unbilled-charges-${new Date().toISOString().slice(0, 10)}.${format}`);
+    } catch { /* the button simply stops spinning */ }
+    finally { setReporting(null); }
+  }, [applied, branchId]);
+
   if (!mayView) {
     return <div className="gecko-card gecko-card-padded gecko-dash-placeholder">
       You do not have permission to view charges.
@@ -198,8 +215,23 @@ export default function UnbilledOrdersPage_() {
         </div>
         <div className="gecko-toolbar">
           <button className="gecko-btn gecko-btn-outline gecko-btn-sm" onClick={exportXlsx}
-            disabled={!branchId || exporting}>
-            <Icon name="print" size={13} /> {exporting ? 'Preparing…' : 'Print'}
+            disabled={!branchId || exporting}
+            title="The orders grid as a workbook">
+            <Icon name="download" size={13} /> {exporting ? 'Preparing…' : 'Orders (Excel)'}
+          </button>
+          <button className="gecko-btn gecko-btn-outline gecko-btn-sm"
+            onClick={() => void printReport('pdf')} disabled={!branchId || reporting !== null}>
+            {reporting === 'pdf'
+              ? <span className="gecko-spinner gecko-spinner-sm" />
+              : <Icon name="print" size={13} />}
+            {reporting === 'pdf' ? 'Preparing…' : 'Print report'}
+          </button>
+          <button className="gecko-btn gecko-btn-outline gecko-btn-sm"
+            onClick={() => void printReport('xlsx')} disabled={!branchId || reporting !== null}>
+            {reporting === 'xlsx'
+              ? <span className="gecko-spinner gecko-spinner-sm" />
+              : <Icon name="download" size={13} />}
+            {reporting === 'xlsx' ? 'Preparing…' : 'Report (Excel)'}
           </button>
           <button className="gecko-btn gecko-btn-outline gecko-btn-sm" onClick={orders.reload}>
             <Icon name="refresh" size={13} /> Refresh

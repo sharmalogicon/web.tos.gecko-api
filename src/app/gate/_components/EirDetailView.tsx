@@ -318,10 +318,14 @@ export function EirDetailView({ id }: { id: string }) {
               )))}
             </tbody>
           </table>
-          <div className="gecko-row gecko-row-between" style={{ marginTop: 10 }}>
+          {/* `Line` is a <tr>. These two were inside a <div>, which is invalid
+              HTML and threw a hydration error on every visit to this page —
+              "<tr> cannot be a child of <div>". They belong in a table like
+              every other fact on the card. */}
+          <Facts>
             <Line label="Paid at the window" value={formatBaht(charges.data.paidNow.total)} />
             <Line label="Billed later" value={formatBaht(charges.data.billedLater.total)} />
-          </div>
+          </Facts>
         </Section>
       )}
 

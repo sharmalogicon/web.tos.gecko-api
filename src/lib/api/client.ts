@@ -213,6 +213,34 @@ export async function login(email: string, password: string): Promise<AccessToke
   return store(await response.json());
 }
 
+/**
+ * CHANGE A PASSWORD WITHOUT BEING SIGNED IN.
+ *
+ * Anonymous, like /auth/login, because the caller has no token yet — but NOT
+ * open: `currentPassword` is the proof. It is either the password they know, or
+ * the one-time one an administrator gave them.
+ *
+ * This is what satisfies `password_change_required`. `LoginService` answers 403
+ * with that code when a credential is flagged `MustChange` or has expired, and
+ * until now nothing in Gecko could clear it — a user in that state was locked
+ * out with nowhere to go.
+ *
+ * The API applies the tenant's password policy, revokes the account's refresh
+ * sessions and answers 204. A wrong current password answers 401 worded exactly
+ * like a failed login, so nothing leaks about which accounts exist.
+ *
+ * See docs/PASSWORD_RECOVERY_FOR_API.md.
+ */
+export async function changePassword(
+  emailOrUserName: string, currentPassword: string, newPassword: string,
+): Promise<void> {
+  const response = await send('/auth/change-password', {
+    method: 'POST',
+    body: JSON.stringify({ emailOrUserName, currentPassword, newPassword }),
+  });
+  if (!response.ok) throw await toApiError(response);
+}
+
 /** Ends the session server-side and clears the cookie; the local token goes either way. */
 export async function logout(): Promise<void> {
   try {

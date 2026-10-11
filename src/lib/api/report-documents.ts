@@ -33,7 +33,13 @@ export function reportQuery(report: ReportDef, branchId: string, values: ReportP
   if (!doc) return '';
   const p = new URLSearchParams();
   if (branchId) p.set('branchId', branchId);
+  /**
+   * A range the drawer hid must not be sent either. Booking Container List
+   * takes a booking number OR a range; sending both is a 400.
+   */
+  const hideRange = Boolean(report.datesUnless && String(values[report.datesUnless] ?? '').trim());
   for (const [field, apiName] of Object.entries(doc.params)) {
+    if (hideRange && (field === 'dateFrom' || field === 'dateTo')) continue;
     if (!apiName) continue;
     const v = values[field];
     if (v === null || v === undefined || String(v).trim() === '') continue;
@@ -79,6 +85,7 @@ export async function downloadReport(
  */
 export function missingRequired(report: ReportDef, values: ReportParamBag): string[] {
   const need = report.document?.required ?? [];
+  if (report.datesUnless && String(values[report.datesUnless] ?? '').trim()) return [];
   return need.filter(k => !String(values[k] ?? '').trim());
 }
 
