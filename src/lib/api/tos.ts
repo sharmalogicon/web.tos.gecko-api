@@ -175,11 +175,18 @@ export const DECISION_TONE: Record<GateDecision, { tone: string; label: string; 
 
 export const SEVERITY_TONE: Record<GateSeverity, string> = { INFO: "info", WARN: "warning", OVERRIDE: "warning", BLOCK: "error" };
 
-/** A container number as the yard writes it: ABCU 123456 7. */
+/**
+ * A container number, exactly as it is recorded.
+ *
+ * It used to be split "ABCU 123456 7" \u2014 ISO 6346's owner code, serial and
+ * check digit. That spacing is a claim about the number's structure, and this
+ * depot handles plenty of boxes that have no such structure: an 11-character
+ * non-ISO number came out "CONT 299087 6", breaking off a last character that
+ * is not a check digit at all. Operators who do not register with ISO use their
+ * own format, and the screen shows it to them unaltered (owner 2026-10-12).
+ */
 export function formatContainerNo(containerNo: string): string {
-  return containerNo.length === 11
-    ? `${containerNo.slice(0, 4)} ${containerNo.slice(4, 10)} ${containerNo.slice(10)}`
-    : containerNo;
+  return containerNo;
 }
 
 export { formatDate, formatDateTime } from "../format";

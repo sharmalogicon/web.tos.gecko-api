@@ -10,13 +10,14 @@ import { useSession } from '@/lib/auth/session';
 import { ApiError } from '@/lib/api/problem';
 import { useCommercialVocabulary } from '@/lib/api/charge-codes';
 import {
-  deleteOrderType, replaceCharges, replaceSteps, updateOrderType, useOrderTypeVocabulary,
-  type OrderType, type OrderTypeDetail, type OrderTypeStep,
+  deleteOrderType, replaceCharges, replaceSteps, ruleErrors, saveRules, updateOrderType, useOrderTypeVocabulary,
+  type OrderType, type OrderTypeDetail, type OrderTypeRules, type OrderTypeStep,
 } from '@/lib/api/order-types';
 import { isPathAvailable } from '@/lib/edition';
 import { OrderTypeForm, formFromOrderType, orderTypeErrors, requestFromOrderType, type OrderTypeFormValue } from './_components/OrderTypeForm';
 import { StepsEditor, requestFromSteps, rowsFromSteps, stepErrors, type StepRow } from './_components/StepsEditor';
 import { ChargesTables } from './_components/ChargesTables';
+import { RulesEditor, RulesSummary, rulesDiffer, rulesFrom, walkInShape } from './_components/RulesPanel';
 import { chargeRowErrors, requestFromCharges, rowsFromCharges, type ChargeRow } from './_components/charge-rows';
 
 /**
@@ -261,19 +262,21 @@ export default function OrderTypeMasterPage() {
   // ── editing: one section at a time ──────────────────────────────────────
   const { data: vocabulary } = useOrderTypeVocabulary();
   const { data: commercial } = useCommercialVocabulary();
-  const [mode, setMode] = useState<'view' | 'header' | 'steps'>('view');
+  const [mode, setMode] = useState<'view' | 'header' | 'steps' | 'rules'>('view');
   const [form, setForm] = useState<OrderTypeFormValue | null>(null);
   const [stepRows, setStepRows] = useState<StepRow[]>([]);
+  const [ruleForm, setRuleForm] = useState<OrderTypeRules | null>(null);
   const [submitted, setSubmitted] = useState(false);
   const [busy, setBusy] = useState(false);
   const [actionError, setActionError] = useState<ApiError | null>(null);
   const [confirmDelete, setConfirmDelete] = useState(false);
   const canEdit = canManage && mode === 'view' && !!vocabulary && !!commercial;
 
-  const begin = (next: 'header' | 'steps') => {
+  const begin = (next: 'header' | 'steps' | 'rules') => {
     if (!current) return;
     setForm(formFromOrderType(current.orderType));
     setStepRows(rowsFromSteps(current.movements));
+    setRuleForm(rulesFrom(current.orderType.rules));
     setSubmitted(false);
     setActionError(null);
     setMode(next);
@@ -299,8 +302,11 @@ export default function OrderTypeMasterPage() {
 
   // Memoised because the charge rows and their errors are derived from it.
   const savedStepCodes = useMemo(() => [...steps].sort((a, b) => a.sequenceNo - b.sequenceNo).map(m => m.movementCode), [steps]);
+  const savedRules = useMemo(() => rulesFrom(ot?.rules), [ot?.rules]);
+  const walkIn = useMemo(() => walkInShape(steps, vocabulary), [steps, vocabulary]);
   const headerErrors = submitted && form ? orderTypeErrors(form) : {};
-  const stepRowErrors = submitted ? stepErrors(stepRows) : {};
+  const stepRowErrors = submitted ? stepErrors(stepRows, savedRules.isWalkIn) : {};
+  const ruleFormErrors = submitted && ruleForm ? ruleErrors(ruleForm, steps.length, walkIn.ok) : {};
 
   // Derived from the API's own answer, not copied into state: a charge is saved
   // the moment the dialog closes, so a second copy could only go stale against
@@ -319,8 +325,26 @@ export default function OrderTypeMasterPage() {
   const saveSteps = () => {
     if (!current) return;
     setSubmitted(true);
-    if (Object.keys(stepErrors(stepRows)).length > 0) return;
+    if (Object.keys(stepErrors(stepRows, savedRules.isWalkIn)).length > 0) return;
     run(() => replaceSteps(current.orderType.orderTypeCode, requestFromSteps(stepRows), current.orderType.rowVersion), 'Gate steps saved');
+  };
+  /**
+   * The Rules panel saves on its own — a PUT of the order type carrying `rules`
+   * beside the header's unchanged fields. The header's own Save leaves `rules`
+   * out entirely, so neither form can wipe what the other holds.
+   */
+  const saveRulesPanel = () => {
+    if (!current || !ruleForm) return;
+    setSubmitted(true);
+    if (Object.keys(ruleErrors(ruleForm, steps.length, walkInShape(steps, vocabulary).ok)).length > 0) return;
+    run(
+      () => saveRules(
+        current.orderType.orderTypeCode,
+        requestFromOrderType(formFromOrderType(current.orderType), current.orderType.rowVersion),
+        ruleForm,
+      ),
+      'Rules saved',
+    );
   };
   /**
    * One charge changed, so the whole set goes back: the API has no per-charge
@@ -551,6 +575,41 @@ export default function OrderTypeMasterPage() {
                   )}
                 </div>
               )}
+
+              {/* Rules — order-type-wide, as opposed to the per-step gate flags below */}
+              <div className="gecko-table-card gecko-ot-rules-card">
+                <div className="gecko-ot-rules-head">
+                  <Icon name="shieldCheck" size={16} className="gecko-ot-rules-icon" />
+                  <span className="gecko-ot-rules-title">Rules</span>
+                  <span className="gecko-page-subtitle">— what the gate does with a truck on this order type</span>
+                  {savedRules.isWalkIn && walkIn.chip && (
+                    <span className="gecko-badge gecko-badge-info">Walk-in · {walkIn.chip}</span>
+                  )}
+                  {canEdit && (
+                    <button className="gecko-btn gecko-btn-outline gecko-btn-sm gecko-ml-auto"
+                      onClick={() => begin('rules')} disabled={busy}>
+                      <Icon name="edit" size={14} /> Edit rules
+                    </button>
+                  )}
+                </div>
+                <div className="gecko-ot-rules-body">
+                  {mode === 'rules' && ruleForm ? (
+                    <div className="gecko-stack gecko-stack-md">
+                      <RulesEditor value={ruleForm} onChange={setRuleForm} steps={steps} vocabulary={vocabulary ?? null}
+                        localErrors={ruleFormErrors} apiError={actionError} />
+                      <div className="gecko-row gecko-row-right">
+                        <button className="gecko-btn gecko-btn-outline" onClick={cancel} disabled={busy}>Cancel</button>
+                        <button className="gecko-btn gecko-btn-primary" onClick={saveRulesPanel}
+                          disabled={busy || !rulesDiffer(ruleForm, savedRules)}>
+                          <Icon name="save" size={16} /> {busy ? 'Saving…' : 'Save rules'}
+                        </button>
+                      </div>
+                    </div>
+                  ) : (
+                    <RulesSummary rules={savedRules} walkInChip={walkIn.chip} />
+                  )}
+                </div>
+              </div>
 
               {/* Workflow canvas */}
               <div className="gecko-table-card" style={{ borderRadius: 14 }}>

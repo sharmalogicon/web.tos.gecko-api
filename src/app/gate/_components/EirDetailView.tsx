@@ -145,7 +145,6 @@ export function EirDetailView({ id }: { id: string }) {
             <span className={`gecko-badge gecko-badge-${e.status === 'VOIDED' ? 'error' : 'success'}`}>{e.status}</span>
             {e.isLate && <span className="gecko-badge gecko-badge-warning">late, on record</span>}
             {e.sealMismatch && <span className="gecko-badge gecko-badge-warning">seal differs</span>}
-            {!e.isCheckDigitValid && <span className="gecko-badge gecko-badge-warning">check digit overridden</span>}
           </div>
           <div className="gecko-page-subtitle gecko-mt-1">
             Gate-{e.direction.toLowerCase()} · {formatContainerNo(e.containerNo)} · {e.movementCode} · {e.fullEmpty.toLowerCase()} · {formatDateTime(e.transactionAt)}

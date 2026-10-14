@@ -7,10 +7,14 @@ import { useToast } from '@/components/ui/Toast';
 import { useSession } from '@/lib/auth/session';
 import { ApiError } from '@/lib/api/problem';
 import { useCommercialVocabulary } from '@/lib/api/charge-codes';
-import { createOrderType, replaceCharges, replaceSteps, useOrderTypeVocabulary } from '@/lib/api/order-types';
+import {
+  NO_RULES, createOrderType, replaceCharges, replaceSteps, ruleErrors, useOrderTypeVocabulary,
+  type OrderTypeRules,
+} from '@/lib/api/order-types';
 import { OrderTypeForm, EMPTY_ORDER_TYPE, orderTypeErrors, requestFromOrderType, type OrderTypeFormValue } from '../_components/OrderTypeForm';
 import { StepsEditor, blankStep, requestFromSteps, stepErrors, type StepRow } from '../_components/StepsEditor';
 import { ChargesTables } from '../_components/ChargesTables';
+import { RulesEditor } from '../_components/RulesPanel';
 import { chargeRowErrors, requestFromCharges, type ChargeRow } from '../_components/charge-rows';
 
 /**
@@ -39,6 +43,7 @@ export default function NewOrderTypePage() {
   const [form, setForm] = useState<OrderTypeFormValue>(EMPTY_ORDER_TYPE);
   const [steps, setSteps] = useState<StepRow[]>(() => [blankStep(), blankStep()]);
   const [charges, setCharges] = useState<ChargeRow[]>([]);
+  const [rules, setRules] = useState<OrderTypeRules>(() => ({ ...NO_RULES, releaseGradeCodes: [] }));
   const [submitted, setSubmitted] = useState(false);
   const [saving, setSaving] = useState(false);
   const [apiError, setApiError] = useState<ApiError | null>(null);
@@ -48,16 +53,21 @@ export default function NewOrderTypePage() {
   const headerErrors = submitted ? orderTypeErrors(form) : {};
   const stepRowErrors = submitted ? stepErrors(steps) : {};
   const chargeErrors = submitted ? chargeRowErrors(charges, stepCodes) : {};
+  // Walk-in is locked on this page, so its half of ruleErrors can never fire here.
+  const ruleFormErrors = submitted ? ruleErrors(rules, steps.length, false) : {};
 
   const save = async () => {
     setSubmitted(true);
-    if ([orderTypeErrors(form), stepErrors(steps), chargeRowErrors(charges, stepCodes)].some(e => Object.keys(e).length > 0)) return;
+    if ([orderTypeErrors(form), stepErrors(steps), chargeRowErrors(charges, stepCodes), ruleErrors(rules, steps.length, false)]
+      .some(e => Object.keys(e).length > 0)) return;
     setSaving(true);
     setApiError(null);
     let p = progress;
     try {
       if (!p) {
-        const created = await createOrderType(requestFromOrderType(form));
+        // `rules` rides along with the POST. Walk-in is always false here (the
+        // panel locks it), so the API has nothing it cannot yet validate.
+        const created = await createOrderType({ ...requestFromOrderType(form), rules });
         p = { code: created.orderType.orderTypeCode, rowVersion: created.orderType.rowVersion, stepsSaved: false };
         setProgress(p);
       }
@@ -146,6 +156,18 @@ export default function NewOrderTypePage() {
         {progress?.stepsSaved
           ? <div className="gecko-cell-meta">Saved: {stepCodes.join(' → ')}. Change them later from the order type.</div>
           : <StepsEditor rows={steps} onChange={setSteps} vocabulary={vocabulary} localErrors={stepRowErrors} apiError={apiError} requiresVesselSchedule={form.requiresVesselSchedule} />}
+      </div>
+
+      <div className="gecko-card gecko-card-padded gecko-stack gecko-stack-md">
+        <div>
+          <div className="gecko-form-section-title">Rules</div>
+          <div className="gecko-form-section-desc">
+            What the gate does with a truck on this order type. Every one of these is optional — left alone, the gate
+            behaves exactly as it does for every other order type.
+          </div>
+        </div>
+        <RulesEditor value={rules} onChange={setRules} steps={[]} vocabulary={vocabulary}
+          localErrors={ruleFormErrors} apiError={locked ? null : apiError} walkInLocked />
       </div>
 
       <div className="gecko-card gecko-card-padded gecko-stack gecko-stack-md">

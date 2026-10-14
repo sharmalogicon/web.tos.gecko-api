@@ -48,8 +48,15 @@ interface OrderTypeRow { orderTypeCode: string; descriptionEn: string; isActive?
 interface PartyRow { partyCode: string; nameEn: string }
 interface EquipmentTypeRow { equipmentTypeId: string; typeCode: string; descriptionEn: string; isActive: boolean }
 
-/** ISO 6346: 4 letters (owner + U/J/Z), then 7 digits. */
-const CONTAINER_PATTERN = /^[A-Z]{4}\d{7}$/;
+/**
+ * Any box number the depot may meet: 4 to 11 letters or digits.
+ *
+ * The API's own test (`ContainerNumber.AnyFormed`), not the ISO shape \u2014 this
+ * depot handles boxes that are not ISO at all (owner 2026-10-08: ANVY6399011,
+ * PLD9256601, RBI051, 4043535). The ISO regex that was here refused to look any
+ * of them up.
+ */
+const CONTAINER_PATTERN = /^[A-Z0-9]{4,11}$/;
 
 function normalise(value: string): string {
   return value.toUpperCase().replace(/[^A-Z0-9]/g, '');
@@ -324,13 +331,8 @@ export default function GateInPage() {
                   autoFocus
                 />
                 {looking && <span className="gecko-cell-meta">checking…</span>}
-                {!looking && boxLooksRight && known && (
-                  <span className={`gecko-badge gecko-badge-xs ${known.isCheckDigitValid ? 'gecko-badge-success' : 'gecko-badge-warning'}`}>
-                    {known.isCheckDigitValid ? 'check digit ok' : 'check digit fails'}
-                  </span>
-                )}
                 {!looking && containerNo.trim() !== '' && !boxLooksRight && (
-                  <span className="gecko-cell-meta gecko-eirin-hint">4 letters then 7 digits</span>
+                  <span className="gecko-cell-meta gecko-eirin-hint">4 to 11 letters or digits</span>
                 )}
               </div>
             </Field>

@@ -18,12 +18,14 @@
  */
 
 import React, { useMemo, useState } from 'react';
+import { useRouter } from 'next/navigation';
 import { Icon } from '@/components/ui/Icon';
 import { EmptyState } from '@/components/ui/EmptyState';
 import { TableSkeleton } from '@/components/ui/TableSkeleton';
 import { TablePagination } from '@/components/ui/TablePagination';
 import { FilterPopover, type FilterField } from '@/components/ui/FilterPopover';
 import { useApi, useApiList, type Paged } from '@/lib/api/use-api';
+import { masterPath } from '@/lib/api/container-master';
 import { useSession } from '@/lib/auth/session';
 import { useFacility } from '@/lib/api/facility';
 import { formatContainerNo } from '@/lib/api/tos';
@@ -33,7 +35,6 @@ import {
   blankInquiryQuery, dayEnd, dayStart, INQUIRY_PERMISSION, inquiryPath, SORTS,
   STATUS_LABEL, type InquiryQuery, type InquiryRow,
 } from '@/lib/api/container-inquiry';
-import { ContainerDetailModal } from './_components/ContainerDetailModal';
 
 /** A timestamp that fits a narrow column: the day, with the clock beneath. */
 function Stamp({ iso }: { iso: string }) {
@@ -60,9 +61,9 @@ export default function ContainerInquiryPage() {
   const [filters, setFilters] = useState<Record<string, string>>(() => ({
     ...blankInquiryQuery(), gateInFrom: '', gateInTo: '',
   }) as unknown as Record<string, string>);
+  const router = useRouter();
   const [typed, setTyped] = useState('');
   const [page, setPage] = useState(1);
-  const [open, setOpen] = useState<string | null>(null);
 
   const branchId = branch?.branchId ?? '';
 
@@ -244,7 +245,7 @@ export default function ContainerInquiryPage() {
                 </td></tr>
               )}
               {!loading && rows.map(r => (
-                <tr key={r.containerVisitId} className="gecko-row-clickable" onClick={() => setOpen(r.containerNo)}>
+                <tr key={r.containerVisitId} className="gecko-row-clickable" onClick={() => router.push(masterPath(r.containerNo))}>
                   <td className="gecko-cell-tight">
                     <span className="gecko-mono-strong gecko-link gecko-cell-tight">{formatContainerNo(r.containerNo)}</span>
                     {r.isHeld && <span className="gecko-badge gecko-badge-xs gecko-badge-error">held</span>}
@@ -307,7 +308,6 @@ export default function ContainerInquiryPage() {
         )}
       </section>
 
-      {open && <ContainerDetailModal containerNo={open} onClose={() => setOpen(null)} />}
     </div>
   );
 }

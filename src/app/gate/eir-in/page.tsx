@@ -22,7 +22,10 @@ import { TypeChangeDialog } from './_components/TypeChangeDialog';
 import { SavedTripPanel } from './_components/SavedTripPanel';
 import type { BookableBox } from '../_components/BookingPicker';
 import {
-  MODE_LABELS, blankMove, boxLooksRight, derivedMode, moveToTripRow, normaliseBox,
+  useWalkInOrderTypes, walkInOrderTypeFor, type WalkInBox,
+} from '@/lib/api/walk-in';
+import {
+  DEFAULT_CONDITION, MODE_LABELS, blankMove, boxLooksRight, derivedMode, moveToTripRow, normaliseBox,
   type MoveDraft, type QuoteLineLike, type SettledLike, type TruckDetails,
 } from './_components/visit-moves';
 
@@ -64,6 +67,17 @@ interface WindowQuote {
   tax?: number;
 }
 
+/**
+ * The `tried` outcomes that change what the clerk DOES, as opposed to the ones
+ * that are the quote's own arithmetic.
+ *
+ * CUSTOMER_ON_CREDIT: nothing to collect, it goes on the account.
+ * CREDIT_LIMIT_REACHED: the customer is normally on credit but is at or over
+ * its limit, so this truck pays cash after all \u2014 the one case where a clerk
+ * who expects to collect nothing has to collect something.
+ */
+const MONEY_NOTES = ['CUSTOMER_ON_CREDIT', 'CREDIT_LIMIT_REACHED'];
+
 export default function GateInPage() {
   const { can } = useSession();
   const { branch } = useFacility();
@@ -80,6 +94,14 @@ export default function GateInPage() {
     driverLicenceNo: '', driverMobile: '', truckCategoryCode: '',
   });
   const [moves, setMoves] = useState<MoveDraft[]>([]);
+  /**
+   * The tenant's walk-in order types, read once when the screen opens.
+   *
+   * There are at most four — one per Drop off / Pick up × Empty / Full — and
+   * the clerk's toggles are answered from this list in memory. A combination
+   * the tenant has not set up is a disabled toggle, not a refused Save.
+   */
+  const { data: walkInTypes } = useWalkInOrderTypes(Boolean(branchId));
   const [openKey, setOpenKey] = useState<string | null>(null);
   const [visit, setVisit] = useState<{ truckVisitId: string; visitNo: string } | null>(null);
   const [result, setResult] = useState<TripSaveResult | null>(null);
@@ -133,6 +155,53 @@ export default function GateInPage() {
   };
 
   /**
+   * A truck with no paperwork. Opens on Drop off + Empty, which is what nearly
+   * every walk-in is — a customer returning an empty — and what BLIND GATE IN
+   * used to be before it was replaced (owner 2026-10-12).
+   */
+  const addWalkIn = () => {
+    const row = blankMove('DROP_OFF_CONT', { isWalkIn: true, fullEmpty: 'EMPTY' });
+    setMoves(rows => [...rows, row]);
+    setOpenKey(row.key);
+  };
+
+  /** The row found no booking: it is a walk-in, and keeps whatever was keyed. */
+  const makeWalkIn = (key: string) => patchMove(key, {
+    isWalkIn: true,
+    fullEmpty: moves.find(m => m.key === key)?.fullEmpty ?? 'EMPTY',
+  });
+
+  /**
+   * The clerk chose a yard box for a walk-in PICK-UP.
+   *
+   * Its line and type come with it and are not asked for again: the yard is the
+   * authority on both, and a second copy on this screen could only disagree.
+   */
+  const pickWalkInBox = (key: string, box: WalkInBox) => patchMove(key, {
+    containerNo: box.containerNo,
+    lineCode: box.lineCode,
+    equipmentTypeCode: box.equipmentTypeCode ?? '',
+    gradeCode: box.gradeCode ?? '',
+    conditionCode: box.conditionCode || DEFAULT_CONDITION,
+    positionText: box.positionText ?? '',
+  });
+
+  /**
+   * R5, max boxes per truck: the walk-in rows already on this truck, counted by
+   * the order type their answers name.
+   *
+   * The API refuses the whole Save with `rows` ("takes at most N box(es) per
+   * truck"), which arrives after the truck is at the barrier and names no row.
+   * Counting here lets the row that is over say so.
+   */
+  const walkInByOrderType = moves.reduce<Record<string, number>>((n, m) => {
+    if (!m.isWalkIn) return n;
+    const code = walkInOrderTypeFor(walkInTypes, m.trip, m.fullEmpty)?.orderTypeCode;
+    if (code) n[code] = (n[code] ?? 0) + 1;
+    return n;
+  }, {});
+
+  /**
    * What this row would cost, and what else could be sold on it.
    *
    * One call answers both: the quote returns the VAS menu for the box's next
@@ -147,7 +216,7 @@ export default function GateInPage() {
    * MTY_OUT was priced as the MTY_IN drop-off, which prices at nothing — so the
    * panel showed 0.00, the Save carried no payment, and the desktop charged
    * S-002 280.37 + 19.63 VAT for the same box. Preview is right only for a
-   * BLIND box, which has no booking and therefore no next step to read.
+   * WALK-IN box, which has no booking and therefore no next step to read.
    *
    * So a booked row is priced through `/window/bookings`, which answers each
    * box at its own `nextMovementCode`. One call per booking on the truck, each
@@ -160,7 +229,9 @@ export default function GateInPage() {
   const priceTruck = useCallback(async (rows: MoveDraft[]) => {
     if (!branchId) return;
     const booked = rows.filter(m => m.bookingContainerId && m.orderNo);
-    const blind = rows.filter(m => !m.bookingContainerId);
+    // No booking: a walk-in. Preview is right for it — it has no next step
+    // to read, and the order type its two answers name is the first step.
+    const walkIns = rows.filter(m => !m.bookingContainerId);
 
     const byOrder = new Map<string, MoveDraft[]>();
     for (const m of booked) byOrder.set(m.orderNo, [...(byOrder.get(m.orderNo) ?? []), m]);
@@ -184,9 +255,11 @@ export default function GateInPage() {
               due: box?.due ?? [],
               billedLater: box?.billedLater ?? [],
               noPrice: box?.noPrice ?? [],
-              // Only SETTLED is news to the clerk; the other outcomes are the
-              // quote's own working and already show up as due or no-price lines.
+              // SETTLED is "already paid for"; the other two are "who pays".
+              // The rest of `tried` is the quote's own working and already shows
+              // up as due or no-price lines.
               settled: (box?.tried ?? []).filter(t => t.outcome === 'SETTLED'),
+              moneyNotes: (box?.tried ?? []).filter(t => MONEY_NOTES.includes(t.outcome)),
               vasMenu: box?.vasMenu ?? [],
               quoteNote: box?.note ?? null,
               quoteError: box ? null : 'The quote did not answer for this box.',
@@ -204,18 +277,19 @@ export default function GateInPage() {
           const err = e instanceof ApiError ? e : new ApiError(0, 'The Gecko API did not answer.');
           for (const m of group) {
             patchMove(m.key, {
-              due: [], billedLater: [], noPrice: [], settled: [], quoteTotal: 0, quoteTax: 0,
+              due: [], billedLater: [], noPrice: [], settled: [], moneyNotes: [], quoteTotal: 0, quoteTax: 0,
               quoteError: err.title || err.message,
             });
           }
         }
       }),
 
-      // A blind box has no booking and no next step, so preview is right for it.
-      ...blind.map(async m => {
+      ...walkIns.map(async m => {
         const p = new URLSearchParams({ branchId });
         const add = (k: string, v: string) => { if (v.trim()) p.set(k, v.trim()); };
-        add('orderTypeCode', m.orderTypeCode);
+        // Derived, never a copy held on the row: the toggles are the truth
+        // and a stale code here would price the wrong move.
+        add('orderTypeCode', walkInOrderTypeFor(walkInTypes, m.trip, m.fullEmpty)?.orderTypeCode ?? m.orderTypeCode);
         add('lineCode', m.lineCode);
         add('customerCode', m.customerCode);
         add('agentCode', m.agentCode);
@@ -232,6 +306,7 @@ export default function GateInPage() {
             billedLater: box?.billedLater ?? [],
             noPrice: box?.noPrice ?? [],
             settled: (box?.tried ?? []).filter(t => t.outcome === 'SETTLED'),
+            moneyNotes: (box?.tried ?? []).filter(t => MONEY_NOTES.includes(t.outcome)),
             vasMenu: box?.vasMenu ?? [],
             quoteNote: box?.note ?? null,
             quoteError: null,
@@ -247,7 +322,7 @@ export default function GateInPage() {
         }
       }),
     ]);
-  }, [branchId, patchMove, truck.haulierCode, truckCategoryCode]);
+  }, [branchId, patchMove, truck.haulierCode, truckCategoryCode, walkInTypes]);
 
   /**
    * Re-price one row, with the whole truck — the gate charge and the VAT are
@@ -473,11 +548,22 @@ export default function GateInPage() {
       setSaveError(problem);
       // Each refusal belongs on its own row, not in one banner the clerk has to
       // match against five boxes. Nothing was charged in any of these.
+      /**
+       * Each refusal belongs on its own row, not in one banner the clerk has to
+       * match against five boxes. Nothing was charged in any of these.
+       *
+       * A 409 names its rows in `rows`. A 400 does not \u2014 it keys its field
+       * errors `rows[2].walkIn.customerCode` \u2014 so the row is found by looking
+       * for its own index among those keys. Without this, every walk-in field
+       * error landed in the top banner and the row showed nothing at all.
+       */
       setMoves(cur => cur.map(m => {
         const i = rows.findIndex(r => r.key === m.key);
         if (i < 0) return m;
         const got = refusedRows.find(r => r.index === i);
-        return got ? { ...m, findings: got.findings ?? [], error: problem } : m;
+        const keyed = Object.keys(problem.fieldErrors).some(k => k.startsWith(`rows[${i}].`));
+        if (!got && !keyed) return m;
+        return { ...m, findings: got?.findings ?? m.findings, error: problem };
       }));
     } finally {
       setSaving(false);
@@ -496,10 +582,39 @@ export default function GateInPage() {
   };
 
   const mode = derivedMode(moves);
+  /**
+   * Why the Save is not available yet, in the clerk's words — or null when it is.
+   *
+   * The walk-in checks are here and not only on the row because the API refuses
+   * the WHOLE truck for them (400 on `rows`), and that refusal lands in the top
+   * banner naming no row. Better to never send it.
+   */
+  const blockedReason = useMemo<string | null>(() => {
+    if (!truckReady) return null;
+    if (pending.length === 0) return null;
+    if (overLimit) return null;
+    const overCap = Object.entries(walkInByOrderType).find(([code, n]) => {
+      const cap = walkInTypes?.find(t => t.orderTypeCode === code)?.maxBoxesPerTruck;
+      return cap != null && n > cap;
+    });
+    if (overCap) {
+      const cap = walkInTypes?.find(t => t.orderTypeCode === overCap[0])?.maxBoxesPerTruck;
+      return `${overCap[0]} takes at most ${cap} box${cap === 1 ? '' : 'es'} per truck; this truck has ${overCap[1]}.`;
+    }
+    const walkIns = pending.filter(m => m.isWalkIn);
+    if (walkIns.some(m => !m.fullEmpty)) return 'A walk-in row has no Empty / Full answer.';
+    if (walkIns.some(m => !m.customerCode)) return 'A walk-in row has no customer, and the booking is raised for one.';
+    if (walkIns.some(m => m.trip === 'DROP_OFF_CONT' && !m.lineCode))
+      return 'A walk-in drop-off has no shipping line.';
+    if (walkIns.some(m => !walkInOrderTypeFor(walkInTypes, m.trip, m.fullEmpty)))
+      return 'A walk-in row has no order type for the answers given.';
+    return null;
+  }, [truckReady, pending, overLimit, walkInByOrderType, walkInTypes]);
+
   const readyToSave = useMemo(
-    () => truckReady && pending.length > 0 && !overLimit
+    () => truckReady && pending.length > 0 && !overLimit && !blockedReason
       && pending.every(m => m.reserved || !m.bookingContainerId),
-    [truckReady, pending, overLimit]);
+    [truckReady, pending, overLimit, blockedReason]);
 
   if (!branchId) {
     return <div className="gecko-card gecko-card-padded gecko-dash-placeholder">
@@ -515,7 +630,7 @@ export default function GateInPage() {
   return (
     <div className="gecko-stack gecko-stack-lg gecko-eirin-page">
       {/* THE SAVE IS THE SLOWEST THING ON THIS SCREEN and the only one that
-          takes money. It gates every box, raises any blind booking, waits for
+          takes money. It gates every box, raises a walk-in truck’s booking, waits for
           the cash window to catch up, and issues the receipt — seconds, not
           milliseconds. A disabled button alone left the clerk unable to tell
           "working" from "hung", so the page says so and takes the keyboard
@@ -616,6 +731,18 @@ export default function GateInPage() {
                   disabled={!truckReady || !!result} onClick={() => addMove('PICK_UP_CONT')}>
                   <Icon name="arrowUp" size={13} /> Add pick-up
                 </button>
+                {/* The truck with no paperwork. It replaced BLIND GATE IN, which
+                    is why it sits with the other two rather than in a menu:
+                    a walk-in is an ordinary day at a depot gate, not an
+                    exception a clerk should have to go looking for. */}
+                <button className="gecko-btn gecko-btn-sm gecko-btn-outline"
+                  disabled={!truckReady || !!result || !walkInTypes || walkInTypes.length === 0}
+                  title={walkInTypes && walkInTypes.length === 0
+                    ? 'No walk-in order type is set up. Master data \u2192 Order types \u2192 Rules.'
+                    : 'A truck that arrived with no booking'}
+                  onClick={addWalkIn}>
+                  <Icon name="zap" size={13} /> No booking (walk-in)
+                </button>
               </div>
             </div>
 
@@ -638,6 +765,11 @@ export default function GateInPage() {
                   branchId={branchId}
                   takenBoxes={takenBoxes}
                   onPickBooking={box => void pickBooking(m.key, box)}
+                  walkInTypes={walkInTypes}
+                  draftId={draftId}
+                  onPickWalkInBox={box => pickWalkInBox(m.key, box)}
+                  walkInOnTruck={walkInByOrderType}
+                  onMakeWalkIn={() => makeWalkIn(m.key)}
                   canRecord={truckReady}
                   onToggle={() => setOpenKey(k => (k === m.key ? null : m.key))}
                   onChange={patch => patchMove(m.key, patch)}
@@ -665,6 +797,7 @@ export default function GateInPage() {
           onPayerName={setPayerName}
           saving={saving}
           canSave={readyToSave && !result}
+          blockedReason={result ? null : blockedReason}
           saved={!!result}
           onSave={() => void save(false)}
         />

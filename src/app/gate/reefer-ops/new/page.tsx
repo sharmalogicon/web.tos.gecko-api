@@ -29,7 +29,9 @@ import {
 
 interface Branch { branchId: string; branchCode: string; displayName: string }
 
-const ISO_CONTAINER_RE = /^[A-Z]{4}\d{7}$/;
+// Any box number the depot may meet, as the API tests it \u2014 a reefer whose
+// number is not ISO still has to be plugged in.
+const ISO_CONTAINER_RE = /^[A-Z0-9]{4,11}$/;
 
 function useDebounced<T>(value: T, ms = 300): T {
   const [debounced, setDebounced] = useState(value);
@@ -229,7 +231,7 @@ export default function PlugInReeferPage() {
                 <div className="gecko-reefer-matched-card gecko-reefer-matched-warn">
                   <Icon name="alertCircle" size={14} className="gecko-reefer-matched-icon" />
                   <div className="gecko-reefer-matched-text">
-                    Expected 4 letters + 7 digits (e.g. <span className="gecko-mono">MAEU1234567</span>)
+                    Expected 4 to 11 letters or digits (e.g. <span className="gecko-mono">MAEU1234567</span>)
                   </div>
                 </div>
               ) : !candidates.loading && rows.length === 0 && !candidates.error ? (

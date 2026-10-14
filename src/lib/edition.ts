@@ -41,7 +41,11 @@ export const LIVE_PATHS: readonly string[] = [
   '/gate/stock',
   '/gate/eir-in',                // the gate-in form: one truck, every box on it
   '/gate/eir-in-register',       // the register of past gate-ins
-  '/gate/eir-in-sept',           // the plainer bound gate-in, kept as a fallback
+  // '/gate/eir-in-sept' RETIRED 2026-10-14. It was the plainer bound gate-in,
+  // kept as a fallback, and it still raised BLIND GATE IN orders — which walk-in
+  // replaced, and which the spec says must not appear on a gate screen at all.
+  // It has no walk-in UI to convert it to, and nothing links to it, so the route
+  // is closed rather than half-fixed. /gate/eir-in is the gate-in now.
   '/bookings/new-sept',
   '/gate/eir-out',               // the gate-out form, /gate/eir-out/[id] detail
   '/gate/eir-out-register',      // the register of past gate-outs

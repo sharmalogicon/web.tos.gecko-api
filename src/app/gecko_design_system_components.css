@@ -8641,7 +8641,7 @@ label.gecko-toggle.gecko-toggle-sm input:checked ~ .gecko-toggle-track .gecko-to
 .gecko-move-card {
   border: 1px solid var(--gecko-border);
   border-radius: var(--gecko-radius-lg);
-  background: var(--gecko-surface);
+  background: var(--gecko-bg-surface);
   overflow: hidden;
 }
 .gecko-move-card-open { border-color: var(--gecko-primary-300); }
@@ -9629,7 +9629,7 @@ th.gecko-cell-tight {
   gap: 10px;
   padding: 6px 10px;
   font-size: 12px;
-  border-bottom: 1px solid var(--gecko-border-subtle, var(--gecko-border));
+  border-bottom: 1px solid var(--gecko-border);
 }
 .gecko-waive-line:last-child { border-bottom: 0; }
 
@@ -10577,3 +10577,417 @@ th.gecko-cell-tight {
   white-space: nowrap;
 }
 .gecko-party-chosen-code { flex: 0 0 auto; white-space: nowrap; }
+
+/* ─── Container master ────────────────────────────────────────────────────────
+   The registry row a clerk edits, its fixed ports, and the merged activity log
+   (/units/unit-inquiry). Vector's Container Master drew eight framed boxes on
+   one screen; these are four stacked sections, because the API behind them is
+   one PUT and three reads, not eight independent forms. */
+
+.gecko-cm-stack { gap: 22px; }
+
+.gecko-cm-section {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  padding: 16px 18px;
+  border: 1px solid var(--gecko-border);
+  border-radius: var(--gecko-radius-md);
+  background: var(--gecko-bg-surface);
+}
+
+.gecko-cm-section-head {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
+.gecko-cm-readonly { font-size: 11.5px; color: var(--gecko-text-secondary); }
+
+/* The number and its (disabled) Correct button share one row so the button
+   cannot be mistaken for an action on the field beneath it. */
+.gecko-cm-locked { display: flex; align-items: center; gap: 8px; }
+.gecko-cm-locked .gecko-input { flex: 1 1 auto; min-width: 0; }
+.gecko-cm-locked .gecko-btn { flex: 0 0 auto; }
+
+.gecko-cm-save {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 14px;
+  flex-wrap: wrap;
+  padding: 12px 18px;
+  border: 1px solid var(--gecko-border);
+  border-radius: var(--gecko-radius-md);
+  background: var(--gecko-bg-subtle);
+  position: sticky;
+  bottom: 0;
+  z-index: var(--gecko-z-raised, 10);
+}
+.gecko-cm-save-actions { display: flex; align-items: center; gap: 8px; }
+
+/* ── fixed ports ── */
+.gecko-cm-port-add { display: flex; align-items: center; gap: 8px; max-width: 520px; }
+.gecko-cm-port-add .gecko-select { flex: 1 1 auto; min-width: 0; }
+.gecko-cm-port-table { table-layout: fixed; width: 100%; max-width: 620px; }
+.gecko-cm-port-table th:nth-child(1), .gecko-cm-port-table td:nth-child(1) { width: 28%; }
+.gecko-cm-port-table th:nth-child(2), .gecko-cm-port-table td:nth-child(2) { width: 60%; }
+.gecko-cm-port-action { width: 12%; text-align: right; }
+
+/* ── a panel whose endpoint does not exist yet ──
+   Muted rather than hidden: the layout is settled, and a clerk is told why the
+   controls do nothing instead of finding them missing. */
+.gecko-cm-planned { border-style: dashed; background: var(--gecko-bg-subtle); }
+.gecko-cm-planned-note {
+  font-size: 12px;
+  line-height: 1.5;
+  color: var(--gecko-text-secondary);
+  max-width: 70ch;
+}
+.gecko-cm-planned-body { border: 0; margin: 0; padding: 0; opacity: 0.55; }
+.gecko-cm-planned-endpoint { font-size: 11px; }
+
+/* ── activity log ── */
+.gecko-cm-log-filters { display: flex; flex-wrap: wrap; gap: 6px; }
+.gecko-cm-log-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 4px 10px;
+  border: 1px solid var(--gecko-border);
+  border-radius: 999px;
+  background: var(--gecko-bg-surface);
+  color: var(--gecko-text-secondary);
+  font-family: inherit;
+  font-size: 12px;
+  cursor: pointer;
+}
+.gecko-cm-log-chip-on {
+  border-color: var(--gecko-primary-600);
+  background: var(--gecko-primary-50);
+  color: var(--gecko-primary-700);
+  font-weight: 600;
+}
+.gecko-cm-log-chip-count { font-variant-numeric: tabular-nums; opacity: 0.7; }
+
+.gecko-cm-log { list-style: none; margin: 0; padding: 0; }
+.gecko-cm-log-row {
+  display: grid;
+  grid-template-columns: 26px 92px 1fr;
+  gap: 12px;
+  padding: 10px 0;
+  border-bottom: 1px solid var(--gecko-border);
+}
+.gecko-cm-log-row:last-child { border-bottom: 0; }
+
+.gecko-cm-log-mark {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 26px;
+  height: 26px;
+  border-radius: 50%;
+  background: var(--gecko-bg-subtle);
+  color: var(--gecko-text-secondary);
+}
+.gecko-cm-log-mark-eir { background: var(--gecko-primary-50); color: var(--gecko-primary-700); }
+.gecko-cm-log-mark-hold { background: var(--gecko-error-50); color: var(--gecko-error-700); }
+.gecko-cm-log-mark-registry { background: var(--gecko-warning-50); color: var(--gecko-warning-700); }
+
+/* The day over the clock, so a narrow column never splits a timestamp. */
+.gecko-cm-log-when { font-size: 11.5px; }
+.gecko-cm-log-day { font-weight: 600; white-space: nowrap; }
+.gecko-cm-log-what { min-width: 0; display: flex; flex-direction: column; gap: 2px; }
+.gecko-cm-log-title { font-size: 12.5px; font-weight: 600; display: flex; align-items: baseline; gap: 8px; flex-wrap: wrap; }
+.gecko-cm-log-where { font-weight: 400; }
+.gecko-cm-log-detail { font-size: 12px; display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+.gecko-cm-log-badge { margin-left: 2px; }
+
+@media (max-width: 640px) {
+  .gecko-cm-log-row { grid-template-columns: 22px 1fr; }
+  .gecko-cm-log-when { grid-column: 2; }
+  .gecko-cm-log-what { grid-column: 2; }
+}
+
+/* ─── Order type: the Rules panel ─────────────────────────────────────────────
+   Order-type-wide rules (gecko_master 34), as opposed to the five per-step gate
+   flags in the steps grid below it. Vector drew a box called "Rules" too, but
+   that one edited the selected movement row's flags — which are already the
+   grid's own columns. */
+
+.gecko-ot-rules-card { border-radius: 14px; }
+
+.gecko-ot-rules-head {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+  padding: 14px 20px;
+  border-bottom: 1px solid var(--gecko-border);
+}
+.gecko-ot-rules-icon { color: var(--gecko-primary-600); }
+.gecko-ot-rules-title { font-size: 14px; font-weight: 700; color: var(--gecko-text-primary); }
+.gecko-ot-rules-body { padding: 16px 20px; }
+
+/* Read mode is prose. An order type with no rules is the common case, and five
+   em-dashes say nothing a clerk can act on. */
+.gecko-ot-rules-plain { max-width: 80ch; line-height: 1.55; }
+
+.gecko-ot-rules-read { display: flex; flex-direction: column; gap: 12px; margin: 0; }
+.gecko-ot-rules-row { display: grid; grid-template-columns: 150px 1fr; gap: 14px; align-items: baseline; }
+.gecko-ot-rules-row dt { margin: 0; }
+.gecko-ot-rules-value { margin: 0; font-size: 12.5px; line-height: 1.5; max-width: 72ch; }
+.gecko-ot-rules-chip { margin-left: 8px; }
+
+.gecko-ot-rules-grades { display: inline-flex; flex-wrap: wrap; gap: 5px; }
+.gecko-ot-grade {
+  display: inline-block;
+  padding: 1px 7px;
+  border: 1px solid var(--gecko-border);
+  border-radius: 4px;
+  background: var(--gecko-bg-subtle);
+  font-family: var(--gecko-font-mono);
+  font-size: 11.5px;
+  font-weight: 600;
+}
+
+/* ── edit ── */
+.gecko-ot-rule-block {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  padding: 12px 14px;
+  border: 1px solid var(--gecko-border);
+  border-radius: var(--gecko-radius-md);
+  background: var(--gecko-bg-subtle);
+}
+.gecko-ot-rule-tick { display: flex; align-items: flex-start; gap: 10px; cursor: pointer; }
+.gecko-ot-rule-tick > span { display: flex; flex-direction: column; gap: 2px; min-width: 0; flex: 1 1 auto; }
+.gecko-ot-rule-tick input[disabled] { cursor: not-allowed; }
+.gecko-ot-rule-name { font-size: 13px; font-weight: 600; color: var(--gecko-text-primary); }
+.gecko-ot-rule-why { display: flex; align-items: flex-start; gap: 6px; line-height: 1.45; max-width: 74ch; }
+
+/* The grades are a tick-list, not a <select multiple>: a clerk picking two of
+   six should see all six and what each one means, not scroll a box. */
+.gecko-ot-grade-picker { display: flex; flex-wrap: wrap; gap: 6px; }
+.gecko-ot-grade-pick {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 5px 10px;
+  border: 1px solid var(--gecko-border);
+  border-radius: 6px;
+  background: var(--gecko-bg-surface);
+  color: var(--gecko-text-secondary);
+  font-family: inherit;
+  font-size: 12px;
+  cursor: pointer;
+  text-align: left;
+}
+.gecko-ot-grade-pick:hover { border-color: var(--gecko-primary-600); }
+.gecko-ot-grade-pick-on {
+  border-color: var(--gecko-primary-600);
+  background: var(--gecko-primary-50);
+  color: var(--gecko-primary-700);
+  font-weight: 600;
+}
+.gecko-ot-grade-desc {
+  max-width: 22ch;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-weight: 400;
+  opacity: 0.8;
+}
+
+@media (max-width: 760px) {
+  .gecko-ot-rules-row { grid-template-columns: 1fr; gap: 2px; }
+}
+
+/* The order type's steps grid carries seven rule ticks and the row controls,
+   which overflow a laptop. Its card scrolls sideways (gecko-table-wrapper);
+   these keep the tick columns narrow so the scroll is a last resort. */
+.gecko-ot-steps-table { min-width: 940px; }
+.gecko-ot-steps-table th { white-space: nowrap; }
+.gecko-ot-steps-table td:not(:nth-child(-n+3)) { text-align: center; }
+
+/* ─── Gate: the walk-in truck ─────────────────────────────────────────────────
+   A customer arrives with no paperwork (WALK_IN_ORDERS_PLAN §3). This replaced
+   BLIND GATE IN on the gate screen: the clerk answers two questions, and those
+   two answers name the order type. */
+
+/* Where the B/L sits on a booked row. A walk-in has no paperwork to read, so
+   the order type its answers named stands there instead. */
+.gecko-walkin-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 3px 9px;
+  border: 1px dashed var(--gecko-primary-600);
+  border-radius: 999px;
+  background: var(--gecko-primary-50);
+  color: var(--gecko-primary-700);
+  font-family: var(--gecko-font-mono);
+  font-size: 11.5px;
+  font-weight: 600;
+  white-space: nowrap;
+}
+
+.gecko-walkin-answers {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 24px;
+  align-items: flex-start;
+  padding-bottom: 4px;
+}
+.gecko-walkin-toggle { display: flex; flex-direction: column; gap: 5px; min-width: 0; }
+
+.gecko-walkin-surveyed { display: flex; align-items: center; gap: 8px; cursor: pointer; }
+
+/* The offer to turn an orphan row into a walk-in: a finding line with a button
+   on the end, so the fix is where the problem is stated. */
+.gecko-walkin-offer { align-items: center; gap: 10px; flex-wrap: wrap; }
+.gecko-walkin-offer > span { flex: 1 1 260px; }
+
+/* ── the yard picker (a walk-in pick-up) ── */
+.gecko-walkin-pick { position: relative; min-width: 0; }
+.gecko-walkin-pick-row { display: flex; align-items: center; gap: 6px; }
+.gecko-walkin-pick-row .gecko-input { flex: 1 1 auto; min-width: 0; font-size: 12px; }
+
+.gecko-walkin-pick-menu {
+  position: absolute;
+  top: calc(100% + 4px);
+  left: 0;
+  z-index: var(--gecko-z-dropdown, 20);
+  min-width: 420px;
+  max-width: 560px;
+  max-height: 320px;
+  overflow-y: auto;
+  padding: 4px;
+  border: 1px solid var(--gecko-border);
+  border-radius: var(--gecko-radius-md);
+  background: var(--gecko-bg-surface);
+  box-shadow: var(--gecko-shadow-lg);
+}
+.gecko-walkin-pick-note { padding: 8px 10px; font-size: 11.5px; color: var(--gecko-text-secondary); line-height: 1.45; }
+
+/* A flat 12px, not --gecko-text-sm: that token clamps up to 15.2px, which made
+   this list read larger than the gate row that opens it. */
+.gecko-walkin-pick-item {
+  display: grid;
+  grid-template-columns: 112px 1fr auto auto;
+  align-items: center;
+  gap: 10px;
+  width: 100%;
+  padding: 6px 10px;
+  border: 0;
+  border-radius: 5px;
+  background: none;
+  font-family: inherit;
+  font-size: 12px;
+  text-align: left;
+  cursor: pointer;
+}
+.gecko-walkin-pick-item:hover { background: var(--gecko-primary-50); }
+.gecko-walkin-pick-no { font-family: var(--gecko-font-mono); font-weight: 600; white-space: nowrap; }
+.gecko-walkin-pick-facts,
+.gecko-walkin-pick-where {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  color: var(--gecko-text-secondary);
+}
+.gecko-walkin-pick-where { text-align: right; }
+
+@media (max-width: 720px) {
+  .gecko-walkin-pick-menu { min-width: 280px; }
+  .gecko-walkin-pick-item { grid-template-columns: 1fr auto; }
+  .gecko-walkin-pick-facts, .gecko-walkin-pick-where { grid-column: 1 / -1; text-align: left; }
+}
+/* The server says what is wrong; this says what to do about it, under it. */
+.gecko-walkin-advice { display: block; margin-top: 2px; opacity: 0.85; }
+
+/* Registry history: the fields a save moved, one per line rather than a run-on
+   sentence \u2014 a save that touched six fields is common. */
+.gecko-cm-log-changes { display: flex; flex-direction: column; gap: 1px; }
+.gecko-cm-log-change { font-size: 11.5px; }
+
+/* Vector's footer: who made the record and who last touched it. */
+.gecko-cm-stamps {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 18px;
+  padding-top: 10px;
+  border-top: 1px solid var(--gecko-border);
+  font-size: 11.5px;
+  color: var(--gecko-text-secondary);
+}
+.gecko-cm-panel-actions { justify-content: flex-end; }
+
+/* ─── Filter popover: the wide, two-column form ───────────────────────────────
+   Most screens filter on three or four things and the narrow single column
+   reads as a list. The Container Inquiry filters on fourteen and the Booking
+   Statement on eighteen; stacked, those run off the bottom of the screen and
+   the Apply button goes with them. Above eight fields the panel widens and the
+   fields pair up. */
+
+.gecko-filter-panel-wide {
+  width: 520px;
+  /* It is anchored right under its button; on a narrow window it would
+     otherwise run off the left edge of the page. */
+  max-width: calc(100vw - 32px);
+}
+
+.gecko-filter-body-wide {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 10px 14px;
+}
+
+/* Label ABOVE the control, not beside it. Side by side, labels running from
+   "Size" to "Gated in from" leave every control starting at a different place
+   and none of them the same width — which is what the single column does, and
+   what it gets away with only because there is one of it. */
+.gecko-filter-body-wide .gecko-filter-row {
+  display: flex;
+  flex-direction: column;
+  align-items: stretch;
+  justify-content: flex-start;
+  gap: 3px;
+  min-width: 0;
+}
+.gecko-filter-body-wide .gecko-filter-row-label {
+  font-size: 11px;
+  color: var(--gecko-text-disabled);
+  font-weight: 600;
+  letter-spacing: 0.02em;
+}
+.gecko-filter-body-wide .gecko-filter-select { width: 100%; height: 30px; font-size: 12px; }
+
+/* A long field list is worth scrolling rather than growing past the viewport;
+   the footer stays put below it. */
+.gecko-filter-panel-wide .gecko-filter-body-wide {
+  max-height: min(52vh, 460px);
+  overflow-y: auto;
+}
+
+@media (max-width: 580px) {
+  .gecko-filter-body-wide { grid-template-columns: 1fr; }
+}
+
+/* Lifted out of FilterPopover.tsx, which had them inline. */
+.gecko-filter-search-icon {
+  position: absolute;
+  left: 9px;
+  top: 8px;
+  color: var(--gecko-text-disabled);
+  pointer-events: none;
+}
+.gecko-filter-sort-list { padding-bottom: 4px; }
+.gecko-filter-sort-tick { color: var(--gecko-primary-600); }
+
+/* The asterisk on a gate field the server will insist on (R6's survey tick). */
+.gecko-required-mark { color: var(--gecko-error-600); font-weight: 700; }

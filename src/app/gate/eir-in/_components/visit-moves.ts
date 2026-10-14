@@ -40,14 +40,22 @@ export interface MoveDraft {
   looking: boolean;
 
   /**
-   * The BLIND GATE IN, raised with the move when the box is on no booking.
+   * A WALK-IN row: the truck arrived with no paperwork.
    *
-   * `POST /api/tos/gate/blind-orders` is the gate's own door — it makes the
-   * BLIND GATE IN order the booking page refuses to make by hand, and it does
-   * NOT want a B/L, which is exactly the desktop's rule: choosing BLIND GATE IN
-   * is what stops the Booking/B-L No being mandatory (GateIn.cs line 198).
-   * The order type is not sent: it is BLIND GATE IN by definition.
+   * Replaces BLIND GATE IN on this screen (owner 2026-10-12). The clerk answers
+   * Drop off / Pick up (`trip`) and Empty / Full (`fullEmpty`); those two name
+   * the tenant's walk-in order type, and the Save raises one booking of it per
+   * truck, customer and line. Nothing here sends `blind` any more.
+   *
+   * A row is EITHER walk-in or booked: picking a booking clears this, and
+   * turning this on clears the booking.
    */
+  isWalkIn: boolean;
+  /**
+   * R6: the clerk surveyed the box as it came in — damages listed, or none
+   * found. Some order-type steps refuse the gate-in without it (SURVEY_REQUIRED).
+   */
+  surveyed: boolean;
   lineCode: string;
   customerCode: string;
   equipmentTypeCode: string;
@@ -150,6 +158,17 @@ export interface MoveDraft {
    * exactly like a box that was never charged for it.
    */
   settled: SettledLike[];
+  /**
+   * What the quote decided about WHO PAYS, as opposed to what was paid already.
+   *
+   * CUSTOMER_ON_CREDIT  the charge goes on the customer's account, no cash here
+   * CREDIT_LIMIT_REACHED  a credit customer at or over its limit pays cash now
+   *
+   * Both were being thrown away with the rest of `tried`, so a truck that owed
+   * nothing and a truck whose customer had just blown its credit limit showed
+   * the clerk exactly the same card.
+   */
+  moneyNotes: SettledLike[];
   /** The server's own sentence about this box, when it has one. */
   quoteNote: string | null;
   /**
@@ -222,7 +241,7 @@ let seq = 0;
 export const newMoveKey = () => `m${++seq}-${Date.now().toString(36)}`;
 
 export function blankMove(trip: TripType, defaults: {
-  orderTypeCode?: string; lineCode?: string;
+  orderTypeCode?: string; lineCode?: string; isWalkIn?: boolean; fullEmpty?: 'FULL' | 'EMPTY';
 } = {}): MoveDraft {
   return {
     key: newMoveKey(),
@@ -230,6 +249,8 @@ export function blankMove(trip: TripType, defaults: {
     containerNo: '',
     known: null,
     looking: false,
+    isWalkIn: defaults.isWalkIn ?? false,
+    surveyed: false,
     lineCode: defaults.lineCode ?? '',
     customerCode: '',
     equipmentTypeCode: '',
@@ -244,7 +265,9 @@ export function blankMove(trip: TripType, defaults: {
     orderTypeCode: defaults.orderTypeCode ?? '',
     bookingTypeCode: '',
     movementCode: '',
-    fullEmpty: null,
+    // A walk-in row opens on the clerk's answer; a booked row reads it off the
+    // booking once one is picked.
+    fullEmpty: defaults.fullEmpty ?? null,
     // AV — a sound box is what rolls through the gate nearly every time, so the
     // clerk changes it only when something is wrong (owner, 2026-10-09).
     conditionCode: DEFAULT_CONDITION,
@@ -288,6 +311,7 @@ export function blankMove(trip: TripType, defaults: {
     billedLater: [],
     noPrice: [],
     settled: [],
+    moneyNotes: [],
     quoteNote: null,
     quoteError: null,
     quoteTotal: 0,
@@ -303,8 +327,17 @@ export function blankMove(trip: TripType, defaults: {
   };
 }
 
-/** ISO 6346: four letters, then seven digits. */
-export const CONTAINER_PATTERN = /^[A-Z]{4}\d{7}$/;
+/**
+ * Any box number the depot may meet: 4 to 11 letters or digits.
+ *
+ * The API's own test (`ContainerNumber.AnyFormed`), not the ISO shape. It was
+ * the ISO shape here until 2026-10-12, which meant the gate would not even look
+ * up a box like RBI051 or 4043535 \u2014 real KORAKIT numbers (owner 2026-10-08:
+ * "some containers don't follow ISO container specs") \u2014 and refused to add
+ * the trip. Whether a number is ISO is the check digit's business, and the
+ * server raises that as a finding the clerk can override.
+ */
+export const CONTAINER_PATTERN = /^[A-Z0-9]{4,11}$/;
 export const normaliseBox = (value: string) => value.toUpperCase().replace(/[^A-Z0-9]/g, '');
 export const boxLooksRight = (value: string) => CONTAINER_PATTERN.test(normaliseBox(value));
 
@@ -347,7 +380,7 @@ export function rowIssues(move: MoveDraft): string[] {
     issues.push('Container number');
     return issues;
   }
-  if (!boxLooksRight(move.containerNo)) issues.push('Container number is not four letters and seven digits');
+  if (!boxLooksRight(move.containerNo)) issues.push('Container number (4 to 11 letters or digits)');
 
   for (const field of requiredFor(move)) {
     if (field === 'seals') {
@@ -358,13 +391,26 @@ export function rowIssues(move: MoveDraft): string[] {
     if (typeof value === 'string' && !value.trim()) issues.push(FIELD_LABELS[field] ?? field);
   }
 
-  // On no booking, the gate raises a BLIND GATE IN for it. No B/L is wanted —
-  // that is the point of a blind gate-in — but the line and the customer are,
-  // and the type of box when the registry has never seen it.
-  if (!onBooking(move) && move.trip === 'DROP_OFF_CONT') {
-    if (!move.lineCode) issues.push('Shipping line');
+  /**
+   * A WALK-IN row. No B/L is wanted — that is the whole point — but the
+   * customer always is, because the booking the Save raises is that customer's
+   * and the charges go to its account.
+   *
+   * A pick-up takes its line and type from the yard box, so neither is asked
+   * for; a drop-off needs the line, and the type too when the registry has
+   * never seen the box.
+   */
+  if (move.isWalkIn) {
+    if (!move.fullEmpty) issues.push('Empty or full');
     if (!move.customerCode) issues.push('Customer');
-    if (!move.equipmentTypeCode && move.known?.isInRegistry === false) issues.push('Equipment type');
+    if (move.trip === 'DROP_OFF_CONT') {
+      if (!move.lineCode) issues.push('Shipping line');
+      if (!move.equipmentTypeCode && move.known?.isInRegistry === false) issues.push('Equipment type');
+    }
+  } else if (!onBooking(move)) {
+    // Not walk-in and not booked is no longer a thing this screen can send:
+    // `blind` is gone, so the row has to become one or the other.
+    issues.push('Booking (or make it a walk-in)');
   }
 
   if (needsDigitReason(move) && !move.checkDigitOverrideReason.trim()) issues.push('Check-digit override reason');
@@ -384,9 +430,16 @@ export const needsDigitReason = (m: MoveDraft) =>
 export const needsLateReason = (m: MoveDraft) =>
   m.findings.some(f => f.code.startsWith('LATE') && f.severity === 'OVERRIDE');
 
-/** A pick-up cannot be invented: the box has to be on an order already. */
+/**
+ * A booked pick-up cannot be invented: the box has to be on an order already.
+ *
+ * A WALK-IN pick-up is the exception, and the reason this check now asks. The
+ * customer collecting an empty off the yard has no order by definition — the
+ * Save raises one. Before walk-ins existed, "pick-up with no order" could only
+ * be a mistake.
+ */
 export const pickupHasNoOrder = (m: MoveDraft) =>
-  m.trip === 'PICK_UP_CONT' && !!m.known && !onBooking(m);
+  m.trip === 'PICK_UP_CONT' && !m.isWalkIn && !!m.known && !onBooking(m);
 
 /** The truck, as the move that OPENS the visit reports it. */
 export interface TruckDetails {
@@ -509,23 +562,42 @@ export function moveToTripRow(move: MoveDraft, branchId: string): TripRow {
     },
   };
 
-  if (move.bookingContainerId) row.bookingContainerId = move.bookingContainerId;
-  else {
-    row.blind = {
-      containerNo: box,
-      lineCode: move.lineCode,
-      customerCode: move.customerCode || null,
-      equipmentTypeCode: move.equipmentTypeCode || null,
-      agentCode: move.agentCode || null,
+  if (move.bookingContainerId) {
+    row.bookingContainerId = move.bookingContainerId;
+  } else {
+    /**
+     * A box with no booking is a WALK-IN, never a blind gate-in any more.
+     *
+     * A PICK-UP's line and type come from the yard box the clerk chose, so
+     * sending this screen's copies could only disagree with the yard. A
+     * drop-off sends what was keyed, and the API falls back to the registry's
+     * owner when the line is left out.
+     */
+    const pickUp = move.trip === 'PICK_UP_CONT';
+    row.walkIn = {
+      fullEmpty: move.fullEmpty ?? 'EMPTY',
+      customerCode: move.customerCode,
+      lineCode: pickUp ? null : move.lineCode || null,
+      equipmentTypeCode: pickUp ? null : move.equipmentTypeCode || null,
       remarks: move.remarks || null,
     };
   }
 
+  // R6. Damages imply it server-side, but sending it keeps the row honest when
+  // the clerk ticked "none found" and listed nothing.
+  if (move.trip === 'DROP_OFF_CONT' && (move.surveyed || move.damages.length > 0)) row.surveyed = true;
+
   // Damages belong to a drop-off only; on a pick-up they are a 400.
   if (move.trip === 'DROP_OFF_CONT' && move.damages.length > 0) row.damages = move.damages;
 
-  // What the clerk read off the box, so the server can say it differs (§23.5).
-  if (move.equipmentTypeCode) row.equipmentTypeCode = move.equipmentTypeCode;
+  /**
+   * What the clerk read off the box, so the server can say it differs (§23.5).
+   *
+   * Only for a BOOKED box: that comparison is against what the booking says,
+   * and a walk-in has no booking to disagree with. The API ignores it on a
+   * walk-in row; sending it anyway only invites a future version to not.
+   */
+  if (move.equipmentTypeCode && !move.isWalkIn) row.equipmentTypeCode = move.equipmentTypeCode;
   if (move.acceptTypeChange) row.acceptTypeChange = true;
 
   return row;

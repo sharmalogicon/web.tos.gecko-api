@@ -10,6 +10,10 @@ import { GateField } from '../../_components/GateField';
 import { VasPanel } from './VasPanel';
 import { DamagePanel } from './DamagePanel';
 import { BookingPicker, type BookableBox } from '../../_components/BookingPicker';
+import { WalkInBoxPicker } from './WalkInBoxPicker';
+import {
+  NO_WALK_IN_ORDER_TYPE, WALK_IN_REFUSALS, walkInOrderTypeFor, type WalkInBox, type WalkInOrderType,
+} from '@/lib/api/walk-in';
 import {
   boxLooksRight, needsDigitReason, needsLateReason,
   editable, grossOf, isDamaged, locationLabel, normaliseBox, onBooking, overMaxWeight,
@@ -33,13 +37,26 @@ import {
 interface PartyRow { partyCode: string; nameEn: string }
 interface EquipmentTypeRow { equipmentTypeId: string; typeCode: string; descriptionEn: string; isActive: boolean }
 
-export function MoveCard({ move, index, open, branchId, takenBoxes, onToggle, onChange, onRemove, onLook, onRecord, onPickBooking, onToggleVas, canRecord }: {
+export function MoveCard({
+  move, index, open, branchId, takenBoxes, onToggle, onChange, onRemove, onLook, onRecord,
+  onPickBooking, onToggleVas, canRecord, walkInTypes, draftId, onPickWalkInBox, onMakeWalkIn,
+  walkInOnTruck,
+}: {
   move: MoveDraft;
   index: number;
   open: boolean;
   branchId: string;
   /** Boxes already on this truck, so the picker cannot offer one twice. */
   takenBoxes: string[];
+  /** The tenant's walk-in order types, read once by the page. */
+  walkInTypes: WalkInOrderType[] | null;
+  /** This screen's draft, so the yard picker does not offer a box we hold. */
+  draftId: string | null;
+  onPickWalkInBox: (box: WalkInBox) => void;
+  /** Walk-in rows already on this truck, by order type code (R5). */
+  walkInOnTruck: Record<string, number>;
+  /** Turn a row that found no booking into a walk-in. */
+  onMakeWalkIn: () => void;
   onPickBooking: (box: BookableBox) => void;
   onToggleVas: (chargeCode: string) => void;
   onToggle: () => void;
@@ -67,7 +84,20 @@ export function MoveCard({ move, index, open, branchId, takenBoxes, onToggle, on
   const done = !!move.result;
   const required = requiredFor(move);
   const needs = (f: string) => required.includes(f);
-  const err = (f: string) => move.error?.forField(f);
+  /**
+   * This row's message for a field.
+   *
+   * A 400 from the big Save keys its errors by position \u2014
+   * `rows[2].walkIn.customerCode`, `rows[2].move.containerNo` \u2014 while the
+   * single-box calls key them bare. Both are tried, so the same `err('customerCode')`
+   * works whichever call refused, and nothing has to be re-keyed at the call site.
+   */
+  const err = (f: string) => move.error?.forField(f)
+    ?? move.error?.forField(`rows[${index}].${f}`)
+    ?? move.error?.forField(`rows[${index}].walkIn.${f}`)
+    ?? move.error?.forField(`rows[${index}].move.${f}`);
+  /** The truck-wide `rows` message, shown by the walk-in block that caused it. */
+  const rowsErr = move.error?.forField('rows');
   const issues = rowIssues(move);
   const booking = move.known?.booking ?? null;
   const step = move.known?.nextStep ?? null;
@@ -79,6 +109,34 @@ export function MoveCard({ move, index, open, branchId, takenBoxes, onToggle, on
   const movement = step?.movementCode ?? move.movementCode;
   const load = step?.fullEmpty ?? move.fullEmpty;
   const blocked = move.known?.holds?.filter(h => h.blocksThisMove) ?? [];
+  // The booking's own step says whether the gate-in needs a damage survey (R6).
+  const needsSurvey = step?.requiresSurvey === true;
+
+  // ── walk-in ────────────────────────────────────────────────────────────
+  // The clerk's two answers name the order type; the clerk never picks one.
+  const walkInType = move.isWalkIn ? walkInOrderTypeFor(walkInTypes, move.trip, move.fullEmpty) : null;
+  // A combination the tenant has not set up. Said on the toggle rather than
+  // left for the Save to refuse after the truck is at the barrier.
+  const walkInMissing = move.isWalkIn && !!move.fullEmpty && !!walkInTypes && !walkInType;
+  const hasWalkInLoad = (load: 'FULL' | 'EMPTY') =>
+    !walkInTypes || !!walkInOrderTypeFor(walkInTypes, move.trip, load);
+  // R5. Counted across the truck, so the row that tips it over is the one that says so.
+  const overCap = !!walkInType?.maxBoxesPerTruck
+    && (walkInOnTruck[walkInType.orderTypeCode] ?? 0) > walkInType.maxBoxesPerTruck;
+
+  /**
+   * Who pays, per box.
+   *
+   * The payment panel totals the truck, which is right for the drawer and wrong
+   * for the clerk looking at one card: a credit customer's box and a box that
+   * simply costs nothing both showed 0.00 and no explanation. The over-limit
+   * case is the one that bites \u2014 a customer normally on account that has to
+   * pay cash today.
+   */
+  const overLimitNote = move.moneyNotes.find(t => t.outcome === 'CREDIT_LIMIT_REACHED');
+  const onAccount = !overLimitNote && move.quoteTotal === 0
+    ? move.moneyNotes.find(t => t.outcome === 'CUSTOMER_ON_CREDIT')
+    : undefined;
 
   const patchSeal = (i: number, p: Partial<SealRow>) =>
     onChange({ seals: move.seals.map((s, j) => (j === i ? { ...s, ...p } : s)) });
@@ -98,8 +156,16 @@ export function MoveCard({ move, index, open, branchId, takenBoxes, onToggle, on
         </span>
 
         {/* The B/L is what the clerk reads off the driver's paperwork, so it
-            comes first — the box follows from the booking line they pick. */}
+            comes first — the box follows from the booking line they pick.
+            A walk-in truck has no paperwork at all, so in its place the row
+            shows the order type its two answers named. */}
         <div className="gecko-move-bl">
+          {move.isWalkIn ? (
+            <span className="gecko-walkin-chip" title="Raised by the Save: one booking per truck, customer and line.">
+              <Icon name="zap" size={12} />
+              {walkInType ? walkInType.orderTypeCode : move.fullEmpty ? 'no order type' : 'walk-in'}
+            </span>
+          ) : (
           <BookingPicker
             branchId={branchId}
             direction={drop ? 'IN' : 'OUT'}
@@ -112,18 +178,33 @@ export function MoveCard({ move, index, open, branchId, takenBoxes, onToggle, on
               bookingContainerId: '', orderNo: '', carrierRef: '', orderTypeCode: '',
               bookingTypeCode: '', movementCode: '', fullEmpty: null,
             })} />
+          )}
         </div>
 
         <div className="gecko-move-box">
-          <input
-            className={`gecko-input gecko-input-sm gecko-text-mono${err('containerNo') ? ' gecko-input-error' : ''}`}
-            value={move.containerNo}
-            disabled={done}
-            maxLength={14}
-            placeholder="MSKU1234565"
-            aria-label={`Container number for box ${index + 1}`}
-            onChange={e => onChange({ containerNo: normaliseBox(e.target.value) })}
-            onBlur={() => { if (boxLooksRight(move.containerNo)) onLook(); }} />
+          {/* A walk-in PICK-UP cannot have its number typed: the box has to be
+              one standing in this yard, free to go. The picker applies that;
+              typing would only invite a 400 the clerk cannot act on. */}
+          {move.isWalkIn && !drop ? (
+            <WalkInBoxPicker
+              branchId={branchId}
+              fullEmpty={move.fullEmpty}
+              draftId={draftId}
+              exclude={takenBoxes}
+              value={move.containerNo}
+              disabled={done}
+              onPick={onPickWalkInBox} />
+          ) : (
+            <input
+              className={`gecko-input gecko-input-sm gecko-text-mono${err('containerNo') ? ' gecko-input-error' : ''}`}
+              value={move.containerNo}
+              disabled={done}
+              maxLength={14}
+              placeholder="MSKU1234565"
+              aria-label={`Container number for box ${index + 1}`}
+              onChange={e => onChange({ containerNo: normaliseBox(e.target.value) })}
+              onBlur={() => { if (boxLooksRight(move.containerNo)) onLook(); }} />
+          )}
           {move.looking && <span className="gecko-cell-meta">looking…</span>}
         </div>
 
@@ -146,7 +227,8 @@ export function MoveCard({ move, index, open, branchId, takenBoxes, onToggle, on
             {/* It adds the trip to the truck — it does not record anything at
                 the barrier. The Save is what commits. */}
             <button type="button" className="gecko-btn gecko-btn-success gecko-btn-sm"
-              disabled={!canRecord || move.saving || issues.length > 0 || pickupHasNoOrder(move)}
+              disabled={!canRecord || move.saving || issues.length > 0 || pickupHasNoOrder(move)
+                || overCap || walkInMissing}
               onClick={onRecord}>
               {/* Holding a place and pricing the box is a round trip too, so it
                   spins rather than just greying out. */}
@@ -202,48 +284,206 @@ export function MoveCard({ move, index, open, branchId, takenBoxes, onToggle, on
             </div>
           ))}
           {move.findings.map((f, i) => <FindingLine key={`${f.code}-${i}`} finding={f} />)}
+          {overLimitNote && (
+            <div className="gecko-eirin-finding gecko-eirin-finding-override">
+              <Icon name="alertCircle" size={13} />
+              <span>
+                Over credit limit \u2014 cash this time.
+                {overLimitNote.note && <span className="gecko-walkin-advice">{overLimitNote.note}</span>}
+              </span>
+            </div>
+          )}
+          {onAccount && (
+            <div className="gecko-eirin-finding">
+              <Icon name="info" size={13} />
+              <span>
+                Billed to the customer&rsquo;s account \u2014 nothing to collect for this box.
+                {onAccount.note && <span className="gecko-walkin-advice">{onAccount.note}</span>}
+              </span>
+            </div>
+          )}
         </div>
       )}
 
       {/* ── the detail ──────────────────────────────────────────────────── */}
       {open && !done && (
         <div className="gecko-move-body">
-          {/* The order, raised with the box when it is on none. */}
-          {!carries && drop && (
-            <Section title="Blind gate-in" wide>
+          {/* ── Walk-in: the truck arrived with no paperwork ──────────
+              Two toggles, a customer, and on a drop-off the box's own facts.
+              The order type is NOT a field: it follows from the answers, and
+              is shown read-only so the clerk can see what they have chosen. */}
+          {move.isWalkIn && (
+            <Section title="Walk-in (no booking)" wide>
+              <div className="gecko-walkin-answers">
+                <div className="gecko-walkin-toggle">
+                  <span className="gecko-eyebrow">The truck is here to</span>
+                  <div className="gecko-segmented gecko-segmented-sm">
+                    {([['DROP_OFF_CONT', 'Drop off'], ['PICK_UP_CONT', 'Pick up']] as const).map(([trip, label]) => (
+                      <button key={trip} type="button"
+                        className={`gecko-segmented-item${move.trip === trip ? ' gecko-segmented-item-active' : ''}`}
+                        disabled={done}
+                        onClick={() => onChange({
+                          trip,
+                          // The box, its line and its type all belonged to the
+                          // other answer; keeping them would send a yard box's
+                          // facts on a drop-off, or the reverse.
+                          containerNo: '', known: null, lineCode: '', equipmentTypeCode: '',
+                        })}>
+                        {label}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+
+                <div className="gecko-walkin-toggle">
+                  <span className="gecko-eyebrow">The box is</span>
+                  <div className="gecko-segmented gecko-segmented-sm">
+                    {([['EMPTY', 'Empty'], ['FULL', 'Full']] as const).map(([loadAnswer, label]) => {
+                      const offered = hasWalkInLoad(loadAnswer);
+                      return (
+                        <button key={loadAnswer} type="button"
+                          className={`gecko-segmented-item${move.fullEmpty === loadAnswer ? ' gecko-segmented-item-active' : ''}`}
+                          disabled={done || !offered}
+                          title={offered ? undefined : NO_WALK_IN_ORDER_TYPE}
+                          onClick={() => onChange({
+                            fullEmpty: loadAnswer,
+                            // A pick-up's box was chosen for the old load, so it
+                            // goes; a drop-off's was keyed and stands.
+                            containerNo: drop ? move.containerNo : '',
+                            known: drop ? move.known : null,
+                          })}>
+                          {label}
+                        </button>
+                      );
+                    })}
+                  </div>
+                </div>
+
+                <div className="gecko-walkin-toggle">
+                  <span className="gecko-eyebrow">Order type</span>
+                  <div className="gecko-readonly-value gecko-text-mono">
+                    {walkInType ? walkInType.orderTypeCode : move.fullEmpty ? '—' : 'Answer both'}
+                  </div>
+                  {walkInType?.description && <span className="gecko-cell-meta">{walkInType.description}</span>}
+                </div>
+              </div>
+
+              {walkInMissing && (
+                <div className="gecko-eirin-finding gecko-eirin-finding-block">
+                  <Icon name="alertCircle" size={13} /> {NO_WALK_IN_ORDER_TYPE}
+                </div>
+              )}
+              {rowsErr && (
+                <div className="gecko-eirin-finding gecko-eirin-finding-block">
+                  <Icon name="alertCircle" size={13} /> {rowsErr}
+                </div>
+              )}
+              {walkInType?.maxBoxesPerTruck != null && (
+                overCap ? (
+                  <div className="gecko-eirin-finding gecko-eirin-finding-block">
+                    <Icon name="alertCircle" size={13} />
+                    This truck already carries {walkInOnTruck[walkInType.orderTypeCode] ?? 0} boxes on{' '}
+                    {walkInType.orderTypeCode}, and it takes at most {walkInType.maxBoxesPerTruck}. Remove a row,
+                    or send the rest on a second truck.
+                  </div>
+                ) : (
+                  <div className="gecko-cell-meta">
+                    {walkInOnTruck[walkInType.orderTypeCode] ?? 0} of at most {walkInType.maxBoxesPerTruck}{' '}
+                    box{walkInType.maxBoxesPerTruck === 1 ? '' : 'es'} of this order type on one truck.
+                  </div>
+                )
+              )}
+
               <div className="gecko-gate-grid-4">
-                <GateField label="Shipping line" required error={err('lineCode')}>
-                  <select className="gecko-input" value={move.lineCode}
-                    onChange={e => onChange({ lineCode: e.target.value })}>
-                    <option value="">Choose…</option>
-                    {lines.map(l => <option key={l.partyCode} value={l.partyCode}>{l.partyCode} - {l.nameEn}</option>)}
-                  </select>
-                </GateField>
-                <GateField label="Customer" required error={err('customerCode')}>
-                  <select className="gecko-input" value={move.customerCode}
+                <GateField label="Customer" required error={err('walkIn.customerCode') ?? err('customerCode')}>
+                  <select className="gecko-input" value={move.customerCode} disabled={done}
                     onChange={e => onChange({ customerCode: e.target.value })}>
                     <option value="">Choose…</option>
                     {customers.map(c => <option key={c.partyCode} value={c.partyCode}>{c.partyCode} - {c.nameEn}</option>)}
                   </select>
                 </GateField>
-                <GateField label="Equipment type" error={err('equipmentTypeCode')}
-                  required={move.known?.isInRegistry === false}>
-                  <select className="gecko-input" value={move.equipmentTypeCode}
-                    onChange={e => onChange({ equipmentTypeCode: e.target.value })}>
-                    <option value="">From the registry</option>
-                    {equipmentTypes.filter(t => t.isActive).map(t => (
-                      <option key={t.equipmentTypeId} value={t.typeCode}>{t.typeCode} - {t.descriptionEn}</option>
-                    ))}
-                  </select>
-                </GateField>
-                <GateField label="Agent" error={err('agentCode')}>
-                  <select className="gecko-input" value={move.agentCode}
-                    onChange={e => onChange({ agentCode: e.target.value })}>
-                    <option value="">Not stated</option>
-                    {lines.map(l => <option key={l.partyCode} value={l.partyCode}>{l.partyCode} - {l.nameEn}</option>)}
-                  </select>
-                </GateField>
+
+                {/* A pick-up's line and type are the YARD's, not the clerk's:
+                    they arrive with the box and are shown, not asked. */}
+                {drop ? (
+                  <>
+                    <GateField label="Shipping line" required error={err('walkIn.lineCode') ?? err('lineCode')}>
+                      <select className="gecko-input" value={move.lineCode} disabled={done}
+                        onChange={e => onChange({ lineCode: e.target.value })}>
+                        <option value="">{move.known?.isInRegistry ? 'From the registry' : 'Choose…'}</option>
+                        {lines.map(l => <option key={l.partyCode} value={l.partyCode}>{l.partyCode} - {l.nameEn}</option>)}
+                      </select>
+                    </GateField>
+                    <GateField label="Equipment type" error={err('walkIn.equipmentTypeCode') ?? err('equipmentTypeCode')}
+                      required={move.known?.isInRegistry === false}>
+                      <select className="gecko-input" value={move.equipmentTypeCode} disabled={done}
+                        onChange={e => onChange({ equipmentTypeCode: e.target.value })}>
+                        <option value="">From the registry</option>
+                        {equipmentTypes.filter(t => t.isActive).map(t => (
+                          <option key={t.equipmentTypeId} value={t.typeCode}>{t.typeCode} - {t.descriptionEn}</option>
+                        ))}
+                      </select>
+                    </GateField>
+                  </>
+                ) : (
+                  <>
+                    <GateField label="Shipping line" frozen>
+                      <div className="gecko-readonly-value">{move.lineCode || '—'}</div>
+                    </GateField>
+                    <GateField label="Equipment type" frozen>
+                      <div className="gecko-readonly-value">{move.equipmentTypeCode || '—'}</div>
+                    </GateField>
+                  </>
+                )}
+
               </div>
+            </Section>
+          )}
+
+          {/* A row with no booking that is not a walk-in can no longer be sent:
+              BLIND GATE IN is gone from this screen. One button turns the row
+              into the thing it actually is. */}
+          {!move.isWalkIn && !carries && !done && (
+            <div className="gecko-eirin-finding gecko-walkin-offer">
+              <Icon name="info" size={13} />
+              <span>
+                No booking on this row. If the truck came with no paperwork, record it as a walk-in — the Save
+                raises the booking.
+              </span>
+              <button type="button" className="gecko-btn gecko-btn-outline gecko-btn-sm" onClick={onMakeWalkIn}>
+                <Icon name="zap" size={13} /> Make it a walk-in
+              </button>
+            </div>
+          )}
+
+          {/* R6 \u2014 THE SURVEY TICK, ON EVERY DROP-OFF, not only a walk-in.
+              A booked drop-off whose order-type step sets requireSurvey is
+              refused with SURVEY_REQUIRED, and the only other way to satisfy it
+              was to list a damage \u2014 which the clerk cannot do on a sound box.
+              A CLEAN survey counts, which is why this is a tick and not merely
+              "were any damages listed". */}
+          {drop && !done && (
+            <Section title="Survey" wide>
+              <label className="gecko-walkin-surveyed">
+                <input type="checkbox" className="gecko-checkbox"
+                  checked={move.surveyed || move.damages.length > 0}
+                  disabled={move.damages.length > 0}
+                  title={move.damages.length > 0 ? 'Damages are listed, so the box is surveyed.' : undefined}
+                  onChange={e => onChange({ surveyed: e.target.checked })} />
+                <span>
+                  <span className="gecko-ot-rule-name">
+                    Surveyed{needsSurvey && <span className="gecko-required-mark"> *</span>}
+                  </span>
+                  <span className="gecko-cell-meta">
+                    {move.damages.length > 0
+                      ? `${move.damages.length} damage${move.damages.length === 1 ? '' : 's'} listed, so the box is surveyed.`
+                      : needsSurvey
+                        ? 'This step will not gate the box in without a survey. Tick it for "none found", or list the damages above.'
+                        : 'Tick it to record a clean survey with the gate-in.'}
+                  </span>
+                </span>
+              </label>
+              {err('surveyed') && <div className="gecko-field-error">{err('surveyed')}</div>}
             </Section>
           )}
 
@@ -407,12 +647,16 @@ export function MoveCard({ move, index, open, branchId, takenBoxes, onToggle, on
             <div className="gecko-trip-col">
               <GateField label="Booking type" frozen>
                 <div className="gecko-readonly-value">
-                  {move.bookingTypeCode || (carries ? '—' : 'IMPORT · blind')}
+                  {move.bookingTypeCode || (carries ? '—' : move.isWalkIn ? 'raised by the Save' : '—')}
                 </div>
               </GateField>
 
               <GateField label="Order type" frozen>
-                <div className="gecko-readonly-value">{orderTypeCode || 'BLIND GATE IN'}</div>
+                {/* A walk-in has no order type until both answers are in; it is
+                    never BLIND GATE IN any more. */}
+                <div className="gecko-readonly-value">
+                  {orderTypeCode || walkInType?.orderTypeCode || '—'}
+                </div>
               </GateField>
 
               <GateField label="Vessel name" frozen>
@@ -586,10 +830,19 @@ function FindingLine({ finding }: { finding: GateFinding }) {
   const tone = finding.severity === 'BLOCK' ? 'block'
     : finding.severity === 'OVERRIDE' ? 'override'
     : finding.severity === 'WARN' ? 'override' : 'info';
+  /**
+   * The server's sentence says what is wrong; for the walk-in refusals we add
+   * what to DO about it. Not a replacement — the server's wording carries the
+   * detail (which grade, which order) and is always shown first.
+   */
+  const advice = WALK_IN_REFUSALS[finding.code];
   return (
     <div className={`gecko-eirin-finding gecko-eirin-finding-${tone}`}>
       <Icon name={finding.severity === 'INFO' ? 'info' : 'alertCircle'} size={13} />
-      <span>{finding.message}</span>
+      <span>
+        {finding.message}
+        {advice && <span className="gecko-walkin-advice">{advice}</span>}
+      </span>
     </div>
   );
 }
@@ -599,8 +852,8 @@ function FindingLine({ finding }: { finding: GateFinding }) {
  *
  * By default the title sits in a 190px gutter on the left, which reads well for
  * a short block. `wide` stacks it instead and gives the fields the whole width:
- * the blind gate-in row has four selects in it and, indented, it did not line
- * up with the Trip information grid directly beneath it (owner, 2026-10-09).
+ * the walk-in block carries two toggles and four selects and, indented, it did
+ * not line up with the Trip information grid beneath it (owner, 2026-10-09).
  */
 function Section({ title, desc, wide, children }: {
   title: string; desc?: string; wide?: boolean; children: React.ReactNode;

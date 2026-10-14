@@ -18,7 +18,7 @@ import type { MoveDraft } from './visit-moves';
  */
 export function GatePaymentPanel({
   moves, visitNo, modeLabel, cashTotal, cashTax, withholdingTax, nett,
-  wht, onWht, payerName, onPayerName, saving, canSave, saved, onSave,
+  wht, onWht, payerName, onPayerName, saving, canSave, saved, onSave, blockedReason,
 }: {
   moves: MoveDraft[];
   visitNo: string | null;
@@ -33,6 +33,15 @@ export function GatePaymentPanel({
   onPayerName: (v: string) => void;
   saving: boolean;
   canSave: boolean;
+  /**
+   * Why the Save is unavailable, in the clerk's words, or null.
+   *
+   * A greyed button with no reason is the worst of both: the clerk cannot
+   * proceed and cannot see what to change. These are the refusals the API would
+   * answer for the WHOLE truck (400 on `rows`), naming no row, so saying it here
+   * is the only place it reads sensibly.
+   */
+  blockedReason: string | null;
   saved: boolean;
   onSave: () => void;
 }) {
@@ -230,10 +239,16 @@ export function GatePaymentPanel({
       {/* A box whose price could not be read must not be saved: the Save
           carries expectedTotal, and sending one taken from a failed quote is
           how a truck leaves having paid the wrong amount. */}
+      {!saved && blockedReason && (
+        <div className="gecko-eirin-finding gecko-eirin-finding-block">
+          <Icon name="alertCircle" size={13} /> {blockedReason}
+        </div>
+      )}
       {!saved && (
         <button className="gecko-btn gecko-btn-primary"
           disabled={!canSave || saving || failed.length > 0}
-          title={failed.length > 0 ? 'Re-check the box that could not be priced, or remove it' : undefined}
+          title={blockedReason
+            ?? (failed.length > 0 ? 'Re-check the box that could not be priced, or remove it' : undefined)}
           onClick={onSave}>
           {saving ? <span className="gecko-spinner gecko-spinner-sm gecko-spinner-white" /> : <Icon name="check" size={14} />}
           {saving ? 'Saving…'

@@ -31,11 +31,25 @@ export interface FilterPopoverProps {
   tone?: 'default' | 'orange'
   /** Filters that are on by default and so should not be counted as "active". */
   defaultValues?: Record<string, string>
+  /**
+   * How many columns the fields sit in.
+   *
+   * Left alone it decides for itself: one column up to WIDE_AT fields, two
+   * beyond. Most screens here filter on three or four things and read best as a
+   * short list; the Container Inquiry has fourteen and the Booking Statement
+   * eighteen, and as one column those run off the bottom of the screen.
+   *
+   * Pass it explicitly only to overrule that.
+   */
+  columns?: 1 | 2
 }
+
+/** Above this many selects and dates, the panel goes two-column and wide. */
+const WIDE_AT = 8;
 
 export function FilterPopover({
   fields, values, onChange, onApply, onClear,
-  sortOptions, sortValue, onSortChange, tone = 'default', defaultValues,
+  sortOptions, sortValue, onSortChange, tone = 'default', defaultValues, columns,
 }: FilterPopoverProps) {
   const [open, setOpen] = useState(false);
   const wrapperRef = useRef<HTMLDivElement>(null);
@@ -48,6 +62,7 @@ export function FilterPopover({
   const searchField = fields.find(f => f.type === 'search');
   const selectFields = fields.filter(f => f.type === 'select') as Extract<FilterField, { type: 'select' }>[];
   const dateFields = fields.filter(f => f.type === 'date') as Extract<FilterField, { type: 'date' }>[];
+  const wide = (columns ?? (selectFields.length + dateFields.length > WIDE_AT ? 2 : 1)) === 2;
 
   useEffect(() => {
     function handleOutside(e: MouseEvent) {
@@ -78,17 +93,13 @@ export function FilterPopover({
       </button>
 
       {open && (
-        <div className="gecko-filter-panel">
+        <div className={`gecko-filter-panel${wide ? ' gecko-filter-panel-wide' : ''}`}>
 
           {/* Search */}
           {searchField && (
             <div className="gecko-filter-search-wrap">
-              <div style={{ position: 'relative' }}>
-                <Icon
-                  name="search"
-                  size={13}
-                  style={{ position: 'absolute', left: 9, top: 8, color: 'var(--gecko-text-disabled)', pointerEvents: 'none' }}
-                />
+              <div>
+                <Icon name="search" size={13} className="gecko-filter-search-icon" />
                 <input
                   className="gecko-filter-input-sm"
                   placeholder={searchField.placeholder}
@@ -103,7 +114,12 @@ export function FilterPopover({
           {(selectFields.length > 0 || dateFields.length > 0) && (
             <>
               <div className="gecko-filter-section-label">Filter by</div>
-              <div className="gecko-filter-body">
+              {/* One column puts the label beside its control, which reads as a
+                  list. Two columns put it ABOVE: the labels here run from
+                  "Size" to "Gated in from", and side by side that leaves every
+                  control starting at a different place and none of them the
+                  same width. */}
+              <div className={`gecko-filter-body${wide ? ' gecko-filter-body-wide' : ''}`}>
                 {selectFields.map(field => (
                   <div key={field.key} className="gecko-filter-row">
                     <span className="gecko-filter-row-label">{field.label}</span>
@@ -120,7 +136,9 @@ export function FilterPopover({
                 ))}
 
                 {/* Dates sit with the selects: they narrow the same list, and a
-                    clerk reads them as one block of "what am I looking at". */}
+                    clerk reads them as one block of "what am I looking at".
+                    A range is two fields, so in two columns it is given a whole
+                    row to itself \u2014 "from" and "to" side by side. */}
                 {dateFields.map(field => (
                   <div key={field.key} className="gecko-filter-row">
                     <span className="gecko-filter-row-label">{field.label}</span>
@@ -141,7 +159,7 @@ export function FilterPopover({
             <>
               <div className="gecko-filter-divider" />
               <div className="gecko-filter-section-label">Sort by</div>
-              <div style={{ paddingBottom: 4 }}>
+              <div className="gecko-filter-sort-list">
                 {sortOptions.map(opt => (
                   <button
                     key={opt.value}
@@ -149,7 +167,7 @@ export function FilterPopover({
                     className={`gecko-filter-sort-row${sortValue === opt.value ? ' gecko-filter-sort-row-active' : ''}`}
                   >
                     <span>{opt.label}</span>
-                    {sortValue === opt.value && <Icon name="check" size={13} style={{ color: 'var(--gecko-primary-600)' }} />}
+                    {sortValue === opt.value && <Icon name="check" size={13} className="gecko-filter-sort-tick" />}
                   </button>
                 ))}
               </div>

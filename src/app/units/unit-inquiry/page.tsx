@@ -14,19 +14,34 @@ import { REEFER_SESSIONS_PATH, type ReeferSession } from '@/lib/api/reefer';
 import { yardsPath, type Yard } from '@/lib/api/yards';
 import {
   STORY_PERMISSIONS, eventLabel, isWellFormedContainerNo, normaliseContainerNo, registryPath, storyPath,
-  type ContainerStory, type RegistryContainer, type StoryVisit,
+  type ContainerStory, type StoryVisit,
 } from '@/lib/api/container-story';
+import { MASTER_PERMISSIONS, type RegistryRow } from '@/lib/api/container-master';
+import { MasterDataTab } from './_components/MasterDataTab';
+import { FixedPortsTab } from './_components/FixedPortsTab';
+import { YardStatePanel } from './_components/YardStatePanel';
+import { ActivityLogTab } from './_components/ActivityLogTab';
 
 /**
- * UNIT INQUIRY — one box's story, live against Gecko.Api.
+ * CONTAINER MASTER — one box, whole: what it IS and what has happened to it.
  *
  * Where it is now (the open stay: depot, yard, position, full/empty, dwell), every
  * stay before with its journal, its EIRs, the holds on it now and those released,
- * the bookings it has been on, its reefer plug sessions and its registry facts.
- * Everything is read-only here; each section links to the screen that changes it.
+ * the bookings it has been on, its reefer plug sessions — and its registry record,
+ * which a clerk with `mdm.equipment.manage` edits here rather than anywhere else.
+ *
+ * This was Unit Inquiry, read-only, and grew into Vector's Container Master
+ * (owner 2026-10-12). It kept its route, because the EIR screens, the stock list
+ * and /gate/container-status all link into it and none of those should break for
+ * a rename.
+ *
+ * What is EDITABLE lives on one tab and is one PUT: the registry row and its
+ * fixed ports. Everything else on the page belongs to a stay, a gate
+ * transaction or a hold, each of which has its own screen and its own audit —
+ * so they are shown here and changed there.
  *
  * The number travels in the URL (?no=) so an EIR, the stock list or a colleague
- * can link straight to a box. /gate/container-status redirects here.
+ * can link straight to a box.
  */
 export default function UnitInquiryPage() {
   return (
@@ -36,13 +51,14 @@ export default function UnitInquiryPage() {
   );
 }
 
-type Tab = 'now' | 'visits' | 'moves' | 'holds' | 'bookings' | 'reefer';
+type Tab = 'now' | 'master' | 'ports' | 'status' | 'emr' | 'log'
+  | 'moves' | 'holds' | 'bookings' | 'reefer';
 
 function UnitInquiry() {
   const router = useRouter();
   const pathname = usePathname();
   const params = useSearchParams();
-  const { can } = useSession();
+  const { can, canAt } = useSession();
   const [tab, setTab] = useState<Tab>('now');
 
   const typed = params.get('no') ?? '';
@@ -56,7 +72,7 @@ function UnitInquiry() {
   };
 
   const story = useApi<ContainerStory>(asked ? storyPath(asked) : null);
-  const registry = useApi<RegistryContainer>(asked && can(STORY_PERMISSIONS.registryView) ? registryPath(asked) : null);
+  const registry = useApi<RegistryRow>(asked && can(STORY_PERMISSIONS.registryView) ? registryPath(asked) : null);
   const moves = useApiList<GateTransactionSummary>(asked ? `/api/tos/gate/transactions?containerNo=${asked}&pageSize=100` : null);
   const activeHolds = useApi<ContainerHolds>(asked && can(STORY_PERMISSIONS.holdView) ? `/api/tos/containers/${asked}/holds` : null);
   const released = useApiList<Hold>(asked && can(STORY_PERMISSIONS.holdView) ? `/api/tos/holds?containerNo=${asked}&status=RELEASED&pageSize=100` : null);
@@ -83,11 +99,12 @@ function UnitInquiry() {
       <div className="gecko-page-actions">
         <div className="gecko-page-actions-left">
           <div className="gecko-row gecko-row-baseline gecko-stack-md">
-            <h1 className="gecko-page-title">Unit inquiry</h1>
+            <h1 className="gecko-page-title">Container master</h1>
             <span className="gecko-badge gecko-badge-success">LIVE</span>
           </div>
           <div className="gecko-page-subtitle gecko-mt-1">
-            A box&apos;s full story: where it is now, every stay and event, its EIRs, holds, bookings, plug sessions and registry facts.
+            One box, whole: its registry record and fixed ports, where it is now, every stay and event, its EIRs,
+            holds, bookings and plug sessions.
           </div>
         </div>
         <div className="gecko-toolbar">
@@ -115,7 +132,7 @@ function UnitInquiry() {
         </div>
         {typed && !wellFormed && (
           <div className="gecko-field-error">
-            &lsquo;{typed}&rsquo; is not a container number (4 letters ending U/J/Z, 7 digits).
+            &lsquo;{typed}&rsquo; is not a container number (4 to 11 letters or digits).
           </div>
         )}
         {story.error && story.error.status === 400 && (
@@ -159,7 +176,11 @@ function UnitInquiry() {
               <div className="gecko-row" style={{ gap: 6, marginTop: 4 }}>
                 <span className={`gecko-badge gecko-badge-${s.isInYard ? 'success' : 'gray'}`}>{s.isInYard ? 'IN YARD' : 'NOT IN YARD'}</span>
                 {activeHolds.data?.isHeld && <span className="gecko-badge gecko-badge-error">HELD</span>}
-                {reg && reg.status !== 'ACTIVE' && <span className="gecko-badge gecko-badge-warning">{reg.status}</span>}
+                {/* The registry's lifecycle states are IN_SERVICE / OFF_HIRED / SOLD / TOTAL_LOSS / SCRAPPED.
+                    It never says ACTIVE, so the old test here badged every healthy box with "IN_SERVICE". */}
+                {reg && reg.status !== 'IN_SERVICE' && (
+                  <span className="gecko-badge gecko-badge-warning">{reg.status.replace(/_/g, ' ')}</span>
+                )}
               </div>
             </div>
           </div>
@@ -173,8 +194,21 @@ function UnitInquiry() {
 
           <div className="gecko-row" style={{ gap: 0, padding: '0 20px', borderBottom: '1px solid var(--gecko-border)', flexWrap: 'wrap' }}>
             {([
-              ['now', 'Now & registry', 'box'],
-              ['visits', `Stays (${s.visits.length})`, 'clock'],
+              ['now', 'Overview', 'box'],
+              /* What the box IS \u2014 the registry record and the ports it is tied to.
+                 Two tabs over one PUT, so each sends the other's fields back. */
+              ...(can(STORY_PERMISSIONS.registryView)
+                ? [['master', 'Master data', 'database'] as const, ['ports', 'Fixed ports', 'mapPin'] as const]
+                : []),
+              /* What the box IS LIKE on this visit. Both belong to the stay, not
+                 to the registry, and both need tos.yard.manage to change. */
+              ['status', 'Status', 'shieldCheck'],
+              ['emr', 'EMR remarks', 'tool'],
+              ['log', 'Activity log', 'activity'],
+              /* Stays and EIRs are one tab, two cards (owner 2026-10-12). Both
+                 are read-only lists of the same history told two ways \u2014 the
+                 stay, and the paperwork that opened and closed it \u2014 and a tab
+                 each cost a row of the strip to save nobody a click. */
               ['moves', `EIRs (${moveRows.length})`, 'transferH'],
               ...(can(STORY_PERMISSIONS.holdView) ? [['holds', `Holds (${holdsNow.length} active)`, 'lock'] as const] : []),
               ['bookings', `Bookings (${s.bookings.length})`, 'clipboardList'],
@@ -200,8 +234,57 @@ function UnitInquiry() {
           <div style={{ padding: 20 }}>
             {tab === 'now' && <NowTab current={current} yard={yard} registry={reg} registryError={registry.error?.status ?? null}
               canRegistry={can(STORY_PERMISSIONS.registryView)} />}
-            {tab === 'visits' && <VisitsTab visits={s.visits} />}
-            {tab === 'moves' && <MovesTab rows={moveRows} error={moves.error?.title ?? null} />}
+            {tab === 'master' && (
+              <MasterDataTab
+                containerNo={s.containerNo}
+                registry={reg}
+                registryError={registry.error?.status ?? null}
+                canView={can(STORY_PERMISSIONS.registryView)}
+                canEdit={can(MASTER_PERMISSIONS.manage)}
+                onSaved={registry.reload}
+                onRenumbered={lookUp}
+              />
+            )}
+            {tab === 'ports' && (
+              <FixedPortsTab
+                registry={reg}
+                registryError={registry.error?.status ?? null}
+                canView={can(STORY_PERMISSIONS.registryView)}
+                canEdit={can(MASTER_PERMISSIONS.manage)}
+                onSaved={registry.reload}
+              />
+            )}
+            {(tab === 'status' || tab === 'emr') && (
+              /* `canAt`, not `can`: the permission is checked AT THE VISIT'S
+                 BRANCH. A planner who covers one depot would otherwise see this
+                 enabled on a box standing at another, and earn a 403 for it. */
+              <YardStatePanel
+                which={tab === 'status' ? 'condition' : 'emr'}
+                visitId={current?.containerVisitId ?? null}
+                inYard={!!current?.isInYard}
+                conditionCode={current?.conditionCode ?? null}
+                gradeCode={current?.gradeCode ?? null}
+                emrRemarks={current?.emrRemarks ?? null}
+                canManage={canAt(MASTER_PERMISSIONS.yardManage, current?.branchId)}
+                onChanged={() => { story.reload(); activeHolds.reload(); }}
+              />
+            )}
+            {tab === 'log' && (
+              <ActivityLogTab story={s} moves={moveRows} holdsNow={holdsNow} holdsReleased={holdsGone} registry={reg}
+                canReadRegistry={can(STORY_PERMISSIONS.registryView)} />
+            )}
+            {tab === 'moves' && (
+              <div className="gecko-stack gecko-cm-stack">
+                <ListCard title="Stays" count={s.visits.length}
+                  desc="Each visit to a depot, with the events recorded during it.">
+                  <VisitsTab visits={s.visits} />
+                </ListCard>
+                <ListCard title="EIRs" count={moveRows.length}
+                  desc="Every gate transaction for this box, voided ones included.">
+                  <MovesTab rows={moveRows} error={moves.error?.title ?? null} />
+                </ListCard>
+              </div>
+            )}
             {tab === 'holds' && <HoldsTab now={holdsNow} released={holdsGone} />}
             {tab === 'bookings' && <BookingsTab story={s} canBookings={can(STORY_PERMISSIONS.bookingView)} />}
             {tab === 'reefer' && <ReeferTab sessions={sessions} />}
@@ -215,7 +298,7 @@ function UnitInquiry() {
 // ─── Tabs ─────────────────────────────────────────────────────────────────────
 
 function NowTab({ current, yard, registry, registryError, canRegistry }: {
-  current: StoryVisit | null; yard: Yard | null; registry: RegistryContainer | null;
+  current: StoryVisit | null; yard: Yard | null; registry: RegistryRow | null;
   registryError: number | null; canRegistry: boolean;
 }) {
   return (
@@ -234,6 +317,7 @@ function NowTab({ current, yard, registry, registryError, canRegistry }: {
               </Link>} />
             <Kv label="Days in yard" value={dwellLabel(current.daysInYard)} />
             <Kv label="Last event" value={formatDateTime(current.lastEventAt)} />
+            {current.emrRemarks && <Kv label="EMR remarks" value={current.emrRemarks} />}
           </>
         )}
       </KvBlock>
@@ -253,12 +337,37 @@ function NowTab({ current, yard, registry, registryError, canRegistry }: {
               <Kv label="Manufactured" value={[registry.manufacturer, registry.manufactureDate].filter(Boolean).join(' · ') || '—'} />
               <Kv label="CSC / ACEP" value={[registry.cscPlateRef, registry.acepRef].filter(Boolean).join(' / ') || '—'} />
               <Kv label="Next examination" value={registry.nextExaminationDate ?? '—'} />
-              <Kv label="Status" value={registry.status} />
-              {!registry.isCheckDigitValid && <Kv label="Check digit" value="Fails ISO 6346 (accepted on override)" />}
+              <Kv label="Status" value={registry.status.replace(/_/g, ' ').toLowerCase()} />
+              <Kv label="Fixed ports" value={
+                registry.fixedPortCodes && registry.fixedPortCodes.length > 0
+                  ? <span className="gecko-mono">{registry.fixedPortCodes.join(', ')}</span>
+                  : 'Any port'} />
+              {registry.updatedAt && <Kv label="Last modified" value={formatDateTime(registry.updatedAt)} />}
             </>
           )}
       </KvBlock>
     </div>
+  );
+}
+
+/**
+ * A titled card around a read-only list.
+ *
+ * Stays and EIRs share a tab, so each needs to say what it is; without a
+ * heading the two tables ran together and the second looked like more rows of
+ * the first.
+ */
+function ListCard({ title, count, desc, children }: {
+  title: string; count: number; desc: string; children: React.ReactNode;
+}) {
+  return (
+    <section className="gecko-cm-section">
+      <div className="gecko-cm-section-head">
+        <div className="gecko-eyebrow">{title} ({count})</div>
+        <span className="gecko-cell-meta">{desc}</span>
+      </div>
+      {children}
+    </section>
   );
 }
 

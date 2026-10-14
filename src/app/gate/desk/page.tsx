@@ -408,13 +408,17 @@ export default function GateDeskPage() {
               placeholder="Why is the late gate allowed? (goes on the EIR)"
             />
           )}
+          {/* Only ever shown when the server raises CHECK_DIGIT, which it does
+              only where the depot has turned gate.enforce_check_digit on. Worded
+              around that setting rather than around ISO: a depot that handles
+              non-ISO boxes leaves it off and never sees this. */}
           {needsDigit && (
             <Override
               tone="warning"
               title="The check digit does not match"
               detail={view.findings.find(f => f.code === 'CHECK_DIGIT')?.message ?? ''}
               allowed={mayOverrideDigit}
-              deniedNote="Only someone holding tos.gate.override can accept a number that fails ISO 6346."
+              deniedNote="Only someone holding tos.gate.override can accept a number this depot's check-digit rule refuses."
               value={digitReason} onChange={setDigitReason}
               placeholder="Why is this number being accepted?"
             />
@@ -584,7 +588,6 @@ function ContextCard({ view }: { view: GatePreflight }) {
         />
         <Line label="Late approved" value={view.cutoff?.coveredByExceptionId ? 'yes, in advance' : '—'} />
         <Line label="Coupon" value={view.coupon ? `${view.coupon.couponRef} (${view.coupon.paymentChannel})` : 'none'} />
-        <Line label="Check digit" value={view.isCheckDigitValid ? 'valid' : 'fails ISO 6346'} />
         <Line label="In the registry" value={view.isInRegistry ? 'yes' : 'unknown box'} />
       </div>
     </Card>

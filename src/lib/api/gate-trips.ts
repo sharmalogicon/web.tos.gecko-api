@@ -110,10 +110,39 @@ export interface TripDamage {
   remarks?: string | null;
 }
 
+/**
+ * A box of a truck that arrived with no paperwork (WALK_IN_ORDERS_PLAN §3).
+ *
+ * The clerk's two answers are the move's `direction` and this `fullEmpty`;
+ * together they name the tenant's walk-in order type, so none is sent. The Save
+ * raises ONE booking of it per truck, customer and line.
+ *
+ * On a PICK-UP the line and type come from the yard box, so both are left out;
+ * on a drop-off they are the box's, falling back to the registry's owner.
+ */
+export interface TripWalkIn {
+  fullEmpty: 'FULL' | 'EMPTY';
+  customerCode: string;
+  lineCode?: string | null;
+  equipmentTypeCode?: string | null;
+  remarks?: string | null;
+}
+
 export interface TripRow {
-  /** The place this row fills. Absent on a blind box, which has no booking. */
+  /** The place this row fills. Absent on a walk-in box, which has no booking. */
   bookingContainerId?: string | null;
+  /**
+   * BLIND GATE IN. Kept in the type because the API still accepts it for one
+   * release, but the gate screen no longer sends it: a box with no paperwork
+   * is a `walkIn` row now, which names a customer and raises a real booking.
+   */
   blind?: TripBlind | null;
+  walkIn?: TripWalkIn | null;
+  /**
+   * R6: the clerk surveyed the box as it came in. True with no damages records
+   * a CLEAN gate-in survey; listing damages implies it. Drop-offs only.
+   */
+  surveyed?: boolean | null;
   move: GateTransactionRequest;
   /** Drop-off rows only; a damage on a pick-up is a 400. */
   damages?: TripDamage[] | null;

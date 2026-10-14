@@ -43,6 +43,8 @@ export interface StoryVisit {
   lineCode: string;
   fullEmpty: string;
   conditionCode: string | null;
+  /** The EMR desk's note on this stay (API 2026-10-12); shown at gate-out as INFO. */
+  emrRemarks?: string | null;
   gradeCode: string | null;
   yardId: string | null;
   positionText: string | null;
@@ -115,9 +117,21 @@ export function normaliseContainerNo(raw: string): string {
   return raw.replace(/[\s-]/g, '').toUpperCase();
 }
 
-/** 3 letters, U/J/Z, 7 digits — the same test the API applies before it answers 400. */
+/**
+ * ANY box number the depot may meet: 4 to 11 letters or digits.
+ *
+ * This mirrors `ContainerNumber.AnyFormed` in Gecko.SharedKernel, which is what
+ * the API actually tests before it answers 400 — NOT the ISO shape. The owner
+ * settled it on 2026-10-08: "some containers don't follow ISO container specs",
+ * naming real KORAKIT boxes — ANVY6399011, PLD9256601, RBI051, 4043535.
+ *
+ * It was the ISO regex here until 2026-10-12, which meant this screen refused
+ * to look up boxes that are standing in the yard right now: a clerk keying
+ * CONT2990876 was told it "is not a container number" and no request was ever
+ * sent. Do not tighten it again.
+ */
 export function isWellFormedContainerNo(no: string): boolean {
-  return /^[A-Z]{3}[UJZ][0-9]{7}$/.test(no);
+  return /^[A-Z0-9]{4,11}$/.test(no);
 }
 
 const EVENT_LABEL: Record<string, string> = {
@@ -128,6 +142,12 @@ const EVENT_LABEL: Record<string, string> = {
   CORRECTION: 'Correction',
   HOLD_APPLIED: 'Hold applied',
   SURVEY: 'Surveyed',
+  // Written by the Container Master's yard panel (API 2026-10-12). Named here
+  // because the fallback turns EMR_REMARKS into "Emr remarks".
+  CONDITION_CHANGE: 'Condition changed',
+  GRADE_CHANGE: 'Grade changed',
+  EMR_REMARKS: 'EMR remarks',
+  RENUMBERED: 'Number corrected',
 };
 
 export function eventLabel(type: string): string {

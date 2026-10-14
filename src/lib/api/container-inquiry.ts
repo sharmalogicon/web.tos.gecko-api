@@ -65,6 +65,8 @@ export interface InquiryRow {
   customerCode: string | null;
   customerName: string | null;
   conditionCode: string | null;
+  /** The EMR desk's note on this stay; also an INFO finding at gate-out. */
+  emrRemarks?: string | null;
   gradeCode: string | null;
   yardId: string | null;
   positionText: string | null;

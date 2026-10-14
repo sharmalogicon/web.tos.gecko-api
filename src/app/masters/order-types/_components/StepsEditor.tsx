@@ -25,6 +25,8 @@ export interface StepRow {
   requireVesselVoyage: boolean;
   allowDamagedRelease: boolean;
   skipEdi: boolean;
+  requireSurvey: boolean;
+  sealMustMatch: boolean;
 }
 
 let nextKey = 0;
@@ -36,6 +38,8 @@ export const RULES: { key: keyof StepRow; label: string; hint: string }[] = [
   { key: 'requireVesselVoyage', label: 'Vessel', hint: 'The move must name a vessel call' },
   { key: 'allowDamagedRelease', label: 'Damaged ok', hint: 'A box flagged damaged may still pass this step' },
   { key: 'skipEdi', label: 'No EDI', hint: 'No gate message is sent to the line for this step' },
+  { key: 'requireSurvey', label: 'Survey', hint: 'The gate-in on this step needs a damage survey on the same truck visit — a clean one counts' },
+  { key: 'sealMustMatch', label: 'Seal match', hint: 'The seal keyed at the gate must be the booking’s declared seal. Needs Seal ticked on this step' },
 ];
 
 export const rowsFromSteps = (steps: OrderTypeStep[]): StepRow[] =>
@@ -50,11 +54,14 @@ export const rowsFromSteps = (steps: OrderTypeStep[]): StepRow[] =>
     requireVesselVoyage: s.requireVesselVoyage,
     allowDamagedRelease: s.allowDamagedRelease,
     skipEdi: s.skipEdi,
+    requireSurvey: s.requireSurvey ?? false,
+    sealMustMatch: s.sealMustMatch ?? false,
   }));
 
 export const blankStep = (): StepRow => ({
   key: newKey(), movementCode: '', pudoMode: '', isRequired: true, isBillable: true,
   checkSealNo: false, checkGrossWeight: false, requireVesselVoyage: false, allowDamagedRelease: false, skipEdi: false,
+  requireSurvey: false, sealMustMatch: false,
 });
 
 export const requestFromSteps = (rows: StepRow[]): SaveOrderTypeStep[] => rows.map((r, i) => ({
@@ -68,11 +75,20 @@ export const requestFromSteps = (rows: StepRow[]): SaveOrderTypeStep[] => rows.m
   allowDamagedRelease: r.allowDamagedRelease,
   skipEdi: r.skipEdi,
   pudoMode: r.pudoMode || null,
+  requireSurvey: r.requireSurvey,
+  // The API refuses sealMustMatch without checkSealNo; the tick is disabled in
+  // that state, but a row that had both and then lost Seal would still carry it.
+  sealMustMatch: r.sealMustMatch && r.checkSealNo,
 }));
 
-export function stepErrors(rows: StepRow[]): Record<string, string> {
+export function stepErrors(rows: StepRow[], isWalkIn = false): Record<string, string> {
   const e: Record<string, string> = {};
   if (rows.length === 0) e.movements = 'Add at least one step — without steps the gate cannot process this order type.';
+  // The API refuses this outright. Said here because the clerk is three clicks
+  // away from the Rules panel that would explain it.
+  else if (isWalkIn && rows.length !== 1)
+    e.movements = `This is a walk-in order type, so it has exactly one step — the truck's drop-off or pick-up. `
+      + `Remove ${rows.length - 1} of these ${rows.length}, or untick Walk-in in Rules.`;
   const seen = new Set<string>();
   rows.forEach((r, i) => {
     if (!r.movementCode) e[`movements[${i}].movementCode`] = 'Pick a movement.';
@@ -112,8 +128,11 @@ export function StepsEditor({ rows, onChange, vocabulary, localErrors, apiError,
   return (
     <div className="gecko-stack gecko-stack-sm">
       {err('movements') && <div className="gecko-field-error">{err('movements')}</div>}
-      <div className="gecko-table-card">
-        <table className="gecko-table">
+      {/* Seven rule columns plus the row controls overflow a laptop. The card is
+          overflow:hidden, so without this wrapper the move / remove buttons are
+          CLIPPED rather than reachable. */}
+      <div className="gecko-table-card gecko-table-wrapper">
+        <table className="gecko-table gecko-ot-steps-table">
           <thead>
             <tr>
               <th>#</th>
@@ -128,14 +147,23 @@ export function StepsEditor({ rows, onChange, vocabulary, localErrors, apiError,
           <tbody>
             {rows.length === 0 && <tr><td colSpan={8 + RULES.length} className="gecko-cell-meta">No steps yet — add the first below.</td></tr>}
             {rows.map((r, i) => {
-              const messages = [err(`movements[${i}]`), err(`movements[${i}].movementCode`), err(`movements[${i}].sequenceNo`), err(`movements[${i}].pudoMode`)]
-                .filter(Boolean);
+              const messages = [
+                err(`movements[${i}]`), err(`movements[${i}].movementCode`), err(`movements[${i}].sequenceNo`),
+                err(`movements[${i}].pudoMode`), err(`movements[${i}].requireVesselVoyage`),
+                err(`movements[${i}].sealMustMatch`), err(`movements[${i}].requireSurvey`),
+              ].filter(Boolean);
               const check = (key: keyof StepRow, label: string) => {
-                const locked = key === 'requireVesselVoyage' && !requiresVesselSchedule;
+                // Two ticks the API refuses outright, so they are disabled with
+                // the reason rather than offered and 400'd after a round trip.
+                const why = key === 'requireVesselVoyage' && !requiresVesselSchedule
+                  ? 'Tick "Requires vessel schedule" on the order type first.'
+                  : key === 'sealMustMatch' && !r.checkSealNo
+                    ? 'Tick Seal on this step first: the gate can only match a seal it records.'
+                    : null;
                 return (
                   <input type="checkbox" className="gecko-checkbox" aria-label={`${label}, step ${i + 1}`}
-                    checked={locked ? false : (r[key] as boolean)} disabled={locked}
-                    title={locked ? 'Tick "Requires vessel schedule" on the order type first.' : undefined}
+                    checked={why ? false : (r[key] as boolean)} disabled={Boolean(why)}
+                    title={why ?? undefined}
                     onChange={e => set(i, { [key]: e.target.checked } as Partial<StepRow>)} />
                 );
               };

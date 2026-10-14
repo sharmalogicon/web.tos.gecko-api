@@ -209,6 +209,24 @@ export function useConditions(): { conditions: ContainerCondition[]; loading: bo
 
 const NO_CONDITIONS: ContainerCondition[] = [];
 
+/**
+ * The container grades, for the order type's release-grade rule.
+ *
+ * `/container-grades` is one of the BARE-ARRAY lists above — `Ok<IReadOnlyList<…>>`
+ * in Gecko.MasterData, no envelope — so it goes through rowsOf like the others.
+ *
+ * `error` is handed back, unlike the hooks above, because the caller needs to
+ * tell "no grades are set up" from "you may not read them": grades need
+ * mdm.equipment.view while the order-type screen needs mdm.commercial.view,
+ * and a clerk can easily hold one without the other.
+ */
+export function useGrades(): { grades: ContainerGrade[]; loading: boolean; denied: boolean } {
+  const { data, error, loading } = useApi<ListOrPage<ContainerGrade>>(`${GRADES_PATH}?pageSize=200`);
+  return { grades: rowsOf(data) ?? NO_GRADES, loading, denied: error?.status === 403 };
+}
+
+const NO_GRADES: ContainerGrade[] = [];
+
 export function useMovements(): { movements: Movement[]; loading: boolean } {
   const { data, loading } = useApi<ListOrPage<Movement>>(`${MOVEMENTS_PATH}?pageSize=200`);
   return { movements: rowsOf(data) ?? NO_MOVEMENTS, loading };
