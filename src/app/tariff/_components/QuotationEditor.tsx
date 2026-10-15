@@ -12,7 +12,7 @@ import { useSession } from '@/lib/auth/session';
 import { Fact } from '@/components/ui/Fact';
 import { ExcelImportPanel } from './ExcelImportPanel';
 import { FreeTimeMatrix } from './FreeTimeMatrix';
-import { PartyPicker } from './PartyPicker';
+import { PartyPicker } from '@/components/ui/PartyPicker';
 import { RateDialog } from './RateDialog';
 import { Labelled } from './TariffFields';
 import {

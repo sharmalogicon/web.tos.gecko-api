@@ -6,7 +6,7 @@ import { defaultHandoverMode, handoverModesFor } from '@/lib/api/tos';
 import { ApiError } from '@/lib/api/problem';
 import { useFacility } from '@/lib/api/facility';
 import { useSession } from '@/lib/auth/session';
-import { PartyPicker } from '@/app/tariff/_components/PartyPicker';
+import { PartyPicker } from '@/components/ui/PartyPicker';
 import { BookingPrintMenu } from './BookingPrintMenu';
 import { useCodeList } from '@/lib/api/lookups';
 import { PortPicker } from './PortPicker';

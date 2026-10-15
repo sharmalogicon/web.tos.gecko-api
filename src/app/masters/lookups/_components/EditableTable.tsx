@@ -1,6 +1,8 @@
 "use client";
 import React, { useMemo, useState } from 'react';
 import { DateField } from '@/components/ui/DateField';
+import { PartyPicker } from '@/components/ui/PartyPicker';
+import type { PartyRole } from '@/lib/api/parties';
 import { Icon } from '@/components/ui/Icon';
 import { EmptyState } from '@/components/ui/EmptyState';
 import { ConfirmDialog } from '@/components/ui/ConfirmDialog';
@@ -15,13 +17,15 @@ import { ApiError } from '@/lib/api/problem';
  * the row's Active switch; Delete is a separate, confirmed action.
  */
 
-export type ColumnKind = 'text' | 'code' | 'number' | 'select' | 'bool' | 'date' | 'time';
+export type ColumnKind = 'text' | 'code' | 'number' | 'select' | 'bool' | 'date' | 'time' | 'party';
 
 export interface Column<T> {
   key: keyof T & string;
   label: string;
   kind: ColumnKind;
   options?: { value: string; label: string }[];
+  /** 'party' only: which role the search is over. */
+  role?: PartyRole;
   required?: boolean;
   /** Editable only while the row is new — the code a row is found by. */
   createOnly?: boolean;
@@ -102,6 +106,20 @@ function Cell<T>({ col, draft, set, error, isNew }: {
     case 'time':
       input = <input type="time" className="gecko-input gecko-input-sm gecko-num-tabular" value={(value as string | null) ?? ''} aria-label={col.label} {...invalid} onChange={e => change(e.target.value || null)} />;
       break;
+    case 'party':
+      /**
+       * A searched party, not a list of them: a customer list is thousands
+       * long and a dropdown of the first 200 stops inside the A's.
+       *
+       * The menu is NOT a portal, unlike DateField's, so the table it sits in
+       * must not clip — see gecko-editable-table-pickers below.
+       */
+      input = (
+        <PartyPicker role={col.role ?? 'CUSTOMER'} value={(value as string | null) || null} nameFirst
+          placeholder="Type to search\u2026" error={error ?? undefined}
+          onChange={code => change(code ?? null)} />
+      );
+      break;
     case 'date':
       // The picker is a portal, so it escapes the table's overflow:hidden.
       input = <DateField size="sm" value={(value as string | null) ?? ''} aria-label={col.label}
@@ -117,7 +135,8 @@ function Cell<T>({ col, draft, set, error, isNew }: {
   return (
     <div>
       {input}
-      {error && <div className="gecko-field-error">{error}</div>}
+      {/* The party picker prints its own error under the control. */}
+      {error && col.kind !== 'party' && <div className="gecko-field-error">{error}</div>}
     </div>
   );
 }
@@ -126,6 +145,7 @@ function display<T>(col: Column<T>, value: unknown): React.ReactNode {
   if (col.kind === 'bool') return value ? <Icon name="check" size={14} /> : <span className="gecko-cell-meta">—</span>;
   if (value === null || value === undefined || value === '') return <span className="gecko-cell-meta">—</span>;
   if (col.kind === 'select') return col.options?.find(o => o.value === value)?.label ?? String(value);
+  if (col.kind === 'party') return value ? <span className="gecko-text-mono">{String(value)}</span> : <span className="gecko-cell-meta">—</span>;
   if (col.kind === 'code') return <span className="gecko-text-mono">{String(value)}</span>;
   return String(value);
 }
@@ -237,8 +257,10 @@ export function EditableTable<T>({
     );
   };
 
+  const hasPicker = columns.some(c => c.kind === 'party');
+
   return (
-    <div className="gecko-stack gecko-stack-md">
+    <div className={`gecko-stack gecko-stack-md${hasPicker ? ' gecko-editable-table-pickers' : ''}`}>
       {note && <div className="gecko-cell-meta">{note}</div>}
       <div className="gecko-row gecko-row-wrap" style={{ gap: 12 }}>
         {toolbar}

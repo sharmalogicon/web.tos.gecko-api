@@ -5,7 +5,7 @@ import { Field, FormGrid } from '@/components/ui/FormGrid';
 import { useToast } from '@/components/ui/Toast';
 import { useApiList } from '@/lib/api/use-api';
 import { ApiError } from '@/lib/api/problem';
-import { PartyPicker } from '@/app/tariff/_components/PartyPicker';
+import { PartyPicker } from '@/components/ui/PartyPicker';
 import { type EquipmentType } from '@/lib/api/equipment-types';
 import {
   MATERIALS, OWNERSHIP_TYPES, REGISTRY_STATUSES,

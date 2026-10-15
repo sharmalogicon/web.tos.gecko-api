@@ -34,10 +34,25 @@ export default function EditQuotationPage({ params }: { params: Promise<{ id: st
   const rates = useApi<RateSet>(`/api/revenue/tariffs/${id}/rates`);
   const freeTime = useApi<FreeTimeSet>(`/api/revenue/tariffs/${id}/free-time`);
 
-  const loading = schedule.loading || rates.loading || freeTime.loading;
   const failure = schedule.error ?? rates.error ?? freeTime.error;
+  /**
+   * ALL THREE READS, NOT JUST THE SCHEDULE.
+   *
+   * The editor seeds its state from `initial` on its FIRST render and never
+   * re-reads it, which the note above explains. The guard here used to be
+   * `loading && !schedule.data` — and the schedule is the smallest of the three
+   * payloads, so it lands first. The moment it did, that condition went false,
+   * the editor mounted with `rates.data` still null, and it captured an empty
+   * rate set for good.
+   *
+   * That is what showed a freshly revised tariff as RATES (0) with all of its
+   * prices sitting safely on the server. Worse, the rates PUT is replace-as-set:
+   * saving that screen would have written the empty set back and deleted every
+   * copied rate.
+   */
+  const ready = Boolean(schedule.data && rates.data && freeTime.data);
 
-  if (loading && !schedule.data) {
+  if (!ready && !failure) {
     return <div className="gecko-card gecko-card-padded gecko-dash-placeholder">Loading the quotation…</div>;
   }
 

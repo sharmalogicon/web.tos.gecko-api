@@ -295,9 +295,20 @@
   display: block;
 }
 
+/* A FIELD THE SAVE WILL INSIST ON reads blue, label and marker together
+   (owner 2026-10-15). Red is the colour this app uses for something that has
+   GONE WRONG — a refused field, a blocked finding — and a form that opens with
+   six red marks on it is a form that looks broken before anyone touches it.
+   Blue says "fill this in", and a clerk can scan the mandatory ones at a
+   glance without reading every label. */
+.gecko-label-required {
+  color: var(--gecko-primary-700);
+  font-weight: 600;
+}
+
 .gecko-label-required::after {
   content: " *";
-  color: var(--gecko-error-500);
+  color: var(--gecko-primary-600);
 }
 
 .gecko-input,
@@ -10991,3 +11002,142 @@ th.gecko-cell-tight {
 
 /* The asterisk on a gate field the server will insist on (R6's survey tick). */
 .gecko-required-mark { color: var(--gecko-error-600); font-weight: 700; }
+
+/* PartyPicker, moved out of tariff/ to components/ui when it became the app's
+   one party search (2026-10-15). These replace its inline styles. */
+.gecko-party-pick { position: relative; }
+.gecko-party-pick-note { padding: 8px; }
+
+/* A filter panel holding a party search must not clip: its menu opens below the
+   input and has to overlap the panel's edge. The scroll cap goes with it, since
+   a scrolling box clips just as hard as a hidden one. */
+.gecko-filter-panel-pickers { overflow: visible; }
+.gecko-filter-panel-pickers .gecko-filter-body-wide { max-height: none; overflow: visible; }
+
+/* An editable table carrying a party search must not clip: that menu is not a
+   portal (DateField's is), so it has to overlap the table rather than be cut
+   off at its edge. */
+.gecko-editable-table-pickers .gecko-table-card,
+.gecko-editable-table-pickers .gecko-table-wrapper { overflow: visible; }
+.gecko-editable-table-pickers td { overflow: visible; }
+.gecko-hct-haulier-filter { width: 260px; }
+
+/* ─── Container master: the Overview tab ──────────────────────────────────────
+   Two cards — where the box is, and what the registry says it is. It was two
+   bare label stacks side by side, which with the box out of the yard left one
+   sentence against half a screen of white. */
+
+.gecko-ui-overview {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+  gap: 18px;
+  align-items: start;
+}
+
+/* The four-up strip under the banner. */
+.gecko-ui-strip {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  border-bottom: 1px solid var(--gecko-border);
+}
+
+/* Label in its own column so every value starts at the same place: ten facts
+   read as five lines instead of ten, and the eye runs down one edge. */
+.gecko-ui-facts { display: flex; flex-direction: column; gap: 7px; margin: 0; }
+
+.gecko-ui-fact {
+  display: grid;
+  grid-template-columns: 140px minmax(0, 1fr);
+  gap: 12px;
+  align-items: baseline;
+}
+.gecko-ui-fact dt {
+  margin: 0;
+  font-size: 11.5px;
+  color: var(--gecko-text-disabled);
+}
+.gecko-ui-fact dd {
+  margin: 0;
+  min-width: 0;
+  font-size: 12.5px;
+  font-weight: 600;
+  color: var(--gecko-text-primary);
+  overflow-wrap: anywhere;
+}
+
+/* A run of facts under its own heading — identity, build, certification. */
+.gecko-ui-group { display: flex; flex-direction: column; gap: 7px; }
+.gecko-ui-group + .gecko-ui-group { margin-top: 12px; padding-top: 12px; border-top: 1px solid var(--gecko-border); }
+.gecko-ui-group-title {
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.07em;
+  text-transform: uppercase;
+  color: var(--gecko-primary-700);
+}
+
+/* The paperwork at each end of a stay, side by side: a clerk clicks these. */
+.gecko-ui-gates {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+  gap: 12px;
+  margin-top: 4px;
+  padding-top: 12px;
+  border-top: 1px solid var(--gecko-border);
+}
+.gecko-ui-gate { display: flex; flex-direction: column; gap: 2px; min-width: 0; }
+
+/* Free text — an EMR note or a registry remark — reads as a paragraph, not a
+   value crammed into a fact's right-hand column. */
+.gecko-ui-emr {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  padding: 9px 11px;
+  border-radius: var(--gecko-radius-md);
+  background: var(--gecko-bg-subtle);
+  font-size: 12.5px;
+  line-height: 1.5;
+}
+
+@media (max-width: 1000px) {
+  .gecko-ui-overview { grid-template-columns: minmax(0, 1fr); }
+}
+@media (max-width: 760px) {
+  .gecko-ui-strip { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .gecko-ui-fact { grid-template-columns: minmax(0, 1fr); gap: 0; }
+  .gecko-ui-gates { grid-template-columns: minmax(0, 1fr); }
+}
+
+/* What a revision carries over, listed before the dates: "58 move charges and
+   8 storage rows are coming with this" is the fact that tells a clerk they are
+   about to do the right thing. */
+.gecko-revise-carry {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  padding: 12px 14px;
+  border: 1px solid var(--gecko-border);
+  border-radius: var(--gecko-radius-md);
+  background: var(--gecko-bg-subtle);
+}
+.gecko-revise-list {
+  margin: 0;
+  padding-left: 18px;
+  font-size: 12.5px;
+  line-height: 1.6;
+  color: var(--gecko-text-primary);
+}
+
+/* A priced-row list filtered down to nothing: the clear is beside the message,
+   because the table it would normally sit above is not there to be seen. */
+.gecko-rate-nomatch { padding: 4px 0 2px; }
+
+/* The tariff detail's card head and body, lifted out of inline styles. */
+.gecko-tariff-card-head {
+  padding: 14px 18px;
+  border-bottom: 1px solid var(--gecko-border);
+  gap: 10px;
+}
+.gecko-tariff-card-icon { color: var(--gecko-primary-600); }
+.gecko-tariff-card-body { padding: 18px; }

@@ -100,7 +100,7 @@ export function PartyPicker({ role, value, onChange, placeholder, error, disable
   };
 
   return (
-    <div ref={box} style={{ position: 'relative' }}>
+    <div ref={box} className="gecko-party-pick">
       <input
         className="gecko-input"
         value={text}
@@ -124,9 +124,9 @@ export function PartyPicker({ role, value, onChange, placeholder, error, disable
           every card on the page, below a modal. */}
       {open && (
         <div className="gecko-card gecko-party-pick-menu" role="listbox">
-          {loading && <div className="gecko-cell-meta" style={{ padding: 8 }}>Searching…</div>}
+          {loading && <div className="gecko-cell-meta gecko-party-pick-note">Searching…</div>}
           {!loading && failure && (
-            <div style={{ padding: 8 }}>
+            <div className="gecko-party-pick-note">
               <div className="gecko-cell-meta">{failure}</div>
               {text.trim() && (
                 <button type="button" className="gecko-btn gecko-btn-outline gecko-btn-sm gecko-mt-1" onClick={takeTypedCode}>
@@ -135,7 +135,9 @@ export function PartyPicker({ role, value, onChange, placeholder, error, disable
               )}
             </div>
           )}
-          {!loading && !failure && items.length === 0 && <div className="gecko-cell-meta" style={{ padding: 8 }}>No matching {role.toLowerCase().replace('_', ' ')}.</div>}
+          {!loading && !failure && items.length === 0 && (
+            <div className="gecko-cell-meta gecko-party-pick-note">No matching {role.toLowerCase().replace('_', ' ')}.</div>
+          )}
           {!loading && items.map(p => (
             // NOT a .gecko-btn any more: that is one line tall and nowrap, so a
             // Thai company name overran its row and printed over the next one.
@@ -168,7 +170,9 @@ export function PartyPicker({ role, value, onChange, placeholder, error, disable
               {!p.isActive && <span className="gecko-pill gecko-pill-neutral">inactive</span>}
             </button>
           ))}
-          {!loading && total > items.length && <div className="gecko-cell-meta" style={{ padding: 8 }}>{total - items.length} more — keep typing to narrow.</div>}
+          {!loading && total > items.length && (
+            <div className="gecko-cell-meta gecko-party-pick-note">{total - items.length} more — keep typing to narrow.</div>
+          )}
         </div>
       )}
     </div>

@@ -11,6 +11,7 @@ import { VasPanel } from './VasPanel';
 import { DamagePanel } from './DamagePanel';
 import { BookingPicker, type BookableBox } from '../../_components/BookingPicker';
 import { WalkInBoxPicker } from './WalkInBoxPicker';
+import { PartyPicker } from '@/components/ui/PartyPicker';
 import {
   NO_WALK_IN_ORDER_TYPE, WALK_IN_REFUSALS, walkInOrderTypeFor, type WalkInBox, type WalkInOrderType,
 } from '@/lib/api/walk-in';
@@ -66,17 +67,29 @@ export function MoveCard({
   onRecord: () => void;
   canRecord: boolean;
 }) {
-  const { data: lineRows } = useApiList<PartyRow>('/api/master/parties?role=SHIPPING_LINE&pageSize=200');
-  const { data: customerRows } = useApiList<PartyRow>('/api/master/parties?role=CUSTOMER&pageSize=200');
-  const { data: equipmentRows } = useApiList<EquipmentTypeRow>('/api/master/equipment-types?pageSize=200');
+  /**
+   * The parties are SEARCHED, not listed.
+   *
+   * These were two `pageSize=200` reads behind plain dropdowns. KORAKIT has far
+   * more customers than that, so the list stopped inside the A's and a clerk
+   * could not reach — or type — anything after it (owner 2026-10-15). PartyPicker
+   * asks the server per keystroke and takes a typed code when the search cannot
+   * reach the API at all.
+   */
+  const { data: equipmentRows, error: equipmentError } =
+    useApiList<EquipmentTypeRow>('/api/master/equipment-types?pageSize=200');
   const { yards } = useFacility();
   const { conditions } = useConditions();
 
   // useApiList answers null until the first page lands; an empty list renders
   // the same and keeps every map below free of a guard.
-  const lines = lineRows ?? [];
-  const customers = customerRows ?? [];
   const equipmentTypes = equipmentRows ?? [];
+  /**
+   * A gate clerk cannot read the equipment types: that list is
+   * RequirePermission(mdm.equipment.view), tenant-wide, and the gate role does
+   * not hold it. The select was simply empty, with no hint why.
+   */
+  const equipmentDenied = equipmentError?.status === 403;
 
   const drop = move.trip === 'DROP_OFF_CONT';
   // Held and priced — not committed. The Save is what writes it.
@@ -396,33 +409,39 @@ export function MoveCard({
 
               <div className="gecko-gate-grid-4">
                 <GateField label="Customer" required error={err('walkIn.customerCode') ?? err('customerCode')}>
-                  <select className="gecko-input" value={move.customerCode} disabled={done}
-                    onChange={e => onChange({ customerCode: e.target.value })}>
-                    <option value="">Choose…</option>
-                    {customers.map(c => <option key={c.partyCode} value={c.partyCode}>{c.partyCode} - {c.nameEn}</option>)}
-                  </select>
+                  <PartyPicker role="CUSTOMER" value={move.customerCode || null} disabled={done} nameFirst
+                    placeholder="Search the customer…"
+                    onChange={code => onChange({ customerCode: code ?? '' })} />
                 </GateField>
 
                 {/* A pick-up's line and type are the YARD's, not the clerk's:
                     they arrive with the box and are shown, not asked. */}
                 {drop ? (
                   <>
-                    <GateField label="Shipping line" required error={err('walkIn.lineCode') ?? err('lineCode')}>
-                      <select className="gecko-input" value={move.lineCode} disabled={done}
-                        onChange={e => onChange({ lineCode: e.target.value })}>
-                        <option value="">{move.known?.isInRegistry ? 'From the registry' : 'Choose…'}</option>
-                        {lines.map(l => <option key={l.partyCode} value={l.partyCode}>{l.partyCode} - {l.nameEn}</option>)}
-                      </select>
+                    <GateField label="Shipping line" required error={err('walkIn.lineCode') ?? err('lineCode')}
+                      hint={move.known?.isInRegistry ? 'Leave it empty to take the registry\u2019s owner.' : undefined}>
+                      <PartyPicker role="SHIPPING_LINE" value={move.lineCode || null} disabled={done} nameFirst
+                        placeholder="Search the line\u2026"
+                        onChange={code => onChange({ lineCode: code ?? '' })} />
                     </GateField>
                     <GateField label="Equipment type" error={err('walkIn.equipmentTypeCode') ?? err('equipmentTypeCode')}
-                      required={move.known?.isInRegistry === false}>
-                      <select className="gecko-input" value={move.equipmentTypeCode} disabled={done}
-                        onChange={e => onChange({ equipmentTypeCode: e.target.value })}>
-                        <option value="">From the registry</option>
-                        {equipmentTypes.filter(t => t.isActive).map(t => (
-                          <option key={t.equipmentTypeId} value={t.typeCode}>{t.typeCode} - {t.descriptionEn}</option>
-                        ))}
-                      </select>
+                      required={move.known?.isInRegistry === false}
+                      hint={equipmentDenied
+                        ? 'The type list needs mdm.equipment.view, which this account does not hold \u2014 type the code.'
+                        : undefined}>
+                      {equipmentDenied ? (
+                        <input className="gecko-input gecko-text-mono" value={move.equipmentTypeCode} disabled={done}
+                          maxLength={20} placeholder="20GP"
+                          onChange={e => onChange({ equipmentTypeCode: e.target.value.toUpperCase() })} />
+                      ) : (
+                        <select className="gecko-input" value={move.equipmentTypeCode} disabled={done}
+                          onChange={e => onChange({ equipmentTypeCode: e.target.value })}>
+                          <option value="">From the registry</option>
+                          {equipmentTypes.filter(t => t.isActive).map(t => (
+                            <option key={t.equipmentTypeId} value={t.typeCode}>{t.typeCode} - {t.descriptionEn}</option>
+                          ))}
+                        </select>
+                      )}
                     </GateField>
                   </>
                 ) : (
@@ -513,11 +532,9 @@ export function MoveCard({
                 {carries ? (
                   <div className="gecko-readonly-value gecko-text-mono">{move.customerCode || '—'}</div>
                 ) : (
-                  <select className="gecko-input" value={move.customerCode}
-                    onChange={e => onChange({ customerCode: e.target.value })}>
-                    <option value="">Choose…</option>
-                    {customers.map(c => <option key={c.partyCode} value={c.partyCode}>{c.partyCode} - {c.nameEn}</option>)}
-                  </select>
+                  <PartyPicker role="CUSTOMER" value={move.customerCode || null} nameFirst
+                    placeholder="Search the customer…"
+                    onChange={code => onChange({ customerCode: code ?? '' })} />
                 )}
               </GateField>
 
@@ -572,11 +589,9 @@ export function MoveCard({
                 {carries ? (
                   <div className="gecko-readonly-value gecko-text-mono">{move.agentCode || '—'}</div>
                 ) : (
-                  <select className="gecko-input" value={move.agentCode}
-                    onChange={e => onChange({ agentCode: e.target.value })}>
-                    <option value="">Not stated</option>
-                    {lines.map(l => <option key={l.partyCode} value={l.partyCode}>{l.partyCode} - {l.nameEn}</option>)}
-                  </select>
+                  <PartyPicker role="SHIPPING_LINE" value={move.agentCode || null} nameFirst
+                    placeholder="Search the agent…"
+                    onChange={code => onChange({ agentCode: code ?? '' })} />
                 )}
               </GateField>
 

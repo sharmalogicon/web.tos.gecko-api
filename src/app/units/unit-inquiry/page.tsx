@@ -7,7 +7,7 @@ import { BarcodeScanInput } from '@/components/ui/BarcodeDisplay';
 import { EmptyState } from '@/components/ui/EmptyState';
 import { useApi, useApiList, type Paged } from '@/lib/api/use-api';
 import { useSession } from '@/lib/auth/session';
-import { dwellLabel, formatContainerNo, formatDateTime, type GateTransactionSummary } from '@/lib/api/tos';
+import { dwellLabel, formatContainerNo, formatDate, formatDateTime, type GateTransactionSummary } from '@/lib/api/tos';
 import { eirPath, formatKg, type ContainerHolds } from '@/lib/api/gate-eir';
 import type { Hold } from '@/lib/api/holds';
 import { REEFER_SESSIONS_PATH, type ReeferSession } from '@/lib/api/reefer';
@@ -90,6 +90,8 @@ function UnitInquiry() {
   const holdsNow = activeHolds.data?.holds ?? [];
   const holdsGone = released.data ?? [];
   const reg = registry.data;
+  // The stay the header describes: the open one, else the newest closed one.
+  const latest = current ?? s?.visits[0] ?? null;
   const loaded = !!s && s.containerNo === asked;
   const nothing = loaded && s.visits.length === 0 && s.bookings.length === 0 && moveRows.length === 0 && !reg;
 
@@ -185,11 +187,18 @@ function UnitInquiry() {
             </div>
           </div>
 
-          <div className="gecko-grid-4" style={{ gap: 0, borderBottom: '1px solid var(--gecko-border)' }}>
-            <Strip label="Depot · yard" value={current ? [current.branchCode, yard?.yardCode].filter(Boolean).join(' · ') || '—' : '—'} />
-            <Strip label="Position" value={current?.positionText ?? '—'} mono />
-            <Strip label="Full / empty" value={current?.fullEmpty ?? '—'} />
-            <Strip label="In yard" value={current ? `${dwellLabel(current.daysInYard)} (since ${formatDateTime(current.gateInAt)})` : '—'} />
+          {/* The strip reads the OPEN stay, or the last one when the box has
+              gone. Four dashes told a clerk nothing except that they had asked
+              about a box that is not here, which the badge above already says. */}
+          <div className="gecko-ui-strip">
+            <Strip label={current ? 'Depot · yard' : 'Last depot · yard'}
+              value={latest ? [latest.branchCode, yard?.yardCode].filter(Boolean).join(' · ') || '—' : '—'} />
+            <Strip label="Position" value={current ? latest?.positionText ?? 'no slot' : '—'} mono />
+            <Strip label="Full / empty" value={latest?.fullEmpty ?? '—'} />
+            <Strip label={current ? 'In yard' : 'Gated out'}
+              value={!latest ? '—'
+                : current ? `${dwellLabel(latest.daysInYard)} (since ${formatDateTime(latest.gateInAt)})`
+                : latest.gateOutAt ? formatDateTime(latest.gateOutAt) : '—'} />
           </div>
 
           <div className="gecko-row" style={{ gap: 0, padding: '0 20px', borderBottom: '1px solid var(--gecko-border)', flexWrap: 'wrap' }}>
@@ -232,8 +241,11 @@ function UnitInquiry() {
           </div>
 
           <div style={{ padding: 20 }}>
-            {tab === 'now' && <NowTab current={current} yard={yard} registry={reg} registryError={registry.error?.status ?? null}
-              canRegistry={can(STORY_PERMISSIONS.registryView)} />}
+            {tab === 'now' && (
+              <NowTab current={current} last={s.visits[0] ?? null} yard={yard} registry={reg}
+                registryError={registry.error?.status ?? null}
+                canRegistry={can(STORY_PERMISSIONS.registryView)} />
+            )}
             {tab === 'master' && (
               <MasterDataTab
                 containerNo={s.containerNo}
@@ -297,55 +309,183 @@ function UnitInquiry() {
 
 // ─── Tabs ─────────────────────────────────────────────────────────────────────
 
-function NowTab({ current, yard, registry, registryError, canRegistry }: {
-  current: StoryVisit | null; yard: Yard | null; registry: RegistryRow | null;
+/**
+ * OVERVIEW — where the box is, and what the registry says it is.
+ *
+ * Two cards, not two bare lists. The facts are laid out label-beside-value in a
+ * grid so a card of ten of them is five lines rather than ten, and the registry
+ * card is grouped — identity, build, certification, status — because eleven
+ * undifferentiated rows is a wall a clerk has to read in full to find one thing.
+ *
+ * WHEN THE BOX IS NOT IN THE YARD the left card shows its LAST stay rather than
+ * one sentence saying it is gone. "Not in the yard" beside an empty half-screen
+ * answers the question nobody asked; where it went, and when, is the question
+ * they did.
+ */
+function NowTab({ current, last, yard, registry, registryError, canRegistry }: {
+  current: StoryVisit | null;
+  /** The newest stay, open or closed — what to show when there is no open one. */
+  last: StoryVisit | null;
+  yard: Yard | null; registry: RegistryRow | null;
   registryError: number | null; canRegistry: boolean;
 }) {
+  const stay = current ?? last;
+
   return (
-    <div className="gecko-grid-2" style={{ gap: 24 }}>
-      <KvBlock title="Current stay">
-        {!current ? <div className="gecko-cell-meta">Not in the yard at any depot you cover.</div> : (
+    <div className="gecko-ui-overview">
+
+      {/* ── where it is ─────────────────────────────────────────────────── */}
+      <section className="gecko-cm-section">
+        <div className="gecko-cm-section-head">
+          <div className="gecko-eyebrow">
+            <Icon name="mapPin" size={13} /> {current ? 'Where it is now' : 'Where it was last'}
+          </div>
+          {stay && (
+            <span className={`gecko-badge gecko-badge-${current ? 'success' : 'gray'}`}>
+              {current ? 'In yard' : 'Gone out'}
+            </span>
+          )}
+        </div>
+
+        {!stay ? (
+          <EmptyState icon="search" title="No stay on record"
+            description="This box has never been through a gate at the depots you cover." />
+        ) : (
           <>
-            <Kv label="Depot" value={current.branchCode ?? '—'} />
-            <Kv label="Yard" value={yard ? `${yard.yardCode} · ${yard.nameEn}` : current.yardId ? '—' : 'Not assigned'} />
-            <Kv label="Position" value={current.positionText ?? '—'} mono />
-            <Kv label="Full / empty" value={current.fullEmpty} />
-            <Kv label="Condition / grade" value={[current.conditionCode, current.gradeCode].filter(Boolean).join(' / ') || '—'} />
-            <Kv label="Gate-in" value={
-              <Link href={eirPath('IN', current.gateInTransactionId)} className="gecko-link">
-                {current.gateInEirNo ?? 'EIR'} · {current.gateInMovementCode ?? ''} · {formatDateTime(current.gateInAt)}
-              </Link>} />
-            <Kv label="Days in yard" value={dwellLabel(current.daysInYard)} />
-            <Kv label="Last event" value={formatDateTime(current.lastEventAt)} />
-            {current.emrRemarks && <Kv label="EMR remarks" value={current.emrRemarks} />}
+            <dl className="gecko-ui-facts">
+              <Fact label="Depot" value={stay.branchCode ?? '—'} />
+              <Fact label="Yard" value={yard ? `${yard.yardCode} · ${yard.nameEn}` : stay.yardId ? '—' : 'Not assigned'} />
+              <Fact label="Position" value={stay.positionText ?? 'no slot'} mono />
+              <Fact label="Full / empty" value={stay.fullEmpty} />
+              <Fact label="Condition · grade" value={[stay.conditionCode, stay.gradeCode].filter(Boolean).join(' · ') || '—'} mono />
+              <Fact label={current ? 'Days in yard' : 'Days it stayed'} value={dwellLabel(stay.daysInYard)} />
+            </dl>
+
+            {/* The paperwork at each end of the stay, which is what a clerk
+                clicks through to. */}
+            <div className="gecko-ui-gates">
+              <div className="gecko-ui-gate">
+                <span className="gecko-eyebrow">Gated in</span>
+                <Link href={eirPath('IN', stay.gateInTransactionId)} className="gecko-link gecko-mono">
+                  {stay.gateInEirNo ?? 'EIR'}
+                </Link>
+                <span className="gecko-cell-meta">
+                  {[stay.gateInMovementCode, formatDateTime(stay.gateInAt)].filter(Boolean).join(' · ')}
+                </span>
+              </div>
+              <div className="gecko-ui-gate">
+                <span className="gecko-eyebrow">Gated out</span>
+                {stay.gateOutTransactionId ? (
+                  <>
+                    <Link href={eirPath('OUT', stay.gateOutTransactionId)} className="gecko-link gecko-mono">
+                      {stay.gateOutEirNo ?? 'EIR'}
+                    </Link>
+                    <span className="gecko-cell-meta">{formatDateTime(stay.gateOutAt)}</span>
+                  </>
+                ) : <span className="gecko-cell-meta">still inside</span>}
+              </div>
+            </div>
+
+            {stay.emrRemarks && (
+              <div className="gecko-ui-emr">
+                <span className="gecko-eyebrow"><Icon name="tool" size={12} /> EMR remarks</span>
+                <span>{stay.emrRemarks}</span>
+              </div>
+            )}
+
+            <div className="gecko-cell-meta">Last event {formatDateTime(stay.lastEventAt)}.</div>
           </>
         )}
-      </KvBlock>
-      <KvBlock title="Registry (master data)">
+      </section>
+
+      {/* ── what it is ──────────────────────────────────────────────────── */}
+      <section className="gecko-cm-section">
+        <div className="gecko-cm-section-head">
+          <div className="gecko-eyebrow"><Icon name="database" size={13} /> Registry · master data</div>
+          {registry && registry.status !== 'IN_SERVICE' && (
+            <span className="gecko-badge gecko-badge-warning">{registry.status.replace(/_/g, ' ').toLowerCase()}</span>
+          )}
+        </div>
+
         {!canRegistry ? <div className="gecko-cell-meta">You do not have access to the container registry.</div>
-          : registryError === 404 ? <div className="gecko-cell-meta">Not in the container registry.</div>
+          : registryError === 404 ? (
+            <EmptyState icon="database" title="Not in the registry"
+              description="The box has been handled at the gate without a master-data record — normal for another line's equipment." />
+          )
           : !registry ? <div className="gecko-cell-meta">{registryError ? 'The registry could not be read.' : 'Reading…'}</div> : (
             <>
-              <Kv label="Type · ISO" value={[registry.typeCode, registry.isoCode].filter(Boolean).join(' · ') || '—'} mono />
-              <Kv label="Owner / lessor" value={[registry.ownerCode, registry.lessorCode].filter(Boolean).join(' / ') || '—'} />
-              <Kv label="Ownership" value={registry.ownershipType.replace(/_/g, ' ').toLowerCase()} />
-              <Kv label="Material" value={registry.material ?? '—'} />
-              <Kv label="Tare / max gross" value={`${formatKg(registry.tareWeightKg)} / ${formatKg(registry.maxGrossKg)}`} />
-              {(registry.reeferUnitMake || registry.reeferUnitModel) && (
-                <Kv label="Reefer unit" value={[registry.reeferUnitMake, registry.reeferUnitModel].filter(Boolean).join(' ')} />
+              <FactGroup title="Identity">
+                <Fact label="Type · ISO" value={[registry.typeCode, registry.isoCode].filter(Boolean).join(' · ') || '—'} mono />
+                <Fact label="Owner" value={registry.ownerCode ?? '—'} />
+                <Fact label="Lessor" value={registry.lessorCode ?? '—'} />
+                <Fact label="Ownership" value={registry.ownershipType.replace(/_/g, ' ').toLowerCase()} />
+              </FactGroup>
+
+              <FactGroup title="Build and weights">
+                <Fact label="Material" value={registry.material?.replace(/_/g, ' ').toLowerCase() ?? '—'} />
+                <Fact label="Tare / max gross" value={`${formatKg(registry.tareWeightKg)} / ${formatKg(registry.maxGrossKg)}`} />
+                <Fact label="Manufacturer" value={registry.manufacturer ?? '—'} />
+                <Fact label="Manufactured" value={registry.manufactureDate ? formatDate(registry.manufactureDate) : '—'} />
+                {(registry.reeferUnitMake || registry.reeferUnitModel) && (
+                  <Fact label="Reefer unit" value={[registry.reeferUnitMake, registry.reeferUnitModel].filter(Boolean).join(' ')} />
+                )}
+              </FactGroup>
+
+              <FactGroup title="Certification">
+                <Fact label="CSC plate" value={registry.cscPlateRef ?? '—'} mono />
+                <Fact label="ACEP" value={registry.acepRef ?? '—'} mono />
+                <Fact label="Next examination"
+                  value={registry.nextExaminationDate ? formatDate(registry.nextExaminationDate) : '—'} />
+              </FactGroup>
+
+              <FactGroup title="Standing">
+                <Fact label="Registry status" value={registry.status.replace(/_/g, ' ').toLowerCase()} />
+                <Fact label="Fixed ports" value={
+                  registry.fixedPortCodes && registry.fixedPortCodes.length > 0
+                    ? <span className="gecko-mono">{registry.fixedPortCodes.join(', ')}</span>
+                    : 'Any port'} />
+              </FactGroup>
+
+              {registry.remarks && (
+                <div className="gecko-ui-emr">
+                  <span className="gecko-eyebrow">Remarks</span>
+                  <span>{registry.remarks}</span>
+                </div>
               )}
-              <Kv label="Manufactured" value={[registry.manufacturer, registry.manufactureDate].filter(Boolean).join(' · ') || '—'} />
-              <Kv label="CSC / ACEP" value={[registry.cscPlateRef, registry.acepRef].filter(Boolean).join(' / ') || '—'} />
-              <Kv label="Next examination" value={registry.nextExaminationDate ?? '—'} />
-              <Kv label="Status" value={registry.status.replace(/_/g, ' ').toLowerCase()} />
-              <Kv label="Fixed ports" value={
-                registry.fixedPortCodes && registry.fixedPortCodes.length > 0
-                  ? <span className="gecko-mono">{registry.fixedPortCodes.join(', ')}</span>
-                  : 'Any port'} />
-              {registry.updatedAt && <Kv label="Last modified" value={formatDateTime(registry.updatedAt)} />}
+
+              <div className="gecko-cm-stamps">
+                <span>
+                  Created {registry.createdAt ? formatDateTime(registry.createdAt) : '—'}
+                  {registry.createdByName && <> by <strong>{registry.createdByName}</strong></>}
+                </span>
+                <span>
+                  Modified {registry.updatedAt ? formatDateTime(registry.updatedAt) : '—'}
+                  {registry.updatedByName && <> by <strong>{registry.updatedByName}</strong></>}
+                </span>
+              </div>
             </>
           )}
-      </KvBlock>
+      </section>
+    </div>
+  );
+}
+
+/** A labelled run of facts inside a card. */
+function FactGroup({ title, children }: { title: string; children: React.ReactNode }) {
+  return (
+    <div className="gecko-ui-group">
+      <div className="gecko-ui-group-title">{title}</div>
+      <dl className="gecko-ui-facts">{children}</dl>
+    </div>
+  );
+}
+
+/** One fact: the label in its own column, so the values line up down the card. */
+function Fact({ label, value, mono }: { label: string; value: React.ReactNode; mono?: boolean }) {
+  return (
+    <div className="gecko-ui-fact">
+      <dt>{label}</dt>
+      <dd className={mono ? 'gecko-mono' : undefined}>{value}</dd>
     </div>
   );
 }
@@ -587,21 +727,4 @@ function Strip({ label, value, mono }: { label: string; value: React.ReactNode; 
   );
 }
 
-function KvBlock({ title, children }: { title: string; children: React.ReactNode }) {
-  return (
-    <div>
-      <div className="gecko-eyebrow gecko-mb-3">{title}</div>
-      <div className="gecko-stack gecko-stack-sm">{children}</div>
-    </div>
-  );
-}
-
-function Kv({ label, value, mono }: { label: string; value: React.ReactNode; mono?: boolean }) {
-  return (
-    <div>
-      <div style={{ fontSize: 10.5, color: 'var(--gecko-text-disabled)', marginBottom: 1 }}>{label}</div>
-      <div style={{ fontSize: 12.5, fontWeight: 600, color: 'var(--gecko-text-primary)', fontFamily: mono ? 'var(--gecko-font-mono)' : 'inherit' }}>{value}</div>
-    </div>
-  );
-}
 

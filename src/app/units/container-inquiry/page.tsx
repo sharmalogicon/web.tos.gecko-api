@@ -67,9 +67,7 @@ export default function ContainerInquiryPage() {
 
   const branchId = branch?.branchId ?? '';
 
-  const { data: lines } = useApiList<PartyRow>('/api/master/parties?role=SHIPPING_LINE&pageSize=200');
-  const { data: customers } = useApiList<PartyRow>('/api/master/parties?role=CUSTOMER&pageSize=200');
-  const { data: agents } = useApiList<PartyRow>('/api/master/parties?role=FORWARDER&pageSize=200');
+  // Line, Customer and Agent are 'party' filters now: searched, not listed.
   const { data: types } = useApiList<EquipmentTypeRow>('/api/master/equipment-types?pageSize=200');
   const { conditions } = useConditions();
 
@@ -124,18 +122,9 @@ export default function ContainerInquiryPage() {
       type: 'select', key: 'reefer', label: 'Reefer',
       options: opt([{ label: 'Reefers only', value: 'true' }]),
     },
-    {
-      type: 'select', key: 'lineCode', label: 'Line',
-      options: opt((lines ?? []).map(p => ({ label: `${p.partyCode} — ${p.nameEn}`, value: p.partyCode }))),
-    },
-    {
-      type: 'select', key: 'customerCode', label: 'Customer',
-      options: opt((customers ?? []).map(p => ({ label: `${p.partyCode} — ${p.nameEn}`, value: p.partyCode }))),
-    },
-    {
-      type: 'select', key: 'agentCode', label: 'Agent',
-      options: opt((agents ?? []).map(p => ({ label: `${p.partyCode} — ${p.nameEn}`, value: p.partyCode }))),
-    },
+    { type: 'party', key: 'lineCode', label: 'Line', role: 'SHIPPING_LINE' },
+    { type: 'party', key: 'customerCode', label: 'Customer', role: 'CUSTOMER' },
+    { type: 'party', key: 'agentCode', label: 'Agent', role: 'FORWARDER' },
     // One free-text slot in the popover, and the booking is what a clerk pastes
     // off paperwork; the agent is picked from its code list below.
     { type: 'search', key: 'booking', placeholder: 'Booking: order no, carrier ref or B/L' },

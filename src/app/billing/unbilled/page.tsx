@@ -6,6 +6,8 @@ import { useToast } from '@/components/ui/Toast';
 import { SendToInvoiceModal, type InvoiceCandidate } from '../statement/_components/StatementModals';
 import { Icon } from '@/components/ui/Icon';
 import { DateField } from '@/components/ui/DateField';
+import { PartyPicker } from '@/components/ui/PartyPicker';
+import type { PartyRole } from '@/lib/api/parties';
 import { apiDownload, apiGet, saveBlob } from '@/lib/api/client';
 import { openPdf } from '@/lib/api/open-pdf';
 import { useApi, useApiList } from '@/lib/api/use-api';
@@ -63,9 +65,9 @@ export default function UnbilledOrdersPage_() {
   // The payer summary keeps its place: a different question, worth a glance.
   const summary = useApi<Unbilled>(branchId && mayView ? unbilledPath(branchId) : null);
 
-  const { data: agentRows } = useApiList<PartyRow>('/api/master/parties?role=SHIPPING_LINE&pageSize=200');
-  const { data: forwarderRows } = useApiList<PartyRow>('/api/master/parties?role=FORWARDER&pageSize=200');
-  const { data: customerRows } = useApiList<PartyRow>('/api/master/parties?role=CUSTOMER&pageSize=200');
+  // The three party filters SEARCH the server (PartyPicker). They were
+  // pageSize=200 dropdowns, which stopped partway through the alphabet and left
+  // the rest unreachable (owner 2026-10-15).
   const { data: orderTypeRows } = useApiList<OrderTypeRow>('/api/master/order-types?pageSize=200');
   const { movements } = useMovements();
   const vocabulary = useOrderTypeVocabulary();
@@ -262,13 +264,13 @@ export default function UnbilledOrdersPage_() {
       <div className="gecko-card gecko-card-padded gecko-stack">
         <div className="gecko-unbilled-filters">
           <Field label="Agent">
-            <Party value={form.agentCode} rows={agentRows} onChange={v => set({ agentCode: v })} />
+            <Party role="SHIPPING_LINE" value={form.agentCode} onChange={v => set({ agentCode: v })} />
           </Field>
           <Field label="Forwarder">
-            <Party value={form.forwarderCode} rows={forwarderRows} onChange={v => set({ forwarderCode: v })} />
+            <Party role="FORWARDER" value={form.forwarderCode} onChange={v => set({ forwarderCode: v })} />
           </Field>
           <Field label="Billing customer">
-            <Party value={form.customerCode} rows={customerRows} onChange={v => set({ customerCode: v })} />
+            <Party role="CUSTOMER" value={form.customerCode} onChange={v => set({ customerCode: v })} />
           </Field>
           <Field label="Booking - B/L no.">
             <input className="gecko-input" value={form.carrierRef}
@@ -607,16 +609,13 @@ function Field({ label, children }: { label: string; children: React.ReactNode }
   );
 }
 
-function Party({ value, rows, onChange }: {
-  value: string; rows: PartyRow[] | null; onChange: (v: string) => void;
+/** A party filter: empty is "all", and clearing the picker goes back to it. */
+function Party({ role, value, onChange }: {
+  role: PartyRole; value: string; onChange: (v: string) => void;
 }) {
   return (
-    <select className="gecko-input" value={value} onChange={e => onChange(e.target.value)}>
-      <option value="">All</option>
-      {(rows ?? []).map(p => (
-        <option key={p.partyCode} value={p.partyCode}>{p.partyCode} - {p.nameEn}</option>
-      ))}
-    </select>
+    <PartyPicker role={role} value={value || null} nameFirst placeholder="All — search to narrow…"
+      onChange={code => onChange(code ?? '')} />
   );
 }
 

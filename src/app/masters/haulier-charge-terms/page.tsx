@@ -4,6 +4,7 @@ import { useApi, useApiList } from '@/lib/api/use-api';
 import { useSession } from '@/lib/auth/session';
 import { apiSend } from '@/lib/api/client';
 import { EditableTable } from '../lookups/_components/EditableTable';
+import { PartyPicker } from '@/components/ui/PartyPicker';
 
 /**
  * LIVE against gecko_master — a haulier's own payment term for one charge of
@@ -48,7 +49,6 @@ export default function HaulierChargeTermsPage() {
   if (orderType) query.set('orderTypeCode', orderType);
   const { data, error, loading, reload } = useApi<HaulierChargeTerm[]>(`${PATH}?${query}`);
 
-  const { data: hauliers } = useApiList<PartyRow>('/api/master/parties?role=HAULIER&pageSize=200');
   const { data: orderTypes } = useApiList<OrderTypeRow>('/api/master/order-types?pageSize=200');
   const { data: movements } = useApiList<MovementRow>('/api/master/movements?pageSize=200');
   const { data: charges } = useApiList<ChargeCodeRow>('/api/master/charge-codes?pageSize=300');
@@ -56,7 +56,6 @@ export default function HaulierChargeTermsPage() {
   const opts = <T,>(rows: T[] | null, value: (r: T) => string, label: (r: T) => string) =>
     (rows ?? []).map(r => ({ value: value(r), label: label(r) }));
 
-  const haulierOptions = opts(hauliers, h => h.partyCode, h => `${h.partyCode} — ${h.nameEn}`);
   const orderTypeOptions = opts(orderTypes, o => o.orderTypeCode, o => o.orderTypeCode);
   const movementOptions = opts(movements, m => m.movementCode, m => `${m.movementCode} — ${m.descriptionEn}`);
   const chargeOptions = opts(charges, c => c.chargeCode, c => `${c.chargeCode} — ${c.descriptionEn}`);
@@ -74,7 +73,8 @@ export default function HaulierChargeTermsPage() {
 
       <EditableTable<HaulierChargeTerm>
         columns={[
-          { key: 'haulierCode', label: 'Haulier', kind: 'select', options: haulierOptions, required: true, width: 220,
+          // Searched, not listed: the haulier list was capped at 200 (owner 2026-10-15).
+          { key: 'haulierCode', label: 'Haulier', kind: 'party', role: 'HAULIER', required: true, width: 240,
             render: t => t.haulierName ? `${t.haulierCode} — ${t.haulierName}` : t.haulierCode },
           { key: 'orderTypeCode', label: 'Order type', kind: 'select', options: orderTypeOptions, required: true, width: 180 },
           { key: 'movementCode', label: 'Movement', kind: 'select', options: movementOptions, required: true, width: 170 },
@@ -117,11 +117,13 @@ export default function HaulierChargeTermsPage() {
         note="One term per haulier, order type, movement and charge. A duplicate is refused (409). Pricing reads these by haulier and order type, so a term only bites where all four match."
         toolbar={
           <>
-            <select className="gecko-input" style={{ width: 240 }} value={haulier} aria-label="Haulier"
-              onChange={e => setHaulier(e.target.value)}>
-              <option value="">Every haulier</option>
-              {haulierOptions.map(o => <option key={o.value} value={o.value}>{o.label}</option>)}
-            </select>
+            {/* The toolbar filter searches too, so finding a haulier here and
+                in the grid is the same gesture. */}
+            <div className="gecko-hct-haulier-filter">
+              <PartyPicker role="HAULIER" value={haulier || null} nameFirst
+                placeholder="Every haulier — type to search…"
+                onChange={code => setHaulier(code ?? '')} />
+            </div>
             <select className="gecko-input" style={{ width: 200 }} value={orderType} aria-label="Order type"
               onChange={e => setOrderType(e.target.value)}>
               <option value="">Every order type</option>

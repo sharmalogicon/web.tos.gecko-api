@@ -2,7 +2,7 @@
 import React from 'react';
 import { Icon } from '@/components/ui/Icon';
 import { GateField } from '../../_components/GateField';
-import { PartyPicker } from '@/app/tariff/_components/PartyPicker';
+import { PartyPicker } from '@/components/ui/PartyPicker';
 import { useTruckCategories } from '@/lib/api/lookups';
 import type { TruckDetails } from './visit-moves';
 

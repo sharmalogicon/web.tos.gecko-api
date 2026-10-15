@@ -3,6 +3,8 @@ import React, { useState } from 'react';
 import { Icon } from '../ui/Icon';
 import { DateField } from '../ui/DateField';
 import { useApi, useApiList } from '@/lib/api/use-api';
+import { PartyPicker } from '@/components/ui/PartyPicker';
+import type { PartyRole } from '@/lib/api/parties';
 import { RECEIPTS_PATH, reportPath, type ReceiptsReport } from '@/lib/api/reports';
 import { useFacility } from '@/lib/api/facility';
 import { useMovements } from '@/lib/api/lookups';
@@ -105,10 +107,9 @@ export function ReportParamsDrawer({ report, onClose, onGenerate, busy, problem 
   const { branch } = useFacility();
   const branchId = branch?.branchId ?? '';
 
-  const { data: lines } = useApiList<PartyRow>('/api/master/parties?role=SHIPPING_LINE&pageSize=200');
-  const { data: customers } = useApiList<PartyRow>('/api/master/parties?role=CUSTOMER&pageSize=200');
-  const { data: forwarders } = useApiList<PartyRow>('/api/master/parties?role=FORWARDER&pageSize=200');
-  const { data: hauliers } = useApiList<PartyRow>('/api/master/parties?role=HAULIER&pageSize=200');
+  // Agent, owner, forwarder, customer and haulier SEARCH the server. They were
+  // four pageSize=200 reads, which at a real depot stop inside the A's and leave
+  // the rest of the list unreachable (owner 2026-10-15).
   const { data: orderTypes } = useApiList<OrderTypeRow>('/api/master/order-types?pageSize=200');
   const { data: equipTypes } = useApiList<EquipmentTypeRow>('/api/master/equipment-types?pageSize=200');
   const { data: vessels } = useApiList<VesselRow>('/api/master/vessels?pageSize=200');
@@ -210,24 +211,24 @@ export function ReportParamsDrawer({ report, onClose, onGenerate, busy, problem 
                 .map(t => ({ value: t.orderTypeCode, label: `${t.orderTypeCode} — ${t.descriptionEn}` }))]} />
           )}
           {need('agent') && (
-            <SelectField label={PARAM_LABELS.agent} value={vals.agent ?? ''}
-              onChange={v => set('agent', v)} opts={parties(lines)} />
+            <PartyField label={PARAM_LABELS.agent} role="SHIPPING_LINE" value={vals.agent ?? ''}
+              onChange={v => set('agent', v)} />
           )}
           {need('owner') && (
-            <SelectField label={PARAM_LABELS.owner} value={vals.owner ?? ''}
-              onChange={v => set('owner', v)} opts={parties(lines)} />
+            <PartyField label={PARAM_LABELS.owner} role="SHIPPING_LINE" value={vals.owner ?? ''}
+              onChange={v => set('owner', v)} />
           )}
           {need('forwarder') && (
-            <SelectField label={PARAM_LABELS.forwarder} value={vals.forwarder ?? ''}
-              onChange={v => set('forwarder', v)} opts={parties(forwarders)} />
+            <PartyField label={PARAM_LABELS.forwarder} role="FORWARDER" value={vals.forwarder ?? ''}
+              onChange={v => set('forwarder', v)} />
           )}
           {need('customer') && (
-            <SelectField label={PARAM_LABELS.customer} value={vals.customer ?? ''}
-              onChange={v => set('customer', v)} opts={parties(customers)} />
+            <PartyField label={PARAM_LABELS.customer} role="CUSTOMER" value={vals.customer ?? ''}
+              onChange={v => set('customer', v)} />
           )}
           {need('haulier') && (
-            <SelectField label={PARAM_LABELS.haulier} value={vals.haulier ?? ''}
-              onChange={v => set('haulier', v)} opts={parties(hauliers)} />
+            <PartyField label={PARAM_LABELS.haulier} role="HAULIER" value={vals.haulier ?? ''}
+              onChange={v => set('haulier', v)} />
           )}
           {need('vessel') && (
             <SelectField label={PARAM_LABELS.vessel} value={vals.vessel ?? ''}
@@ -366,6 +367,22 @@ export function ReportParamsDrawer({ report, onClose, onGenerate, busy, problem 
         </div>
       </div>
     </>
+  );
+}
+
+/**
+ * A report parameter that names a party. Empty is "any", which is what clearing
+ * the picker goes back to, so a report can still be run across all of them.
+ */
+function PartyField({ label, role, value, onChange }: {
+  label: string; role: PartyRole; value: string; onChange: (v: string) => void;
+}) {
+  return (
+    <div className="gecko-form-group">
+      <label className="gecko-label">{label}</label>
+      <PartyPicker role={role} value={value || null} nameFirst placeholder="Any — type to search…"
+        onChange={code => onChange(code ?? '')} />
+    </div>
   );
 }
 

@@ -10,7 +10,9 @@ import { FreeTimeMatrix } from '../../_components/FreeTimeMatrix';
 import {
   freeTimeDraftsOf, rateDraftsOf, toRateItem, type RateDraft,
 } from '../../_components/tariff-drafts';
+import { FilterPopover, type FilterField } from '@/components/ui/FilterPopover';
 import { RateDialog } from '../../_components/RateDialog';
+import { ReviseDialog, type ReviseValues } from '../../_components/ReviseDialog';
 import { AskDialog, type AskRequest } from '../../_components/AskDialog';
 import { useApi } from '@/lib/api/use-api';
 import { useTariffCatalogs } from '@/lib/api/tariff-catalogs';
@@ -90,6 +92,8 @@ export default function TariffScheduleDetailPage({ params }: { params: Promise<{
 
   /** The id of the row being edited, so the replacement lands in its place. */
   const [editingId, setEditingId] = useState<string | null>(null);
+  /** The revision dialog: three fields, so it is its own component, not an Ask. */
+  const [askRevise, setAskRevise] = useState(false);
 
   const putRates = useCallback(async (next: RateDraft[], undo: () => void) => {
     const converted = next.map(toRateItem);
@@ -189,23 +193,59 @@ export default function TariffScheduleDetailPage({ params }: { params: Promise<{
 
   /**
    * A new version of an APPROVED tariff: the API copies its rates, tiers,
-   * conditions and free time into a fresh DRAFT (PLAN §4.1 — an approved price
-   * is never edited). It must start later than the version it replaces, so the
-   * default offered is the day after this one stops being in force.
+   * conditions, condition values and free-time rules into a fresh DRAFT
+   * (PLAN §4.1 — an approved price is never edited). It must start later than
+   * the version it replaces, so the default offered is the day after this one
+   * stops being in force.
+   *
+   * The end date and the name go with it. Both are on the API's contract and
+   * neither used to be sent, so every revision came out open-ended and had to
+   * be corrected afterwards.
    */
-  async function revise(from: string) {
+  async function revise(values: ReviseValues) {
     if (!s) return;
     setBusy('revise');
     try {
       const created = await apiSend<Schedule>('POST', `/api/revenue/tariffs/${s.scheduleId}/revise`, {
         rowVersion: s.rowVersion,
-        effectiveFrom: from,
+        effectiveFrom: values.effectiveFrom,
+        // '' is the clerk leaving it open-ended; the API wants null, not ''.
+        effectiveTo: values.effectiveTo || null,
+        name: values.name,
       });
-      toast({ variant: 'success', title: `v${created.versionNo} drafted`, message: `${created.rateCount} rate row(s) copied — edit and submit.` });
+
+      /**
+       * A COPY THAT CAME BACK EMPTY IS NOT A SUCCESS.
+       *
+       * The old flow said "0 rate row(s) copied" in a green toast and then
+       * navigated to a draft with nothing in it, which reads as the feature
+       * being broken rather than as something to report. If this version had
+       * rows and the new one has none, say so in red and name the numbers.
+       */
+      const expected = rates.length;
+      if (expected > 0 && created.rateCount === 0) {
+        toast({
+          variant: 'danger',
+          title: `v${created.versionNo} was created EMPTY`,
+          message: `${expected} priced row(s) should have come across and none did. `
+            + 'Do not submit this draft — send this message on so it can be looked at.',
+        });
+      } else {
+        toast({
+          variant: 'success',
+          title: `v${created.versionNo} drafted`,
+          message: `${created.rateCount} priced row(s) copied — edit and submit.`,
+        });
+      }
+      setAskRevise(false);
       router.push(`/tariff/plans/${created.scheduleId}`);
     } catch (e) {
       const error = e instanceof ApiError ? e : new ApiError(0, 'Could not reach the Gecko API.');
-      toast({ variant: 'danger', title: 'Could not start a new version', message: error.message });
+      toast({
+        variant: 'danger',
+        title: 'Could not start a new version',
+        message: error.forField('effectiveFrom') ?? error.forField('effectiveTo') ?? error.explanation ?? error.message,
+      });
     } finally {
       setBusy(null);
     }
@@ -322,15 +362,8 @@ export default function TariffScheduleDetailPage({ params }: { params: Promise<{
             </button>
           )}
           {s.status === 'APPROVED' && canManage && (
-            <button className="gecko-btn gecko-btn-primary gecko-btn-sm" disabled={busy !== null} onClick={() => setAsk({
-                kind: 'date',
-                title: `Start version ${s.versionNo + 1}`,
-                subtitle: 'Every rate, tier, condition and free-time rule is copied into a new draft.',
-                label: 'In force from',
-                initial: nextDay(s.effectiveUntil ?? s.effectiveFrom),
-                confirmLabel: 'Create the draft',
-                onConfirm: revise,
-              })}>
+            <button className="gecko-btn gecko-btn-primary gecko-btn-sm" disabled={busy !== null}
+              onClick={() => setAskRevise(true)}>
               <Icon name="copy" size={14} /> {busy === 'revise' ? 'Copying…' : 'New version'}
             </button>
           )}
@@ -500,6 +533,22 @@ export default function TariffScheduleDetailPage({ params }: { params: Promise<{
       </div>
 
       {/* The same dialog that creates a rate, opened on one that exists. */}
+      {askRevise && s && (
+        <ReviseDialog
+          versionNo={s.versionNo}
+          scheduleNo={s.scheduleNo}
+          name={s.name}
+          currentFrom={s.effectiveFrom}
+          currentUntil={s.effectiveUntil}
+          moveRows={moveCharges.length}
+          timeRows={timeCharges.length}
+          freeTimeRules={freeTime.data?.rules?.length ?? 0}
+          initialFrom={nextDay(s.effectiveUntil ?? s.effectiveFrom)}
+          busy={busy === 'revise'}
+          onClose={() => setAskRevise(false)}
+          onConfirm={revise} />
+      )}
+
       <RateDialog
         key={editing?.key ?? 'none'}
         open={editing !== null}
@@ -520,17 +569,24 @@ export default function TariffScheduleDetailPage({ params }: { params: Promise<{
 function Card({ title, subtitle, icon, right, children }: {
   title: string; subtitle?: string; icon?: string; right?: React.ReactNode; children: React.ReactNode;
 }) {
+  /**
+   * A card with something in `right` may hold a menu — the rate filter does —
+   * and .gecko-table-card is overflow:hidden for its corners, which would cut
+   * that menu off rather than let it overlap. The established fix is to stop
+   * the card clipping and clip the BODY instead, so the bottom corners stay
+   * round (.gecko-table-card-menus / .gecko-table-clip).
+   */
   return (
-    <div className="gecko-table-card">
-      <div className="gecko-row" style={{ padding: '14px 18px', borderBottom: '1px solid var(--gecko-border)', gap: 10 }}>
-        {icon && <Icon name={icon} size={15} style={{ color: 'var(--gecko-primary-600)' }} />}
+    <div className={`gecko-table-card${right ? ' gecko-table-card-menus' : ''}`}>
+      <div className="gecko-row gecko-tariff-card-head">
+        {icon && <Icon name={icon} size={15} className="gecko-tariff-card-icon" />}
         <div className="gecko-flex-1">
           <div className="gecko-section-header-title">{title}</div>
           {subtitle && <div className="gecko-section-header-subtitle">{subtitle}</div>}
         </div>
         {right}
       </div>
-      <div style={{ padding: 18 }}>{children}</div>
+      <div className="gecko-table-clip gecko-tariff-card-body">{children}</div>
     </div>
   );
 }
@@ -578,6 +634,25 @@ function TrailRow({ icon, tone, what, when, detail, last }: {
 }
 
 /** One table for every rate row: the axes as columns, because that is what they are. */
+/**
+ * The axes a clerk narrows a long price list by.
+ *
+ * A public tariff runs to sixty-odd rows and the question is nearly always
+ * "what do we charge for THIS" — one charge code, one order type, one movement.
+ * Scrolling for it is the thing the filter removes.
+ *
+ * The options are built from the ROWS THAT ARE HERE, not from the master lists:
+ * offering every order type in the tenant when this tariff prices four of them
+ * is a menu of dead ends.
+ */
+const RATE_FILTERS: { key: keyof Rate & string; label: string }[] = [
+  { key: 'chargeCode', label: 'Charge' },
+  { key: 'orderTypeCode', label: 'Order type' },
+  { key: 'movementCode', label: 'Movement' },
+  { key: 'paymentTermCode', label: 'Term' },
+  { key: 'billTo', label: 'Billed to' },
+];
+
 function RateTable({ rates, currency, emptyNote, describe, editable, onEdit, onDelete, busyKey }: {
   rates: Rate[];
   currency: string;
@@ -591,6 +666,27 @@ function RateTable({ rates, currency, emptyNote, describe, editable, onEdit, onD
   /** The row the server is being asked about, so only that one shows as busy. */
   busyKey: string | null;
 }) {
+  // Live, not on Apply: the rows are already here, so there is nothing to wait
+  // for and a round trip to re-read them would be pretending otherwise.
+  const [filters, setFilters] = useState<Record<string, string>>({});
+
+  const fields = useMemo<FilterField[]>(() => RATE_FILTERS.map(f => {
+    const seen = [...new Set(rates.map(r => (r[f.key] as string | null) ?? '').filter(Boolean))].sort();
+    return {
+      type: 'select', key: f.key, label: f.label,
+      options: [{ value: '', label: 'Any' }, ...seen.map(v => ({
+        value: v,
+        // The charge code is the one axis whose code says nothing on its own.
+        label: f.key === 'chargeCode' && describe(v) ? `${v} — ${describe(v)}` : v,
+      }))],
+    };
+  }), [rates, describe]);
+
+  const shown = useMemo(() => rates.filter(r => RATE_FILTERS.every(f => {
+    const want = filters[f.key];
+    return !want || ((r[f.key] as string | null) ?? '') === want;
+  })), [rates, filters]);
+
   if (rates.length === 0) {
     return <Card title="Rates" icon="dollarSign"><div className="gecko-cell-meta">{emptyNote}</div></Card>;
   }
@@ -598,12 +694,32 @@ function RateTable({ rates, currency, emptyNote, describe, editable, onEdit, onD
   // One table, charge code first. Grouping into a card per charge code pushed
   // the code into a heading and left the rows below it anonymous — a clerk
   // scanning for LIFT OFF EMPTY had to read the headings rather than the rows.
-  const sorted = [...rates].sort((a, b) =>
+  const sorted = [...shown].sort((a, b) =>
     a.chargeCode.localeCompare(b.chargeCode) || b.specificity - a.specificity);
 
+  const filtered = shown.length !== rates.length;
+
   return (
-    <Card title={`Priced rows (${rates.length})`} icon="dollarSign"
-      subtitle="Where two rows both match a move, the more specific one wins.">
+    <Card icon="dollarSign"
+      title={filtered ? `Priced rows (${shown.length} of ${rates.length})` : `Priced rows (${rates.length})`}
+      subtitle="Where two rows both match a move, the more specific one wins."
+      right={
+        <FilterPopover
+          fields={fields}
+          values={filters}
+          onChange={setFilters}
+          onApply={() => {}}
+          onClear={() => setFilters({})} />
+      }>
+      {sorted.length === 0 && (
+        <div className="gecko-stack gecko-stack-sm gecko-rate-nomatch">
+          <div className="gecko-cell-meta">No priced row matches the filter.</div>
+          <button type="button" className="gecko-btn gecko-btn-outline gecko-btn-sm gecko-self-start"
+            onClick={() => setFilters({})}>
+            <Icon name="x" size={13} /> Clear the filter
+          </button>
+        </div>
+      )}
       <div className="gecko-table-wrap">
         <table className="gecko-table gecko-table-compact">
           <thead>

@@ -1,6 +1,8 @@
 "use client";
 import React, { useState, useRef, useEffect } from 'react';
 import { Icon } from '@/components/ui/Icon';
+import { PartyPicker } from '@/components/ui/PartyPicker';
+import type { PartyRole } from '@/lib/api/parties';
 
 export type FilterField =
   | { type: 'search'; key: string; placeholder: string }
@@ -11,6 +13,14 @@ export type FilterField =
    * needs a date before it needs another dropdown.
    */
   | { type: 'date'; key: string; label: string }
+  /**
+   * A party, SEARCHED rather than listed.
+   *
+   * A customer list is thousands long at a real depot, so a dropdown of the
+   * first 200 is a dropdown that stops inside the A's (owner 2026-10-15).
+   * Empty still means "all".
+   */
+  | { type: 'party'; key: string; label: string; role: PartyRole }
 
 export type SortOption = { label: string; value: string }
 
@@ -62,7 +72,8 @@ export function FilterPopover({
   const searchField = fields.find(f => f.type === 'search');
   const selectFields = fields.filter(f => f.type === 'select') as Extract<FilterField, { type: 'select' }>[];
   const dateFields = fields.filter(f => f.type === 'date') as Extract<FilterField, { type: 'date' }>[];
-  const wide = (columns ?? (selectFields.length + dateFields.length > WIDE_AT ? 2 : 1)) === 2;
+  const partyFields = fields.filter(f => f.type === 'party') as Extract<FilterField, { type: 'party' }>[];
+  const wide = (columns ?? (selectFields.length + dateFields.length + partyFields.length > WIDE_AT ? 2 : 1)) === 2;
 
   useEffect(() => {
     function handleOutside(e: MouseEvent) {
@@ -79,6 +90,16 @@ export function FilterPopover({
     };
   }, []);
 
+  /**
+   * A party field opens a search menu BELOW its input. The panel clips
+   * (overflow:hidden, for its radius) and the wide body scrolls, so without
+   * gecko-filter-panel-pickers that menu is cut off at the panel edge rather
+   * than overlapping it — clipping, not stacking.
+   */
+  const panelClass = ['gecko-filter-panel',
+    wide && 'gecko-filter-panel-wide',
+    partyFields.length > 0 && 'gecko-filter-panel-pickers'].filter(Boolean).join(' ');
+
   return (
     <div ref={wrapperRef} className="gecko-filter-trigger">
       {/* Trigger */}
@@ -93,7 +114,7 @@ export function FilterPopover({
       </button>
 
       {open && (
-        <div className={`gecko-filter-panel${wide ? ' gecko-filter-panel-wide' : ''}`}>
+        <div className={panelClass}>
 
           {/* Search */}
           {searchField && (
@@ -111,7 +132,7 @@ export function FilterPopover({
           )}
 
           {/* Filter By */}
-          {(selectFields.length > 0 || dateFields.length > 0) && (
+          {(selectFields.length > 0 || dateFields.length > 0 || partyFields.length > 0) && (
             <>
               <div className="gecko-filter-section-label">Filter by</div>
               {/* One column puts the label beside its control, which reads as a
@@ -132,6 +153,18 @@ export function FilterPopover({
                         <option key={opt.value} value={opt.value}>{opt.label}</option>
                       ))}
                     </select>
+                  </div>
+                ))}
+
+                {/* The parties sit between the selects and the dates: each is one
+                    field like any other, it just answers from the server as the
+                    clerk types instead of from a list fetched up front. */}
+                {partyFields.map(field => (
+                  <div key={field.key} className="gecko-filter-row">
+                    <span className="gecko-filter-row-label">{field.label}</span>
+                    <PartyPicker role={field.role} value={values[field.key] || null} nameFirst
+                      placeholder="All — type to search…"
+                      onChange={code => onChange({ ...values, [field.key]: code ?? '' })} />
                   </div>
                 ))}
 
