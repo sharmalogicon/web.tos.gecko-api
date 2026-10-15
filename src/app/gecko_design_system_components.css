@@ -11141,3 +11141,146 @@ th.gecko-cell-tight {
 }
 .gecko-tariff-card-icon { color: var(--gecko-primary-600); }
 .gecko-tariff-card-body { padding: 18px; }
+
+/* ─── The account menu ────────────────────────────────────────────────────────
+   One button in place of five. The header carried a language button, a bell, a
+   help button and a theme toggle, none of which a clerk touches during a shift;
+   together they crowded the depot switcher, which they do. */
+
+.gecko-header-sticky {
+  position: sticky;
+  top: 0;
+  z-index: var(--gecko-z-header, 30);
+  background: var(--gecko-bg-surface);
+}
+.gecko-header-right { gap: 6px; }
+
+.gecko-usermenu { position: relative; }
+
+/* The trigger IS the sidebar's account row: avatar, who, and a chevron that
+   points up because that is where the menu goes. */
+.gecko-usermenu-trigger {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  width: 100%;
+  padding: 7px 8px;
+  border: 1px solid transparent;
+  border-radius: 8px;
+  background: none;
+  color: var(--gecko-text-secondary);
+  font-family: inherit;
+  text-align: left;
+  cursor: pointer;
+  position: relative;
+}
+.gecko-usermenu-trigger:hover { border-color: var(--gecko-border); background: var(--gecko-bg-subtle); }
+.gecko-usermenu-trigger-rail { justify-content: center; padding: 7px 0; }
+.gecko-usermenu-trigger-who { flex: 1 1 auto; min-width: 0; display: flex; flex-direction: column; }
+
+/* The unread dot sits on the ROW, not in the menu: a badge only seen after you
+   open the thing it is on is not a badge. */
+.gecko-usermenu-trigger > .gecko-notification-dot { top: 6px; left: 30px; right: auto; }
+.gecko-usermenu-trigger-rail > .gecko-notification-dot { left: auto; right: 14px; }
+
+/* FIXED, not absolute. The sidebar is overflow:hidden for its collapse
+   animation, so a panel positioned inside it would be cut off at the rail's
+   edge — and this one is wider than the rail. Fixed escapes that and lets the
+   menu overlay the page, which is what it does in every product of this shape. */
+.gecko-usermenu-panel {
+  position: fixed;
+  left: 10px;
+  bottom: 66px;
+  z-index: var(--gecko-z-menu, 45);
+  width: 300px;
+  max-width: calc(100vw - 24px);
+  max-height: calc(100vh - 96px);
+  overflow-y: auto;
+  padding: 6px;
+  border: 1px solid var(--gecko-border);
+  border-radius: 12px;
+  background: var(--gecko-bg-surface);
+  box-shadow: var(--gecko-shadow-lg);
+}
+
+.gecko-usermenu-head { display: flex; align-items: center; gap: 10px; padding: 10px 10px 12px; }
+.gecko-usermenu-who { min-width: 0; }
+.gecko-usermenu-name {
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--gecko-text-primary);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.gecko-usermenu-sep { height: 1px; margin: 4px 0; background: var(--gecko-border); }
+
+.gecko-usermenu-item {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  width: 100%;
+  padding: 8px 10px;
+  border: 0;
+  border-radius: 7px;
+  background: none;
+  color: var(--gecko-text-primary);
+  font-family: inherit;
+  font-size: 13px;
+  text-align: left;
+  cursor: pointer;
+}
+.gecko-usermenu-item > span:first-of-type { flex: 1 1 auto; }
+.gecko-usermenu-item:hover:not(:disabled) { background: var(--gecko-bg-subtle); }
+.gecko-usermenu-item:disabled { color: var(--gecko-text-disabled); cursor: not-allowed; }
+.gecko-usermenu-item-danger:hover:not(:disabled) { background: var(--gecko-error-50); color: var(--gecko-error-700); }
+
+/* Language and theme are the current value, not a row that opens something. */
+.gecko-usermenu-choice {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  padding: 6px 10px;
+}
+.gecko-usermenu-choice-label {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  font-size: 13px;
+  color: var(--gecko-text-primary);
+}
+
+/* ── the settings page ── */
+.gecko-settings-page { gap: 18px; max-width: 760px; margin: 0 auto; padding-bottom: 48px; }
+.gecko-settings-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 18px;
+  flex-wrap: wrap;
+  padding-top: 12px;
+  border-top: 1px solid var(--gecko-border);
+}
+.gecko-settings-row:first-of-type { padding-top: 0; border-top: 0; }
+.gecko-settings-row-label { min-width: 0; flex: 1 1 260px; }
+.gecko-settings-row-name { font-size: 13px; font-weight: 600; color: var(--gecko-text-primary); }
+.gecko-settings-note { display: flex; align-items: flex-start; gap: 6px; line-height: 1.5; }
+
+/* The show/hide eye inside a password box. */
+.gecko-pw-wrap { position: relative; }
+.gecko-pw-wrap .gecko-input { padding-right: 32px; }
+.gecko-pw-eye {
+  position: absolute;
+  top: 50%;
+  right: 8px;
+  transform: translateY(-50%);
+  display: flex;
+  padding: 2px;
+  border: 0;
+  background: none;
+  color: var(--gecko-text-disabled);
+  cursor: pointer;
+}
+.gecko-pw-eye:hover { color: var(--gecko-text-secondary); }

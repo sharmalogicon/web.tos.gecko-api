@@ -110,6 +110,10 @@ export const BLOCKED_PATHS: readonly string[] = [
  */
 export const EXACT_PATHS: readonly string[] = [
   '/masters',                    // hub: link-only tiles to the live masters
+  // Reached from the account menu, not the sidebar: it is the signed-in
+  // person's own preferences, not a depot screen. The depot's rules are
+  // Configuration.
+  '/settings',
 ];
 
 /** Pages always served: sign-in, the root redirect, and the guard's own page. */

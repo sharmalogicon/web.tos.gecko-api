@@ -7,6 +7,7 @@ import { useSession } from '@/lib/auth/session';
 import { companyLabel } from '@/lib/api/org';
 import { FacilityProvider, useFacility } from '@/lib/api/facility';
 import { Icon } from '../ui/Icon';
+import { UserMenu } from './UserMenu';
 import { ToastProvider } from '../ui/Toast';
 import { AskGeckoProvider } from '../ai/AskGeckoWidget';
 import { isPathAvailable } from '@/lib/edition';
@@ -265,17 +266,9 @@ const VISIBLE_NAV = NAV
 
 function Sidebar({ collapsed, onToggle }: { collapsed: boolean, onToggle: () => void }) {
   const pathname = usePathname();
-  const router = useRouter();
-  const { user, status, signOut } = useSession();
   const { company } = useFacility();
-  // The token carries no display name, so the card shows what it does carry: the role and the depots.
-  const who = status === 'authenticated' && user
-    ? { name: (user.roles[0] ?? user.userType ?? 'Signed in').replace(/_/g, ' '),
-        role: `${user.roles.length > 1 ? `+${user.roles.length - 1} role(s) · ` : ''}${user.branches.length} depot(s)`,
-        initials: (user.roles[0] ?? 'U').slice(0, 2).toUpperCase() }
-    : { name: 'Not signed in', role: 'Demo screens only', initials: '—' };
-  const doSignOut = async () => { try { await signOut(); } finally { router.push('/login'); } };
-  
+  // Who is signed in, and signing out, both belong to the account menu at the
+  // foot of this sidebar now — the row that showed them is that menu's trigger.
   // Determine active module based on URL path
   const activeModule = pathname ? pathname.split('/')[1] : 'dashboard';
   
@@ -370,30 +363,17 @@ function Sidebar({ collapsed, onToggle }: { collapsed: boolean, onToggle: () => 
         })}
       </nav>
 
+      {/* The account row IS the menu now. It used to carry a lone sign-out
+          button beside the name, which meant two ways out of the app once the
+          menu existed; the row opens the menu and the menu signs you out.
+
+          The "Demo · reset data" button lived here too. It called seedDemoData(),
+          which overwrites the yard layout and sample data, and was hidden only
+          by the old pilot flag. With one edition there is nowhere safe to show
+          it: KORAKIT is live, and reseeding a live depot is not an undoable
+          mistake. Removed 2026-10-05. */}
       <div className="gecko-sidebar-footer">
-        {!collapsed ? (
-          <>
-            {/* The "Demo · reset data" button lived here. It called seedDemoData(),
-                which overwrites the yard layout and sample data, and was hidden
-                only by the old pilot flag. With one edition there is nowhere
-                safe to show it: KORAKIT is live, and reseeding a live depot is
-                not an undoable mistake. Removed 2026-10-05. */}
-            <div className="gecko-sidebar-user-row">
-              <div className="gecko-avatar gecko-avatar-accent">{who.initials}</div>
-              <div className="gecko-flex-1 gecko-min-w-0">
-                <div className="gecko-sidebar-user-name">{who.name}</div>
-                <div className="gecko-sidebar-user-role">{who.role}</div>
-              </div>
-              <button className="gecko-btn gecko-btn-ghost gecko-btn-icon gecko-btn-sm gecko-text-secondary-btn" title="Sign out" onClick={doSignOut}>
-                <Icon name="logOut" size={15} />
-              </button>
-            </div>
-          </>
-        ) : (
-          <div className="gecko-row" style={{ justifyContent: 'center' }}>
-            <div className="gecko-avatar gecko-avatar-accent">{who.initials}</div>
-          </div>
-        )}
+        <UserMenu collapsed={collapsed} />
       </div>
     </aside>
   );
@@ -501,16 +481,8 @@ function FacilitySwitcher() {
 }
 
 function Header({ onToggleSidebar, pageTitle = "Dashboard", breadcrumbs = ["Workspace", "Overview"] }: HeaderProps) {
-  const [theme, setTheme] = useState('light');
-
-  const onToggleTheme = () => {
-    const newTheme = theme === 'dark' ? 'light' : 'dark';
-    setTheme(newTheme);
-    document.documentElement.setAttribute('data-theme', newTheme);
-  };
-
   return (
-    <header className="gecko-header" role="banner" style={{ position: 'sticky', top: 0, zIndex: 30, background: 'var(--gecko-bg-surface)' }}>
+    <header className="gecko-header gecko-header-sticky" role="banner">
       <button className="gecko-btn gecko-btn-ghost gecko-btn-icon gecko-btn-sm" onClick={onToggleSidebar} title="Toggle sidebar">
         <Icon name="menu" size={18} />
       </button>
@@ -533,24 +505,13 @@ function Header({ onToggleSidebar, pageTitle = "Dashboard", breadcrumbs = ["Work
       {/* Global search and Ask Gecko are hidden until they are backed by the API
           (there is no search endpoint yet, and Ask Gecko answers from mock data). */}
 
-      <div className="gecko-ml-auto gecko-row" style={{ gap: 6 }}>
+      {/* Language, notifications, help and the theme toggle were four buttons
+          in a row here. None of them is touched during a shift, and together
+          they crowded the depot switcher, which is. They are all in the account
+          menu at the FOOT OF THE SIDEBAR now (owner 2026-10-15), where the
+          account already lived. The header keeps only the depot switcher. */}
+      <div className="gecko-ml-auto gecko-row gecko-header-right">
         <FacilitySwitcher />
-
-        {/* Locale */}
-        <button className="gecko-btn gecko-btn-ghost gecko-btn-sm gecko-header-locale-btn" title="Language">
-          <Icon name="globe" size={14} /> EN
-        </button>
-
-        <button className="gecko-btn gecko-btn-ghost gecko-btn-icon gecko-btn-sm gecko-header-notif-btn" title="Notifications">
-          <Icon name="bell" size={17} />
-          <span className="gecko-notification-dot" />
-        </button>
-        <button className="gecko-btn gecko-btn-ghost gecko-btn-icon gecko-btn-sm" title="Help">
-          <Icon name="help" size={17} />
-        </button>
-        <button className="gecko-btn gecko-btn-ghost gecko-btn-icon gecko-btn-sm" onClick={onToggleTheme} title="Toggle theme">
-          <Icon name={theme === 'dark' ? 'sun' : 'moon'} size={17} />
-        </button>
       </div>
     </header>
   );

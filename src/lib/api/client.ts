@@ -214,29 +214,28 @@ export async function login(email: string, password: string): Promise<AccessToke
 }
 
 /**
- * CHANGE A PASSWORD WITHOUT BEING SIGNED IN.
+ * CHANGE YOUR OWN PASSWORD.
  *
- * Anonymous, like /auth/login, because the caller has no token yet — but NOT
- * open: `currentPassword` is the proof. It is either the password they know, or
- * the one-time one an administrator gave them.
+ * `POST /auth/password`, and it REQUIRES A SIGNED-IN SESSION: the access token
+ * is what proves who is asking, which is why there is no email and no current
+ * password in the body. Just the new one, typed twice (owner 2026-10-10).
  *
- * This is what satisfies `password_change_required`. `LoginService` answers 403
- * with that code when a credential is flagged `MustChange` or has expired, and
- * until now nothing in Gecko could clear it — a user in that state was locked
- * out with nowhere to go.
+ * This used to be posted anonymously from the login page, to
+ * `/auth/change-password` with an email and a current password. No such route
+ * exists and never did — that card could only ever have answered 404. The
+ * control now lives in the account menu, where the caller has a token.
  *
- * The API applies the tenant's password policy, revokes the account's refresh
- * sessions and answers 204. A wrong current password answers 401 worded exactly
- * like a failed login, so nothing leaks about which accounts exist.
- *
- * See docs/PASSWORD_RECOVERY_FOR_API.md.
+ * The old password stops working at once; this session stays signed in, so
+ * nothing has to be re-entered afterwards. 400 on `newPassword` when the
+ * tenant's policy refuses it, worded for the person typing.
  */
-export async function changePassword(
-  emailOrUserName: string, currentPassword: string, newPassword: string,
-): Promise<void> {
-  const response = await send('/auth/change-password', {
+export const PASSWORD_MIN_LENGTH = 12;
+export const PASSWORD_MAX_LENGTH = 128;
+
+export async function changePassword(newPassword: string, confirmPassword: string): Promise<void> {
+  const response = await send('/auth/password', {
     method: 'POST',
-    body: JSON.stringify({ emailOrUserName, currentPassword, newPassword }),
+    body: JSON.stringify({ newPassword, confirmPassword }),
   });
   if (!response.ok) throw await toApiError(response);
 }
