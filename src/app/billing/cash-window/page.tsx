@@ -798,28 +798,27 @@ function BoxCard({ box, selected, onToggle, mayWaive, onWaive }: {
 
       {!payable && box.note && <div className="gecko-text-muted" style={{ marginTop: 8, fontSize: 13 }}>{box.note}</div>}
 
-      {/* UNPRICED, not free. The amount is 0 and that is the trap: a clerk who
-          reads 0 takes the money and sends the truck to a gate that will not
-          open, because the server issues no coupon for this box. Red, loud,
-          and Pay is already disabled by isPayable(). */}
+      {/* UNPRICED: no tariff prices these, so they are left off the receipt and
+          the truck still goes through (owner 2026-10-07). Shown so the clerk
+          knows, and so a missing rate can be added if it should be charged. */}
       {unpriced.length > 0 && (
-        <div className="gecko-alert gecko-alert-error" style={{ marginTop: 10 }}>
+        <div className="gecko-alert gecko-alert-warning" style={{ marginTop: 10 }}>
           <div className="gecko-row" style={{ gap: 8, alignItems: 'flex-start' }}>
             <Icon name="alertCircle" size={16} />
             <div className="gecko-flex-1">
-              <strong>No rate in any tariff: add the rate or ask a supervisor to waive.</strong>
+              <strong>No rate in any tariff: not charged.</strong>
               <div style={{ fontSize: 13, marginTop: 2 }}>
-                This box cannot be paid for and the gate will refuse it until every charge below is priced or waived.
+                These charges are left off the receipt and the truck still goes through. Add the rate if they should be charged.
               </div>
               <table className="gecko-table gecko-table-compact" style={{ width: '100%', marginTop: 8 }}>
                 <tbody>
                   {unpriced.map((l, i) => (
                     <tr key={`np-${l.chargeCode}-${l.billTo}-${i}`}>
-                      <td style={{ color: 'var(--gecko-error-600)', fontWeight: 600 }}>
+                      <td style={{ fontWeight: 600 }}>
                         {l.chargeName} <span className="gecko-text-mono" style={{ fontWeight: 400 }}>{l.chargeCode}</span>
                       </td>
                       <td style={{ fontSize: 13 }}>{l.billTo}</td>
-                      <td style={{ ...right, color: 'var(--gecko-error-600)' }}>no price</td>
+                      <td style={right}>not charged</td>
                       {mayWaive && (
                         <td style={right}>
                           <button type="button" className="gecko-btn gecko-btn-sm gecko-btn-outline" onClick={() => onWaive(l)}>Waive</button>

@@ -489,16 +489,12 @@ export const receiptPdfPath = (receiptId: string) => `/api/revenue/window/receip
 export const voidReceipt = (receiptId: string, reason: string) =>
   apiSend<Receipt>('POST', `/api/revenue/window/receipts/${receiptId}/void`, { reason });
 
-/** A booking's box can be taken to the counter when the quote has lines on it. */
 /**
- * A box can be paid for only when every charge on it HAS a price.
- *
- * A box carrying a noPrice line is not cheap, it is unpriced: the server issues
- * no coupon, the gate blocks it with NO_COUPON, and a receipt for it is refused
- * with a 409 (§16g). Letting the clerk tick it would take the customer's money
- * and then send the truck to a gate that will not open.
+ * A box can be paid for when it has priced cash due. A charge no tariff prices
+ * (noPrice) is not charged and does not block the receipt or the coupon — the
+ * priced lines are paid and the truck goes through (owner 2026-10-07, as Vector).
  */
-export const isPayable = (box: WindowBox) => box.due.length > 0 && !hasNoPrice(box);
+export const isPayable = (box: WindowBox) => box.due.length > 0;
 
 /** True when some charge on this box has no rate in any tariff. */
 export const hasNoPrice = (box: WindowBox) => (box.noPrice?.length ?? 0) > 0;

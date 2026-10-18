@@ -44,7 +44,7 @@ export function MoneyCards({ rows, currency }: { rows: StatementRow[]; currency:
       {waived > 0 && <Card tone="muted" label="Waived" value={m(waived)} note="forgiven, with a reason" />}
       {noRate > 0 && (
         <Card tone="alert" label="No rate" value={String(noRate)}
-          note={`${noRate === 1 ? 'line has' : 'lines have'} no tariff — the gate will refuse them`} />
+          note={`${noRate === 1 ? 'line has' : 'lines have'} no tariff — not charged, the truck still goes through`} />
       )}
     </div>
   );
