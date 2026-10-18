@@ -373,14 +373,28 @@ export const needsNomination = (m: MoveDraft): boolean =>
 export const onBooking = (m: MoveDraft): boolean =>
   !!m.known?.booking || m.bookingContainerId !== '';
 
+/**
+ * A walk-in DROP-OFF may arrive with no number at all — unreadable, or a box
+ * that never had one. The gate issues NOID+7 for it (API 2026-10-18).
+ *
+ * Only a drop-off: a pick-up names a box that is standing in the yard, so it
+ * always has one, and a booked box takes its number from the booking.
+ */
+export const mayMintNumber = (m: MoveDraft) => m.isWalkIn && m.trip === 'DROP_OFF_CONT';
+
 /** A row is ready when it has a plausible box and whatever the server demands. */
 export function rowIssues(move: MoveDraft): string[] {
   const issues: string[] = [];
   if (!move.containerNo.trim()) {
-    issues.push('Container number');
-    return issues;
+    // Blank is allowed here, but then nothing can be read off a registry entry
+    // that does not exist: the API requires the line and the type instead.
+    if (!mayMintNumber(move)) {
+      issues.push('Container number');
+      return issues;
+    }
+  } else if (!boxLooksRight(move.containerNo)) {
+    issues.push('Container number (4 to 11 letters or digits)');
   }
-  if (!boxLooksRight(move.containerNo)) issues.push('Container number (4 to 11 letters or digits)');
 
   for (const field of requiredFor(move)) {
     if (field === 'seals') {
@@ -405,7 +419,12 @@ export function rowIssues(move: MoveDraft): string[] {
     if (!move.customerCode) issues.push('Customer');
     if (move.trip === 'DROP_OFF_CONT') {
       if (!move.lineCode) issues.push('Shipping line');
-      if (!move.equipmentTypeCode && move.known?.isInRegistry === false) issues.push('Equipment type');
+      // With no number there is no registry entry to fall back on, so the type
+      // is required outright rather than only when the box is unknown.
+      const noNumber = !move.containerNo.trim();
+      if (!move.equipmentTypeCode && (noNumber || move.known?.isInRegistry === false)) {
+        issues.push('Box type');
+      }
     }
   } else if (!onBooking(move)) {
     // Not walk-in and not booked is no longer a thing this screen can send:
@@ -526,7 +545,8 @@ export function moveToTripRow(move: MoveDraft, branchId: string): TripRow {
     move: {
       branchId,
       // An empty pick-up where the yard chooses the box is keyed at Gate Out,
-      // so the number is genuinely blank here (§25.1).
+      // so the number is genuinely blank here (§25.1). A walk-in drop-off may
+      // also be blank on purpose: the gate mints NOID+7 for it.
       containerNo: box,
       direction: directionOfTrip(move.trip),
       tripType: move.trip,

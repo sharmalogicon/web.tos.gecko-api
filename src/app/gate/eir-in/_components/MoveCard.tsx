@@ -5,7 +5,7 @@ import { Icon } from '@/components/ui/Icon';
 import { useApiList } from '@/lib/api/use-api';
 import { useFacility } from '@/lib/api/facility';
 import { useConditions } from '@/lib/api/lookups';
-import type { GateFinding } from '@/lib/api/tos';
+import { formatContainerNo, type GateFinding } from '@/lib/api/tos';
 import { GateField } from '../../_components/GateField';
 import { VasPanel } from './VasPanel';
 import { DamagePanel } from './DamagePanel';
@@ -16,7 +16,7 @@ import {
   NO_WALK_IN_ORDER_TYPE, WALK_IN_REFUSALS, walkInOrderTypeFor, type WalkInBox, type WalkInOrderType,
 } from '@/lib/api/walk-in';
 import {
-  boxLooksRight, needsDigitReason, needsLateReason,
+  boxLooksRight, mayMintNumber, needsDigitReason, needsLateReason,
   editable, grossOf, isDamaged, locationLabel, normaliseBox, onBooking, overMaxWeight,
   pickupHasNoOrder, requiredFor, rowIssues,
   type MoveDraft, type SealRow,
@@ -124,6 +124,13 @@ export function MoveCard({
   const blocked = move.known?.holds?.filter(h => h.blocksThisMove) ?? [];
   // The booking's own step says whether the gate-in needs a damage survey (R6).
   const needsSurvey = step?.requiresSurvey === true;
+  /**
+   * A box that turned up with no readable number. The gate issues NOID+7 for a
+   * walk-in DROP-OFF only (API 2026-10-18) — a pick-up names a box already in
+   * the yard, and a booked box takes its number from the booking.
+   */
+  const canMint = mayMintNumber(move);
+  const willMint = canMint && !move.containerNo.trim();
 
   // ── walk-in ────────────────────────────────────────────────────────────
   // The clerk's two answers name the order type; the clerk never picks one.
@@ -213,18 +220,30 @@ export function MoveCard({
               value={move.containerNo}
               disabled={done}
               maxLength={14}
-              placeholder="MSKU1234565"
+              placeholder={canMint ? 'Leave blank if unreadable' : 'MSKU1234565'}
               aria-label={`Container number for box ${index + 1}`}
               onChange={e => onChange({ containerNo: normaliseBox(e.target.value) })}
-              onBlur={() => { if (boxLooksRight(move.containerNo)) onLook(); }} />
+              // Nothing to look up when the field is empty, and on a mintable
+              // row empty is a legitimate answer rather than a half-typed one.
+              onBlur={() => { if (move.containerNo.trim() && boxLooksRight(move.containerNo)) onLook(); }} />
           )}
           {move.looking && <span className="gecko-cell-meta">looking…</span>}
+          {willMint && !done && (
+            <span className="gecko-cell-meta gecko-move-mint-hint">
+              The gate will issue one (NOID…) to write on the box.
+            </span>
+          )}
         </div>
 
         <div className="gecko-move-spacer" />
 
         {done ? (
           <span className="gecko-move-eir">
+            {move.result!.containerNoWasMinted && (
+              <span className="gecko-badge gecko-badge-warning gecko-mono" title="Write this number on the box">
+                {formatContainerNo(move.result!.containerNo)}
+              </span>
+            )}
             <Icon name={move.result!.status === 'GATED' ? 'shieldCheck' : 'clock'} size={13} />
             {move.result!.eirNo
               ? <Link href={`/gate/eir-in/${move.result!.gateTransactionId}`} className="gecko-link gecko-text-mono">
@@ -321,6 +340,30 @@ export function MoveCard({
       {/* ── the detail ──────────────────────────────────────────────────── */}
       {open && !done && (
         <div className="gecko-move-body">
+          {/* WHAT IS STILL MISSING, AT THE TOP. It used to sit under the last
+              field of a card three screens long, so a clerk who could not see
+              why Add trip was dead had to scroll to the bottom to be told —
+              past the very fields it was naming (owner 2026-10-18). */}
+          {issues.length > 0 && (
+            <div className="gecko-move-issues">
+              <Icon name="alertCircle" size={13} />
+              <span>Still to fill: {issues.join(' · ')}</span>
+            </div>
+          )}
+
+          {/* Not a blocker — the box can still be recorded — but it belongs
+              with the other card-level messages rather than beside the weight
+              fields three screens down. */}
+          {overMaxWeight(move) && (
+            <div className="gecko-move-issues gecko-move-issues-warn">
+              <Icon name="alertCircle" size={13} />
+              <span>
+                Over max weight — tare + cargo is {grossOf(move)?.toLocaleString()} kg against a plate
+                limit of {Number(move.maxGrossWeightKg).toLocaleString()} kg. It can still be recorded.
+              </span>
+            </div>
+          )}
+
           {/* ── Walk-in: the truck arrived with no paperwork ──────────
               Two toggles, a customer, and on a drop-off the box's own facts.
               The order type is NOT a field: it follows from the answers, and
@@ -419,13 +462,16 @@ export function MoveCard({
                 {drop ? (
                   <>
                     <GateField label="Shipping line" required error={err('walkIn.lineCode') ?? err('lineCode')}
-                      hint={move.known?.isInRegistry ? 'Leave it empty to take the registry\u2019s owner.' : undefined}>
+                      hint={willMint ? 'Required: there is no registry entry to take it from.'
+                        : move.known?.isInRegistry ? 'Leave it empty to take the registry\u2019s owner.' : undefined}>
                       <PartyPicker role="SHIPPING_LINE" value={move.lineCode || null} disabled={done} nameFirst
                         placeholder="Search the line\u2026"
                         onChange={code => onChange({ lineCode: code ?? '' })} />
                     </GateField>
-                    <GateField label="Equipment type" error={err('walkIn.equipmentTypeCode') ?? err('equipmentTypeCode')}
-                      required={move.known?.isInRegistry === false}
+                    {/* With no number there is no registry entry to fall back
+                        on, so the API requires the type outright. */}
+                    <GateField label="Box type" error={err('walkIn.equipmentTypeCode') ?? err('equipmentTypeCode')}
+                      required={willMint || move.known?.isInRegistry === false}
                       hint={equipmentDenied
                         ? 'The type list needs mdm.equipment.view, which this account does not hold \u2014 type the code.'
                         : undefined}>
@@ -436,7 +482,7 @@ export function MoveCard({
                       ) : (
                         <select className="gecko-input" value={move.equipmentTypeCode} disabled={done}
                           onChange={e => onChange({ equipmentTypeCode: e.target.value })}>
-                          <option value="">From the registry</option>
+                          <option value="">{willMint ? 'Choose…' : 'From the registry'}</option>
                           {equipmentTypes.filter(t => t.isActive).map(t => (
                             <option key={t.equipmentTypeId} value={t.typeCode}>{t.typeCode} - {t.descriptionEn}</option>
                           ))}
@@ -736,15 +782,6 @@ export function MoveCard({
             </div>
           </div>
 
-          {overMaxWeight(move) && (
-            <div className="gecko-move-issues">
-              <Icon name="alertCircle" size={13} />
-              <span>
-                Over max weight — tare + cargo is {grossOf(move)?.toLocaleString()} kg against a plate
-                limit of {Number(move.maxGrossWeightKg).toLocaleString()} kg. It can still be recorded.
-              </span>
-            </div>
-          )}
 
           {drop && (
             <Section title="Where it goes">
@@ -805,13 +842,6 @@ export function MoveCard({
               </div>
             </Section>
           )}
-
-          {issues.length > 0 && (
-            <div className="gecko-move-issues">
-              <Icon name="alertCircle" size={13} />
-              <span>Still to fill: {issues.join(' · ')}</span>
-            </div>
-          )}
         </div>
       )}
 
@@ -819,6 +849,18 @@ export function MoveCard({
           paid for and held, and Gate Out releases it against this same visit. */}
       {open && done && move.result && (
         <div className="gecko-move-body">
+          {/* THE BOX HAS NO NUMBER OF ITS OWN. Nothing else identifies it, so
+              this is an instruction, not a fact: it goes above the readback and
+              says what to do with it. */}
+          {move.result.containerNoWasMinted && (
+            <div className="gecko-move-issues gecko-move-issues-warn">
+              <Icon name="edit" size={13} />
+              <span>
+                Number issued by the gate: <strong className="gecko-mono">{formatContainerNo(move.result.containerNo)}</strong>.
+                Write it on the box — nothing else identifies it.
+              </span>
+            </div>
+          )}
           <div className="gecko-eirin-readback">
             <Readback label="Outcome" value={move.result.status === 'GATED' ? 'Gated in'
               : move.result.status === 'PLANNED' ? 'Waiting for gate out' : move.result.status} />

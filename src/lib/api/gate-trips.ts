@@ -194,6 +194,12 @@ export type TripRowStatus = 'GATED' | 'PLANNED' | 'NOT_GATED' | string;
 export interface TripRowResult {
   index: number;
   containerNo: string;
+  /**
+   * The gate ISSUED this number because the box arrived without one
+   * (API 2026-10-18). `containerNo` is then NOID + 7 digits, and the clerk has
+   * to write it on the box — nothing else identifies it.
+   */
+  containerNoWasMinted?: boolean;
   /** The place used — not necessarily the one sent, if it was switched. */
   bookingContainerId: string;
   orderNo: string;

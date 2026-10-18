@@ -60,9 +60,19 @@ export class ApiError extends Error {
     return this.message !== this.title ? this.message : null;
   }
 
-  /** First message for a field, matched case-insensitively (the API sends PascalCase). */
+  /**
+   * The message for a field, matched case-insensitively (the API sends PascalCase).
+   *
+   * AN EXACT MATCH WINS. A field can carry two messages: the framework's
+   * `rows[0].move.ContainerNo` — "The ContainerNo field is required." — and the
+   * endpoint's own `rows[0].move.containerNo` — "A walk-in pick-up names the
+   * box it collects." Taking whichever came first in the JSON gave the clerk
+   * the generic one, which says nothing they can act on. Our callers ask in
+   * camelCase, which is the hand-written one.
+   */
   forField(name: string): string | undefined {
-    const key = Object.keys(this.fieldErrors).find(k => k.toLowerCase() === name.toLowerCase());
+    const keys = Object.keys(this.fieldErrors);
+    const key = keys.find(k => k === name) ?? keys.find(k => k.toLowerCase() === name.toLowerCase());
     return key ? this.fieldErrors[key][0] : undefined;
   }
 }

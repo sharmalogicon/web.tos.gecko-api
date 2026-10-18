@@ -124,6 +124,12 @@ export function SavedTripPanel({ result }: { result: TripSaveResult }) {
         {result.rows.map(r => (
           <div key={r.index} className="gecko-saved-row">
             <span className="gecko-text-mono gecko-mono-strong">{r.containerNo || '(yard chooses)'}</span>
+            {/* The gate gave this box its number; the clerk has to write it on. */}
+            {r.containerNoWasMinted && (
+              <span className="gecko-badge gecko-badge-warning" title="Write this number on the box">
+                issued — write it on the box
+              </span>
+            )}
             <span className={`gecko-saved-badge gecko-saved-badge-${r.status === 'GATED' ? 'in' : r.status === 'PLANNED' ? 'wait' : 'no'}`}>
               {r.status === 'GATED' ? 'Gated in' : r.status === 'PLANNED' ? 'Waiting for gate out' : r.status}
             </span>

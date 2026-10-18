@@ -11284,3 +11284,16 @@ th.gecko-cell-tight {
   cursor: pointer;
 }
 .gecko-pw-eye:hover { color: var(--gecko-text-secondary); }
+
+/* A card-level message that is a caution, not a blocker: same place at the top
+   of the card, a quieter colour. */
+.gecko-move-issues-warn {
+  border-color: var(--gecko-warning-300, var(--gecko-border));
+  background: var(--gecko-warning-50);
+  color: var(--gecko-warning-700);
+}
+
+/* "The gate will issue one" — said under the empty container-number box on a
+   walk-in drop-off, so a blank field reads as a choice rather than an
+   unfinished one. */
+.gecko-move-mint-hint { display: block; line-height: 1.35; max-width: 22ch; }
