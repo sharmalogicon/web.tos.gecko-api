@@ -73,9 +73,10 @@ const NO_YARDS: Yard[] = [];
 
 /** Every depot this tenant runs. Empty until the session is authenticated. */
 export function useBranches(): { branches: Branch[]; loading: boolean } {
-  const { status } = useSession();
+  const { status, tokenReady } = useSession();
+  // Read with the token, alongside /auth/me rather than after it.
   const { data, loading } = useApiList<Branch>(
-    status === 'authenticated' ? '/api/branches?pageSize=100' : null,
+    status === 'authenticated' || (status === 'loading' && tokenReady) ? '/api/branches?pageSize=100' : null,
   );
   return { branches: data ?? NO_BRANCHES, loading };
 }

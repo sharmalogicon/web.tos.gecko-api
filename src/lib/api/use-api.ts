@@ -4,6 +4,7 @@ import { useCallback, useEffect, useState } from "react";
 import { apiGet } from "./client";
 import { ApiError } from "./problem";
 import { useSession } from "../auth/session";
+import { cachedAnswer, rememberAnswer } from "./api-cache";
 
 /** Every list endpoint answers with this envelope. */
 export interface Paged<T> {
@@ -31,18 +32,20 @@ export interface ApiResource<T> {
  * back to whatever mock data the screen still carries.
  */
 export function useApi<T>(path: string | null): ApiResource<T> {
-  const { status } = useSession();
-  const [data, setData] = useState<T | null>(null);
+  const { status, tokenReady } = useSession();
+  const [data, setData] = useState<T | null>(() => (path === null ? null : cachedAnswer<T>(path) ?? null));
   const [error, setError] = useState<ApiError | null>(null);
-  const [loading, setLoading] = useState(true);
+  const [loading, setLoading] = useState(() => path === null || cachedAnswer(path) === undefined);
   const [nonce, setNonce] = useState(0);
 
   const reload = useCallback(() => setNonce(n => n + 1), []);
+  // The token is enough to read with: no need to wait for /auth/me as well.
+  const canRead = status === "authenticated" || (status === "loading" && tokenReady);
 
   useEffect(() => {
-    if (path === null || status === "loading") return;
+    if (path === null || (status === "loading" && !tokenReady)) return;
 
-    if (status !== "authenticated") {
+    if (!canRead) {
       setLoading(false);
       setError(status === "offline"
         ? new ApiError(0, "The Gecko API is not reachable — showing sample data.")
@@ -51,10 +54,18 @@ export function useApi<T>(path: string | null): ApiResource<T> {
     }
 
     let cancelled = false;
-    setLoading(true);
+    // Seen before this session: show it now, and refresh it behind the scenes.
+    const cached = cachedAnswer<T>(path);
+    if (cached !== undefined) {
+      setData(cached);
+      setLoading(false);
+    } else {
+      setLoading(true);
+    }
     apiGet<T>(path)
       .then(result => {
         if (cancelled) return;
+        rememberAnswer(path, result);
         setData(result);
         setError(null);
       })
@@ -69,7 +80,9 @@ export function useApi<T>(path: string | null): ApiResource<T> {
     return () => {
       cancelled = true;
     };
-  }, [path, status, nonce]);
+    // canRead is derived from status + tokenReady, both listed.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [path, status, tokenReady, nonce]);
 
   return { data, error, loading, reload };
 }

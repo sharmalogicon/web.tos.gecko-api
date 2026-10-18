@@ -3,6 +3,7 @@
 import React, { createContext, useCallback, useContext, useEffect, useMemo, useState } from "react";
 import * as client from "../api/client";
 import type { Me } from "../api/client";
+import { clearApiCache } from "../api/api-cache";
 
 /**
  * Who is signed in, for the whole app.
@@ -22,6 +23,11 @@ export type SessionStatus = "loading" | "authenticated" | "anonymous" | "offline
 
 interface SessionValue {
   status: SessionStatus;
+  /**
+   * True once an access token is in hand — before /auth/me answers. Screens
+   * may read data from here on, alongside the profile rather than after it.
+   */
+  tokenReady: boolean;
   user: Me | null;
   signIn: (email: string, password: string) => Promise<void>;
   signOut: () => Promise<void>;
@@ -54,6 +60,7 @@ function branchesOf(user: Me | null, permission: string): string[] {
 export function SessionProvider({ children }: { children: React.ReactNode }) {
   const [status, setStatus] = useState<SessionStatus>("loading");
   const [user, setUser] = useState<Me | null>(null);
+  const [tokenReady, setTokenReady] = useState(false);
 
   const load = useCallback(async () => {
     try {
@@ -62,6 +69,7 @@ export function SessionProvider({ children }: { children: React.ReactNode }) {
       setStatus("authenticated");
     } catch {
       setUser(null);
+      setTokenReady(false);
       setStatus("anonymous");
     }
   }, []);
@@ -81,6 +89,7 @@ export function SessionProvider({ children }: { children: React.ReactNode }) {
         setStatus("anonymous");
         return;
       }
+      setTokenReady(true);
       await load();
     })();
     return () => {
@@ -89,18 +98,23 @@ export function SessionProvider({ children }: { children: React.ReactNode }) {
   }, [load]);
 
   const signIn = useCallback(async (email: string, password: string) => {
+    clearApiCache();
     await client.login(email, password);
+    setTokenReady(true);
     await load();
   }, [load]);
 
   const signOut = useCallback(async () => {
     await client.logout();
+    clearApiCache();
     setUser(null);
+    setTokenReady(false);
     setStatus("anonymous");
   }, []);
 
   const value = useMemo<SessionValue>(() => ({
     status,
+    tokenReady,
     user,
     signIn,
     signOut,
@@ -111,7 +125,7 @@ export function SessionProvider({ children }: { children: React.ReactNode }) {
       || (!!branchId && branchesOf(user, permission).includes(branchId)),
     branchesFor: (permission: string) =>
       user?.permissions.includes(permission) ? (user?.branches ?? []) : branchesOf(user, permission),
-  }), [status, user, signIn, signOut]);
+  }), [status, tokenReady, user, signIn, signOut]);
 
   return <SessionContext.Provider value={value}>{children}</SessionContext.Provider>;
 }
