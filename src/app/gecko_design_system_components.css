@@ -8695,13 +8695,17 @@ label.gecko-toggle.gecko-toggle-sm input:checked ~ .gecko-toggle-track .gecko-to
 .gecko-move-kind-in  { background: var(--gecko-info-50);    color: var(--gecko-info-700); }
 .gecko-move-kind-out { background: var(--gecko-warning-50); color: var(--gecko-warning-700); }
 
+/* The container number is the most important thing on the row, and on a walk-in
+   drop-off its placeholder is a sentence ("Leave blank if unreadable") rather
+   than a specimen number. At 190px that was clipped to "Leave bl". */
 .gecko-move-box {
   display: flex;
   align-items: center;
   gap: 8px;
-  width: 190px;
+  width: 260px;
   flex: 0 0 auto;
 }
+.gecko-move-box .gecko-input { flex: 1 1 auto; min-width: 0; }
 
 /* The booking this box sits on, under the row that identifies it — one phrase,
    read left to right, rather than squeezed against the Record button. */
@@ -11293,7 +11297,8 @@ th.gecko-cell-tight {
   color: var(--gecko-warning-700);
 }
 
-/* "The gate will issue one" — said under the empty container-number box on a
-   walk-in drop-off, so a blank field reads as a choice rather than an
-   unfinished one. */
-.gecko-move-mint-hint { display: block; line-height: 1.35; max-width: 22ch; }
+
+/* Booking statement: the receipts and invoices of one booking, one card. */
+.gecko-stmt-docs-head { padding: 10px 12px; font-weight: 700; font-size: 13px; }
+.gecko-stmt-docs-none { text-align: center; padding: 12px; }
+.gecko-stmt-docs-total { font-weight: 700; }

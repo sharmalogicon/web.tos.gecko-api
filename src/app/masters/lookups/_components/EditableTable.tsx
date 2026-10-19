@@ -116,7 +116,7 @@ function Cell<T>({ col, draft, set, error, isNew }: {
        */
       input = (
         <PartyPicker role={col.role ?? 'CUSTOMER'} value={(value as string | null) || null} nameFirst
-          placeholder="Type to search\u2026" error={error ?? undefined}
+          placeholder="Type to search…" error={error ?? undefined}
           onChange={code => change(code ?? null)} />
       );
       break;

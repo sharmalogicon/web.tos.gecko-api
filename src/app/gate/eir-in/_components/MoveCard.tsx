@@ -228,11 +228,6 @@ export function MoveCard({
               onBlur={() => { if (move.containerNo.trim() && boxLooksRight(move.containerNo)) onLook(); }} />
           )}
           {move.looking && <span className="gecko-cell-meta">looking…</span>}
-          {willMint && !done && (
-            <span className="gecko-cell-meta gecko-move-mint-hint">
-              The gate will issue one (NOID…) to write on the box.
-            </span>
-          )}
         </div>
 
         <div className="gecko-move-spacer" />
@@ -465,7 +460,7 @@ export function MoveCard({
                       hint={willMint ? 'Required: there is no registry entry to take it from.'
                         : move.known?.isInRegistry ? 'Leave it empty to take the registry\u2019s owner.' : undefined}>
                       <PartyPicker role="SHIPPING_LINE" value={move.lineCode || null} disabled={done} nameFirst
-                        placeholder="Search the line\u2026"
+                        placeholder="Search the line…"
                         onChange={code => onChange({ lineCode: code ?? '' })} />
                     </GateField>
                     {/* With no number there is no registry entry to fall back

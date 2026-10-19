@@ -30,7 +30,9 @@ import { Icon } from '@/components/ui/Icon';
 import { EmptyState } from '@/components/ui/EmptyState';
 import { FilterPopover, type FilterField } from '@/components/ui/FilterPopover';
 import { useToast } from '@/components/ui/Toast';
-import { useApi, useApiList } from '@/lib/api/use-api';
+import { useApi, useApiList, type Paged } from '@/lib/api/use-api';
+import { INVOICES_PATH, type InvoiceSummary } from '@/lib/api/invoices';
+import { formatDateTime } from '@/lib/format';
 import { useSession } from '@/lib/auth/session';
 import { useFacility } from '@/lib/api/facility';
 import { saveBlob } from '@/lib/api/client';
@@ -149,6 +151,22 @@ function Statement() {
 
   const all = useMemo(() => (s ? flattenStatement(s) : []), [s]);
   const cur = s?.receipts[0]?.currencyCode ?? all[0]?.charge.currencyCode ?? 'THB';
+
+  /**
+   * THE CREDIT SIDE OF THE SAME BOOKING.
+   *
+   * The statement carries the receipts — the cash side — but no invoices, so a
+   * booking settled on credit showed "TOTAL CREDIT 200 · invoiced and settled"
+   * above a card that said "No receipt has been issued". The money was
+   * accounted for and the document was nowhere.
+   *
+   * A second call, because BookingStatementResponse has no `invoices`. Asked
+   * for in docs/STATEMENT_INVOICES_FOR_API.md; when it arrives this collapses
+   * back into the statement read.
+   */
+  const invoices = useApi<Paged<InvoiceSummary>>(
+    s?.orderNo ? `${INVOICES_PATH}?orderNo=${encodeURIComponent(s.orderNo)}&PageSize=50` : null);
+  const invoiceRows = invoices.data?.items ?? [];
   const m = (v: number) => amount(v, cur);
   const movements = useMemo(
     () => [...new Set(all.map(r => r.charge.movementCode).filter((v): v is string => Boolean(v)))].sort(),
@@ -573,22 +591,36 @@ function Statement() {
             </div>
           </section>
 
+          {/* ONE CARD FOR BOTH DOCUMENTS. Cash leaves a receipt, credit leaves
+              an invoice, and a clerk asking "what paper exists for this
+              booking?" does not care which kind it is — they are listed
+              together, newest first, with the kind as a column. */}
           <section className="gecko-table-card">
-            <div style={{ padding: '10px 12px', fontWeight: 700, fontSize: 13 }}>Receipts · {s.receipts.length}</div>
+            <div className="gecko-stmt-docs-head">
+              Receipts &amp; invoices · {s.receipts.length + invoiceRows.length}
+              {invoices.error && (
+                <span className="gecko-cell-meta"> · invoices could not be read ({invoices.error.title})</span>
+              )}
+            </div>
             <table className="gecko-table gecko-table-compact gecko-table-fixed">
               <thead>
                 <tr>
-                  <th style={{ width: '16%' }}>Receipt</th><th style={{ width: '16%' }}>Time</th><th>Payer</th>
-                  <th className="gecko-num" style={{ width: '13%' }}>Before VAT</th>
-                  <th className="gecko-num" style={{ width: '11%' }}>VAT</th>
-                  <th className="gecko-num" style={{ width: '13%' }}>Total</th>
-                  <th style={{ width: '14%' }}>Status</th>
+                  <th style={{ width: '17%' }}>Document</th>
+                  <th style={{ width: '10%' }}>Kind</th>
+                  <th style={{ width: '15%' }}>Time</th><th>Payer</th>
+                  <th className="gecko-num" style={{ width: '12%' }}>Before VAT</th>
+                  <th className="gecko-num" style={{ width: '10%' }}>VAT</th>
+                  <th className="gecko-num" style={{ width: '12%' }}>Total</th>
+                  <th style={{ width: '12%' }}>Status</th>
                 </tr>
               </thead>
               <tbody>
-                {s.receipts.length === 0 && (
-                  <tr><td colSpan={7} className="gecko-cell-meta" style={{ textAlign: 'center', padding: 12 }}>No receipt has been issued on this booking.</td></tr>
+                {s.receipts.length === 0 && invoiceRows.length === 0 && (
+                  <tr><td colSpan={8} className="gecko-cell-meta gecko-stmt-docs-none">
+                    No receipt or invoice has been issued on this booking.
+                  </td></tr>
                 )}
+
                 {s.receipts.map(r => (
                   <tr key={r.receiptId} className={r.status === 'VOIDED' ? 'gecko-statement-row-muted' : undefined}>
                     <td className="gecko-cell-tight">
@@ -596,15 +628,42 @@ function Statement() {
                         {r.receiptNo}
                       </Link>
                     </td>
-                    <td className="gecko-cell-tight">{r.receiptAt.slice(0, 16).replace('T', ' ')}</td>
+                    <td><span className="gecko-badge gecko-badge-xs gecko-badge-success">Receipt</span></td>
+                    <td className="gecko-cell-tight">{formatDateTime(r.receiptAt)}</td>
                     <td className="gecko-cell-tight">{r.payerName}</td>
                     <td className="gecko-num gecko-mono">{amount(r.subtotal, r.currencyCode)}</td>
                     <td className="gecko-num gecko-mono">{amount(r.tax, r.currencyCode)}</td>
-                    <td className="gecko-num gecko-mono" style={{ fontWeight: 700 }}>{amount(r.total, r.currencyCode)}</td>
+                    <td className="gecko-num gecko-mono gecko-stmt-docs-total">{amount(r.total, r.currencyCode)}</td>
                     <td>
                       <span className={`gecko-badge ${r.status === 'VOIDED' ? 'gecko-badge-gray' : 'gecko-badge-success'}`}>{r.status === 'VOIDED' ? 'Voided' : 'Issued'}</span>
                       {r.voidReason && <div className="gecko-cell-meta gecko-cell-tight">{r.voidReason}</div>}
                       {r.replacedByReceiptNo && <div className="gecko-cell-meta gecko-cell-tight">replaced by {r.replacedByReceiptNo}</div>}
+                    </td>
+                  </tr>
+                ))}
+
+                {invoiceRows.map(i => (
+                  <tr key={i.invoiceId} className={i.status === 'VOID' || i.status === 'VOIDED' ? 'gecko-statement-row-muted' : undefined}>
+                    <td className="gecko-cell-tight">
+                      <Link href={`/billing/invoices/${encodeURIComponent(i.invoiceId)}`} className="gecko-mono-strong gecko-link">
+                        {i.invoiceNo}
+                      </Link>
+                    </td>
+                    <td>
+                      {/* A credit note is the same document type refunding one,
+                          so it says which it is rather than all reading "Invoice". */}
+                      <span className={`gecko-badge gecko-badge-xs ${i.invoiceType === 'CREDIT_NOTE' ? 'gecko-badge-warning' : 'gecko-badge-info'}`}>
+                        {i.invoiceType === 'CREDIT_NOTE' ? 'Credit note' : 'Invoice'}
+                      </span>
+                    </td>
+                    <td className="gecko-cell-tight">{formatDateTime(i.issuedAt)}</td>
+                    <td className="gecko-cell-tight">{i.payerName ?? i.payerCode ?? '—'}</td>
+                    <td className="gecko-num gecko-mono">{amount(i.amount, i.currencyCode)}</td>
+                    <td className="gecko-num gecko-mono">{amount(i.tax, i.currencyCode)}</td>
+                    <td className="gecko-num gecko-mono gecko-stmt-docs-total">{amount(i.total, i.currencyCode)}</td>
+                    <td>
+                      <span className="gecko-badge gecko-badge-info">{i.status.replace(/_/g, ' ').toLowerCase()}</span>
+                      <div className="gecko-cell-meta gecko-cell-tight">{i.paymentTermCode.toLowerCase()}</div>
                     </td>
                   </tr>
                 ))}
