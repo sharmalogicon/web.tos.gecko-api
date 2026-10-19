@@ -592,8 +592,12 @@ export default function UnbilledOrdersPage_() {
             setInvoicing(false);
             toast.toast({ variant: 'success', title: 'Credit invoice issued', message });
             // The lines are INVOICED now, so the worklist they came from has to
-            // be re-read or it still offers them.
+            // be re-read or it still offers them — the lines, AND the order rows,
+            // footer totals and payer summary (2026-10-19: the row kept its old
+            // ฿200 after the invoice, so a billed order looked still unbilled).
             setLinesNonce(n => n + 1);
+            orders.reload();
+            summary.reload();
           }} />
       )}
     </div>
