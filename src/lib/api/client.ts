@@ -245,11 +245,25 @@ export const PASSWORD_MIN_LENGTH = 6;
 export const PASSWORD_MAX_LENGTH = 18;
 
 export async function changePassword(newPassword: string, confirmPassword: string): Promise<void> {
-  const response = await send('/auth/password', {
+  /**
+   * api(), not send(). `send` only sets Authorization when a token is handed
+   * to it, and this was handing it none — so the one endpoint on this file
+   * that REQUIRES a signed-in caller was the one posting without a bearer, and
+   * answered 401 every time.
+   *
+   * The three neighbours are right to use `send`: /auth/login, /auth/refresh
+   * and /auth/logout are all AllowAnonymous and work off the HttpOnly cookie.
+   * /auth/password is RequireAuthorization, because the token is what proves
+   * whose password is being changed.
+   *
+   * api() -> authorised() adds the header, refreshes once on 401, gives back
+   * undefined on the 204, and throws an ApiError on a 400 so the dialog still
+   * shows the server's own wording.
+   */
+  await api<void>('/auth/password', {
     method: 'POST',
     body: JSON.stringify({ newPassword, confirmPassword }),
   });
-  if (!response.ok) throw await toApiError(response);
 }
 
 /** Ends the session server-side and clears the cookie; the local token goes either way. */
