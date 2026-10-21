@@ -39,6 +39,58 @@ interface SessionValue {
   branchesFor: (permission: string) => string[];
 }
 
+/**
+ * A ROLE CLAIM, as a person reads it.
+ *
+ * ClaimsBuilder emits a tenant-wide role as its code and a BRANCH-SCOPED one as
+ * `CODE@branchId` (ClaimsBuilder.cs:87), so a gate clerk's role arrives as
+ * "GATE_CLERK@1c59e785-33a5-f111-9b0d-00919e4766d5". Printed raw, the account
+ * menu showed the guid.
+ *
+ * The branch is not dropped information here \u2014 `branches` carries it, and the
+ * depot switcher names it. This is only about reading the role aloud.
+ */
+export const roleLabel = (claim: string) =>
+  claim.split('@')[0].replace(/_/g, ' ');
+
+/**
+ * WHAT TO CALL THE SIGNED-IN PERSON, in one place.
+ *
+ * Their name when the session carries one, their e-mail when it does not, and
+ * their role when it carries neither. `firstName` holds the whole name and
+ * `lastName` is always null, so the join below yields the name as stored.
+ *
+ * Every screen asks this rather than reaching into the fields, so when the API
+ * starts sending firstName and lastName the menu, the sidebar and the settings
+ * page all change together.
+ */
+export function displayName(user: Me | null): string {
+  if (!user) return 'Not signed in';
+  const full = [user.firstName, user.lastName].filter(Boolean).join(' ').trim();
+  if (full) return full;
+  if (user.email) return user.email;
+  return user.roles[0] ? roleLabel(user.roles[0]) : (user.userType ?? 'Signed in');
+}
+
+/**
+ * Two letters for the avatar: from the name when there is one, else the role.
+ *
+ * `firstName` holds the WHOLE name and `lastName` is always null (API,
+ * 2026-10-21), so the letters come off `firstName` itself. Splitting on the
+ * space would be wrong — a Thai name, or anyone with two family names, does
+ * not divide where the first space happens to fall.
+ */
+export function initialsOf(user: Me | null): string {
+  if (!user) return '\u2014';
+  const first = user.firstName?.trim();
+  const last = user.lastName?.trim();
+  // Only if the API ever sends the two apart does an initial of each make sense.
+  if (first && last) return (first[0] + last[0]).toUpperCase();
+  if (first) return first.slice(0, 2).toUpperCase();
+  if (last) return last.slice(0, 2).toUpperCase();
+  return displayName(user).slice(0, 2).toUpperCase();
+}
+
 const SessionContext = createContext<SessionValue | null>(null);
 
 /**

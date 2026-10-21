@@ -21,6 +21,24 @@ export interface Me {
   userId: string;
   tenantId: string;
   userType: string | null;
+  /**
+   * WHO THE PERSON IS, as opposed to what they may do.
+   *
+   * Sent by /auth/me since 2026-10-21 (docs/AUTH_ME_IDENTITY_FOR_API.md).
+   * Optional because an account need not have a name or an e-mail set, and
+   * `firstName` holds the WHOLE name — `lastName` is always null. Every screen
+   * that shows a person reads `displayName()` rather than these fields, so one
+   * place decides what to call someone.
+   */
+  firstName?: string | null;
+  lastName?: string | null;
+  email?: string | null;
+  /**
+   * The sign-in user ID, e.g. "PLA" — null on accounts that sign in with an
+   * e-mail only. It is what the clerk types at the lane, so it is the thing
+   * they recognise their own account by, and it is shown beside the e-mail.
+   */
+  userName?: string | null;
   branches: string[];
   modules: string[];
   roles: string[];

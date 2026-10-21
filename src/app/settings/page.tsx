@@ -1,7 +1,7 @@
 "use client";
 import React, { useState } from 'react';
 import { Icon } from '@/components/ui/Icon';
-import { useSession } from '@/lib/auth/session';
+import { displayName, roleLabel, useSession } from '@/lib/auth/session';
 import { useFacility } from '@/lib/api/facility';
 import { LANGUAGES, usePreferences, type Language, type Theme } from '@/lib/preferences';
 import { ChangePasswordDialog } from '@/components/layout/ChangePasswordDialog';
@@ -20,8 +20,9 @@ import { ChangePasswordDialog } from '@/components/layout/ChangePasswordDialog';
  * rather than implying the choice follows them around; see
  * docs/USER_PREFERENCES_FOR_API.md for what would fix it.
  *
- * The account block below is read from the token, which is why it shows a role
- * and a depot count rather than a name and an e-mail: those are not in it.
+ * The account block below is read from the token. `displayName()` names the
+ * person when the session carries a name and falls back to the role when it does
+ * not, which is the case today — see docs/AUTH_ME_IDENTITY_FOR_API.md.
  */
 export default function SettingsPage() {
   const { user, status } = useSession();
@@ -99,8 +100,18 @@ export default function SettingsPage() {
           <>
             <dl className="gecko-ui-facts">
               <div className="gecko-ui-fact">
+                <dt>Name</dt>
+                <dd>{displayName(user)}</dd>
+              </div>
+              {user.email && (
+                <div className="gecko-ui-fact">
+                  <dt>E-mail</dt>
+                  <dd>{user.email}</dd>
+                </div>
+              )}
+              <div className="gecko-ui-fact">
                 <dt>Role</dt>
-                <dd>{user.roles.map(r => r.replace(/_/g, ' ')).join(', ') || user.userType || '—'}</dd>
+                <dd>{[...new Set(user.roles.map(roleLabel))].join(', ') || user.userType || '—'}</dd>
               </div>
               <div className="gecko-ui-fact">
                 <dt>Depots</dt>

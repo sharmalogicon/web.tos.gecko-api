@@ -2,7 +2,7 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { Icon } from '@/components/ui/Icon';
-import { useSession } from '@/lib/auth/session';
+import { displayName, initialsOf, roleLabel, useSession } from '@/lib/auth/session';
 import { LANGUAGES, usePreferences, type Language, type Theme } from '@/lib/preferences';
 import { ChangePasswordDialog } from './ChangePasswordDialog';
 
@@ -47,11 +47,19 @@ export function UserMenu({ collapsed = false }: {
   }, []);
 
   const signedIn = status === 'authenticated' && !!user;
-  // `Me` carries no name or email — only roles, branches and permissions — so
-  // the menu says what it actually knows rather than inventing a display name.
-  const role = (user?.roles[0] ?? user?.userType ?? 'Signed in').replace(/_/g, ' ');
-  const initials = (user?.roles[0] ?? 'U').slice(0, 2).toUpperCase();
+  // THE PERSON LEADS, the role sits underneath. /auth/me carries the name since
+  // 2026-10-21; displayName() still falls back to the e-mail and then the role,
+  // because an account may have no name set.
+  const who = displayName(user ?? null);
+  const role = user?.roles[0] ? roleLabel(user.roles[0]) : (user?.userType ?? '');
+  const initials = initialsOf(user ?? null);
   const depots = user ? `${user.branches.length} depot${user.branches.length === 1 ? '' : 's'}` : '';
+  // Role and depots read as one line; either may be empty, so neither leaves a
+  // stray separator behind.
+  const standing = [role, depots].filter(Boolean).join(' · ');
+  // What the clerk types at the lane, then the address it reaches. `userName` is
+  // null on e-mail-only accounts, so neither leaves a stray separator behind.
+  const account = [user?.userName, user?.email].filter(Boolean).join(' · ');
 
   const doSignOut = async () => {
     setOpen(false);
@@ -65,13 +73,13 @@ export function UserMenu({ collapsed = false }: {
       <button type="button"
         className={`gecko-usermenu-trigger${collapsed ? ' gecko-usermenu-trigger-rail' : ''}`}
         aria-haspopup="menu" aria-expanded={open}
-        title={signedIn ? `${role} · ${depots}` : 'Account'}
+        title={signedIn ? `${who} · ${standing}` : 'Account'}
         onClick={() => setOpen(o => !o)}>
         <span className="gecko-avatar gecko-avatar-accent">{initials}</span>
         {!collapsed && (
           <span className="gecko-usermenu-trigger-who">
-            <span className="gecko-sidebar-user-name">{signedIn ? role : 'Not signed in'}</span>
-            <span className="gecko-sidebar-user-role">{signedIn ? depots : 'Demo screens only'}</span>
+            <span className="gecko-sidebar-user-name">{signedIn ? who : 'Not signed in'}</span>
+            <span className="gecko-sidebar-user-role">{signedIn ? standing : 'Demo screens only'}</span>
           </span>
         )}
         {/* The unread dot lives out here: inside the menu it would only be seen
@@ -88,8 +96,9 @@ export function UserMenu({ collapsed = false }: {
             <div className="gecko-usermenu-head">
               <span className="gecko-avatar gecko-avatar-accent">{initials}</span>
               <div className="gecko-usermenu-who">
-                <div className="gecko-usermenu-name">{signedIn ? role : 'Not signed in'}</div>
-                <div className="gecko-cell-meta">{signedIn ? depots : 'Sign in to use Gecko'}</div>
+                <div className="gecko-usermenu-name">{signedIn ? who : 'Not signed in'}</div>
+                <div className="gecko-cell-meta">{signedIn ? standing : 'Sign in to use Gecko'}</div>
+                {signedIn && account && <div className="gecko-cell-meta">{account}</div>}
               </div>
             </div>
 
