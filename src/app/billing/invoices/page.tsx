@@ -17,7 +17,7 @@
  * batch print. See docs/STATEMENT_CHARGE_EDIT_FOR_API.md §7.
  */
 
-import React, { Suspense, useMemo, useState } from 'react';
+import React, { Suspense, useCallback, useMemo, useState } from 'react';
 import Link from 'next/link';
 import { Icon } from '@/components/ui/Icon';
 import { EmptyState } from '@/components/ui/EmptyState';
@@ -34,6 +34,7 @@ import {
   INVOICE_PERMISSIONS, INVOICE_STATUS, invoicesPath,
   type InvoiceSummary,
 } from '@/lib/api/invoices';
+import { REVENUE_LOOKUPS_PATH, type RevenueLookups } from '@/lib/api/revenue';
 
 interface Page { items: InvoiceSummary[]; page: number; pageSize: number; totalCount: number; totalPages: number }
 
@@ -50,13 +51,27 @@ function Invoices() {
   const { user } = useSession();
   const mayView = (user?.permissions ?? []).includes(INVOICE_PERMISSIONS.view);
 
-  const [filters, setFilters] = useState<Record<string, string>>({ query: '', payerCode: '', orderNo: '', status: '' });
+  const [filters, setFilters] = useState<Record<string, string>>({ query: '', payerCode: '', orderNo: '', status: '', billTo: '' });
+
+  /**
+   * WHO THE PAYER IS, as the tenant spells it.
+   *
+   * `billTo` is a soft reference to lookup.bill_to_role, so the options come
+   * from GET /api/revenue/lookups rather than a list written here — a tenant
+   * that adds a role gets it without a release.
+   */
+  const lookups = useApi<RevenueLookups>(REVENUE_LOOKUPS_PATH);
+  const billToRoles = useMemo(() => lookups.data?.billToRoles ?? [], [lookups.data]);
+  const billToLabel = useCallback(
+    (code: string) => billToRoles.find(r => r.code === code)?.name ?? code.replace(/_/g, ' ').toLowerCase(),
+    [billToRoles]);
   const [sortBy, setSortBy] = useState('issued_desc');
 
   const path = useMemo(
-    () => invoicesPath({ search: filters.query, payerCode: filters.payerCode, orderNo: filters.orderNo },
+    () => invoicesPath({ search: filters.query, payerCode: filters.payerCode, orderNo: filters.orderNo,
+      billTo: filters.billTo },
       branch?.branchId ?? '', 1, 200),
-    [filters.query, filters.payerCode, filters.orderNo, branch?.branchId]);
+    [filters.query, filters.payerCode, filters.orderNo, filters.billTo, branch?.branchId]);
 
   const { data, error, loading, reload } = useApi<Page>(mayView ? path : null);
   const invoices = useMemo(() => data?.items ?? [], [data]);
@@ -94,7 +109,7 @@ function Invoices() {
   ];
 
   const exportCsv = () => saveBlob(toCsv(
-    ['Invoice', 'Issued', 'Payer code', 'Payer', 'Bill to', 'Term', 'Lines', 'Amount', 'VAT', 'Total', 'Status', 'Remarks'],
+    ['Invoice', 'Issued', 'Payer code', 'Payer', 'Payer type', 'Term', 'Lines', 'Amount', 'VAT', 'Total', 'Status', 'Remarks'],
     rows.map(i => [i.invoiceNo, i.issuedAt, i.payerCode ?? '', i.payerName ?? '', i.billTo, i.paymentTermCode,
       i.lines, i.amount, i.tax, i.total, i.status, i.remarks ?? '']),
   ), 'invoices.csv');
@@ -134,7 +149,7 @@ function Invoices() {
           <FilterPopover
             fields={fields} values={filters} tone="orange"
             onChange={setFilters} onApply={setFilters}
-            onClear={() => setFilters({ query: '', payerCode: '', orderNo: '', status: '' })}
+            onClear={() => setFilters({ query: '', payerCode: '', orderNo: '', status: '', billTo: '' })}
             sortOptions={[
               { label: 'Newest first', value: 'issued_desc' },
               { label: 'Oldest first', value: 'issued_asc' },
@@ -174,7 +189,8 @@ function Invoices() {
               <th style={{ width: '18%' }}>Invoice no</th>
               <th style={{ width: '13%' }}>Issued</th>
               <th>Payer</th>
-              <th style={{ width: '9%' }}>Term</th>
+              <th style={{ width: '11%' }}>Payer type</th>
+              <th style={{ width: '8%' }}>Term</th>
               <th className="gecko-num" style={{ width: '7%' }}>Lines</th>
               <th className="gecko-num" style={{ width: '12%' }}>Amount</th>
               <th className="gecko-num" style={{ width: '10%' }}>VAT</th>
@@ -183,10 +199,10 @@ function Invoices() {
             </tr>
           </thead>
           <tbody>
-            {loading && <TableSkeleton columns={9} />}
+            {loading && <TableSkeleton columns={10} />}
             {!loading && rows.length === 0 && (
               <tr>
-                <td colSpan={9} style={{ padding: 0 }}>
+                <td colSpan={10} style={{ padding: 0 }}>
                   <EmptyState icon="invoice" title="No invoice has been raised yet"
                     description="An invoice is made from a booking's credit charges: open a statement, tick the credit lines and press Send to." />
                 </td>
@@ -203,9 +219,11 @@ function Invoices() {
                     {i.remarks && <div className="gecko-cell-meta gecko-cell-tight" title={i.remarks}>{i.remarks}</div>}
                   </td>
                   <td className="gecko-cell-tight">{i.issuedAt.slice(0, 10)}</td>
+                  {/* The name alone. The code was filing, and the role it was
+                      sharing a line with is a column of its own now. */}
+                  <td className="gecko-cell-tight">{i.payerName ?? i.payerCode ?? '\u2014'}</td>
                   <td>
-                    <span className="gecko-cell-tight">{i.payerName ?? '—'}</span>
-                    <span className="gecko-cell-meta gecko-mono">{i.payerCode ?? ''} · {i.billTo.toLowerCase()}</span>
+                    <span className="gecko-badge gecko-badge-xs gecko-badge-info">{billToLabel(i.billTo)}</span>
                   </td>
                   <td><span className="gecko-badge gecko-badge-xs gecko-badge-gray">{i.paymentTermCode}</span></td>
                   <td className="gecko-num gecko-mono">{i.lines}</td>

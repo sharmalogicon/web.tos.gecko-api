@@ -1,6 +1,7 @@
 "use client";
 import React, { useState, useMemo } from 'react';
 import { Icon } from '@/components/ui/Icon';
+import { PASSWORD_MAX_LENGTH, PASSWORD_MIN_LENGTH } from '@/lib/api/client';
 
 // ── Role definitions ───────────────────────────────────────────────────────────
 
@@ -204,7 +205,9 @@ function NewUserPanel({
     }));
   };
 
-  const valid = form.fullName.trim() && form.email.trim() && form.role && form.password.length >= 6;
+  // The same rule the API applies, read from the one place it is written.
+  const valid = form.fullName.trim() && form.email.trim() && form.role
+    && form.password.length >= PASSWORD_MIN_LENGTH && form.password.length <= PASSWORD_MAX_LENGTH;
 
   return (
     <>
@@ -349,7 +352,8 @@ function NewUserPanel({
                 type={showPw ? 'text' : 'password'}
                 value={form.password}
                 onChange={e => setForm(f => ({ ...f, password: e.target.value }))}
-                placeholder="Min. 6 characters"
+                maxLength={PASSWORD_MAX_LENGTH}
+                placeholder={`${PASSWORD_MIN_LENGTH} to ${PASSWORD_MAX_LENGTH} characters`}
                 className="gecko-input"
                 style={{ fontSize: 13, paddingLeft: 32, paddingRight: 38 }}
               />

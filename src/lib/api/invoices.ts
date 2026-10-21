@@ -98,6 +98,19 @@ export interface InvoiceQuery {
   search: string;
   payerCode: string;
   orderNo: string;
+  /**
+   * The payer's ROLE — a soft reference to lookup.bill_to_role (CUSTOMER,
+   * SHIPPING_LINE, HAULIER, FORWARDER...), not a particular party.
+   *
+   * WIRED AND WAITING. `GET /api/revenue/invoices` takes branchId, payerCode,
+   * orderNo and Search; it has no billTo yet, so sending it narrows nothing.
+   * The control is deliberately absent from the filter panel until the API
+   * can honour it — a server-paged list with a filter applied on the client
+   * stops working the moment there is a second page, and reads as a filter
+   * while behaving as a highlighter. Asked for in
+   * docs/INVOICE_PAYER_TYPE_FOR_API.md.
+   */
+  billTo: string;
 }
 
 export const invoicesPath = (q: Partial<InvoiceQuery>, branchId: string, page = 1, pageSize = 50) => {
@@ -106,6 +119,7 @@ export const invoicesPath = (q: Partial<InvoiceQuery>, branchId: string, page = 
   if (q.search?.trim()) p.set('Search', q.search.trim());
   if (q.payerCode?.trim()) p.set('payerCode', q.payerCode.trim());
   if (q.orderNo?.trim()) p.set('orderNo', q.orderNo.trim());
+  if (q.billTo?.trim()) p.set('billTo', q.billTo.trim());
   return `${INVOICES_PATH}?${p.toString()}`;
 };
 

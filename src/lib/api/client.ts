@@ -229,8 +229,20 @@ export async function login(email: string, password: string): Promise<AccessToke
  * nothing has to be re-entered afterwards. 400 on `newPassword` when the
  * tenant's policy refuses it, worded for the person typing.
  */
-export const PASSWORD_MIN_LENGTH = 12;
-export const PASSWORD_MAX_LENGTH = 128;
+/**
+ * THE TENANT'S PASSWORD RULE, in one place.
+ *
+ * 6 to 18 (owner 2026-10-21). The API refuses anything else with a 400 on
+ * `newPassword` reading "Password must be 6-18 characters.", so every screen
+ * that sets a password reads these rather than writing a number of its own —
+ * a literal in a form is a rule that drifts from the server silently.
+ *
+ * NOT for the sign-in form. A password already in use was set under whatever
+ * rule applied then, and refusing to post a 20-character one would lock out
+ * the person who has it.
+ */
+export const PASSWORD_MIN_LENGTH = 6;
+export const PASSWORD_MAX_LENGTH = 18;
 
 export async function changePassword(newPassword: string, confirmPassword: string): Promise<void> {
   const response = await send('/auth/password', {
