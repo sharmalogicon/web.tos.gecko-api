@@ -67,3 +67,32 @@ export function formatBytes(n: number | null): string {
   if (n == null) return "";
   return n < 1024 * 1024 ? `${Math.max(1, Math.round(n / 1024))} KB` : `${(n / 1024 / 1024).toFixed(1)} MB`;
 }
+
+/**
+ * AMENDING THE TRUCK ON A RECORDED VISIT.
+ *
+ * The plate, the haulier, the driver and their number are the VISIT's, not the
+ * EIR's — one truck, one set of details, however many boxes it brought. So an
+ * amendment here changes every EIR on that visit, which is right (they were
+ * all the same truck) but has to be said out loud before the clerk presses it.
+ *
+ * LIVE SINCE 2026-10-27 (docs/GATE_AMEND_TRUCK_FOR_API.md). The API took the
+ * shape asked for and added one thing: a `reason`, required. A 404 therefore
+ * means the VISIT is gone, not that the endpoint is missing.
+ */
+export const visitAmendPath = (truckVisitId: string) => `${GATE_API}/visits/${truckVisitId}`;
+
+export interface VisitAmendRequest {
+  truckPlate: string;
+  haulierCode: string | null;
+  driverName: string | null;
+  driverMobile: string | null;
+  /**
+   * WHY THE TRUCK WAS CHANGED. The API requires it (max 300) — it answered the
+   * question the prompt asked, and answered yes: amending a recorded document
+   * goes on the record the same way a void does.
+   */
+  reason: string;
+  /** Sent when the visit carries one, which it does since 2026-10-27. */
+  rowVersion?: string | null;
+}

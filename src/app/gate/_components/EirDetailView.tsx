@@ -14,6 +14,7 @@ import { codeLabel, useCodeList } from '@/lib/api/lookups';
 import { EIR_PRINT_NOTE, openPdf } from '@/lib/api/open-pdf';
 import { couponPdfPath } from '@/lib/api/receipts';
 import { receiptByNo } from '@/lib/api/cash-bills';
+import { AmendTruckModal } from './AmendTruckModal';
 import {
   GATE_API, attachmentsPath, eirPath, formatBytes, formatKg,
   type ContainerHolds, type EirDetail, type GateAttachment, type Survey,
@@ -42,6 +43,15 @@ export function EirDetailView({ id }: { id: string }) {
   const charges = useApi<VisitQuote>(
     e && canAt(WINDOW_PERMISSIONS.collect, e.branchId) ? visitQuotePath(e.truckVisitId) : null);
   const [voiding, setVoiding] = useState(false);
+  const [amending, setAmending] = useState(false);
+  /**
+   * Amending a RECORDED gate document is supervisor work, so it takes the same
+   * permission as voiding one rather than the clerk's create right. A voided
+   * EIR is not edited at all: it is history, and the replacement carries the
+   * corrected truck.
+   */
+  const mayAmend = !!e && e.status !== 'VOIDED' && !!visit.data
+    && canAt(TOS_PERMISSIONS.gateOverride, e.branchId);
   const [printing, setPrinting] = useState(false);
   /** Which of the other two documents is being fetched, if either. */
   const [printingDoc, setPrintingDoc] = useState<'truck-in' | 'coupon' | null>(null);
@@ -194,7 +204,12 @@ export function EirDetailView({ id }: { id: string }) {
 
       {/* The truck first and full width: it is the thing in front of the clerk,
           and everything below is about the box it brought. */}
-        <Section title="Truck">
+        <Section title="Truck" action={mayAmend && (
+          <button type="button" className="gecko-btn gecko-btn-outline gecko-btn-sm"
+            onClick={() => setAmending(true)}>
+            <Icon name="edit" size={14} /> Edit
+          </button>
+        )}>
           <Facts>
           <Line label="Plate" value={e.truckPlate} />
           <Line label="Visit" value={e.visitNo} />
@@ -210,6 +225,7 @@ export function EirDetailView({ id }: { id: string }) {
               {visit.data.trailerPlate && <Line label="Trailer" value={visit.data.trailerPlate} />}
               <Line label="Haulier" value={visit.data.haulierCode ?? '—'} />
               <Line label="Driver" value={visit.data.driverName ?? '—'} />
+              {visit.data.driverMobile && <Line label="Mobile" value={visit.data.driverMobile} />}
               <Line label="Arrived / left" value={`${formatDateTime(visit.data.arrivedAt)} / ${formatDateTime(visit.data.gateOutAt)}`} />
               {visit.data.transactions.filter(t => t.gateTransactionId !== e.gateTransactionId).map(t => (
                 <Line key={t.gateTransactionId} label="Also on this truck"
@@ -344,6 +360,12 @@ export function EirDetailView({ id }: { id: string }) {
           that returns, not the plumbing. Restore from
           docs/snapshots/eir-detail.three-column-2026-10-08.tsx */}
 
+      {amending && e && visit.data && (
+        <AmendTruckModal eir={e} visit={visit.data}
+          onClose={() => setAmending(false)}
+          onSaved={() => { setAmending(false); visit.reload(); eir.reload(); }} />
+      )}
+
       {voiding && (
         <VoidModal eir={e} onClose={() => setVoiding(false)}
                    onVoided={() => { setVoiding(false); eir.reload(); }} />
@@ -473,7 +495,7 @@ function VoidModal({ eir, onClose, onVoided }: { eir: EirDetail; onClose: () => 
           <div className={`gecko-alert gecko-alert-${stale ? 'warning' : 'error'}`}>
             <Icon name="alertCircle" size={18} />
             <div>
-              <div style={{ fontWeight: 600 }}>{general.title}</div>
+              <div className="gecko-alert-title">{general.title}</div>
               {general.explanation && <div>{general.explanation}</div>}
             </div>
           </div>
@@ -489,10 +511,18 @@ function VoidModal({ eir, onClose, onVoided }: { eir: EirDetail; onClose: () => 
   );
 }
 
-function Section({ title, children }: { title: string; children: React.ReactNode }) {
+/** A card. `action` puts a control on the title row — the truck's Edit. */
+function Section({ title, action, children }: {
+  title: string;
+  action?: React.ReactNode;
+  children: React.ReactNode;
+}) {
   return (
     <div className="gecko-card gecko-card-padded">
-      <div className="gecko-stat-label gecko-mb-2">{title}</div>
+      <div className="gecko-row gecko-row-between gecko-mb-2">
+        <div className="gecko-stat-label">{title}</div>
+        {action}
+      </div>
       {children}
     </div>
   );
