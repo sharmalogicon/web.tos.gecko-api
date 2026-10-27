@@ -398,42 +398,6 @@ export function preflightPath(params: {
   }
   return `/api/tos/gate/preflight?${query}`;
 }
-
-/**
- * WHAT THIS DEPOT ALLOWS A CLERK TO DO WITH THE GATE CLOCK.
- *
- * The owner asked for the flat 24-hour back-date window to go (2026-10-27) and
- * the API answered with something better: the window is a per-depot setting,
- * `gate.max_backdate_hours`, 24 hours only where nobody has set it. So the
- * screen must ASK rather than decide — the same shape as the capture rules.
- *
- * Both numbers are the server's own, so what the screen refuses is exactly
- * what the POST would refuse. Hard-coding either one is how the two drift.
- */
-export interface GateSettings {
-  branchId: string;
-  /** Hours a move may be dated back. 0 = this depot forbids back-dating. */
-  maxBackdateHours: number;
-  /** How far ahead of the server's clock still counts as "now". */
-  futureGraceMinutes: number;
-}
-
-export const gateSettingsPath = (branchId: string) =>
-  `/api/tos/gate/settings?branchId=${encodeURIComponent(branchId)}`;
-
-/**
- * WHAT TO ASSUME WHEN THE DEPOT HAS NOT ANSWERED YET.
- *
- * Deliberately generous on the window and exact on the grace. A screen that
- * guessed 24 hours while the settings call was in flight would refuse a clerk
- * mid-keying and then change its mind, which is worse than letting the server
- * have the last word.
- */
-export const GATE_SETTINGS_UNKNOWN: Omit<GateSettings, 'branchId'> = {
-  maxBackdateHours: Number.POSITIVE_INFINITY,
-  futureGraceMinutes: 5,
-};
-
 // ── how a booked box is collected or delivered ──────────────────────────────
 
 /**

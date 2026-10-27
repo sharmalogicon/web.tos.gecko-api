@@ -8,10 +8,9 @@ import { ApiError } from '@/lib/api/problem';
 import { useFacility } from '@/lib/api/facility';
 import { useSession } from '@/lib/auth/session';
 import {
-  GATE_SETTINGS_UNKNOWN, TOS_PERMISSIONS, gateSettingsPath, preflightPath,
-  type GateFinding, type GatePreflight, type GateSettings,
+  TOS_PERMISSIONS, preflightPath,
+  type GateFinding, type GatePreflight,
 } from '@/lib/api/tos';
-import { useApi } from '@/lib/api/use-api';
 import {
   overTruckLimit, reserveBox, saveTrip,
   type TripRefusalRow, type TripSaveResult, type VasOption,
@@ -108,14 +107,6 @@ export default function GateInPage() {
    * the tenant has not set up is a disabled toggle, not a refused Save.
    */
   const { data: walkInTypes } = useWalkInOrderTypes(Boolean(branchId));
-  /**
-   * HOW FAR BACK THIS DEPOT LETS THE CLOCK GO, and how far ahead still counts
-   * as now. The server's own numbers (`gate.max_backdate_hours`), so the screen
-   * refuses exactly what the POST would. Until they arrive the screen does not
-   * guess a window — see GATE_SETTINGS_UNKNOWN.
-   */
-  const { data: gateSettings } = useApi<GateSettings>(branchId ? gateSettingsPath(branchId) : null);
-  const clockRules = gateSettings ?? GATE_SETTINGS_UNKNOWN;
   const [openKey, setOpenKey] = useState<string | null>(null);
   const [visit, setVisit] = useState<{ truckVisitId: string; visitNo: string } | null>(null);
   const [result, setResult] = useState<TripSaveResult | null>(null);
@@ -628,7 +619,7 @@ export default function GateInPage() {
       const cap = walkInTypes?.find(t => t.orderTypeCode === overCap[0])?.maxBoxesPerTruck;
       return `${overCap[0]} takes at most ${cap} box${cap === 1 ? '' : 'es'} per truck; this truck has ${overCap[1]}.`;
     }
-    const clock = backDateIssue(truck.transactionAt, new Date(), clockRules);
+    const clock = backDateIssue(truck.transactionAt);
     if (clock) return clock;
     /**
      * A box cannot move before it last moved. Checked per row because the
@@ -712,7 +703,6 @@ export default function GateInPage() {
             visitNo={visit?.visitNo ?? null}
             modeLabel={MODE_LABELS[mode]}
             fieldError={f => truckError?.forField(f)}
-            clockRules={clockRules}
           />
 
           <div className="gecko-card gecko-card-padded gecko-stack">

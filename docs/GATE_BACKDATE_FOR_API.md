@@ -82,26 +82,45 @@ none, so a box that last moved at 14:00:13 refuses a keyed 14:00. The refusal
 therefore names the first whole minute that is genuinely accepted (14:01)
 rather than quoting 14:00 and sending the clerk round again.
 
-**THE WINDOW WAS NOT REMOVED — it was moved to the depot, which is better
-than what we asked for.** We asked for the 24-hour cap to go. The API made it
-`gate.max_backdate_hours` per branch, `DefaultMaxBackdateHours = 24` only where
-nobody has set it, with `FutureGrace` of 5 minutes — and exposed both to us:
+**THE WINDOW MUST GO ENTIRELY — the owner has now said so twice.** This
+document originally asked for the flat 24-hour cap to be removed. The API
+answered by making it per-depot: `gate.max_backdate_hours`, with
+`DefaultMaxBackdateHours = 24` where nobody has set it, exposed at
+`GET /api/tos/gate/settings`. web.tos read it and enforced it — and the owner
+rejected that too, on seeing the picker grey out every date before yesterday:
 
-```
-GET /api/tos/gate/settings?branchId=...
-{ "branchId": "...", "maxBackdateHours": 2400, "futureGraceMinutes": 5 }
-```
+> "remove that 24 hrs totally, and freely allow to use any date and time — the
+> only rule is to check the selected date should be more than the previous
+> container gate in date, which is coming from the API as soon as the user keys
+> in the container no."
 
-That answers question 5 (an upper bound — yes, the depot’s own) and is the
-same shape as the capture rules: the depot decides, the screen asks. **The
-fixture branch is set to 2400 hours (100 days).** A depot that has never been
-configured still gets 24 hours, so please tell the owner which value KORAKIT
-should carry — unset means 24, and the screen will say so honestly.
+**So there is exactly ONE rule on a gate date, and it is per container, not per
+clock:** later than that box’s own last movement, which `lastMovementAt`
+already answers at the lane. No window, no floor, no depot setting standing in
+front of it. A depot keys a month of paper if a month of paper is what it has.
 
-The UI read no window at all until this was found, which would have let a clerk
-key nine days back on an unconfigured depot and be refused by the POST. Fixed:
-`GET /gate/settings` is now read when the gate screen opens, and it drives the
-picker’s floor, the hint and the Save guard.
+**web.tos has removed every window** (2026-10-27): no `min` on the picker, no
+settings call, no hours anywhere in the screen. The only clock checks left are
+blank, unreadable and the future.
+
+**WHAT WE NEED FROM THE API.** KORAKIT resolves to 24 hours today
+(`resolvedFrom: DEFAULT` — nobody has set the key), and
+`TripEndpoints.cs:196` runs `BackdateErrorsAsync` on the trips POST. So the
+screen now allows a three-day-old move that the server refuses on
+`rows[n].move.transactionAt`. One of these, your choice:
+
+1. **Stop enforcing `gate.max_backdate_hours` on the gate write** and let the
+   per-container rule be the only one. This is what the owner has asked for in
+   plain words, and `BEFORE_PREVIOUS_MOVE` already protects the ordering that
+   actually matters.
+2. **Change the default from 24 to unlimited** (or treat an unset key as no
+   limit), so a depot that has never been configured is not quietly capped.
+3. **Keep the setting but set KORAKIT’s branch value high** — a config change,
+   not a code change, and the one we can make ourselves today. It leaves the
+   trap in place for the next tenant, so we would rather have 1 or 2.
+
+Please say which, because until then a clerk gets a clean screen and a refused
+Save, which is the worst of the three outcomes.
 
 **Still open:** question 3 (what the back-date drives — free-time / storage
 clock, cut-off) and question 4 (a `tos.gate.backdate` permission).
@@ -133,11 +152,10 @@ stamped its own clock on every move. It does now.
 - Defaults to the clerk's own clock. `localInputValue()` in `src/lib/format.ts`
   builds it from local parts — **not** `toISOString().slice(0,16)`, which is
   UTC and would open the box 7 hours behind the wall in Bangkok.
-- **The floor is the depot's.** `backDateIssue()` refuses blank, unreadable,
-  the future (by the server's own `futureGraceMinutes`, 5) and anything older
-  than the branch's `gate.max_backdate_hours`. No number is hard-coded here;
-  before the settings call answers, the screen imposes no window rather than
-  guessing one it might have to retract mid-keying.
+- **NO FLOOR AT ALL.** `backDateIssue()` refuses only blank, unreadable and the
+  future (5 minutes of grace, mirroring the server's `GateRules.FutureGrace`).
+  There is no `min` on the picker and no window behind it — a greyed-out
+  calendar is this rule broken.
 - `beforeLastMoveIssue(move, transactionAt)` is the new rule, **per row**: it
   compares the truck's clock against `preflight.inYard.lastEventAt` for that
   box, blocks *Add trip*, and holds the Save through `blockedReason`.
@@ -162,14 +180,14 @@ stamped its own clock on every move. It does now.
 Run against the real functions, 2026-10-27:
 
 ```
-THE DEPOT'S WINDOW (live settings)        THE BOX'S OWN LAST MOVEMENT
-                 2400h   24h    0h         no history       -> ok (anything)
-  1 hour ago     ok      ok     refused     1 min after      -> ok
-  25 hours ago   ok      refused refused    the same minute  -> REFUSED (server is strict)
-  99 days ago    ok      refused refused    1 minute before  -> REFUSED
-  101 days ago   refused refused refused    the quoted minute-> ok  (advice is keyable)
-  3 min ahead    ok      ok     ok
-  6 min ahead    "in the future" (5 min grace, the server's own)
+THE CLOCK: any date, any time             THE BOX'S OWN LAST MOVEMENT
+  1 hour ago      -> ok                     no history        -> ok (anything)
+  25 hours ago    -> ok                     a year before     -> REFUSED
+  2 weeks ago     -> ok                     1 minute before   -> REFUSED
+  6 months ago    -> ok                     the same minute   -> REFUSED (server is strict)
+  3 years ago     -> ok                     1 minute after    -> ok
+  3 min ahead     -> ok (grace)             the quoted minute -> ok (the advice is keyable)
+  6 min ahead     -> "in the future"
 ```
 
 ---

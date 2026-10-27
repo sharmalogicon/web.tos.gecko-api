@@ -29,7 +29,7 @@ import { localInputValue } from '@/lib/format';
  */
 
 export function TruckVisitCard({
-  truck, onChange, locked, visitNo, modeLabel, fieldError, clockRules,
+  truck, onChange, locked, visitNo, modeLabel, fieldError,
 }: {
   truck: TruckDetails;
   onChange: (patch: Partial<TruckDetails>) => void;
@@ -38,39 +38,27 @@ export function TruckVisitCard({
   visitNo: string | null;
   modeLabel: string;
   fieldError: (field: string) => string | undefined;
-  /** This depot's own back-date window and future grace, from the API. */
-  clockRules: { maxBackdateHours: number; futureGraceMinutes: number };
 }) {
   const { categories } = useTruckCategories();
 
   /**
-   * THE FLOOR IS THE DEPOT'S, NOT THIS SCREEN'S (owner 2026-10-27). The flat 24
-   * hours is gone; what replaced it is `gate.max_backdate_hours` on the branch,
-   * read from the API, so a depot that keys a week of paper sets a week and one
-   * that keys none sets zero. A depot that has not answered gets no floor at
-   * all rather than a guess — the server still has the last word.
+   * NO FLOOR ON THE PICKER. NONE (owner 2026-10-27, said twice). A clerk winds
+   * the clock back as far as yesterday’s paper goes — a week, a month — so
+   * there is no `min` here and no window anywhere behind it. A greyed-out
+   * calendar is this rule broken; if one ever appears again, something has put
+   * a floor back.
    *
-   * What a clerk may NOT do, whatever the window says, is date a box behind its
-   * own last movement. That is a per-container question this card cannot answer
-   * — it is asked on each row, and finally by the server.
+   * What a clerk may NOT do is date a box behind ITS OWN last movement, and
+   * that is not a question this card can answer: it is per container, asked on
+   * each row from the preflight, and finally by the server.
    *
-   * `max`/`min` are read fresh on each render rather than frozen at mount: a
-   * card left open across a shift would otherwise still offer a ceiling from
-   * hours ago. They only steer the native picker — a clerk can still type — so
+   * `max` is read fresh on each render rather than frozen at mount: a card left
+   * open across a shift would otherwise still offer a ceiling from hours ago.
+   * It only steers the native picker — a clerk can still type — so
    * `backDateIssue` is the check that decides, here and again before the POST.
    */
   const now = new Date();
-  const clockIssue = backDateIssue(truck.transactionAt, now, clockRules);
-  const floor = Number.isFinite(clockRules.maxBackdateHours)
-    ? localInputValue(new Date(now.getTime() - clockRules.maxBackdateHours * 3_600_000))
-    : undefined;
-  /** Says what THIS depot allows, rather than a sentence that might be untrue here. */
-  const hours = clockRules.maxBackdateHours;
-  const clockHint = !Number.isFinite(hours)
-    ? 'Now by default. Wind it back as far as the paper goes — but not behind a box’s own last movement.'
-    : hours <= 0
-      ? 'This depot records gate moves as they happen — the time stays as now.'
-      : `Now by default. This depot allows up to ${hours} hours back — but never behind a box’s own last movement.`;
+  const clockIssue = backDateIssue(truck.transactionAt, now);
 
   // -menus: .gecko-card sets overflow:hidden for its rounded corners, which
   // CLIPS the haulier search's dropdown. Clipping is not stacking — no z-index
@@ -146,12 +134,10 @@ export function TruckVisitCard({
             not on a row. Frozen once the visit is open, because by then the
             server owns the arrival time. */}
         <GateField label="Gate date &amp; time" required
-          error={fieldError('transactionAt') ?? fieldError('truck.arrivedAt') ?? clockIssue ?? undefined}
-          hint={locked ? undefined : clockHint}>
+          error={fieldError('transactionAt') ?? fieldError('truck.arrivedAt') ?? clockIssue ?? undefined}>
           <input className="gecko-input" type="datetime-local" value={truck.transactionAt}
             disabled={locked}
             max={localInputValue(now)}
-            min={floor}
             onChange={e => onChange({ transactionAt: e.target.value })} />
         </GateField>
 

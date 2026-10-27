@@ -21,9 +21,7 @@ import type {
   GateFinding, GatePreflight, GateTransactionRequest, TripType,
 } from '@/lib/api/tos';
 import type { TripDamage, TripRowResult, VasOption } from '@/lib/api/gate-trips';
-import {
-  GATE_SETTINGS_UNKNOWN, directionOfTrip, numberOrNull, requiredGateFields, textOrNull,
-} from '@/lib/api/tos';
+import { directionOfTrip, numberOrNull, requiredGateFields, textOrNull } from '@/lib/api/tos';
 import { formatDateTime } from '@/lib/format';
 import type { TripRow } from '@/lib/api/gate-trips';
 import type { ApiError } from '@/lib/api/problem';
@@ -509,39 +507,35 @@ export interface TruckDetails {
 }
 
 /**
- * Why the gate clock is not acceptable, in the clerk's words — or null.
+ * Why the gate clock is not acceptable, in the clerk’s words — or null.
  *
- * THE FLAT 24-HOUR WINDOW IS GONE (owner 2026-10-27), but NOT in favour of no
- * window: the API made it `gate.max_backdate_hours`, a per-depot setting that
- * falls back to 24 hours only where nobody has set it, read here from
- * `GET /api/tos/gate/settings`. So the depot decides how far back its paper
- * goes, the same way it decides what the lane must capture — and a screen with
- * no window at all would simply let a clerk key what the POST then refuses.
+ * THERE IS NO BACK-DATE WINDOW. NOT 24 HOURS, NOT THE DEPOT’S, NOT ANY (owner
+ * 2026-10-27, said twice). A clerk may reach back as far as the paper goes — a
+ * week, a month, a year. Do not reintroduce a floor here, and do not put a
+ * `min` on the picker: a greyed-out calendar is this rule broken.
  *
- * BOTH NUMBERS ARE THE SERVER'S. The grace on the future side is the server's
- * `futureGraceMinutes` (5, not the 1 this used to assume) and the window is the
- * server's hours, so what this refuses is what the POST refuses. The separate,
- * per-container rule — never before the box's own last move — is
- * `beforeLastMoveIssue` below (docs/GATE_BACKDATE_FOR_API.md).
+ * THE ONLY RULE IS THE BOX’S OWN LAST MOVEMENT, which is per container and not
+ * per clock, so it cannot live in this function at all. It is
+ * `beforeLastMoveIssue` below, answered from the preflight the moment a
+ * container number is keyed.
+ *
+ * What is left here is only what is not a date at all — blank, unreadable —
+ * and the future. FUTURE_GRACE_MINUTES mirrors the server’s
+ * `GateRules.FutureGrace`, a constant and not a per-depot setting, so the
+ * screen and the POST refuse the same instant. Nobody keys a truck that has
+ * not yet arrived.
  */
-export function backDateIssue(
-  value: string,
-  now: Date = new Date(),
-  settings: { maxBackdateHours: number; futureGraceMinutes: number } = GATE_SETTINGS_UNKNOWN,
-): string | null {
+const FUTURE_GRACE_MINUTES = 5;
+
+export function backDateIssue(value: string, now: Date = new Date()): string | null {
   if (!value.trim()) return 'The gate date and time is blank.';
   const at = new Date(value);
   if (Number.isNaN(at.getTime())) return 'The gate date and time cannot be read.';
-  if (at.getTime() > now.getTime() + settings.futureGraceMinutes * 60_000)
+  if (at.getTime() > now.getTime() + FUTURE_GRACE_MINUTES * 60_000)
     return 'The gate date and time is in the future.';
-
-  const hours = settings.maxBackdateHours;
-  if (!Number.isFinite(hours)) return null;
-  if (at.getTime() >= now.getTime() - Math.max(hours, 0) * 3_600_000) return null;
-  return hours <= 0
-    ? 'This depot does not allow a gate move to be dated back — leave the time as now.'
-    : `This depot allows a gate move to be dated at most ${hours} hours back.`;
+  return null;
 }
+
 
 /**
  * A MOVE CANNOT PRECEDE THE BOX'S OWN LAST MOVE (owner 2026-10-27).
