@@ -105,6 +105,19 @@ export interface ReportDocument {
   params: Partial<Record<ReportParamKey | 'dateFrom' | 'dateTo' | 'type', string>>;
   /** Parameters the API refuses the call without. */
   required?: ('dateFrom' | 'dateTo')[];
+  /**
+   * QUERY PARAMETERS THE REPORT ITSELF FIXES, sent on every run and never shown
+   * in the drawer.
+   *
+   * This is what makes two catalogue cards out of one endpoint. Cash Collection
+   * IS Gate-In / Gate-Out with `paymentChannel=CASH` — same path, same columns,
+   * same summary — and a clerk looking for the cash sheet should find a card
+   * called that, not be told to run another report and remember a filter.
+   *
+   * It is not a drawer field with a default: a default can be cleared, and a
+   * cleared one would quietly turn the cash report back into the whole log.
+   */
+  fixed?: Record<string, string>;
 }
 
 /* ──────────────────────────────────────────────────────────────────────────
@@ -248,6 +261,58 @@ export const OPERATIONAL_REPORTS: ReportDef[] = [
       },
       // The only one of the three that insists on a range, and it caps at 366 days.
       required: ['dateFrom', 'dateTo'],
+    } },
+
+  /**
+   * THE SAME SHEET, NARROWED TO WHAT WAS NOT PAID FOR AT THE WINDOW
+   * (owner 2026-10-27).
+   *
+   * Same columns, same agent × size/type summary as Gate-In / Gate-Out, and it
+   * covers both directions — the Movement Code filter narrows it. The moves on
+   * it are the ones whose gate coupon was issued on CREDIT: the customer is
+   * billed later, so there is NO INVOICE NUMBER on the sheet. That is the point
+   * of it, not an omission.
+   */
+  { id: 'op-credit-collection', title: 'Credit Collection Report', description: 'Gate-in / gate-out moves made on credit (billed later, no invoice no.), with the size summary.',
+    category: 'operational', group: 'In-Bound Reports', icon: 'truck',
+    params: ['agent', 'forwarder', 'customer', 'vessel', 'voyage', 'typeSize', 'emptyLoaded',
+      'bookingType', 'orderType', 'blNo', 'haulier', 'movementCode', 'yardLocation'],
+    document: {
+      path: '/api/tos/reports/credit-collection',
+      params: {
+        agent: 'agentCode', forwarder: 'forwarderCode', customer: 'customerCode',
+        vessel: 'vesselCode', voyage: 'voyageNo', typeSize: 'size', emptyLoaded: 'fullEmpty',
+        bookingType: 'bookingType', orderType: 'orderType', blNo: 'bookingBlNo',
+        haulier: 'haulierCode', movementCode: 'movementCode', yardLocation: 'yardId',
+        dateFrom: 'dateFrom', dateTo: 'dateTo',
+      },
+      required: ['dateFrom', 'dateTo'],
+    } },
+
+  /**
+   * ITS OPPOSITE NUMBER, and the same endpoint as Gate-In / Gate-Out with
+   * `paymentChannel=CASH` pinned (API 2026-10-27). Credit Collection has a card
+   * of its own, so the cash half needs one too — otherwise a cashier reading
+   * the catalogue finds only half the pair and assumes the other does not exist.
+   *
+   * Gate-In / Gate-Out itself still sends no `paymentChannel` and still lists
+   * every move, paid or not.
+   */
+  { id: 'op-cash-collection', title: 'Cash Collection Report', description: 'Gate-in / gate-out moves paid at the window, with the size summary.',
+    category: 'operational', group: 'In-Bound Reports', icon: 'truck',
+    params: ['agent', 'forwarder', 'customer', 'vessel', 'voyage', 'typeSize', 'emptyLoaded',
+      'bookingType', 'orderType', 'blNo', 'haulier', 'movementCode', 'yardLocation'],
+    document: {
+      path: '/api/tos/reports/gate-in-out',
+      params: {
+        agent: 'agentCode', forwarder: 'forwarderCode', customer: 'customerCode',
+        vessel: 'vesselCode', voyage: 'voyageNo', typeSize: 'size', emptyLoaded: 'fullEmpty',
+        bookingType: 'bookingType', orderType: 'orderType', blNo: 'bookingBlNo',
+        haulier: 'haulierCode', movementCode: 'movementCode', yardLocation: 'yardId',
+        dateFrom: 'dateFrom', dateTo: 'dateTo',
+      },
+      required: ['dateFrom', 'dateTo'],
+      fixed: { paymentChannel: 'CASH' },
     } },
 
   { id: 'op-gate-in-out-agent', title: 'Gate-In / Gate-Out (By Agent)', description: 'Gate movements grouped by shipping line / agent.',

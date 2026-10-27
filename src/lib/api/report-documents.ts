@@ -45,6 +45,12 @@ export function reportQuery(report: ReportDef, branchId: string, values: ReportP
     if (v === null || v === undefined || String(v).trim() === '') continue;
     p.set(apiName, String(v).trim());
   }
+  /**
+   * LAST, so nothing a drawer field carries can unset what the report IS.
+   * Cash Collection without `paymentChannel=CASH` is the whole gate log under
+   * a heading that says otherwise, which is worse than no report at all.
+   */
+  for (const [apiName, value] of Object.entries(doc.fixed ?? {})) p.set(apiName, value);
   return p.toString();
 }
 
