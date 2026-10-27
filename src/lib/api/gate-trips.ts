@@ -158,6 +158,8 @@ export interface TripTruck {
   haulierCode?: string | null;
   driverName?: string | null;
   driverLicence?: string | null;
+  /** See GateTruckRequest.driverMobile — both endpoints take the same truck. */
+  driverMobile?: string | null;
   laneCode?: string | null;
   arrivedAt?: string | null;
   truckCategoryCode?: string | null;

@@ -78,7 +78,7 @@ export function MoveCard({
    */
   const { data: equipmentRows, error: equipmentError } =
     useApiList<EquipmentTypeRow>('/api/master/equipment-types?pageSize=200');
-  const { yards } = useFacility();
+  const { yards, yard } = useFacility();
   const { conditions } = useConditions();
 
   // useApiList answers null until the first page lands; an empty list renders
@@ -92,11 +92,34 @@ export function MoveCard({
   const equipmentDenied = equipmentError?.status === 403;
 
   const drop = move.trip === 'DROP_OFF_CONT';
+  /**
+   * WHAT THE SERVER SAID AS IT ACCEPTED THE ROW — NO_SEAL and its kind.
+   *
+   * These arrive on the 201, not the preflight: a full box dropped off with no
+   * seal whose step does not tick Seal is ACCEPTED and warned about (API
+   * 2026-10-22). Nothing here blocks — the box is already recorded — so they
+   * are amber, and they appear in the collapsed header too, because the row
+   * collapses the moment it saves and an unread warning is no warning.
+   */
+  const saidOnSave = (move.result?.findings ?? []).filter(f => f.severity !== 'INFO');
   // Held and priced — not committed. The Save is what writes it.
   const held = move.reserved;
   const done = !!move.result;
   const required = requiredFor(move);
   const needs = (f: string) => required.includes(f);
+
+  /**
+   * A DROP-OFF LANDS SOMEWHERE, so the yard is picked for the clerk rather than
+   * left on "Not stated" (owner 2026-10-22). The yard the depot switcher is on
+   * wins; failing that the depot's first — at a one-yard depot that is simply
+   * its yard. Only ever filled when blank, so a clerk who changes it keeps the
+   * change, and never on a row already recorded.
+   */
+  React.useEffect(() => {
+    if (!drop || done || move.yardId || yards.length === 0) return;
+    const onSwitcher = yard && yards.some(y => y.yardId === yard.yardId) ? yard.yardId : null;
+    onChange({ yardId: onSwitcher ?? yards[0].yardId });
+  }, [drop, done, move.yardId, yards, yard, onChange]);
   /**
    * This row's message for a field.
    *
@@ -237,6 +260,14 @@ export function MoveCard({
             {move.result!.containerNoWasMinted && (
               <span className="gecko-badge gecko-badge-warning gecko-mono" title="Write this number on the box">
                 {formatContainerNo(move.result!.containerNo)}
+              </span>
+            )}
+            {saidOnSave.length > 0 && (
+              <span className="gecko-badge gecko-badge-warning"
+                title={saidOnSave.map(f => f.message).join(' · ')}>
+                {saidOnSave.length === 1
+                  ? saidOnSave[0].code.replace(/_/g, ' ').toLowerCase()
+                  : `${saidOnSave.length} warnings`}
               </span>
             )}
             <Icon name={move.result!.status === 'GATED' ? 'shieldCheck' : 'clock'} size={13} />
@@ -723,7 +754,10 @@ export function MoveCard({
                 <div className="gecko-readonly-value gecko-text-mono">{move.voyageNo || '—'}</div>
               </GateField>
 
-              <GateField label="Tare weight kg" required={needs('tareWeightKg')} error={err('tareWeightKg')}>
+              {/* A required GROSS is a required TARE: gross is tare + cargo and is
+                  never typed, so the asterisk belongs on the box that is. */}
+              <GateField label="Tare weight kg" required={needs('tareWeightKg') || needs('grossWeightKg')}
+                error={err('tareWeightKg')}>
                 <input className="gecko-input" type="number" min={0} value={move.tareWeightKg}
                   onChange={e => onChange({ tareWeightKg: e.target.value })} />
               </GateField>
@@ -742,7 +776,8 @@ export function MoveCard({
               </GateField>
 
               {/* Computed, as Vector computes it — never typed. */}
-              <GateField label="Gross weight kg" frozen>
+              <GateField label="Gross weight kg" frozen required={needs('grossWeightKg')}
+                error={err('grossWeightKg')}>
                 <div className={`gecko-readonly-value gecko-text-mono${overMaxWeight(move) ? ' gecko-tone-error' : ''}`}>
                   {grossOf(move)?.toLocaleString() ?? '—'}
                 </div>
@@ -781,14 +816,17 @@ export function MoveCard({
           {drop && (
             <Section title="Where it goes">
               <div className="gecko-gate-grid-4">
-                <GateField label="Yard" error={err('yardId')}>
+                <GateField label="Yard" required={needs('yardId')} error={err('yardId')}>
                   <select className="gecko-input" value={move.yardId}
                     onChange={e => onChange({ yardId: e.target.value })}>
                     <option value="">Not stated</option>
                     {yards.map(y => <option key={y.yardId} value={y.yardId}>{y.yardCode} - {y.nameEn}</option>)}
                   </select>
                 </GateField>
-                <GateField label="Position" error={err('positionText')}>
+                {/* Both are the ORDER TYPE's ticks now (owner 2026-10-27), not
+                    this screen's. Until the server sends them, Position falls
+                    back to what it has demanded of every drop-off since 22 Oct. */}
+                <GateField label="Position" required={needs('positionText')} error={err('positionText')}>
                   <input className="gecko-input gecko-text-mono" maxLength={40} value={move.positionText}
                     placeholder="A-03-2-1"
                     onChange={e => onChange({ positionText: e.target.value.toUpperCase() })} />
@@ -854,6 +892,13 @@ export function MoveCard({
                 Number issued by the gate: <strong className="gecko-mono">{formatContainerNo(move.result.containerNo)}</strong>.
                 Write it on the box — nothing else identifies it.
               </span>
+            </div>
+          )}
+          {/* The server's own sentence, above the readback: it is the one thing
+              here the clerk may still have to act on. */}
+          {saidOnSave.length > 0 && (
+            <div className="gecko-eirin-findings">
+              {saidOnSave.map((f, i) => <FindingLine key={`${f.code}-${i}`} finding={f} />)}
             </div>
           )}
           <div className="gecko-eirin-readback">

@@ -5,7 +5,7 @@ import { Field, FormGrid } from '@/components/ui/FormGrid';
 import { useGrades } from '@/lib/api/lookups';
 import type { ApiError } from '@/lib/api/problem';
 import {
-  NO_RULES, OWNER_MATCHES, PAYMENT_RULES,
+  CAPTURE_RULES, NO_RULES, OWNER_MATCHES, PAYMENT_RULES,
   type OrderTypeRules, type OrderTypeStep, type OrderTypeVocabulary,
 } from '@/lib/api/order-types';
 
@@ -36,6 +36,7 @@ export const rulesDiffer = (a: OrderTypeRules, b: OrderTypeRules): boolean =>
   || a.paymentRule !== b.paymentRule
   || a.ownerMatch !== b.ownerMatch
   || a.maxBoxesPerTruck !== b.maxBoxesPerTruck
+  || CAPTURE_RULES.some(r => a[r.key] !== b[r.key])
   || [...a.releaseGradeCodes].sort().join(',') !== [...b.releaseGradeCodes].sort().join(',');
 
 /**
@@ -60,14 +61,17 @@ export function walkInShape(steps: OrderTypeStep[], vocabulary: OrderTypeVocabul
 export function RulesSummary({ rules, walkInChip }: { rules: OrderTypeRules; walkInChip: string | null }) {
   const payment = PAYMENT_RULES.find(p => p.value === (rules.paymentRule ?? ''));
   const owner = OWNER_MATCHES.find(o => o.value === (rules.ownerMatch ?? ''));
+  const captured = CAPTURE_RULES.filter(r => rules[r.key]);
   const plain = !rules.isWalkIn && !rules.paymentRule && !rules.ownerMatch
-    && rules.releaseGradeCodes.length === 0 && rules.maxBoxesPerTruck === null;
+    && rules.releaseGradeCodes.length === 0 && rules.maxBoxesPerTruck === null
+    && captured.length === 0;
 
   if (plain) {
     return (
       <div className="gecko-cell-meta gecko-ot-rules-plain">
         No special rules. The charge rows decide payment, a pick-up may take any grade, a box of another owner
-        follows the depot&apos;s own setting, and a truck may carry as many boxes as it can.
+        follows the depot&apos;s own setting, a truck may carry as many boxes as it can, and the gate asks the
+        clerk for nothing beyond what each step already demands.
       </div>
     );
   }
@@ -78,6 +82,14 @@ export function RulesSummary({ rules, walkInChip }: { rules: OrderTypeRules; wal
         <Read label="Walk-in">
           A truck may arrive with no paperwork; the gate raises one booking of this order type for it.
           {walkInChip && <span className="gecko-badge gecko-badge-info gecko-ot-rules-chip">{walkInChip}</span>}
+        </Read>
+      )}
+      {captured.length > 0 && (
+        <Read label="The gate must key">
+          <span className="gecko-ot-rules-grades">
+            {captured.map(r => <span key={r.key} className="gecko-ot-grade">{r.label}</span>)}
+          </span>
+          <Hint>On every step of this order type, on top of whatever the step itself ticks.</Hint>
         </Read>
       )}
       {rules.paymentRule && <Read label="Payment">{payment?.label ?? rules.paymentRule}<Hint>{payment?.hint}</Hint></Read>}
@@ -173,6 +185,41 @@ export function RulesEditor({ value, onChange, steps, vocabulary, localErrors, a
             already does, the save is refused and names it.
           </div>
         )}
+      </div>
+
+      {/* ── R7-R10 what the gate must capture ── */}
+      <div className="gecko-ot-rule-block">
+        <div className="gecko-ot-rule-name">What the gate clerk must key</div>
+        <div className="gecko-cell-meta">
+          Asked on every step of this order type. Seal and Cargo weight can also be ticked on a single step in
+          the grid above — use that where only one step wants them, such as weighing the laden-in and not the
+          empty-out. Either tick asking is enough.
+        </div>
+        <div className="gecko-ot-capture-grid">
+          {CAPTURE_RULES.map(r => {
+            // A position sits inside a yard. Rather than refusing the save, ticking
+            // Position turns Yard on with it, and unticking Yard takes Position away.
+            const on = value[r.key];
+            const toggle = (next: boolean) => {
+              if (r.key === 'requirePosition') return set({ requirePosition: next, requireYard: next || value.requireYard });
+              if (r.key === 'requireYard') return set({ requireYard: next, requirePosition: next ? value.requirePosition : false });
+              return set({ [r.key]: next } as Partial<OrderTypeRules>);
+            };
+            return (
+              <label key={r.key} className="gecko-ot-capture-tick" title={r.hint}>
+                <input type="checkbox" className="gecko-checkbox" checked={on}
+                  onChange={e => toggle(e.target.checked)} />
+                <span>
+                  <span className="gecko-ot-capture-name">{r.label}</span>
+                  <span className="gecko-cell-meta">{r.hint}</span>
+                </span>
+              </label>
+            );
+          })}
+        </div>
+        {CAPTURE_RULES.map(r => err(`rules.${r.key}`) && (
+          <div key={r.key} className="gecko-field-error">{err(`rules.${r.key}`)}</div>
+        ))}
       </div>
 
       <FormGrid columns={2}>

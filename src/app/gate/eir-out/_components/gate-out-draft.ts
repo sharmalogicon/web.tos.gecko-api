@@ -29,12 +29,13 @@ export interface GateOutTruck {
   trailerPlate: string;
   haulierCode: string;
   driverName: string;
+  driverMobile: string;
   truckCategoryCode: string;
 }
 
 export const blankGateOutTruck = (): GateOutTruck => ({
   truckVisitId: '', visitNo: '', truckPlate: '', trailerPlate: '',
-  haulierCode: '', driverName: '', truckCategoryCode: '',
+  haulierCode: '', driverName: '', driverMobile: '', truckCategoryCode: '',
 });
 
 /** One planned pick-up, as the clerk works it. */

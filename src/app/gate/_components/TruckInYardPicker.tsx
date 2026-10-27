@@ -39,6 +39,7 @@ export interface OpenVisit {
   trailerPlate: string | null;
   haulierCode: string | null;
   driverName: string | null;
+  driverMobile: string | null;
   truckCategoryCode: string | null;
   status: string;
   pickupDropoffMode: string | null;

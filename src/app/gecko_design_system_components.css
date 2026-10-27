@@ -295,20 +295,22 @@
   display: block;
 }
 
-/* A FIELD THE SAVE WILL INSIST ON reads blue, label and marker together
-   (owner 2026-10-15). Red is the colour this app uses for something that has
-   GONE WRONG — a refused field, a blocked finding — and a form that opens with
-   six red marks on it is a form that looks broken before anyone touches it.
-   Blue says "fill this in", and a clerk can scan the mandatory ones at a
-   glance without reading every label. */
+/* A FIELD THE SAVE WILL INSIST ON carries the marker and nothing else.
+   It read blue for a week (owner 2026-10-15, reversed 2026-10-22): the label
+   now keeps the same colour as every other label, and the asterisk takes the
+   error red the rest of this file already uses for one — .gecko-field-required,
+   .gecko-field-label-required and .gecko-form-label-required all do. Four
+   required markers in four colours was the real problem.
+
+   The slightly heavier weight stays. It is not colour, and without it a
+   mandatory field is distinguished by one asterisk at the end of a line. */
 .gecko-label-required {
-  color: var(--gecko-primary-700);
   font-weight: 600;
 }
 
 .gecko-label-required::after {
   content: " *";
-  color: var(--gecko-primary-600);
+  color: var(--gecko-error-600);
 }
 
 .gecko-input,
@@ -405,6 +407,12 @@
 .gecko-alert-success { background-color: var(--gecko-success-50); border-color: var(--gecko-success-200); color: var(--gecko-success-800); }
 .gecko-alert-warning { background-color: var(--gecko-warning-50); border-color: var(--gecko-warning-200); color: var(--gecko-warning-800); }
 .gecko-alert-error   { background-color: var(--gecko-error-50);   border-color: var(--gecko-error-200);   color: var(--gecko-error-800); }
+
+/* THE BOLD FIRST LINE OF AN ALERT: what went wrong, before the detail.
+   It was written as style={{ fontWeight: 600 }} wherever it was needed, which
+   is the one thing this file exists to stop. It inherits the alert's colour on
+   purpose -- the tone is already carried by the box around it. */
+.gecko-alert-title { font-weight: 600; }
 
 [data-theme="dark"] .gecko-alert-info    { background-color: rgba(6,182,212,0.1);  border-color: rgba(6,182,212,0.3);  color: var(--gecko-info-300); }
 [data-theme="dark"] .gecko-alert-success { background-color: rgba(34,197,94,0.1);  border-color: rgba(34,197,94,0.3);  color: var(--gecko-success-300); }
@@ -10783,6 +10791,22 @@ th.gecko-cell-tight {
 .gecko-ot-rule-tick input[disabled] { cursor: not-allowed; }
 .gecko-ot-rule-name { font-size: 13px; font-weight: 600; color: var(--gecko-text-primary); }
 .gecko-ot-rule-why { display: flex; align-items: flex-start; gap: 6px; line-height: 1.45; max-width: 74ch; }
+
+/* The four capture ticks. Two columns so the pair that belong together — Yard
+   and Position — sit side by side, and one column on a narrow screen rather
+   than a tick wrapping away from its own description. */
+.gecko-ot-capture-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 8px 20px;
+  margin-top: 4px;
+}
+.gecko-ot-capture-tick { display: flex; align-items: flex-start; gap: 10px; cursor: pointer; }
+.gecko-ot-capture-tick > span { display: flex; flex-direction: column; gap: 1px; min-width: 0; flex: 1 1 auto; }
+.gecko-ot-capture-name { font-size: 13px; font-weight: 500; color: var(--gecko-text-primary); }
+@media (max-width: 720px) {
+  .gecko-ot-capture-grid { grid-template-columns: minmax(0, 1fr); }
+}
 
 /* The grades are a tick-list, not a <select multiple>: a clerk picking two of
    six should see all six and what each one means, not scroll a box. */

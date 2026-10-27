@@ -104,6 +104,7 @@ export default function GateInPage() {
   const [positionText, setPositionText] = useState('');
   const [plate, setPlate] = useState('');
   const [driver, setDriver] = useState('');
+  const [driverMobile, setDriverMobile] = useState('');
   const [haulier, setHaulier] = useState('');
   const [remarks, setRemarks] = useState('');
 
@@ -133,7 +134,7 @@ export default function GateInPage() {
    * the booking step, never from the clerk.
    */
   const required = requiredGateFields('DROP_OFF_CONT', known?.nextStep?.fullEmpty ?? null,
-    known?.booking?.directionCode === 'EXPORT');
+    known?.booking?.directionCode === 'EXPORT', known?.nextStep ?? null);
   const needs = (field: string) => required.includes(field);
   const fieldError = (field: string) => error?.forField(field);
 
@@ -186,7 +187,7 @@ export default function GateInPage() {
     setGrossWeight(''); setTareWeight(''); setVgmKg('');
     setConditionCode(''); setGradeCode(''); setTemperatureC('');
     setYardId(''); setPositionText('');
-    setPlate(''); setDriver(''); setHaulier(''); setRemarks('');
+    setPlate(''); setDriver(''); setDriverMobile(''); setHaulier(''); setRemarks('');
     setDigitReason(''); setLateReason('');
     setError(null);
   };
@@ -220,6 +221,7 @@ export default function GateInPage() {
         truck: {
           plate: plate.trim() || 'UNKNOWN',
           driverName: textOrNull(driver),
+          driverMobile: textOrNull(driverMobile),
           haulierCode: textOrNull(haulier),
           truckCategoryCode: effectiveTruckCategory || null,
         },
@@ -439,7 +441,7 @@ export default function GateInPage() {
             </div>
           </FormSection>
 
-          <FormSection title="Weights" desc="From the weighbridge ticket. A drop-off always records tare and max gross; a full one also records the cargo." cols={3}>
+          <FormSection title="Weights" desc="From the weighbridge ticket. Tare and max gross are optional; a full drop-off records the cargo weight." cols={3}>
             <Field label="Gross (kg)">
               <input className="gecko-input" type="number" value={grossWeight} onChange={e => setGrossWeight(e.target.value)} />
               {fieldError('grossWeightKg') && <div className="gecko-field-error">{fieldError('grossWeightKg')}</div>}
@@ -484,6 +486,11 @@ export default function GateInPage() {
             </Field>
             <Field label="Driver">
               <input className="gecko-input" value={driver} onChange={e => setDriver(e.target.value)} />
+            </Field>
+            <Field label="Mobile">
+              <input className="gecko-input gecko-mono" value={driverMobile} maxLength={30} inputMode="tel"
+                placeholder="08x-xxx-xxxx" onChange={e => setDriverMobile(e.target.value)} />
+              {fieldError('truck.driverMobile') && <div className="gecko-field-error">{fieldError('truck.driverMobile')}</div>}
             </Field>
             <Field label="Haulier">
               <input className="gecko-input" value={haulier} onChange={e => setHaulier(e.target.value)} placeholder="Party code" />

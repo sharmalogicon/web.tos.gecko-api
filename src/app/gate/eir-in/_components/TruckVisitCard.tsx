@@ -4,7 +4,8 @@ import { Icon } from '@/components/ui/Icon';
 import { GateField } from '../../_components/GateField';
 import { PartyPicker } from '@/components/ui/PartyPicker';
 import { useTruckCategories } from '@/lib/api/lookups';
-import type { TruckDetails } from './visit-moves';
+import { MAX_BACK_DATE_HOURS, backDateIssue, type TruckDetails } from './visit-moves';
+import { localInputValue } from '@/lib/format';
 
 /**
  * Step 1 — the truck and its driver.
@@ -37,6 +38,19 @@ export function TruckVisitCard({ truck, onChange, locked, visitNo, modeLabel, fi
   fieldError: (field: string) => string | undefined;
 }) {
   const { categories } = useTruckCategories();
+
+  /**
+   * THE WINDOW THE CLERK MAY REACH BACK INTO.
+   *
+   * Read fresh on each render rather than frozen at mount: a card left open
+   * across a shift would otherwise still offer a `max` from hours ago. The
+   * attributes only steer the native picker — a clerk can still type — so
+   * `backDateIssue` is the check that actually decides, here for the message
+   * and again on the page before the POST.
+   */
+  const now = new Date();
+  const earliest = new Date(now.getTime() - MAX_BACK_DATE_HOURS * 3_600_000);
+  const clockIssue = backDateIssue(truck.transactionAt, now);
 
   // -menus: .gecko-card sets overflow:hidden for its rounded corners, which
   // CLIPS the haulier search's dropdown. Clipping is not stacking — no z-index
@@ -99,9 +113,25 @@ export function TruckVisitCard({ truck, onChange, locked, visitNo, modeLabel, fi
             onChange={e => onChange({ driverLicenceNo: e.target.value.toUpperCase() })} />
         </GateField>
 
-        <GateField label="Mobile">
-          <input className="gecko-input gecko-text-mono" value={truck.driverMobile} disabled
+        {/* What the gate reaches for when a truck is sitting on a lane. */}
+        <GateField label="Mobile" error={fieldError('truck.driverMobile')}>
+          <input className="gecko-input gecko-text-mono" value={truck.driverMobile} disabled={locked}
+            maxLength={30} inputMode="tel" placeholder="08x-xxx-xxxx"
             onChange={e => onChange({ driverMobile: e.target.value })} />
+        </GateField>
+
+        {/* WHEN THE TRUCK WAS AT THE BARRIER — now, unless the shift is keying
+            yesterday's paper. One clock for the whole truck: every box it
+            carries was at the gate at the same moment, so this sits here and
+            not on a row. Frozen once the visit is open, because by then the
+            server owns the arrival time. */}
+        <GateField label="Gate date &amp; time" required
+          error={fieldError('transactionAt') ?? fieldError('truck.arrivedAt') ?? clockIssue ?? undefined}
+          hint={locked ? undefined : `Now by default. May be wound back up to ${MAX_BACK_DATE_HOURS} hours.`}>
+          <input className="gecko-input" type="datetime-local" value={truck.transactionAt}
+            disabled={locked}
+            min={localInputValue(earliest)} max={localInputValue(now)}
+            onChange={e => onChange({ transactionAt: e.target.value })} />
         </GateField>
 
       </div>

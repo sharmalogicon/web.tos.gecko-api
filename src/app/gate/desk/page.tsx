@@ -56,6 +56,7 @@ export default function GateDeskPage() {
   // what the clerk observed
   const [plate, setPlate] = useState('');
   const [driver, setDriver] = useState('');
+  const [driverMobile, setDriverMobile] = useState('');
   const [haulier, setHaulier] = useState('');
   const [truckCategory, setTruckCategory] = useState('');
   const [grossWeight, setGrossWeight] = useState('');
@@ -86,7 +87,8 @@ export default function GateDeskPage() {
    * state, never a guess.
    */
   const required = useMemo(
-    () => requiredGateFields(tripType, view?.nextStep?.fullEmpty ?? null, view?.booking?.directionCode === 'EXPORT'),
+    () => requiredGateFields(tripType, view?.nextStep?.fullEmpty ?? null,
+      view?.booking?.directionCode === 'EXPORT', view?.nextStep ?? null),
     [tripType, view],
   );
   const needs = (field: string) => required.includes(field);
@@ -143,6 +145,7 @@ export default function GateDeskPage() {
         truck: {
           plate: plate.trim() || 'UNKNOWN',
           driverName: textOrNull(driver),
+          driverMobile: textOrNull(driverMobile),
           haulierCode: textOrNull(haulier),
           // Only read when this POST opens a new visit, and the axis the gate
           // charge is priced on — so send the truck that is actually here.
@@ -180,7 +183,7 @@ export default function GateDeskPage() {
 
   function nextBox() {
     reset();
-    setContainerNo(''); setPlate(''); setDriver(''); setPosition('');
+    setContainerNo(''); setPlate(''); setDriver(''); setDriverMobile(''); setPosition('');
   }
 
   // ── render ────────────────────────────────────────────────────────────────
@@ -295,6 +298,8 @@ export default function GateDeskPage() {
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: 14, marginTop: 14 }}>
             <Field label="Truck plate" value={plate} onChange={setPlate} placeholder="70-1234" error={fieldError('truck.plate')} />
             <Field label="Driver" value={driver} onChange={setDriver} placeholder="Name on the licence" />
+            <Field label="Mobile" value={driverMobile} onChange={setDriverMobile} placeholder="08x-xxx-xxxx"
+              error={fieldError('truck.driverMobile')} />
             <Field label="Haulier code" value={haulier} onChange={setHaulier} placeholder="HAU-LCH" error={fieldError('truck.haulierCode')} />
             <div className="gecko-form-group">
               <label className="gecko-form-label">Truck category</label>
@@ -307,7 +312,7 @@ export default function GateDeskPage() {
               {fieldError('truck.truckCategoryCode') && <div className="gecko-field-error">{fieldError('truck.truckCategoryCode')}</div>}
             </div>
             <Field
-              label={view.nextStep?.checkGrossWeight ? 'Gross weight (kg) — required' : 'Gross weight (kg)'}
+              label={`Gross weight (kg)${needs('grossWeightKg') || needs('cargoWeightKg') ? ' — required' : ''}`}
               value={grossWeight} onChange={setGrossWeight} placeholder="22150" type="number"
               error={fieldError('grossWeightKg')}
             />
@@ -349,11 +354,11 @@ export default function GateDeskPage() {
             </div>
           </details>
 
-          {/* Seals: the step's MDM rule decides whether one is required. */}
+          {/* Seals: the ORDER TYPE's rule and the step's, summed by requiredGateFields. */}
           <div className="gecko-stack gecko-stack-md" style={{ marginTop: 18 }}>
             <div className="gecko-row gecko-row-between">
               <div className="gecko-form-label" style={{ margin: 0 }}>
-                Seals {view.nextStep?.checkSealNo && <span className="gecko-badge gecko-badge-xs gecko-badge-warning">required by {view.nextStep.movementCode}</span>}
+                Seals {needs('seals') && <span className="gecko-badge gecko-badge-xs gecko-badge-warning">required by {view.nextStep?.movementCode ?? 'this order type'}</span>}
               </div>
               <button type="button" className="gecko-btn gecko-btn-outline gecko-btn-xs" onClick={() => setSeals([...seals, { ...EMPTY_SEAL }])}>
                 <Icon name="plus" size={14} /> Add seal

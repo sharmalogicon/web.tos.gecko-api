@@ -38,6 +38,25 @@ export interface OrderTypeRules {
   ownerMatch: string | null;
   /** R5: walk-in boxes of this order type on one truck; null = no cap. */
   maxBoxesPerTruck: number | null;
+  /**
+   * R7-R10: WHAT THE GATE CLERK MUST KEY on this order type (owner 2026-10-27).
+   *
+   * Four things the gate used to demand of everybody, or of nobody, decided by
+   * the depot that owns the order type instead. Off is what the gate did before
+   * they existed, so an untouched order type behaves exactly as it always has.
+   *
+   * SEAL AND CARGO WEIGHT ALSO EXIST PER STEP (`OrderTypeStep.checkSealNo`,
+   * `.checkGrossWeight`). The two are ADDITIVE, never contradictory: the order
+   * type's tick means "on every step of this order type", the step's tick means
+   * "at this step". Either one asking is enough. A depot that weighs only the
+   * laden-in still ticks the step, not this.
+   */
+  requireSeal: boolean;
+  requireCargoWeight: boolean;
+  /** The yard the box goes to. A position without a yard is not a place. */
+  requireYard: boolean;
+  /** The slot inside that yard. Implies requireYard; the editor keeps the pair honest. */
+  requirePosition: boolean;
 }
 
 /** R2's four answers. `''` is "as the charges say" — the API's null. */
@@ -63,7 +82,23 @@ export const OWNER_MATCHES: { value: string; label: string; hint: string }[] = [
 
 export const NO_RULES: OrderTypeRules = {
   isWalkIn: false, paymentRule: null, releaseGradeCodes: [], ownerMatch: null, maxBoxesPerTruck: null,
+  requireSeal: false, requireCargoWeight: false, requireYard: false, requirePosition: false,
 };
+
+/**
+ * The four capture ticks, in the order the gate screen asks for them.
+ *
+ * One list, read by the editor and the summary alike, so a rule cannot be
+ * offered in one and silently missing from the other.
+ */
+export const CAPTURE_RULES: { key: CaptureRuleKey; label: string; hint: string }[] = [
+  { key: 'requireSeal', label: 'Seal', hint: 'At least one seal number, on every step of this order type.' },
+  { key: 'requireCargoWeight', label: 'Cargo weight', hint: 'A drop-off declares the cargo weight; a pick-up is weighed as it stands.' },
+  { key: 'requireYard', label: 'Yard', hint: 'Which yard the box goes to.' },
+  { key: 'requirePosition', label: 'Position', hint: 'The slot inside that yard, so the next shift does not go looking.' },
+];
+
+export type CaptureRuleKey = 'requireSeal' | 'requireCargoWeight' | 'requireYard' | 'requirePosition';
 
 export interface OrderType {
   orderTypeId: string;
@@ -234,6 +269,9 @@ export function ruleErrors(rules: OrderTypeRules, stepCount: number, walkInStepO
       : `This order type has ${stepCount} steps. A walk-in order type has exactly one \u2014 the truck\u2019s drop-off or pick-up.`;
   else if (rules.isWalkIn && !walkInStepOk)
     e['rules.isWalkIn'] = 'That step is not a gate drop-off or pick-up of a full or empty box, so a walk-in truck could not be matched to it.';
+  // A slot the clerk cannot say the yard of is not a place anyone can find.
+  if (rules.requirePosition && !rules.requireYard)
+    e['rules.requirePosition'] = 'A position sits inside a yard — tick Yard as well, or untick Position.';
   if (rules.maxBoxesPerTruck !== null && (rules.maxBoxesPerTruck < 1 || rules.maxBoxesPerTruck > 99))
     e['rules.maxBoxesPerTruck'] = 'Between 1 and 99, or leave it empty for no cap.';
   return e;

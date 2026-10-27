@@ -97,6 +97,7 @@ export function GateOutForm() {
       trailerPlate: v.trailerPlate ?? '',
       haulierCode: v.haulierCode ?? '',
       driverName: v.driverName ?? '',
+      driverMobile: v.driverMobile ?? '',
       truckCategoryCode: v.truckCategoryCode ?? '',
     });
     setRows([]);
@@ -282,6 +283,11 @@ export function GateOutForm() {
           </GateField>
           <GateField label="Driver" frozen>
             <div className="gecko-readonly-value">{truck.driverName || '—'}</div>
+          </GateField>
+          {/* Read off the visit the box came in on — the number to ring when a
+              truck is holding up a lane. */}
+          <GateField label="Mobile" frozen>
+            <div className="gecko-readonly-value gecko-text-mono">{truck.driverMobile || '—'}</div>
           </GateField>
         </div>
       </div>

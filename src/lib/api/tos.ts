@@ -29,23 +29,75 @@ export const directionOfTrip = (trip: TripType): GateDirection =>
   trip === "DROP_OFF_CONT" ? "IN" : "OUT";
 
 /**
- * What the server will demand, so the clerk is told before the POST rather than
- * by a 400 afterwards. The server remains the authority — this only mirrors it.
+ * What the gate must have before it will post — THE TENANT'S RULE, not ours.
  *
- * FULL/EMPTY is the booking step's load state (preflight `nextStep.fullEmpty`),
- * never what the clerk picked.
+ * This used to hardcode "a full drop-off needs a seal and a cargo weight",
+ * which is a rule that belongs to a depot, not to a screen: KORAKIT does not
+ * want it, the next tenant may (owner 2026-10-22). It is already configured
+ * per tenant, per order type and per movement step —
+ * `commercial.order_type_movement.check_seal_no` / `check_gross_weight`, edited
+ * on the Rules panel of the order-type master and delivered on every preflight
+ * as `GateStep` — so the gate reads it instead of deciding for itself.
+ *
+ *   Seal   ticked → at least one seal number
+ *   Weight ticked → the cargo weight (gross is tare + cargo, and the tare is
+ *                   optional, so the cargo weight is the one actually keyed)
+ *
+ * UNTICKED MEANS NOT ASKED. With no step at all — a walk-in before preflight
+ * has answered — nothing is demanded, because there is no rule to read yet.
+ *
+ * TARE AND MAX GROSS are never here: the API stopped wanting them on
+ * 2026-10-22, so a box whose weighbridge ticket has not caught up still gates.
+ *
+ * THE CUSTOMS PERMIT is not a depot's choice. A full EXPORT box without one is
+ * turned away at the port, so it is asked for wherever the booking says EXPORT.
+ *
+ * A PICK-UP READS THE SAME TICKS (API 2026-10-22). It used to demand nothing,
+ * on the reasoning that the box is already in the yard with its facts — but a
+ * tenant who ticks Seal or Weight on a gate-OUT step means it, and the server
+ * now refuses the pick-up with SEAL_REQUIRED / WEIGHT_REQUIRED. The weight it
+ * wants there is the GROSS, not the cargo: a box going out is weighed as it
+ * stands, while a box coming in declares what is inside it.
+ *
+ * THE YARD AND THE POSITION are a pick-up's concern only in that it has none:
+ * a pick-up takes a box OFF a slot, so neither is ever asked of it.
+ *
+ * NOTE the server may still be stricter — `GateRules.MissingForTrip` hardcodes
+ * what this function now reads from the step. Where it is, the refusal reaches
+ * the right field through `ApiError.forField`, just one POST later. See
+ * docs/GATE_RULES_PER_TENANT_FOR_API.md.
  */
 export function requiredGateFields(
   trip: TripType,
   fullEmpty: "FULL" | "EMPTY" | null,
   isExportBooking: boolean,
+  step: GateStep | null,
 ): string[] {
-  if (trip === "PICK_UP_CONT") return [];
-  const required = ["tareWeightKg", "maxGrossWeightKg"];
-  if (fullEmpty === "FULL") {
-    required.push("cargoWeightKg", "seals");
-    if (isExportBooking) required.push("customsPermitNo");
+  const required: string[] = [];
+  const drop = trip === "DROP_OFF_CONT";
+  /**
+   * The effective tick, and what to do until the server sends one.
+   *
+   * `??` and not `||`: `false` from the server is an answer — the depot said
+   * no — and must not fall through to the old hard-coded guess.
+   */
+  const seal = step?.requireSeal ?? step?.checkSealNo ?? false;
+  const weight = step?.requireCargoWeight ?? step?.checkGrossWeight ?? false;
+  const yard = step?.requireYard ?? false;
+  // Today's rule, kept as the fallback so merging this changes nothing: a box
+  // put down in an unrecorded slot is one the next shift has to go and find.
+  const position = step?.requirePosition ?? drop;
+
+  if (seal) required.push("seals");
+  if (trip === "PICK_UP_CONT") {
+    // A box going out is weighed as it stands; one coming in declares its cargo.
+    if (weight) required.push("grossWeightKg");
+    return required;
   }
+  if (weight) required.push("cargoWeightKg");
+  if (fullEmpty === "FULL" && isExportBooking) required.push("customsPermitNo");
+  if (yard) required.push("yardId");
+  if (position) required.push("positionText");
   return required;
 }
 
@@ -66,6 +118,23 @@ export interface GateStep {
   fullEmpty: "FULL" | "EMPTY"; isRequired: boolean; checkSealNo: boolean; checkGrossWeight: boolean;
   requireVesselVoyage: boolean; allowDamagedRelease: boolean; requiresSurvey: boolean;
   stepsSkipped: string[];
+
+  /**
+   * WHAT THIS STEP ACTUALLY DEMANDS, order-type rules and step ticks already
+   * combined by the server (asked 2026-10-27, see docs/GATE_CAPTURE_RULES_FOR_API.md).
+   *
+   * The order type carries four tenant ticks of its own now, and a field is
+   * required when EITHER the order type or this step asks for it. Doing that
+   * sum on the server is the only way the two sides cannot disagree — the gate
+   * never sees the order type's rules, only the step it is standing at.
+   *
+   * UNDEFINED UNTIL THE API SHIPS THEM, and every reader falls back to exactly
+   * what the gate did before, so nothing moves on the day this is merged.
+   */
+  requireSeal?: boolean;
+  requireCargoWeight?: boolean;
+  requireYard?: boolean;
+  requirePosition?: boolean;
 }
 
 export interface GateHold {
@@ -141,10 +210,18 @@ export interface YardContainer {
 
 export interface TruckVisit {
   truckVisitId: string; visitNo: string; branchId: string; truckPlate: string; trailerPlate: string | null;
-  haulierCode: string | null; driverName: string | null; laneCode: string | null;
+  haulierCode: string | null; driverName: string | null; driverMobile: string | null;
+  laneCode: string | null;
   arrivedAt: string; gateInAt: string | null; gateOutAt: string | null; dwellMinutes: number | null;
   status: "ARRIVED" | "ON_SITE" | "DEPARTED"; source: string; transactions: GateTransactionSummary[];
   truckCategoryCode?: string | null;
+  /**
+   * Optimistic concurrency for an amendment, the way the EIR's own void uses
+   * `EirDetail.rowVersion`. The API returns it since 2026-10-27; still optional
+   * so a depot on an older build sends the amend without it rather than not at
+   * all, with the server as the only guard against two clerks on one visit.
+   */
+  rowVersion?: string | null;
   /**
    * What the truck did on this visit, DERIVED by the server from the moves that
    * stand — a voided EIR never happened, so re-read the visit after voiding one.
@@ -207,6 +284,10 @@ export interface GateTruckRequest {
   haulierCode?: string | null;
   driverName?: string | null;
   driverLicence?: string | null;
+  /** Max 30, stored trimmed as typed (API 2026-10-22). No format is imposed:
+      a Thai mobile is written 08x-xxx-xxxx, +66 8x ... and as nine bare digits,
+      and the clerk copies whatever is on the licence or the gate pass. */
+  driverMobile?: string | null;
   laneCode?: string | null;
   /** Only stored when this POST opens a NEW visit; ignored alongside truckVisitId. */
   truckCategoryCode?: string | null;

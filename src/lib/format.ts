@@ -69,3 +69,30 @@ export function formatDayDate(value: string | null | undefined): string {
   const day = at.toLocaleDateString('en-GB', { weekday: 'short' });
   return `${day} ${formatDate(value)}`;
 }
+
+/**
+ * A `<input type="datetime-local">` VALUE — yyyy-MM-ddTHH:mm, in LOCAL time.
+ *
+ * `toISOString().slice(0, 16)` is the obvious one-liner and it is wrong: that
+ * string is UTC, so in Bangkok (+07) the box opens seven hours behind the
+ * clock on the wall. The same mistake printed the wrong gate-in day across the
+ * app until 2026-10-18; it is not repeated here.
+ */
+export function localInputValue(at: Date = new Date()): string {
+  return `${at.getFullYear()}-${pad(at.getMonth() + 1)}-${pad(at.getDate())}`
+    + `T${pad(at.getHours())}:${pad(at.getMinutes())}`;
+}
+
+/**
+ * The reverse: what the clerk sees in the box, as the instant to send.
+ *
+ * A datetime-local value carries NO zone, and `new Date('2026-10-27T08:30')`
+ * reads it in the browser's own zone — which is what the clerk meant, because
+ * they read it off the gate clock beside them. Null when the box is empty or
+ * half-typed, so a caller can tell "not set" from "set to something odd".
+ */
+export function instantFromLocalInput(value: string): string | null {
+  if (!value) return null;
+  const at = new Date(value);
+  return Number.isNaN(at.getTime()) ? null : at.toISOString();
+}

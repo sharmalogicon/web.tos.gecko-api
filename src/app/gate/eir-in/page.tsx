@@ -24,8 +24,10 @@ import type { BookableBox } from '../_components/BookingPicker';
 import {
   useWalkInOrderTypes, walkInOrderTypeFor, type WalkInBox,
 } from '@/lib/api/walk-in';
+import { instantFromLocalInput, localInputValue } from '@/lib/format';
 import {
-  DEFAULT_CONDITION, MODE_LABELS, blankMove, boxLooksRight, derivedMode, moveToTripRow, normaliseBox,
+  DEFAULT_CONDITION, MODE_LABELS, backDateIssue, blankMove, boxLooksRight, derivedMode, moveToTripRow,
+  normaliseBox,
   type MoveDraft, type QuoteLineLike, type SettledLike, type TruckDetails,
 } from './_components/visit-moves';
 
@@ -89,10 +91,12 @@ export default function GateInPage() {
   const [draftId, setDraftId] = useState(() => crypto.randomUUID());
   const [idempotencyKey, setIdempotencyKey] = useState<string | null>(null);
 
-  const [truck, setTruck] = useState<TruckDetails>({
+  const [truck, setTruck] = useState<TruckDetails>(() => ({
     plate: '', trailerPlate: '', haulierCode: '', driverName: '',
     driverLicenceNo: '', driverMobile: '', truckCategoryCode: '',
-  });
+    // The clock on the wall beside the clerk, not UTC.
+    transactionAt: localInputValue(),
+  }));
   const [moves, setMoves] = useState<MoveDraft[]>([]);
   /**
    * The tenant's walk-in order types, read once when the screen opens.
@@ -482,6 +486,15 @@ export default function GateInPage() {
 
     // Agreeing to a type change is a new attempt, so it takes a new key.
     const key = acceptTypeChange || !idempotencyKey ? crypto.randomUUID() : idempotencyKey;
+
+    /**
+     * ONE instant for the whole truck, read off the clerk's box.
+     *
+     * Computed once here rather than per row, so twelve boxes on one truck
+     * cannot end up seconds apart — and null only if the box is unreadable,
+     * which `blockedReason` has already refused.
+     */
+    const gateAt = instantFromLocalInput(truck.transactionAt);
     setIdempotencyKey(key);
 
     try {
@@ -492,10 +505,12 @@ export default function GateInPage() {
           trailerPlate: truck.trailerPlate.trim() || null,
           driverName: truck.driverName.trim() || null,
           driverLicence: truck.driverLicenceNo.trim() || null,
+          driverMobile: truck.driverMobile.trim() || null,
+          arrivedAt: gateAt,
           haulierCode: truck.haulierCode || null,
           truckCategoryCode: truckCategoryCode || null,
         },
-        rows: rows.map(m => moveToTripRow(acceptTypeChange ? { ...m, acceptTypeChange: true } : m, branchId)),
+        rows: rows.map(m => moveToTripRow(acceptTypeChange ? { ...m, acceptTypeChange: true } : m, branchId, gateAt)),
         vas: [...new Set(rows.flatMap(m => m.vasTicked))],
         payment: cashTotal > 0
           ? {
@@ -578,6 +593,8 @@ export default function GateInPage() {
     setTruck({
       plate: '', trailerPlate: '', haulierCode: '', driverName: '',
       driverLicenceNo: '', driverMobile: '', truckCategoryCode: '',
+      // The NEXT truck is at the gate now, whatever the last one was dated.
+      transactionAt: localInputValue(),
     });
   };
 
@@ -601,6 +618,8 @@ export default function GateInPage() {
       const cap = walkInTypes?.find(t => t.orderTypeCode === overCap[0])?.maxBoxesPerTruck;
       return `${overCap[0]} takes at most ${cap} box${cap === 1 ? '' : 'es'} per truck; this truck has ${overCap[1]}.`;
     }
+    const clock = backDateIssue(truck.transactionAt);
+    if (clock) return clock;
     const walkIns = pending.filter(m => m.isWalkIn);
     if (walkIns.some(m => !m.fullEmpty)) return 'A walk-in row has no Empty / Full answer.';
     if (walkIns.some(m => !m.customerCode)) return 'A walk-in row has no customer, and the booking is raised for one.';
@@ -609,7 +628,7 @@ export default function GateInPage() {
     if (walkIns.some(m => !walkInOrderTypeFor(walkInTypes, m.trip, m.fullEmpty)))
       return 'A walk-in row has no order type for the answers given.';
     return null;
-  }, [truckReady, pending, overLimit, walkInByOrderType, walkInTypes]);
+  }, [truckReady, pending, overLimit, walkInByOrderType, walkInTypes, truck.transactionAt]);
 
   const readyToSave = useMemo(
     () => truckReady && pending.length > 0 && !overLimit && !blockedReason

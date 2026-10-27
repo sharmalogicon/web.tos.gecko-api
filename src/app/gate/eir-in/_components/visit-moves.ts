@@ -353,6 +353,9 @@ export function requiredFor(move: MoveDraft): string[] {
     // clerk picked already said whether the move is full or empty.
     move.known?.nextStep?.fullEmpty ?? move.fullEmpty,
     (move.known?.booking?.directionCode ?? move.bookingTypeCode) === 'EXPORT',
+    // The order type's own rules for this step. Null until preflight answers,
+    // and null means nothing is demanded — there is no rule to read yet.
+    move.known?.nextStep ?? null,
   );
 }
 
@@ -396,9 +399,27 @@ export function rowIssues(move: MoveDraft): string[] {
     issues.push('Container number (4 to 11 letters or digits)');
   }
 
+  /**
+   * WHERE THE BOX WILL STAND used to be hard-coded here for every drop-off
+   * (owner 2026-10-22). It is a tick on the order type now (owner 2026-10-27)
+   * and arrives through `requiredFor` with the rest, so one list governs every
+   * asterisk on the card. With no answer from the server the tick falls back to
+   * that same hard-coded rule, so nothing changed for a depot that has not set
+   * one.
+   */
   for (const field of requiredFor(move)) {
     if (field === 'seals') {
       if (!move.seals.some(s => s.sealNo.trim())) issues.push('At least one seal');
+      continue;
+    }
+    /**
+     * There is no `grossWeightKg` on the draft to read — it is DERIVED
+     * (`grossOf` = tare + cargo), so a generic lookup would find `undefined`
+     * and quietly pass. The tare is the number the clerk actually keys, so the
+     * issue says so rather than naming a box that cannot be typed into.
+     */
+    if (field === 'grossWeightKg') {
+      if (grossOf(move) == null) issues.push('Gross weight (key the tare)');
       continue;
     }
     const value = move[field as keyof MoveDraft];
@@ -438,9 +459,12 @@ export function rowIssues(move: MoveDraft): string[] {
 }
 
 const FIELD_LABELS: Record<string, string> = {
+  yardId: 'Yard',
+  positionText: 'Position',
   tareWeightKg: 'Tare weight',
   maxGrossWeightKg: 'Max gross weight',
   cargoWeightKg: 'Cargo weight',
+  grossWeightKg: 'Gross weight',
   customsPermitNo: 'Customs permit no.',
 };
 
@@ -469,6 +493,45 @@ export interface TruckDetails {
   driverLicenceNo: string;
   driverMobile: string;
   truckCategoryCode: string;
+  /**
+   * WHEN THE TRUCK WAS AT THE BARRIER, as a datetime-local value
+   * (yyyy-MM-ddTHH:mm, in the clerk's own zone — never UTC).
+   *
+   * It belongs to the TRUCK, not to a row: one truck is at the gate once, and
+   * every box it carries was there at the same moment. It defaults to now and
+   * may be wound back by `MAX_BACK_DATE_HOURS`, for the shift that writes the
+   * paper first and keys it afterwards.
+   */
+  transactionAt: string;
+}
+
+/**
+ * HOW FAR BACK THE GATE MAY BE WOUND (owner 2026-10-27).
+ *
+ * A day, no more. Long enough for a night shift keyed the next morning; short
+ * enough that nobody quietly re-dates last week's move into this month's
+ * storage billing, where the free-time clock would be wrong by a week.
+ *
+ * THIS CAP IS THE SCREEN'S, not the server's — see
+ * docs/GATE_BACKDATE_FOR_API.md. A cap that only one side enforces is a
+ * convention, not a rule.
+ */
+export const MAX_BACK_DATE_HOURS = 24;
+
+/**
+ * Why the gate clock is not acceptable, in the clerk's words — or null.
+ *
+ * The minute of grace on the future side is for the clock ticking past the
+ * moment the box was filled in; it is not a licence to post ahead.
+ */
+export function backDateIssue(value: string, now: Date = new Date()): string | null {
+  if (!value.trim()) return 'The gate date and time is blank.';
+  const at = new Date(value);
+  if (Number.isNaN(at.getTime())) return 'The gate date and time cannot be read.';
+  if (at.getTime() > now.getTime() + 60_000) return 'The gate date and time is in the future.';
+  if (at.getTime() < now.getTime() - MAX_BACK_DATE_HOURS * 3_600_000)
+    return `The gate date and time cannot be more than ${MAX_BACK_DATE_HOURS} hours ago.`;
+  return null;
 }
 
 /**
@@ -539,7 +602,7 @@ export const isDamaged = (move: MoveDraft): boolean =>
  * booking, and the server writes the container number onto that place itself:
  * the UI never PUTs the booking line (§24.3).
  */
-export function moveToTripRow(move: MoveDraft, branchId: string): TripRow {
+export function moveToTripRow(move: MoveDraft, branchId: string, transactionAt: string | null): TripRow {
   const box = normaliseBox(move.containerNo);
   const row: TripRow = {
     move: {
@@ -550,6 +613,9 @@ export function moveToTripRow(move: MoveDraft, branchId: string): TripRow {
       containerNo: box,
       direction: directionOfTrip(move.trip),
       tripType: move.trip,
+      // The gate clock, the same instant on every row of this truck. Null means
+      // "now", which is what the server assumed before this existed.
+      transactionAt,
       // Gross is derived from tare + cargo, as Vector derives it. It is not a
       // weighbridge reading, so `weightSource` stays null.
       grossWeightKg: grossOf(move),
