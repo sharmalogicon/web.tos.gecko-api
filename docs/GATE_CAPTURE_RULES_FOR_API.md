@@ -14,6 +14,35 @@ belong to nobody.
 
 ---
 
+## 0. ANSWERED — all four shipped, 2026-10-27 (verified live)
+
+Read off a running API, not assumed:
+
+- `OrderTypeRulesItem` carries `requireSeal`, `requireCargoWeight`,
+  `requireYard`, `requirePosition`.
+- `GateStepResponse` carries the same four, **as the sum** — §2c was taken as
+  asked, so the gate never has to load the order type.
+
+A live preflight on the fixture branch returns, for `MTY_IN`:
+
+```
+checkSealNo=false  checkGrossWeight=false
+requireSeal=false  requireCargoWeight=false  requireYard=false  requirePosition=false
+```
+
+**So the behavioural change predicted in §2a has now happened for real.** The
+server sends `requirePosition: false`, and because the screen reads `??` and not
+`||`, that `false` correctly beats the old hard-coded "a drop-off must have a
+position". **Position is no longer mandatory on a drop-off** until somebody
+ticks it in Masters — Order types — Rules. That is the depot deciding, which
+is the point of the exercise, but it is a visible change for a tester and the
+owner should tick what KORAKIT actually wants.
+
+**Still open:** questions 1 (is order-type-wide `require_cargo_weight` the right
+grain), 2 (does anything else already write `position_text`) and 3 (audit).
+
+---
+
 ## 1. Built on the web side (2026-10-27)
 
 - `OrderTypeRules` carries four more booleans — `requireSeal`,

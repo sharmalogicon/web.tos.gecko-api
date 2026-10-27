@@ -154,6 +154,24 @@ export interface GatePreflight {
   findings: GateFinding[]; booking: GateBooking | null; nextStep: GateStep | null;
   holds: GateHold[]; inYard: GateYard | null; cutoff: GateCutoff | null; coupon: GateCoupon | null;
   isCheckDigitValid: boolean; isInRegistry: boolean;
+
+  /**
+   * THE BOX'S LAST RECORDED MOVEMENT, whatever and wherever it was (asked
+   * 2026-10-27, docs/GATE_BACKDATE_FOR_API.md).
+   *
+   * A back-dated gate move may not precede it. The preflight is the right
+   * place for it because the gate ALREADY calls this the moment a container
+   * number is keyed — so the answer costs no extra round trip, and the clerk
+   * is told at the lane rather than after the POST.
+   *
+   * NOT `inYard.lastEventAt`, which this falls back to: that is the last event
+   * of the visit the box is on NOW, and it is null for a box that is not in
+   * the yard — exactly the returning box whose history matters most.
+   *
+   * Undefined until the API sends it; null means the box has no history at all
+   * and any date is allowed.
+   */
+  lastMovementAt?: string | null;
 }
 
 export interface GateSeal { sealNo: string; sealType: string; isIntact: boolean; matchesDeclared: boolean | null }
@@ -380,6 +398,41 @@ export function preflightPath(params: {
   }
   return `/api/tos/gate/preflight?${query}`;
 }
+
+/**
+ * WHAT THIS DEPOT ALLOWS A CLERK TO DO WITH THE GATE CLOCK.
+ *
+ * The owner asked for the flat 24-hour back-date window to go (2026-10-27) and
+ * the API answered with something better: the window is a per-depot setting,
+ * `gate.max_backdate_hours`, 24 hours only where nobody has set it. So the
+ * screen must ASK rather than decide — the same shape as the capture rules.
+ *
+ * Both numbers are the server's own, so what the screen refuses is exactly
+ * what the POST would refuse. Hard-coding either one is how the two drift.
+ */
+export interface GateSettings {
+  branchId: string;
+  /** Hours a move may be dated back. 0 = this depot forbids back-dating. */
+  maxBackdateHours: number;
+  /** How far ahead of the server's clock still counts as "now". */
+  futureGraceMinutes: number;
+}
+
+export const gateSettingsPath = (branchId: string) =>
+  `/api/tos/gate/settings?branchId=${encodeURIComponent(branchId)}`;
+
+/**
+ * WHAT TO ASSUME WHEN THE DEPOT HAS NOT ANSWERED YET.
+ *
+ * Deliberately generous on the window and exact on the grace. A screen that
+ * guessed 24 hours while the settings call was in flight would refuse a clerk
+ * mid-keying and then change its mind, which is worse than letting the server
+ * have the last word.
+ */
+export const GATE_SETTINGS_UNKNOWN: Omit<GateSettings, 'branchId'> = {
+  maxBackdateHours: Number.POSITIVE_INFINITY,
+  futureGraceMinutes: 5,
+};
 
 // ── how a booked box is collected or delivered ──────────────────────────────
 

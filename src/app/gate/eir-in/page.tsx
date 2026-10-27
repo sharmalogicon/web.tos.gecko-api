@@ -8,9 +8,10 @@ import { ApiError } from '@/lib/api/problem';
 import { useFacility } from '@/lib/api/facility';
 import { useSession } from '@/lib/auth/session';
 import {
-  TOS_PERMISSIONS, preflightPath,
-  type GateFinding, type GatePreflight,
+  GATE_SETTINGS_UNKNOWN, TOS_PERMISSIONS, gateSettingsPath, preflightPath,
+  type GateFinding, type GatePreflight, type GateSettings,
 } from '@/lib/api/tos';
+import { useApi } from '@/lib/api/use-api';
 import {
   overTruckLimit, reserveBox, saveTrip,
   type TripRefusalRow, type TripSaveResult, type VasOption,
@@ -26,7 +27,8 @@ import {
 } from '@/lib/api/walk-in';
 import { instantFromLocalInput, localInputValue } from '@/lib/format';
 import {
-  DEFAULT_CONDITION, MODE_LABELS, backDateIssue, blankMove, boxLooksRight, derivedMode, moveToTripRow,
+  DEFAULT_CONDITION, MODE_LABELS, backDateIssue, beforeLastMoveIssue, blankMove, boxLooksRight,
+  derivedMode, moveToTripRow,
   normaliseBox,
   type MoveDraft, type QuoteLineLike, type SettledLike, type TruckDetails,
 } from './_components/visit-moves';
@@ -106,6 +108,14 @@ export default function GateInPage() {
    * the tenant has not set up is a disabled toggle, not a refused Save.
    */
   const { data: walkInTypes } = useWalkInOrderTypes(Boolean(branchId));
+  /**
+   * HOW FAR BACK THIS DEPOT LETS THE CLOCK GO, and how far ahead still counts
+   * as now. The server's own numbers (`gate.max_backdate_hours`), so the screen
+   * refuses exactly what the POST would. Until they arrive the screen does not
+   * guess a window — see GATE_SETTINGS_UNKNOWN.
+   */
+  const { data: gateSettings } = useApi<GateSettings>(branchId ? gateSettingsPath(branchId) : null);
+  const clockRules = gateSettings ?? GATE_SETTINGS_UNKNOWN;
   const [openKey, setOpenKey] = useState<string | null>(null);
   const [visit, setVisit] = useState<{ truckVisitId: string; visitNo: string } | null>(null);
   const [result, setResult] = useState<TripSaveResult | null>(null);
@@ -618,8 +628,16 @@ export default function GateInPage() {
       const cap = walkInTypes?.find(t => t.orderTypeCode === overCap[0])?.maxBoxesPerTruck;
       return `${overCap[0]} takes at most ${cap} box${cap === 1 ? '' : 'es'} per truck; this truck has ${overCap[1]}.`;
     }
-    const clock = backDateIssue(truck.transactionAt);
+    const clock = backDateIssue(truck.transactionAt, new Date(), clockRules);
     if (clock) return clock;
+    /**
+     * A box cannot move before it last moved. Checked per row because the
+     * history is the box's, not the truck's — one clock, and it has to clear
+     * every box on it. Best-effort: only the boxes the preflight told us about
+     * are visible here, and the server is the authority (GATE_BACKDATE_FOR_API).
+     */
+    const outOfOrder = pending.map(m => beforeLastMoveIssue(m, truck.transactionAt)).find(Boolean);
+    if (outOfOrder) return outOfOrder;
     const walkIns = pending.filter(m => m.isWalkIn);
     if (walkIns.some(m => !m.fullEmpty)) return 'A walk-in row has no Empty / Full answer.';
     if (walkIns.some(m => !m.customerCode)) return 'A walk-in row has no customer, and the booking is raised for one.';
@@ -694,6 +712,7 @@ export default function GateInPage() {
             visitNo={visit?.visitNo ?? null}
             modeLabel={MODE_LABELS[mode]}
             fieldError={f => truckError?.forField(f)}
+            clockRules={clockRules}
           />
 
           <div className="gecko-card gecko-card-padded gecko-stack">
@@ -780,6 +799,7 @@ export default function GateInPage() {
                   key={m.key}
                   move={m}
                   index={i}
+                  transactionAt={truck.transactionAt}
                   open={openKey === m.key}
                   branchId={branchId}
                   takenBoxes={takenBoxes}

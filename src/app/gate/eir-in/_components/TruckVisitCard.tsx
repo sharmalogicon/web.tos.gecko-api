@@ -4,7 +4,7 @@ import { Icon } from '@/components/ui/Icon';
 import { GateField } from '../../_components/GateField';
 import { PartyPicker } from '@/components/ui/PartyPicker';
 import { useTruckCategories } from '@/lib/api/lookups';
-import { MAX_BACK_DATE_HOURS, backDateIssue, type TruckDetails } from './visit-moves';
+import { backDateIssue, type TruckDetails } from './visit-moves';
 import { localInputValue } from '@/lib/format';
 
 /**
@@ -28,7 +28,9 @@ import { localInputValue } from '@/lib/format';
  * clutter at a gate. Put them back the day VBS ships.
  */
 
-export function TruckVisitCard({ truck, onChange, locked, visitNo, modeLabel, fieldError }: {
+export function TruckVisitCard({
+  truck, onChange, locked, visitNo, modeLabel, fieldError, clockRules,
+}: {
   truck: TruckDetails;
   onChange: (patch: Partial<TruckDetails>) => void;
   /** True once a move has opened the visit — the server owns the truck now. */
@@ -36,21 +38,39 @@ export function TruckVisitCard({ truck, onChange, locked, visitNo, modeLabel, fi
   visitNo: string | null;
   modeLabel: string;
   fieldError: (field: string) => string | undefined;
+  /** This depot's own back-date window and future grace, from the API. */
+  clockRules: { maxBackdateHours: number; futureGraceMinutes: number };
 }) {
   const { categories } = useTruckCategories();
 
   /**
-   * THE WINDOW THE CLERK MAY REACH BACK INTO.
+   * THE FLOOR IS THE DEPOT'S, NOT THIS SCREEN'S (owner 2026-10-27). The flat 24
+   * hours is gone; what replaced it is `gate.max_backdate_hours` on the branch,
+   * read from the API, so a depot that keys a week of paper sets a week and one
+   * that keys none sets zero. A depot that has not answered gets no floor at
+   * all rather than a guess — the server still has the last word.
    *
-   * Read fresh on each render rather than frozen at mount: a card left open
-   * across a shift would otherwise still offer a `max` from hours ago. The
-   * attributes only steer the native picker — a clerk can still type — so
-   * `backDateIssue` is the check that actually decides, here for the message
-   * and again on the page before the POST.
+   * What a clerk may NOT do, whatever the window says, is date a box behind its
+   * own last movement. That is a per-container question this card cannot answer
+   * — it is asked on each row, and finally by the server.
+   *
+   * `max`/`min` are read fresh on each render rather than frozen at mount: a
+   * card left open across a shift would otherwise still offer a ceiling from
+   * hours ago. They only steer the native picker — a clerk can still type — so
+   * `backDateIssue` is the check that decides, here and again before the POST.
    */
   const now = new Date();
-  const earliest = new Date(now.getTime() - MAX_BACK_DATE_HOURS * 3_600_000);
-  const clockIssue = backDateIssue(truck.transactionAt, now);
+  const clockIssue = backDateIssue(truck.transactionAt, now, clockRules);
+  const floor = Number.isFinite(clockRules.maxBackdateHours)
+    ? localInputValue(new Date(now.getTime() - clockRules.maxBackdateHours * 3_600_000))
+    : undefined;
+  /** Says what THIS depot allows, rather than a sentence that might be untrue here. */
+  const hours = clockRules.maxBackdateHours;
+  const clockHint = !Number.isFinite(hours)
+    ? 'Now by default. Wind it back as far as the paper goes — but not behind a box’s own last movement.'
+    : hours <= 0
+      ? 'This depot records gate moves as they happen — the time stays as now.'
+      : `Now by default. This depot allows up to ${hours} hours back — but never behind a box’s own last movement.`;
 
   // -menus: .gecko-card sets overflow:hidden for its rounded corners, which
   // CLIPS the haulier search's dropdown. Clipping is not stacking — no z-index
@@ -127,10 +147,11 @@ export function TruckVisitCard({ truck, onChange, locked, visitNo, modeLabel, fi
             server owns the arrival time. */}
         <GateField label="Gate date &amp; time" required
           error={fieldError('transactionAt') ?? fieldError('truck.arrivedAt') ?? clockIssue ?? undefined}
-          hint={locked ? undefined : `Now by default. May be wound back up to ${MAX_BACK_DATE_HOURS} hours.`}>
+          hint={locked ? undefined : clockHint}>
           <input className="gecko-input" type="datetime-local" value={truck.transactionAt}
             disabled={locked}
-            min={localInputValue(earliest)} max={localInputValue(now)}
+            max={localInputValue(now)}
+            min={floor}
             onChange={e => onChange({ transactionAt: e.target.value })} />
         </GateField>
 

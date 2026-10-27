@@ -16,7 +16,7 @@ import {
   NO_WALK_IN_ORDER_TYPE, WALK_IN_REFUSALS, walkInOrderTypeFor, type WalkInBox, type WalkInOrderType,
 } from '@/lib/api/walk-in';
 import {
-  boxLooksRight, mayMintNumber, needsDigitReason, needsLateReason,
+  beforeLastMoveIssue, boxLooksRight, mayMintNumber, needsDigitReason, needsLateReason,
   editable, grossOf, isDamaged, locationLabel, normaliseBox, onBooking, overMaxWeight,
   pickupHasNoOrder, requiredFor, rowIssues,
   type MoveDraft, type SealRow,
@@ -41,10 +41,15 @@ interface EquipmentTypeRow { equipmentTypeId: string; typeCode: string; descript
 export function MoveCard({
   move, index, open, branchId, takenBoxes, onToggle, onChange, onRemove, onLook, onRecord,
   onPickBooking, onToggleVas, canRecord, walkInTypes, draftId, onPickWalkInBox, onMakeWalkIn,
-  walkInOnTruck,
+  walkInOnTruck, transactionAt,
 }: {
   move: MoveDraft;
   index: number;
+  /**
+   * The truck's gate clock, so the row can say that THIS box cannot have moved
+   * then. The clock is the truck's; whether it is allowed is the box's.
+   */
+  transactionAt: string;
   open: boolean;
   branchId: string;
   /** Boxes already on this truck, so the picker cannot offer one twice. */
@@ -135,6 +140,13 @@ export function MoveCard({
   /** The truck-wide `rows` message, shown by the walk-in block that caused it. */
   const rowsErr = move.error?.forField('rows');
   const issues = rowIssues(move);
+  /**
+   * TIME RUNS ONE WAY FOR A BOX. Separate from `issues` because it is not a
+   * blank field to fill in — the clerk fixes it on the truck's clock, above,
+   * not on this row — so it reads as its own sentence rather than joining a
+   * list of missing values.
+   */
+  const backBeforeLast = beforeLastMoveIssue(move, transactionAt);
   const booking = move.known?.booking ?? null;
   const step = move.known?.nextStep ?? null;
   // Preflight is the authority once it answers; before that, what the clerk
@@ -286,7 +298,7 @@ export function MoveCard({
                 the barrier. The Save is what commits. */}
             <button type="button" className="gecko-btn gecko-btn-success gecko-btn-sm"
               disabled={!canRecord || move.saving || issues.length > 0 || pickupHasNoOrder(move)
-                || overCap || walkInMissing}
+                || overCap || walkInMissing || !!backBeforeLast}
               onClick={onRecord}>
               {/* Holding a place and pricing the box is a round trip too, so it
                   spins rather than just greying out. */}
@@ -374,6 +386,16 @@ export function MoveCard({
             <div className="gecko-move-issues">
               <Icon name="alertCircle" size={13} />
               <span>Still to fill: {issues.join(' · ')}</span>
+            </div>
+          )}
+
+          {/* The truck's clock is wrong FOR THIS BOX. Said on the row, because
+              the row is what knows the box's history — but the fix is upstairs
+              on the truck card, so the sentence points there. */}
+          {backBeforeLast && (
+            <div className="gecko-move-issues">
+              <Icon name="alertCircle" size={13} />
+              <span>{backBeforeLast} Change the gate date &amp; time on the truck.</span>
             </div>
           )}
 

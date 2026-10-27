@@ -21,7 +21,10 @@ import type {
   GateFinding, GatePreflight, GateTransactionRequest, TripType,
 } from '@/lib/api/tos';
 import type { TripDamage, TripRowResult, VasOption } from '@/lib/api/gate-trips';
-import { directionOfTrip, numberOrNull, requiredGateFields, textOrNull } from '@/lib/api/tos';
+import {
+  GATE_SETTINGS_UNKNOWN, directionOfTrip, numberOrNull, requiredGateFields, textOrNull,
+} from '@/lib/api/tos';
+import { formatDateTime } from '@/lib/format';
 import type { TripRow } from '@/lib/api/gate-trips';
 import type { ApiError } from '@/lib/api/problem';
 
@@ -499,39 +502,95 @@ export interface TruckDetails {
    *
    * It belongs to the TRUCK, not to a row: one truck is at the gate once, and
    * every box it carries was there at the same moment. It defaults to now and
-   * may be wound back by `MAX_BACK_DATE_HOURS`, for the shift that writes the
-   * paper first and keys it afterwards.
+   * may be wound back as far as the depot needs — the only floor is each box's
+   * own last movement, which `beforeLastMoveIssue` checks per row.
    */
   transactionAt: string;
 }
 
 /**
- * HOW FAR BACK THE GATE MAY BE WOUND (owner 2026-10-27).
- *
- * A day, no more. Long enough for a night shift keyed the next morning; short
- * enough that nobody quietly re-dates last week's move into this month's
- * storage billing, where the free-time clock would be wrong by a week.
- *
- * THIS CAP IS THE SCREEN'S, not the server's — see
- * docs/GATE_BACKDATE_FOR_API.md. A cap that only one side enforces is a
- * convention, not a rule.
- */
-export const MAX_BACK_DATE_HOURS = 24;
-
-/**
  * Why the gate clock is not acceptable, in the clerk's words — or null.
  *
- * The minute of grace on the future side is for the clock ticking past the
- * moment the box was filled in; it is not a licence to post ahead.
+ * THE FLAT 24-HOUR WINDOW IS GONE (owner 2026-10-27), but NOT in favour of no
+ * window: the API made it `gate.max_backdate_hours`, a per-depot setting that
+ * falls back to 24 hours only where nobody has set it, read here from
+ * `GET /api/tos/gate/settings`. So the depot decides how far back its paper
+ * goes, the same way it decides what the lane must capture — and a screen with
+ * no window at all would simply let a clerk key what the POST then refuses.
+ *
+ * BOTH NUMBERS ARE THE SERVER'S. The grace on the future side is the server's
+ * `futureGraceMinutes` (5, not the 1 this used to assume) and the window is the
+ * server's hours, so what this refuses is what the POST refuses. The separate,
+ * per-container rule — never before the box's own last move — is
+ * `beforeLastMoveIssue` below (docs/GATE_BACKDATE_FOR_API.md).
  */
-export function backDateIssue(value: string, now: Date = new Date()): string | null {
+export function backDateIssue(
+  value: string,
+  now: Date = new Date(),
+  settings: { maxBackdateHours: number; futureGraceMinutes: number } = GATE_SETTINGS_UNKNOWN,
+): string | null {
   if (!value.trim()) return 'The gate date and time is blank.';
   const at = new Date(value);
   if (Number.isNaN(at.getTime())) return 'The gate date and time cannot be read.';
-  if (at.getTime() > now.getTime() + 60_000) return 'The gate date and time is in the future.';
-  if (at.getTime() < now.getTime() - MAX_BACK_DATE_HOURS * 3_600_000)
-    return `The gate date and time cannot be more than ${MAX_BACK_DATE_HOURS} hours ago.`;
-  return null;
+  if (at.getTime() > now.getTime() + settings.futureGraceMinutes * 60_000)
+    return 'The gate date and time is in the future.';
+
+  const hours = settings.maxBackdateHours;
+  if (!Number.isFinite(hours)) return null;
+  if (at.getTime() >= now.getTime() - Math.max(hours, 0) * 3_600_000) return null;
+  return hours <= 0
+    ? 'This depot does not allow a gate move to be dated back — leave the time as now.'
+    : `This depot allows a gate move to be dated at most ${hours} hours back.`;
+}
+
+/**
+ * A MOVE CANNOT PRECEDE THE BOX'S OWN LAST MOVE (owner 2026-10-27).
+ *
+ * Time runs one way for a container: it cannot be gated in on Monday if the
+ * system already has it leaving on Wednesday. Dating a move behind its
+ * predecessor reorders the box's history, and everything read off that
+ * order — where it stands, how long it has been there, what storage is owed —
+ * is then computed from a sequence that never happened.
+ *
+ * IT READS THE PREFLIGHT, which the gate already calls the moment a container
+ * number is keyed — so this costs no extra round trip.
+ *
+ *   lastMovementAt      the box's whole history. LIVE on the API since
+ *                       2026-10-27, and verified to carry a value for a box
+ *                       that has LEFT the yard — the case below cannot see.
+ *   inYard.lastEventAt  the fallback for an older API: only the visit the box
+ *                       is on NOW, and null for a box not in the yard — which
+ *                       is exactly the returning box whose history matters
+ *
+ * The server holds the full history and stays the authority either way.
+ *
+ * STRICTLY LATER, NOT "at or after". We asked for equal to be allowed; the API
+ * shipped `at > previousMoveAt` (GateRules.BeforePreviousMove / InBeforeLastOut,
+ * both BLOCK). Equal is therefore REFUSED, and this check follows the server
+ * rather than the request — a screen that accepted the same instant would pass
+ * a row the POST then rejects, which is the one failure that teaches a clerk to
+ * stop believing the screen.
+ *
+ * THE MESSAGE NAMES THE EARLIEST MINUTE THE CLERK CAN KEY, which is never the
+ * minute of the last movement. A stored instant has seconds; the picker has
+ * none. A box that last moved at 14:00:13 refuses a keyed 14:00, and a refusal
+ * reading "cannot be before 14:00" would be telling the clerk to key what it
+ * has just rejected. The first whole minute strictly after the last movement is
+ * the smallest value both this check and the server accept.
+ */
+export function beforeLastMoveIssue(move: MoveDraft, transactionAt: string): string | null {
+  const last = move.known?.lastMovementAt ?? move.known?.inYard?.lastEventAt;
+  if (!last || !transactionAt.trim()) return null;
+  const at = new Date(transactionAt);
+  const previous = new Date(last);
+  if (Number.isNaN(at.getTime()) || Number.isNaN(previous.getTime())) return null;
+  if (at.getTime() > previous.getTime()) return null;
+  const box = move.containerNo.trim() || 'this box';
+  // The first whole minute STRICTLY after the last movement; see the note above.
+  const earliest = new Date((Math.floor(previous.getTime() / 60_000) + 1) * 60_000);
+  return `${box} already has a movement at ${formatDateTime(last)}. `
+    + `The gate date and time must be later than that — `
+    + `the earliest you can key is ${formatDateTime(earliest.toISOString())}.`;
 }
 
 /**
