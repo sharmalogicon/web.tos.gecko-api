@@ -118,7 +118,7 @@ export const CHARGE_STATUS: Record<ChargeStatus, { label: string; badge: string;
   UNBILLED:  { label: 'Unbilled',  badge: 'gecko-badge-warning', hint: 'Credit line waiting for an invoice' },
   INVOICED:  { label: 'Invoiced',  badge: 'gecko-badge-primary', hint: 'On an invoice' },
   WAIVED:    { label: 'Waived',    badge: 'gecko-badge-gray',    hint: 'Forgiven at the window, with a reason' },
-  CANCELLED: { label: 'Cancelled', badge: 'gecko-badge-gray',    hint: 'The EIR it came from was voided' },
+  CANCELLED: { label: 'Cancelled', badge: 'gecko-badge-gray',    hint: 'The EIR it came from was deleted' },
 };
 
 export const CHARGE_SOURCE: Record<ChargeSource, string> = {
@@ -288,7 +288,7 @@ export const isEditableCharge = (c: Charge) => c.status === 'QUOTED';
 /** Why this line cannot be touched, in the clerk's words. */
 export const whyNotEditable = (c: Charge): string =>
   c.status === 'PAID' || c.status === 'EARNED'
-    ? 'Already paid — void the receipt to change it.'
+    ? 'Already paid — delete the receipt to change it.'
     : c.status === 'INVOICED' ? 'On an invoice — this needs a credit note.'
       : c.status === 'UNBILLED' ? 'Waiting to be invoiced — not changed from here.'
         : c.status === 'WAIVED' ? 'Already waived.'

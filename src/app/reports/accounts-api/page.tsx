@@ -63,7 +63,7 @@ export default function AccountsReportsPage() {
       ...r.customers.map(c => ['Customer', c.payerCode ? `${c.payerCode} ${c.payerName}` : c.payerName, c.tally.receipts, c.tally.subtotal, c.tally.tax, c.tally.total]),
       ...r.channels.map(c => ['Channel', CHANNEL[c.channel] ?? c.channel, c.payments, null, null, c.amount]),
       ['Total', 'issued', r.total.receipts, r.total.subtotal, r.total.tax, r.total.total],
-      ['Voided', 'not counted', r.voided.receipts, r.voided.subtotal, r.voided.tax, r.voided.total],
+      ['Deleted', 'not counted', r.voided.receipts, r.voided.subtotal, r.voided.tax, r.voided.total],
     ];
     saveBlob(toCsv(['Group', 'Key', 'Receipts', 'Before VAT', 'VAT', 'Total'], out), `cash-receipts-${r.branchCode}-${r.from}-${r.to}.csv`);
   };
@@ -124,7 +124,7 @@ export default function AccountsReportsPage() {
         <ReportKpi label="Before VAT" value={r ? m(r.total.subtotal) : undefined} />
         <ReportKpi label="VAT" value={r ? m(r.total.tax) : undefined} />
         <ReportKpi label="Total taken" value={r ? m(r.total.total) : undefined} tone="success" />
-        <ReportKpi label="Voided" value={r?.voided.receipts.toLocaleString()} sub={r && r.voided.receipts ? `${m(r.voided.total)} · not counted` : 'not counted'}
+        <ReportKpi label="Deleted" value={r?.voided.receipts.toLocaleString()} sub={r && r.voided.receipts ? `${m(r.voided.total)} · not counted` : 'not counted'}
                    tone={r && r.voided.receipts ? 'warning' : 'neutral'} />
       </div>
 
@@ -184,9 +184,9 @@ export default function AccountsReportsPage() {
         <div className="gecko-eyebrow">Receipts · {list.total.toLocaleString()}</div>
         <div className="gecko-row" style={{ gap: 8 }}>
           <select className="gecko-input gecko-input-sm" value={status} onChange={e => setStatus(e.target.value as '' | 'ISSUED' | 'VOIDED')}>
-            <option value="">Issued and voided</option>
+            <option value="">Issued and deleted</option>
             <option value="ISSUED">Issued</option>
-            <option value="VOIDED">Voided</option>
+            <option value="VOIDED">Deleted</option>
           </select>
           <input className="gecko-input gecko-input-sm" value={list.search} placeholder="Receipt no, order, payer or tax id"
                  onChange={e => list.setSearch(e.target.value)} style={{ width: 240 }} />
@@ -222,11 +222,11 @@ export default function AccountsReportsPage() {
                 <td className="gecko-num gecko-mono">{amount(x.tax, x.currencyCode)}</td>
                 <td className="gecko-num gecko-mono" style={{ fontWeight: 700 }}>{amount(x.total, x.currencyCode)}</td>
                 <td>
-                  <span className={`gecko-badge ${x.status === 'VOIDED' ? 'gecko-badge-gray' : 'gecko-badge-success'}`}>{x.status === 'VOIDED' ? 'Voided' : 'Issued'}</span>
+                  <span className={`gecko-badge ${x.status === 'VOIDED' ? 'gecko-badge-gray' : 'gecko-badge-success'}`}>{x.status === 'VOIDED' ? 'Deleted' : 'Issued'}</span>
                   {x.voidReason && <div className="gecko-cell-meta gecko-truncate" style={{ maxWidth: 160 }} title={x.voidReason}>{x.voidReason}</div>}
                   {mayVoid && x.status === 'ISSUED' && (
-                    <button className="gecko-btn gecko-btn-ghost gecko-btn-sm" onClick={() => setVoiding(x)} title="Void — only before the box has moved">
-                      <Icon name="x" size={12} /> Void
+                    <button className="gecko-btn gecko-btn-danger gecko-btn-sm" onClick={() => setVoiding(x)} title="Delete — only before the box has moved">
+                      <Icon name="trash" size={12} /> Delete
                     </button>
                   )}
                 </td>

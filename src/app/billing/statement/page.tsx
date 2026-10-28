@@ -635,7 +635,7 @@ function Statement() {
                     <td className="gecko-num gecko-mono">{amount(r.tax, r.currencyCode)}</td>
                     <td className="gecko-num gecko-mono gecko-stmt-docs-total">{amount(r.total, r.currencyCode)}</td>
                     <td>
-                      <span className={`gecko-badge ${r.status === 'VOIDED' ? 'gecko-badge-gray' : 'gecko-badge-success'}`}>{r.status === 'VOIDED' ? 'Voided' : 'Issued'}</span>
+                      <span className={`gecko-badge ${r.status === 'VOIDED' ? 'gecko-badge-gray' : 'gecko-badge-success'}`}>{r.status === 'VOIDED' ? 'Deleted' : 'Issued'}</span>
                       {r.voidReason && <div className="gecko-cell-meta gecko-cell-tight">{r.voidReason}</div>}
                       {r.replacedByReceiptNo && <div className="gecko-cell-meta gecko-cell-tight">replaced by {r.replacedByReceiptNo}</div>}
                     </td>

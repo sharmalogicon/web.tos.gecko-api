@@ -165,6 +165,6 @@ export const INVOICE_PERMISSIONS = { issue: 'revenue.invoice.issue', view: 'reve
 export const INVOICE_STATUS: Record<string, { label: string; badge: string }> = {
   ISSUED: { label: 'Issued', badge: 'gecko-badge-info' },
   PAID: { label: 'Paid', badge: 'gecko-badge-success' },
-  VOIDED: { label: 'Voided', badge: 'gecko-badge-gray' },
+  VOIDED: { label: 'Deleted', badge: 'gecko-badge-gray' },
   CANCELLED: { label: 'Cancelled', badge: 'gecko-badge-gray' },
 };

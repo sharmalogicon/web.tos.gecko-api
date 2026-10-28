@@ -9,6 +9,7 @@ import { useApi, useApiList, type Paged } from '@/lib/api/use-api';
 import { useSession } from '@/lib/auth/session';
 import { dwellLabel, formatContainerNo, formatDate, formatDateTime, type GateTransactionSummary } from '@/lib/api/tos';
 import { eirPath, formatKg, type ContainerHolds } from '@/lib/api/gate-eir';
+import { statusLabel } from '@/lib/format';
 import type { Hold } from '@/lib/api/holds';
 import { REEFER_SESSIONS_PATH, type ReeferSession } from '@/lib/api/reefer';
 import { yardsPath, type Yard } from '@/lib/api/yards';
@@ -292,7 +293,7 @@ function UnitInquiry() {
                   <VisitsTab visits={s.visits} />
                 </ListCard>
                 <ListCard title="EIRs" count={moveRows.length}
-                  desc="Every gate transaction for this box, voided ones included.">
+                  desc="Every gate transaction for this box, deleted ones included.">
                   <MovesTab rows={moveRows} error={moves.error?.title ?? null} />
                 </ListCard>
               </div>
@@ -590,7 +591,7 @@ function MovesTab({ rows, error }: { rows: GateTransactionSummary[]; error: stri
             <td>{t.fullEmpty}</td>
             <td className="gecko-mono">{t.orderNo}</td>
             <td>{t.truckPlate}</td>
-            <td><span className={`gecko-badge gecko-badge-${t.status === 'VOIDED' ? 'error' : 'success'}`}>{t.status}</span></td>
+            <td><span className={`gecko-badge gecko-badge-${t.status === 'VOIDED' ? 'error' : 'success'}`}>{statusLabel(t.status)}</span></td>
           </tr>
         ))}
       </tbody>

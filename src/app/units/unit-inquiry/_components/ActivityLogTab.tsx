@@ -100,7 +100,7 @@ export function ActivityLogTab({ story, moves, holdsNow, holdsReleased, registry
         detail: (
           <>
             <Link href={eirPath(t.direction, t.gateTransactionId)} className="gecko-link gecko-mono">{t.eirNo}</Link>
-            {t.status === 'VOIDED' && <span className="gecko-badge gecko-badge-error gecko-cm-log-badge">voided</span>}
+            {t.status === 'VOIDED' && <span className="gecko-badge gecko-badge-error gecko-cm-log-badge">deleted</span>}
           </>
         ),
         note: [t.fullEmpty, t.truckPlate, t.orderNo].filter(Boolean).join(' · ') || null,

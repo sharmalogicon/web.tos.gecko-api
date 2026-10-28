@@ -5,6 +5,7 @@ import { apiGet } from '@/lib/api/client';
 import { ProblemAlert, problemOf, type Problem } from './ProblemAlert';
 import { formatBaht, type Receipt, type Shift, type ShiftReceipt } from '@/lib/api/window';
 import { VoidReceiptModal } from '../_components/VoidReceiptModal';
+import { statusLabel } from '@/lib/format';
 
 const time = (iso: string) => new Date(iso).toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' });
 
@@ -71,7 +72,7 @@ export function ShiftReceipts({ shift, onReprint, mayVoid = false, onVoided }: {
                     <td>{r.payerName}</td>
                     <td style={right}>{formatBaht(r.total)}</td>
                     <td>
-                      <span className={`gecko-badge gecko-badge-xs ${r.status === 'ISSUED' ? 'gecko-badge-success' : 'gecko-badge-error'}`}>{r.status}</span>
+                      <span className={`gecko-badge gecko-badge-xs ${r.status === 'ISSUED' ? 'gecko-badge-success' : 'gecko-badge-error'}`}>{statusLabel(r.status)}</span>
                     </td>
                     <td style={right}>
                       <button type="button" className="gecko-btn gecko-btn-sm gecko-btn-outline" disabled={opening !== null}
@@ -79,9 +80,9 @@ export function ShiftReceipts({ shift, onReprint, mayVoid = false, onVoided }: {
                         <Icon name="printer" size={14} /> {opening === r.receiptId ? 'Opening…' : 'Reprint'}
                       </button>
                       {mayVoid && r.status === 'ISSUED' && (
-                        <button type="button" className="gecko-btn gecko-btn-sm gecko-btn-ghost" style={{ marginLeft: 4 }}
-                          onClick={() => setVoiding(r)} title="Void this receipt — before the box has moved">
-                          <Icon name="x" size={14} /> Void
+                        <button type="button" className="gecko-btn gecko-btn-sm gecko-btn-danger" style={{ marginLeft: 4 }}
+                          onClick={() => setVoiding(r)} title="Delete this receipt — before the box has moved">
+                          <Icon name="trash" size={14} /> Delete
                         </button>
                       )}
                     </td>

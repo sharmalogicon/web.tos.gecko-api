@@ -106,7 +106,7 @@ function ActivityTable({ moves }: { moves: RecentMove[] }) {
               <td className="gecko-mono gecko-dash-cell-time">{timeOfDay(move.at)}</td>
               <td>
                 {move.status === 'VOIDED'
-                  ? <span className="gecko-badge gecko-badge-gray gecko-badge-xs">Voided</span>
+                  ? <span className="gecko-badge gecko-badge-gray gecko-badge-xs">Deleted</span>
                   : <span className="gecko-badge gecko-badge-success gecko-badge-xs">Complete</span>}
               </td>
             </tr>

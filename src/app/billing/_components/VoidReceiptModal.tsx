@@ -28,7 +28,7 @@ export function VoidReceiptModal({ receipt, onClose, onVoided }: {
     try {
       onVoided(await voidReceipt(receipt.receiptId, reason.trim()));
     } catch (err) {
-      setFailure(err instanceof ApiError ? err : new ApiError(0, 'The receipt could not be voided.'));
+      setFailure(err instanceof ApiError ? err : new ApiError(0, 'The receipt could not be deleted.'));
     } finally {
       setSaving(false);
     }
@@ -37,7 +37,7 @@ export function VoidReceiptModal({ receipt, onClose, onVoided }: {
   const fieldError = failure?.forField('reason');
 
   return (
-    <Modal isOpen onClose={onClose} title={`Void ${receipt.receiptNo}`}
+    <Modal isOpen onClose={onClose} title={`Delete ${receipt.receiptNo}`}
            subtitle={`${formatBaht(receipt.total)}${receipt.payerName ? ` · ${receipt.payerName}` : ''}`}>
       <form onSubmit={submit} className="gecko-stack">
         <div className="gecko-alert gecko-alert-warning">
@@ -66,7 +66,7 @@ export function VoidReceiptModal({ receipt, onClose, onVoided }: {
         <div className="gecko-row" style={{ justifyContent: 'flex-end', gap: 8 }}>
           <button type="button" className="gecko-btn gecko-btn-outline" onClick={onClose}>Keep it</button>
           <button type="submit" className="gecko-btn gecko-btn-danger" disabled={saving || reason.trim().length < 5}>
-            <Icon name="x" size={14} /> {saving ? 'Voiding…' : 'Void receipt'}
+            <Icon name="trash" size={14} /> {saving ? 'Deleting…' : 'Delete receipt'}
           </button>
         </div>
       </form>

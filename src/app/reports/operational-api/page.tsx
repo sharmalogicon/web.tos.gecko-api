@@ -118,7 +118,7 @@ export default function OperationalReportsPage() {
         <ReportKpi label="Out" value={r?.total.out.toLocaleString()} sub={r ? `${r.total.fullOut} full · ${r.total.emptyOut} empty` : undefined} tone="success" />
         <ReportKpi label="Busiest day" value={r ? (busiest?.tally.moves ?? 0).toLocaleString() : undefined}
                    sub={busiest && busiest.tally.moves ? busiest.day : undefined} />
-        <ReportKpi label="Voided EIRs" value={r?.voided.toLocaleString()} sub="not counted as moves" tone={r && r.voided ? 'warning' : 'neutral'} />
+        <ReportKpi label="Deleted EIRs" value={r?.voided.toLocaleString()} sub="not counted as moves" tone={r && r.voided ? 'warning' : 'neutral'} />
       </div>
 
       {r && (
@@ -207,7 +207,7 @@ export default function OperationalReportsPage() {
                 <td className="gecko-mono">{e.lineCode}</td>
                 <td className="gecko-mono">{e.truckPlate}</td>
                 <td>
-                  <span className={`gecko-badge ${e.status === 'VOIDED' ? 'gecko-badge-gray' : 'gecko-badge-success'}`}>{e.status === 'VOIDED' ? 'Voided' : 'Completed'}</span>
+                  <span className={`gecko-badge ${e.status === 'VOIDED' ? 'gecko-badge-gray' : 'gecko-badge-success'}`}>{e.status === 'VOIDED' ? 'Deleted' : 'Completed'}</span>
                   {e.isLate && <span className="gecko-badge gecko-badge-warning" style={{ marginLeft: 4 }}>Late</span>}
                 </td>
               </tr>

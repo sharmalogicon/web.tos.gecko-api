@@ -84,7 +84,7 @@ export default function CashReceiptsPage() {
       options: [
         { label: 'All', value: '' },
         { label: 'Issued', value: 'ISSUED' },
-        { label: 'Voided', value: 'VOIDED' },
+        { label: 'Deleted', value: 'VOIDED' },
       ],
     },
   ];
@@ -93,7 +93,7 @@ export default function CashReceiptsPage() {
     saveBlob(
       toCsv(
         ['Receipt', 'Time', 'Cashier', 'Order', 'Customer code', 'Customer', 'Tax id', 'Branch no',
-          'Before VAT', 'VAT', 'Total', 'Currency', 'Paid by', 'Status', 'Void reason'],
+          'Before VAT', 'VAT', 'Total', 'Currency', 'Paid by', 'Status', 'Delete reason'],
         rows.map(x => [x.receiptNo, x.receiptAt, x.cashierName, x.orderNo, x.payerCode, x.payerName,
           x.payerTaxId, x.payerBranchNo, x.subtotal, x.tax, x.total, x.currencyCode,
           x.channels.join(' + '), x.status, x.voidReason]),
@@ -214,7 +214,7 @@ export default function CashReceiptsPage() {
                   <td>
                     <span className={`gecko-badge gecko-badge-xs ${r.status === 'VOIDED' ? 'gecko-badge-gray' : 'gecko-badge-success'}`}
                       title={r.status === 'VOIDED' ? r.voidReason ?? undefined : undefined}>
-                      {r.status === 'VOIDED' ? 'Voided' : 'Issued'}
+                      {r.status === 'VOIDED' ? 'Deleted' : 'Issued'}
                     </span>
                   </td>
                 </tr>

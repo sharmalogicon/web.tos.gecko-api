@@ -96,3 +96,21 @@ export function instantFromLocalInput(value: string): string | null {
   const at = new Date(value);
   return Number.isNaN(at.getTime()) ? null : at.toISOString();
 }
+
+/**
+ * A RECORD STATUS AS THE SCREEN SAYS IT.
+ *
+ * The API calls a cancelled EIR or receipt VOIDED, and it is right to: the
+ * number is kept and never reused, and the row stays readable for ever. But
+ * nobody at this depot says "void" — the clerks say DELETE, and that is the
+ * word on every button now (owner, 2026-10-28). So the stored value stays
+ * VOIDED everywhere it is compared, filtered or sent, and only what reaches
+ * the eye is translated. Do not rename the status itself.
+ *
+ * Anything it does not know is passed through unchanged, so a new status added
+ * by the API shows up as itself rather than vanishing.
+ */
+export function statusLabel(status: string | null | undefined): string {
+  if (!status) return '';
+  return status === 'VOIDED' || status === 'VOID' ? 'DELETED' : status;
+}

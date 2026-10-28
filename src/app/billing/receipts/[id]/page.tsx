@@ -85,7 +85,7 @@ export default function CashBillPage() {
             <h1 className="gecko-page-title">Customer Cash Bill</h1>
             {r && (
               <span className={`gecko-badge ${voided ? 'gecko-badge-gray' : 'gecko-badge-success'}`}>
-                {voided ? 'Voided' : 'Issued'}
+                {voided ? 'Deleted' : 'Issued'}
               </span>
             )}
           </div>
@@ -127,8 +127,8 @@ export default function CashBillPage() {
             </button>
           )}
           {r && mayVoid && !voided && (
-            <button className="gecko-btn gecko-btn-outline gecko-btn-sm" onClick={() => setVoiding(true)}>
-              <Icon name="fileX" size={14} /> Void
+            <button className="gecko-btn gecko-btn-danger gecko-btn-sm" onClick={() => setVoiding(true)}>
+              <Icon name="trash" size={14} /> Delete
             </button>
           )}
         </div>
@@ -157,7 +157,7 @@ export default function CashBillPage() {
             <div role="status" className="gecko-alert gecko-alert-warning">
               <Icon name="alertCircle" size={16} />
               <span>
-                This receipt was voided{r.voidedAt ? ` on ${r.voidedAt.slice(0, 10)}` : ''}
+                This receipt was deleted{r.voidedAt ? ` on ${r.voidedAt.slice(0, 10)}` : ''}
                 {r.voidReason ? ` — ${r.voidReason}` : ''}.
                 {r.replacedByReceiptNo && <> It was replaced by <strong>{r.replacedByReceiptNo}</strong>.</>}
                 {/* A split names several replacements, each its own document. */}
@@ -351,7 +351,7 @@ export default function CashBillPage() {
           onClose={() => setVoiding(false)}
           onDone={() => {
             setVoiding(false);
-            toast({ variant: 'success', title: 'Receipt voided', message: r.receiptNo });
+            toast({ variant: 'success', title: 'Receipt deleted', message: r.receiptNo });
             reload();
           }}
           receiptId={r.receiptId}
@@ -404,8 +404,8 @@ function VoidDialog({ receiptId, receiptNo, total, onClose, onDone }: {
       await voidReceipt(receiptId, reason.trim());
       onDone();
     } catch (e) {
-      const err = e instanceof ApiError ? e : new ApiError(0, 'The receipt could not be voided.');
-      setProblem({ title: err.title || 'Could not void it', detail: err.explanation ?? err.message });
+      const err = e instanceof ApiError ? e : new ApiError(0, 'The receipt could not be deleted.');
+      setProblem({ title: err.title || 'Could not delete it', detail: err.explanation ?? err.message });
     } finally {
       setBusy(false);
     }
@@ -413,14 +413,14 @@ function VoidDialog({ receiptId, receiptNo, total, onClose, onDone }: {
 
   return (
     <Modal isOpen onClose={onClose} size="sm" closeOnBackdrop={false}
-      title={`Void ${receiptNo}?`}
+      title={`Delete ${receiptNo}?`}
       subtitle={`${total} was taken on it.`}
       footer={
         <>
-          <span className="gecko-modal-footer-note gecko-flex-1">{ready ? '' : 'Say why it is being voided.'}</span>
+          <span className="gecko-modal-footer-note gecko-flex-1">{ready ? '' : 'Say why it is being deleted.'}</span>
           <button className="gecko-btn gecko-btn-outline gecko-btn-sm" onClick={onClose} disabled={busy}>Cancel</button>
           <button className="gecko-btn gecko-btn-danger gecko-btn-sm" disabled={!ready} onClick={go}>
-            <Icon name="fileX" size={13} /> {busy ? 'Voiding…' : 'Void it'}
+            <Icon name="trash" size={13} /> {busy ? 'Deleting…' : 'Delete it'}
           </button>
         </>
       }>

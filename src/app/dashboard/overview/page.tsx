@@ -278,7 +278,7 @@ function MoveDirection({ move }: { move: RecentMove }) {
 
 function MoveStatus({ status }: { status: RecentMove['status'] }) {
   return status === 'VOIDED'
-    ? <span className="gecko-badge gecko-badge-gray gecko-badge-xs">Voided</span>
+    ? <span className="gecko-badge gecko-badge-gray gecko-badge-xs">Deleted</span>
     : <span className="gecko-badge gecko-badge-success gecko-badge-xs">Complete</span>;
 }
 

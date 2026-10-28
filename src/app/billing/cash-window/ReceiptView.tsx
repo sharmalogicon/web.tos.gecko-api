@@ -121,10 +121,10 @@ export function ReceiptView({ receipt, depot, onPrint, onNext, onVoid, onSplit, 
               {receipt.orderNo} · {receipt.payerName} · {when(receipt.receiptAt)}
             </div>
             {voided && receipt.voidReason && (
-              <div style={{ color: 'var(--gecko-error-700)', fontSize: 13 }}>Voided: {receipt.voidReason}</div>
+              <div style={{ color: 'var(--gecko-error-700)', fontSize: 13 }}>Deleted: {receipt.voidReason}</div>
             )}
             {receipt.replacesReceiptNo && (
-              <div className="gecko-text-muted" style={{ fontSize: 13 }}>Replaces voided receipt {receipt.replacesReceiptNo}</div>
+              <div className="gecko-text-muted" style={{ fontSize: 13 }}>Replaces deleted receipt {receipt.replacesReceiptNo}</div>
             )}
             {receipt.replacedByReceiptNo && (
               <div className="gecko-text-muted" style={{ fontSize: 13 }}>Replaced by {receipt.replacedByReceiptNo}</div>
@@ -194,8 +194,8 @@ export function ReceiptView({ receipt, depot, onPrint, onNext, onVoid, onSplit, 
             </button>
           )}
           {onVoid && !voided && (
-            <button className="gecko-btn gecko-btn-ghost" onClick={onVoid} title="Keyed wrong? Void it before the box moves, then take the payment again">
-              <Icon name="x" size={16} /> Void
+            <button className="gecko-btn gecko-btn-danger" onClick={onVoid} title="Keyed wrong? Delete it before the box moves, then take the payment again">
+              <Icon name="trash" size={16} /> Delete
             </button>
           )}
         </div>

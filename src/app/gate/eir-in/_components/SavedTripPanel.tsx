@@ -162,7 +162,7 @@ export function SavedTripPanel({ result }: { result: TripSaveResult }) {
             toast({
               variant: 'success',
               title: `Split into ${made.length} receipts`,
-              message: `${made.map(x => x.receiptNo).join(' · ')} — the original is voided. Print each from its own page.`,
+              message: `${made.map(x => x.receiptNo).join(' · ')} — the original is deleted. Print each from its own page.`,
             });
             // Each part is its own tax invoice and the driver leaves with all
             // of them, so all of them are printed. The banner above still names

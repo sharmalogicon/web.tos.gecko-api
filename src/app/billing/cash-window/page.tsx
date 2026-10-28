@@ -376,7 +376,7 @@ export default function CashWindowPage() {
         <ShiftReceipts shift={shift} onReprint={r => { setReceipt(r); window.scrollTo({ top: 0 }); }}
           mayVoid={mayVoid}
           onVoided={v => {
-            toast.toast({ variant: 'warning', title: `${v.receiptNo} voided`, message: 'Take the payment again for the right customer or box.' });
+            toast.toast({ variant: 'warning', title: `${v.receiptNo} deleted`, message: 'Take the payment again for the right customer or box.' });
             if (receipt?.receiptId === v.receiptId) setReceipt(v);
             loadShift();
           }} />
@@ -387,7 +387,7 @@ export default function CashWindowPage() {
           onVoided={v => {
             setVoidingReceipt(null);
             setReceipt(v);
-            toast.toast({ variant: 'warning', title: `${v.receiptNo} voided`, message: 'Take the payment again for the right customer or box.' });
+            toast.toast({ variant: 'warning', title: `${v.receiptNo} deleted`, message: 'Take the payment again for the right customer or box.' });
             loadShift();
           }} />
       )}
