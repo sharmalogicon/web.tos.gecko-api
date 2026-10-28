@@ -201,6 +201,64 @@ export interface GateTransaction {
   customsPermitNo: string | null; paperlessCode: string | null; nextLocationCode: string | null;
   transactionAt: string; recordedAt: string; status: "COMPLETED" | "VOIDED";
   containerVisitId: string | null; bookingContainerCompleted: boolean; rowVersion: string;
+
+  /**
+   * THE WORDS THE DEPOT USES, sent beside the codes since 2026-10-28
+   * (docs/GATE_NAMES_AND_COUPON_FOR_API.md). The API picks the party's LOCAL
+   * name where MDM has one and its English name otherwise — one field, chosen
+   * there, not re-derived here.
+   *
+   * Null, never an empty string, for a code MDM does not know, so the screen
+   * falls back to the code. Optional on the type only so a depot on an older
+   * build degrades to codes instead of showing `undefined`.
+   *
+   * ONLY THE GET DETAIL CARRIES THESE. The POST and the void answer still
+   * return codes alone, which is why both re-read the EIR.
+   */
+  lineName?: string | null;
+  /**
+   * The booking's customer. There is NO other source for it in any gate read —
+   * before this shipped the EIR could not name who the depot was serving.
+   */
+  customerCode?: string | null;
+  customerName?: string | null;
+  /**
+   * The numbers the depot actually quotes — the carrier's booking number and
+   * the B/L. `orderNo` beside them is Gecko's own filing number: right for a
+   * URL, wrong for the heading. Null when the booking carries neither.
+   */
+  carrierRef?: string | null;
+  subBlNo?: string | null;
+  /**
+   * The coupon this move was recorded against, or null where none was spent —
+   * a movement that is not billable, or one gated before Revenue issued one.
+   * `gateAuthorizationId` above is the same id and stays where it was.
+   */
+  coupon?: EirCoupon | null;
+}
+
+/**
+ * The coupon as the EIR reads it back: the preflight's four fields plus what
+ * happened to it afterwards.
+ *
+ * `receiptNo` IS NOT THE COUPON'S OWN NUMBER. `couponRef` keeps naming the
+ * receipt the cash was first taken on; `receiptNo` names the receipt that
+ * holds this box NOW. After a split they differ — verified live on KORAKIT,
+ * where EIR —00039 and —00040 were both paid on CAKTC261000006 and their
+ * coupons now point at CAKTC261000008 and CAKTC261000007. Quote `receiptNo`
+ * to anyone asking what to pull from the drawer.
+ *
+ * It is null for a CREDIT coupon, which has no receipt at all, and for one
+ * whose receipt has since been voided.
+ *
+ * A COUPON CAN BE REVOKED AFTER IT WAS SPENT and the move still stands. Say so
+ * rather than showing a clean "yes" — the API sets `revokedAt` for exactly
+ * this case (owner 2026-10-28).
+ */
+export interface EirCoupon extends GateCoupon {
+  receiptNo?: string | null;
+  revokedAt?: string | null;
+  revokeReason?: string | null;
 }
 
 export interface GateTransactionSummary {
@@ -217,6 +275,13 @@ export interface GateTransactionSummary {
    */
   carrierRef?: string | null;
   subBlNo?: string | null;
+  /**
+   * The line BY NAME (API 2026-10-28). It is on the summary and not only the
+   * detail because a register cannot resolve fifty codes a row at a time @d
+   * the owner confirmed it costs one cached master-data read per page there,
+   * not a join per row.
+   */
+  lineName?: string | null;
 }
 
 export interface YardContainer {
@@ -247,6 +312,15 @@ export interface TruckVisit {
    * Do not recompute it here by counting transactions.
    */
   pickupDropoffMode?: PickupDropoffMode | null;
+  /**
+   * The transporter BY NAME (API 2026-10-28), on the list, the single read,
+   * the depart answer and the truck correction.
+   *
+   * THE VISIT'S HAULIER IS THE ONE TO SHOW. A booking carries one too, but
+   * that is only who was expected; this is the truck that drove in, and it is
+   * what `PATCH /gate/visits/{id}` corrects (owner 2026-10-28).
+   */
+  haulierName?: string | null;
 }
 
 /** The `PICKUP_DROPOFF_MODE` code list; labels come from it, not from here. */

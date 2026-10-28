@@ -3,6 +3,7 @@ import React, { useEffect, useState } from 'react';
 import Link from 'next/link';
 import { Icon } from '@/components/ui/Icon';
 import { Modal } from '@/components/ui/Modal';
+import { PartyName } from '@/components/ui/PartyName';
 import { useToast } from '@/components/ui/Toast';
 import { useApi, type Paged } from '@/lib/api/use-api';
 import { apiDownload, apiSend, saveBlob } from '@/lib/api/client';
@@ -11,6 +12,7 @@ import { useSession } from '@/lib/auth/session';
 import { TOS_PERMISSIONS, formatContainerNo, formatDateTime, type TruckVisit } from '@/lib/api/tos';
 import { WINDOW_PERMISSIONS, formatBaht, visitQuotePath, type VisitQuote } from '@/lib/api/window';
 import { codeLabel, useCodeList } from '@/lib/api/lookups';
+import { statusLabel } from '@/lib/format';
 import { EIR_PRINT_NOTE, openPdf } from '@/lib/api/open-pdf';
 import { couponPdfPath } from '@/lib/api/receipts';
 import { receiptByNo } from '@/lib/api/cash-bills';
@@ -145,6 +147,28 @@ export function EirDetailView({ id }: { id: string }) {
 
   const surveyRows = surveys.data?.items ?? [];
 
+  /**
+   * THE NUMBERS THE DEPOT QUOTES.
+   *
+   * `orderNo` is Gecko's own filing number — right for the URL, wrong for the
+   * heading: nobody at the lane asks for BK-KTC-2610-00185, they ask for the
+   * carrier's booking or the B/L. The register has led with these since
+   * 2026-10-08 and the detail now agrees with it.
+   *
+   * Straight off the EIR since 2026-10-28. It briefly came off the truck visit
+   * instead, because the summary carried `carrierRef` when the detail did not;
+   * the visit is no longer needed for it, so the number no longer waits on a
+   * second read to appear.
+   */
+  const bookingRef = e.carrierRef || e.subBlNo || null;
+
+  /**
+   * THE COUPON, in full. `gateAuthorizationId` alone could only ever say
+   * yes — which coupon, on what channel, against which receipt was a question
+   * the EIR could not answer. `coupon` answers it (API 2026-10-28).
+   */
+  const coupon = e.coupon ?? null;
+
   return (
     <div className="gecko-stack gecko-stack-xl" style={{ maxWidth: 'var(--gecko-container-max)', margin: '0 auto', paddingBottom: 60 }}>
       <div className="gecko-page-actions">
@@ -152,7 +176,7 @@ export function EirDetailView({ id }: { id: string }) {
           <Link href={register} className="gecko-link gecko-cell-meta">← {e.direction === 'OUT' ? 'EIR-Out' : 'EIR-In'} register</Link>
           <div className="gecko-row gecko-row-baseline gecko-stack-md gecko-mt-1">
             <h1 className="gecko-page-title">{e.eirNo}</h1>
-            <span className={`gecko-badge gecko-badge-${e.status === 'VOIDED' ? 'error' : 'success'}`}>{e.status}</span>
+            <span className={`gecko-badge gecko-badge-${e.status === 'VOIDED' ? 'error' : 'success'}`}>{statusLabel(e.status)}</span>
             {e.isLate && <span className="gecko-badge gecko-badge-warning">late, on record</span>}
             {e.sealMismatch && <span className="gecko-badge gecko-badge-warning">seal differs</span>}
           </div>
@@ -182,8 +206,16 @@ export function EirDetailView({ id }: { id: string }) {
               {printingDoc === 'coupon' ? 'Preparing…' : 'Coupon (cash bill)'}
             </button>
           )}
+          {/* DELETE, in the clerk's word, in the project's destructive style
+              (gecko-btn-danger + the trash icon, as every other delete on the
+              system reads). It is still a VOID underneath — the number is kept
+              and never reused — which is why the dialog says so before it is
+              pressed, and why the EIR stays readable afterwards with a VOIDED
+              badge on it. */}
           {mayVoid && (
-            <button className="gecko-btn gecko-btn-outline gecko-btn-sm" onClick={() => setVoiding(true)}>Void EIR</button>
+            <button className="gecko-btn gecko-btn-danger gecko-btn-sm" onClick={() => setVoiding(true)}>
+              <Icon name="trash" size={14} /> Delete EIR
+            </button>
           )}
           {/* The EIR prints VALUES ONLY onto pre-printed stationery. At "Fit to
               page" every value lands a few millimetres out and the whole form
@@ -196,7 +228,7 @@ export function EirDetailView({ id }: { id: string }) {
         <div className="gecko-alert gecko-alert-error">
           <Icon name="alertCircle" size={18} />
           <div>
-            <div style={{ fontWeight: 600 }}>Voided {formatDateTime(e.voidedAt)}</div>
+            <div style={{ fontWeight: 600 }}>Deleted {formatDateTime(e.voidedAt)}</div>
             <div>{e.voidReason ?? 'No reason recorded.'} The number is kept and never reused; the move is re-recorded at the gate desk.</div>
           </div>
         </div>
@@ -223,7 +255,7 @@ export function EirDetailView({ id }: { id: string }) {
           {visit.data && (
             <>
               {visit.data.trailerPlate && <Line label="Trailer" value={visit.data.trailerPlate} />}
-              <Line label="Haulier" value={visit.data.haulierCode ?? '—'} />
+              <Line label="Haulier" value={<PartyName code={visit.data.haulierCode} name={visit.data.haulierName} />} />
               <Line label="Driver" value={visit.data.driverName ?? '—'} />
               {visit.data.driverMobile && <Line label="Mobile" value={visit.data.driverMobile} />}
               <Line label="Arrived / left" value={`${formatDateTime(visit.data.arrivedAt)} / ${formatDateTime(visit.data.gateOutAt)}`} />
@@ -243,13 +275,23 @@ export function EirDetailView({ id }: { id: string }) {
       <div className="gecko-grid-2" style={{ gap: 20 }}>
         <Section title="The move">
           <Facts>
-          <Line label="Booking" value={<Link href={`/bookings/${e.bookingId}`} className="gecko-link">{e.orderNo}</Link>} />
-          <Line label="Line" value={e.lineCode} />
+          <Line label="Booking" value={
+            <>
+              <Link href={`/bookings/${e.bookingId}`} className="gecko-link">{bookingRef ?? e.orderNo}</Link>
+              {/* Kept, small: it is still the number that files the order. */}
+              {bookingRef && <div className="gecko-cell-meta gecko-text-mono">{e.orderNo}</div>}
+            </>
+          } />
+          <Line label="Line" value={<PartyName code={e.lineCode} name={e.lineName} />} />
+          {/* WHO THE DEPOT IS SERVING. It was absent from this card until the
+              API started sending it: the customer is the booking's, and no
+              gate read carried it before 2026-10-28. */}
+          <Line label="Customer" value={<PartyName code={e.customerCode} name={e.customerName} />} />
           <Line label="Equipment" value={[e.equipmentTypeCode, e.isoCode].filter(Boolean).join(' · ') || '—'} />
           <Line label="Position" value={e.positionText ?? '—'} />
           <Line label="Recorded" value={formatDateTime(e.recordedAt)} />
           {e.replacesGateTransactionId && (
-            <Line label="Reissue of" value={<Link href={eirPath(e.direction, e.replacesGateTransactionId)} className="gecko-link">the voided EIR</Link>} />
+            <Line label="Reissue of" value={<Link href={eirPath(e.direction, e.replacesGateTransactionId)} className="gecko-link">the deleted EIR</Link>} />
           )}
           {e.remarks && <Line label="Remarks" value={e.remarks} />}
           <Line label="Customs permit" value={e.customsPermitNo ?? '—'} />
@@ -349,7 +391,41 @@ export function EirDetailView({ id }: { id: string }) {
         <Line label="Cut-off applied" value={e.cutoffKindApplied ? `${e.cutoffKindApplied} · ${formatDateTime(e.cutoffAtApplied)}` : '—'} />
         <Line label="Late override" value={e.lateOverrideReason ?? '—'} />
         <Line label="Check-digit override" value={e.checkDigitOverrideReason ?? '—'} />
-        <Line label="Paid by coupon" value={e.gateAuthorizationId ? 'yes' : '—'} />
+        {/* WHICH COUPON, NOT WHETHER. This said a bare "yes" until the API
+            started sending the coupon itself (2026-10-28): a supervisor asked
+            what paid for a move could not answer it from the EIR.
+
+            REVOKED AFTER IT WAS SPENT is a real case — the move still stands,
+            and the coupon is marked rather than quietly reported as good.
+            `receiptNo` is the receipt holding this box NOW, which after a
+            split is not the one `couponRef` names; it is the one to pull from
+            the drawer. Null on CREDIT, which has no receipt at all. */}
+        <Line label="Paid by coupon" value={
+          !coupon
+            ? (e.gateAuthorizationId ? 'yes' : '—')
+            : <>
+              <span className={coupon.revokedAt ? 'gecko-tone-warning' : undefined}>
+                <span className="gecko-text-mono">{coupon.couponRef}</span>
+                {' · '}
+                <span className={`gecko-badge gecko-badge-xs gecko-badge-${coupon.paymentChannel === 'CASH' ? 'success' : 'warning'}`}>
+                  {coupon.paymentChannel}
+                </span>
+              </span>
+              <div className="gecko-cell-meta">
+                {coupon.receiptNo
+                  ? <>on receipt <span className="gecko-text-mono">{coupon.receiptNo}</span></>
+                  : coupon.paymentChannel === 'CREDIT'
+                    ? 'on account — no receipt'
+                    : 'no live receipt — it was deleted'}
+              </div>
+              {coupon.revokedAt && (
+                <div className="gecko-cell-meta gecko-tone-warning">
+                  Revoked {formatDateTime(coupon.revokedAt)}, after it was spent at the gate.
+                  {coupon.revokeReason ? ` ${coupon.revokeReason}` : ''} The move still stands.
+                </div>
+              )}
+            </>
+        } />
           </Facts>
         
       </Section>
@@ -465,7 +541,7 @@ function VoidModal({ eir, onClose, onVoided }: { eir: EirDetail; onClose: () => 
     setFailure(null);
     try {
       await apiSend('POST', `${GATE_API}/transactions/${eir.gateTransactionId}/void`, { reason: reason.trim(), rowVersion: eir.rowVersion });
-      toast.toast({ variant: 'success', title: `${eir.eirNo} voided`, message: 'The step it completed is open again. Re-record the move at the gate desk.' });
+      toast.toast({ variant: 'success', title: `${eir.eirNo} deleted`, message: 'The step it completed is open again. Re-record the move at the gate desk.' });
       onVoided();
     } catch (e: unknown) {
       setFailure(e instanceof ApiError ? e : new ApiError(0, 'Could not reach the Gecko API.'));
@@ -478,15 +554,15 @@ function VoidModal({ eir, onClose, onVoided }: { eir: EirDetail; onClose: () => 
   const general = failure && !failure.forField('reason') ? failure : null;
 
   return (
-    <Modal isOpen onClose={onClose} title={`Void ${eir.eirNo}`}
-           subtitle={`${formatContainerNo(eir.containerNo)} · ${eir.movementCode}. The number is kept; the booking step and the yard go back to how they were.`}
+    <Modal isOpen onClose={onClose} title={`Delete ${eir.eirNo}`}
+           subtitle={`${formatContainerNo(eir.containerNo)} · ${eir.movementCode}. The number is kept and never reused; the booking step and the yard go back to how they were.`}
            footer={
              <>
                <button className="gecko-btn gecko-btn-ghost" onClick={onClose} disabled={busy}>Cancel</button>
                {stale
                  ? <button className="gecko-btn gecko-btn-primary" onClick={onVoided}>Reload the EIR</button>
-                 : <button className="gecko-btn gecko-btn-primary" onClick={submit} disabled={busy || reason.trim().length < 3}>
-                     {busy ? 'Voiding…' : 'Void EIR'}
+                 : <button className="gecko-btn gecko-btn-danger" onClick={submit} disabled={busy || reason.trim().length < 3}>
+                     {busy ? 'Deleting…' : <><Icon name="trash" size={15} /> Delete EIR</>}
                    </button>}
              </>
            }>
@@ -501,7 +577,7 @@ function VoidModal({ eir, onClose, onVoided }: { eir: EirDetail; onClose: () => 
           </div>
         )}
         <div className="gecko-form-group">
-          <label className="gecko-form-label">Why is it voided? *</label>
+          <label className="gecko-form-label">Why is it being deleted? *</label>
           <textarea className="gecko-input" rows={3} maxLength={300} value={reason} onChange={ev => setReason(ev.target.value)}
                     placeholder="e.g. Wrong box keyed at the desk" />
           {failure?.forField('reason') && <div className="gecko-field-error">{failure.forField('reason')}</div>}

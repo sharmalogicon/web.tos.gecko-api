@@ -4,6 +4,8 @@ import Link from 'next/link';
 import { DateField } from '@/components/ui/DateField';
 import { Icon } from '@/components/ui/Icon';
 import { EmptyState } from '@/components/ui/EmptyState';
+import { PartyName } from '@/components/ui/PartyName';
+import { statusLabel } from '@/lib/format';
 import { useServerList } from '@/lib/api/use-server-list';
 import { saveBlob } from '@/lib/api/client';
 import { useSession } from '@/lib/auth/session';
@@ -46,10 +48,10 @@ export function EirRegister({ direction }: { direction: GateDirection }) {
   const clear = () => { list.setSearch(''); setFromDay(''); setToDay(''); setContainerNo(''); setTruck(''); setStatus(''); setLateOnly(false); };
 
   const exportCsv = () => {
-    const head = ['EIR', 'Time', 'Container', 'Movement', 'F/E', 'Booking / B/L', 'Order', 'Line', 'Truck', 'Late', 'Status'];
+    const head = ['EIR', 'Time', 'Container', 'Movement', 'F/E', 'Booking / B/L', 'Order', 'Line', 'Line name', 'Truck', 'Late', 'Status'];
     const cell = (v: string) => `"${v.replace(/"/g, '""')}"`;
     const lines = rows.map(r => [r.eirNo, r.transactionAt, r.containerNo, r.movementCode, r.fullEmpty,
-      r.carrierRef || r.subBlNo || '', r.orderNo, r.lineCode, r.truckPlate, r.isLate ? 'yes' : '', r.status].map(cell).join(','));
+      r.carrierRef || r.subBlNo || '', r.orderNo, r.lineCode, r.lineName ?? '', r.truckPlate, r.isLate ? 'yes' : '', r.status].map(cell).join(','));
     saveBlob(new Blob([[head.join(','), ...lines].join('\r\n')], { type: 'text/csv;charset=utf-8' }), `eir-${direction.toLowerCase()}.csv`);
   };
 
@@ -121,7 +123,7 @@ export function EirRegister({ direction }: { direction: GateDirection }) {
             <select className="gecko-input" value={status} onChange={e => setStatus(e.target.value)}>
               <option value="">Any</option>
               <option value="COMPLETED">Completed</option>
-              <option value="VOIDED">Voided</option>
+              <option value="VOIDED">Deleted</option>
             </select>
           </div>
           <label className="gecko-row" style={{ gap: 6, alignItems: 'center', paddingBottom: 8 }}>
@@ -166,10 +168,14 @@ export function EirRegister({ direction }: { direction: GateDirection }) {
                       <span className="gecko-cell-meta gecko-mono gecko-cell-tight">{r.orderNo}</span>
                     )}
                   </td>
-                  <td>{r.lineCode}</td>
+                  {/* The line BY NAME, its code underneath — a clerk scanning
+                      the register reads CHENG LIE, not 20261955. The server
+                      sends the name on the row (API 2026-10-28); it is never
+                      looked up here, because fifty rows would be fifty reads. */}
+                  <td><PartyName code={r.lineCode} name={r.lineName} /></td>
                   <td>{r.truckPlate}</td>
                   <td>
-                    <span className={`gecko-badge gecko-badge-xs gecko-badge-${r.status === 'VOIDED' ? 'error' : 'success'}`}>{r.status.toLowerCase()}</span>
+                    <span className={`gecko-badge gecko-badge-xs gecko-badge-${r.status === 'VOIDED' ? 'error' : 'success'}`}>{statusLabel(r.status).toLowerCase()}</span>
                     {r.isLate && <span className="gecko-badge gecko-badge-xs gecko-badge-warning" style={{ marginLeft: 4 }}>late</span>}
                   </td>
                 </tr>
