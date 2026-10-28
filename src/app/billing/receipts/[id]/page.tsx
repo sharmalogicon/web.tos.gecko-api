@@ -30,7 +30,7 @@ import { amount } from '@/lib/api/charges';
 import { formatContainerNo } from '@/lib/api/tos';
 import {
   canChangePayer, canDivide, cashInvoicePdfPath, channelLabel, downloadReceiptPdf,
-  receiptPath, voidReceipt, type Receipt,
+  printReceiptParts, printedPartsToast, receiptPath, voidReceipt, type Receipt,
 } from '@/lib/api/receipts';
 import { SplitReceiptModal } from '../../_components/SplitReceiptModal';
 import { openPdf } from '@/lib/api/open-pdf';
@@ -338,6 +338,20 @@ export default function CashBillPage() {
                 variant: 'success',
                 title: `Split into ${made.length} receipts`,
                 message: `${first.receiptNo} kept the first part; new: ${rest.map(x => x.receiptNo).join(' · ')}.`,
+              // EACH PART IS ITS OWN TAX INVOICE and the driver leaves with
+              // all of them. OFFERED, not fired off: the receipt may have been
+              // split to send one part by e-mail, and three tabs nobody asked
+              // for is its own kind of wrong. A toast carrying an action lives
+              // four times as long, so there is time to take it.
+                action: {
+                  label: `Print all ${made.length}`,
+                  onClick: () => {
+                    void (async () => {
+                      const say = printedPartsToast(await printReceiptParts(made, 'receipt'), 'receipt');
+                      if (say) toast(say);
+                    })();
+                  },
+                },
               });
             }
             reload();

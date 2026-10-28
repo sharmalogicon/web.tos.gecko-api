@@ -19,7 +19,7 @@ import { DrawerBar } from './DrawerBar';
 import { ShiftReceipts } from './ShiftReceipts';
 import { VoidReceiptModal } from '../_components/VoidReceiptModal';
 import { SplitReceiptModal } from '../_components/SplitReceiptModal';
-import { canChangePayer } from '@/lib/api/receipts';
+import { canChangePayer, printReceiptParts, printedPartsToast } from '@/lib/api/receipts';
 import { ReceiptView, usePrintReceipt } from './ReceiptView';
 import { formatDate } from '@/lib/format';
 
@@ -132,6 +132,12 @@ export default function CashWindowPage() {
    * it.
    */
   const [payKey, setPayKey] = useState(newIdempotencyKey);
+
+  /** Every part of a split, in order — one tax invoice each, part one first. */
+  const printAllParts = async (made: { receiptId: string; receiptNo: string }[]) => {
+    const say = printedPartsToast(await printReceiptParts(made, 'receipt'), 'receipt');
+    if (say) toast.toast(say);
+  };
 
   const orderInput = useRef<HTMLInputElement>(null);
   const tenderedInput = useRef<HTMLInputElement>(null);
@@ -412,6 +418,15 @@ export default function CashWindowPage() {
                 variant: 'success',
                 title: `Split into ${made.length} receipts`,
                 message: `${first.receiptNo} kept the first part; new: ${rest.map(x => x.receiptNo).join(' · ')}.`,
+              // EACH PART IS ITS OWN TAX INVOICE and the driver leaves with
+              // all of them. OFFERED, not fired off: the receipt may have been
+              // split to send one part by e-mail, and three tabs nobody asked
+              // for is its own kind of wrong. A toast carrying an action lives
+              // four times as long, so there is time to take it.
+                action: {
+                  label: `Print all ${made.length}`,
+                  onClick: () => { void printAllParts(made); },
+                },
               });
             }
             loadShift();

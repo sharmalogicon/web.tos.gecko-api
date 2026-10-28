@@ -11,6 +11,17 @@ interface ToastItem {
   variant: ToastVariant;
   title: string;
   message?: string;
+  /**
+   * ONE THING THE CLERK CAN DO ABOUT IT, offered on the toast itself.
+   *
+   * A toast with an action LIVES LONGER — three seconds is enough to read
+   * "split into 3" and nowhere near enough to decide to print them. An
+   * offer that vanishes before it can be taken is worse than no offer.
+   *
+   * It is one action, not a menu: anything needing a choice belongs on the
+   * page, not in something that dismisses itself.
+   */
+  action?: { label: string; onClick: () => void };
 }
 
 interface ToastContextValue {
@@ -40,12 +51,15 @@ const VARIANT_META: Record<ToastVariant, { className: string; icon: string }> = 
 };
 
 const DURATION_MS = 3000;
+/** Long enough to read it, weigh it and reach the button. */
+const DURATION_WITH_ACTION_MS = 12000;
 
 // ─── Single toast card ────────────────────────────────────────────────────────
 
 function ToastCard({ item, onRemove }: { item: ToastItem; onRemove: (id: string) => void }) {
   const meta = VARIANT_META[item.variant];
   const [progress, setProgress] = useState(100);
+  const life = item.action ? DURATION_WITH_ACTION_MS : DURATION_MS;
 
   // Countdown progress bar + auto-dismiss
   useEffect(() => {
@@ -53,14 +67,14 @@ function ToastCard({ item, onRemove }: { item: ToastItem; onRemove: (id: string)
     let elapsed = 0;
     const timer = setInterval(() => {
       elapsed += step;
-      setProgress(Math.max(0, 100 - (elapsed / DURATION_MS) * 100));
-      if (elapsed >= DURATION_MS) {
+      setProgress(Math.max(0, 100 - (elapsed / life) * 100));
+      if (elapsed >= life) {
         clearInterval(timer);
         onRemove(item.id);
       }
     }, step);
     return () => clearInterval(timer);
-  }, [item.id, onRemove]);
+  }, [item.id, life, onRemove]);
 
   return (
     <div className={`gecko-toast ${meta.className}`}>
@@ -71,6 +85,12 @@ function ToastCard({ item, onRemove }: { item: ToastItem; onRemove: (id: string)
         <div className="gecko-toast-content">
           <div className="gecko-toast-title">{item.title}</div>
           {item.message && <div className="gecko-toast-message">{item.message}</div>}
+          {item.action && (
+            <button type="button" className="gecko-toast-action"
+              onClick={() => { item.action!.onClick(); onRemove(item.id); }}>
+              {item.action.label}
+            </button>
+          )}
         </div>
         <button className="gecko-toast-close" onClick={() => onRemove(item.id)} aria-label="Close">
           <Icon name="x" size={13} />

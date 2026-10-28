@@ -6,6 +6,7 @@ import { useToast } from '@/components/ui/Toast';
 import { ApiError } from '@/lib/api/problem';
 import { EIR_PRINT_NOTE, openPdf } from '@/lib/api/open-pdf';
 import { SplitReceiptModal } from '@/app/billing/_components/SplitReceiptModal';
+import { printReceiptParts, printedPartsToast, type Receipt } from '@/lib/api/receipts';
 import type { TripSaveResult } from '@/lib/api/gate-trips';
 
 /**
@@ -26,6 +27,17 @@ import type { TripSaveResult } from '@/lib/api/gate-trips';
 export function SavedTripPanel({ result }: { result: TripSaveResult }) {
   const { toast } = useToast();
   const [splitting, setSplitting] = useState(false);
+  /**
+   * THE PARTS A SPLIT MADE, once one has been done from this panel.
+   *
+   * `result.receipt` is what the Save answered with and it never changes — so
+   * after a split it names PART ONE and nothing else, which is why Receipt and
+   * Coupon printed one document and the driver left two short.
+   *
+   * A ONE-PART answer is a change of payer, not a split: same id, same number.
+   * It is still kept, because the payer printed on the paper has changed.
+   */
+  const [parts, setParts] = useState<Receipt[] | null>(null);
   /** Which document is being fetched — the pressed button spins, not all of them. */
   const [printing, setPrinting] = useState<string | null>(null);
 
@@ -56,6 +68,37 @@ export function SavedTripPanel({ result }: { result: TripSaveResult }) {
       setPrinting(null);
     }
   };
+  /**
+   * What to print: the split's parts once there are any, else the receipt the
+   * Save answered with. Its `pdfUrl` is the same document `receiptPdfPath`
+   * builds, so one path serves both and there is no second code path to drift.
+   */
+  const partList: { receiptId: string; receiptNo: string }[] = parts
+    ?? (result.receipt ? [{ receiptId: result.receipt.receiptId, receiptNo: result.receipt.receiptNo }] : []);
+  const split = partList.length > 1;
+
+  /** One part on its own — what a clerk presses when a tab was blocked. */
+  const printOne = async (part: { receiptId: string; receiptNo: string }) => {
+    setPrinting(part.receiptId);
+    try {
+      const say = printedPartsToast(await printReceiptParts([part], 'receipt'), 'receipt');
+      if (say) toast(say);
+    } finally {
+      setPrinting(null);
+    }
+  };
+
+  const printParts = async (kind: 'receipt' | 'coupon') => {
+    if (partList.length === 0) return;
+    setPrinting(kind);
+    try {
+      const say = printedPartsToast(await printReceiptParts(partList, kind), kind);
+      if (say) toast(say);
+    } finally {
+      setPrinting(null);
+    }
+  };
+
   const gated = result.rows.filter(r => r.status === 'GATED');
   const planned = result.rows.filter(r => r.status === 'PLANNED');
   const refused = result.rows.filter(r => r.status !== 'GATED' && r.status !== 'PLANNED');
@@ -78,22 +121,25 @@ export function SavedTripPanel({ result }: { result: TripSaveResult }) {
         <div className="gecko-row gecko-gap-2 gecko-flex-wrap">
           {result.receipt && (
             <button className="gecko-btn gecko-btn-outline gecko-btn-sm" disabled={printing !== null}
-              onClick={() => void print('receipt', result.receipt!.pdfUrl, `${result.receipt!.receiptNo}.pdf`, 'Receipt')}>
+              onClick={() => void printParts('receipt')}
+              title={split ? `One tax invoice per part: ${partList.map(x => x.receiptNo).join(', ')}` : undefined}>
               {printing === 'receipt'
                 ? <span className="gecko-spinner gecko-spinner-sm" />
                 : <Icon name="print" size={13} />}
-              Receipt {result.receipt.receiptNo}
+              {split ? `Receipts ×${partList.length}` : `Receipt ${partList[0]?.receiptNo ?? result.receipt.receiptNo}`}
             </button>
           )}
           {/* One cash bill per receipt, listing every box and charge on it —
-              no longer a slip per box, so the label says what it is. */}
-          {result.receipt?.couponPdfUrl && (
+              no longer a slip per box, so the label says what it is. After a
+              split that is one per PART, and the count says so. */}
+          {(result.receipt?.couponPdfUrl || split) && (
             <button className="gecko-btn gecko-btn-outline gecko-btn-sm" disabled={printing !== null}
-              onClick={() => void print('coupon', result.receipt!.couponPdfUrl!, `${result.receipt!.receiptNo}-coupon.pdf`, 'Coupon')}>
+              onClick={() => void printParts('coupon')}
+              title={split ? `One cash bill per part: ${partList.map(x => x.receiptNo).join(', ')}` : undefined}>
               {printing === 'coupon'
                 ? <span className="gecko-spinner gecko-spinner-sm" />
                 : <Icon name="print" size={13} />}
-              Coupon (cash bill)
+              {split ? `Coupons (cash bill) ×${partList.length}` : 'Coupon (cash bill)'}
             </button>
           )}
           {result.truckInPdfUrl && (
@@ -116,6 +162,21 @@ export function SavedTripPanel({ result }: { result: TripSaveResult }) {
           )}
         </div>
       </div>
+
+      {/* ONE LINK PER PART, so a single one can be reprinted — which is what a
+          clerk needs when the browser blocked the second tab and only part one
+          came out. Only after a real split; one receipt has its own button. */}
+      {split && (
+        <div className="gecko-print-note gecko-print-note-left">
+          {partList.map(part => (
+            <button key={part.receiptId} className="gecko-link gecko-link-button gecko-coupon-reprint"
+              disabled={printing !== null}
+              onClick={() => void printOne(part)}>
+              {printing === part.receiptId ? 'Preparing…' : `Print ${part.receiptNo}`}
+            </button>
+          ))}
+        </div>
+      )}
 
       {/* Values only, onto pre-printed stationery: scaling ruins it. */}
       <div className="gecko-print-note gecko-print-note-left">{EIR_PRINT_NOTE}</div>
@@ -159,15 +220,26 @@ export function SavedTripPanel({ result }: { result: TripSaveResult }) {
           onClose={() => setSplitting(false)}
           onDone={made => {
             setSplitting(false);
-            toast({
-              variant: 'success',
-              title: `Split into ${made.length} receipts`,
-              message: `${made.map(x => x.receiptNo).join(' · ')} — the original is deleted. Print each from its own page.`,
-            });
-            // Each part is its own tax invoice and the driver leaves with all
-            // of them, so all of them are printed. The banner above still names
-            // the original, which is now voided and points at these.
-
+            setParts(made);
+            // NOTHING IS DESTROYED IN A SPLIT. The first part keeps the
+            // original id and number and the others are new ones beside it —
+            // the cash window has always worded it this way, and this panel
+            // used to contradict it, telling a clerk their receipt was gone.
+            if (made.length === 1) {
+              toast({
+                variant: 'success',
+                title: 'Payer changed',
+                message: `${made[0].receiptNo} is now made out to ${made[0].payerName ?? 'the new payer'}.`,
+              });
+            } else {
+              const [first, ...rest] = made;
+              toast({
+                variant: 'success',
+                title: `Split into ${made.length} receipts`,
+                message: `${first.receiptNo} kept the first part; new: ${rest.map(x => x.receiptNo).join(' · ')}.`
+                  + ' Print now sends one document per part.',
+              });
+            }
           }} />
       )}
     </div>

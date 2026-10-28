@@ -78,10 +78,25 @@ export function EirDetailView({ id }: { id: string }) {
    * Both are authorised endpoints, so both fetch the bytes with the token and
    * hand over a blob. A plain link would answer 401.
    */
-  const receiptNo = charges.data?.boxes
-    ?.flatMap(b => b.lines ?? [])
-    .map(l => l.receiptNo)
-    .find((n): n is string => Boolean(n)) ?? null;
+  /**
+   * EVERY RECEIPT ON THIS VISIT, NOT THE FIRST ONE.
+   *
+   * A split receipt is several tax invoices, and the driver leaves with a
+   * coupon for each — one slip per receipt, each listing only its own boxes.
+   * This was `.find(…)`, which kept the first number and silently dropped the
+   * rest: on EIR-KTC-2610-00120 the special-trailer charge printed and the
+   * ADMIN FEE did not, while the table above listed both (owner 2026-10-28).
+   *
+   * Deduplicated, in the order the charges table shows them — the same
+   * traversal, so the buttons and the table cannot disagree about which
+   * receipt is first.
+   */
+  const receiptNos = [...new Set(
+    (charges.data?.boxes ?? [])
+      .flatMap(b => b.lines ?? [])
+      .map(l => l.receiptNo)
+      .filter((n): n is string => Boolean(n)),
+  )];
 
   const printTruckIn = async () => {
     if (!e) return;
@@ -96,22 +111,62 @@ export function EirDetailView({ id }: { id: string }) {
     }
   };
 
-  const printCoupon = async () => {
-    if (!receiptNo) return;
+  /**
+   * ONE COUPON PER RECEIPT, AWAITED IN TURN.
+   *
+   * A failure on one must not cost the others: a 404 means that part simply
+   * has no coupon (it was credit, or the coupon was never issued), and the
+   * other parts are still owed to the driver. So each is tried, the failures
+   * are collected, and ONE toast at the end names what printed and what did
+   * not — rather than a toast per receipt, or a silent stop halfway.
+   *
+   * A 403 is the exception and stops the run: the cash-collect permission is
+   * not per receipt, so the second would refuse exactly as the first did.
+   *
+   * If the browser blocks the second tab, `openPdf` saves the file instead.
+   * That is its own deliberate fallback and nothing here second-guesses it:
+   * the clerk ends up with the document either way.
+   */
+  const printCoupons = async (nos: string[]) => {
+    if (nos.length === 0) return;
     setPrintingDoc('coupon');
+    const printed: string[] = [];
+    const noCoupon: string[] = [];
+    let refused: string | null = null;
     try {
-      const receipt = await receiptByNo(receiptNo);
-      await openPdf(couponPdfPath(receipt.receiptId), `${receiptNo}-coupon.pdf`);
-    } catch (err: unknown) {
-      const api = err instanceof ApiError ? err : null;
-      toast.toast({ variant: 'danger', title: 'Coupon not printed',
-        message: api?.status === 404
-          ? `No coupon was issued on ${receiptNo}.`
-          : api?.status === 403
+      for (const no of nos) {
+        try {
+          const receipt = await receiptByNo(no);
+          await openPdf(couponPdfPath(receipt.receiptId), `${no}-coupon.pdf`);
+          printed.push(no);
+        } catch (err: unknown) {
+          const api = err instanceof ApiError ? err : null;
+          if (api?.status === 404) { noCoupon.push(no); continue; }
+          refused = api?.status === 403
             ? 'Printing a cash bill needs the cash-collect permission.'
-            : api?.title ?? 'Could not reach the Gecko API.' });
+            : api?.title ?? 'Could not reach the Gecko API.';
+          break;
+        }
+      }
     } finally {
       setPrintingDoc(null);
+    }
+
+    const list = (xs: string[]) => xs.join(', ');
+    if (refused) {
+      toast.toast({ variant: 'danger', title: 'Coupons not printed', message: refused });
+    } else if (printed.length === 0) {
+      toast.toast({ variant: 'danger', title: 'No coupon printed',
+        message: `No coupon was issued on ${list(noCoupon)}.` });
+    } else if (noCoupon.length > 0) {
+      toast.toast({ variant: 'warning', title: 'Some coupons printed',
+        message: `Printed ${list(printed)}; no coupon on ${list(noCoupon)}.` });
+    } else if (printed.length > 1) {
+      // Silent for a single coupon, as it always was — the tab opening IS the
+      // feedback. Several is worth saying out loud, because a blocked tab
+      // turns into a saved file the clerk has to go and find.
+      toast.toast({ variant: 'success', title: `${printed.length} coupons sent to print`,
+        message: list(printed) });
     }
   };
 
@@ -197,25 +252,50 @@ export function EirDetailView({ id }: { id: string }) {
             {printingDoc === 'truck-in' ? 'Preparing…' : 'Truck-in form'}
           </button>
           {/* Only where money was taken: a coupon is what the driver spends at
-              the barrier, so a visit that was charged nothing has none. */}
-          {receiptNo && mayCollect && (
+              the barrier, so a visit that was charged nothing has none.
+
+              THE COUNT IS ON THE BUTTON when the receipt was split, because
+              "Coupon" on a button that produces two documents is how the
+              second one goes unnoticed. */}
+          {receiptNos.length > 0 && mayCollect && (
             <button className="gecko-btn gecko-btn-outline gecko-btn-sm"
-              onClick={printCoupon} disabled={printingDoc !== null}
-              title={`The cash bill for receipt ${receiptNo}`}>
+              onClick={() => void printCoupons(receiptNos)} disabled={printingDoc !== null}
+              title={receiptNos.length === 1
+                ? `The cash bill for receipt ${receiptNos[0]}`
+                : `One cash bill per receipt: ${receiptNos.join(', ')}`}>
               <Icon name="print" size={14} />
-              {printingDoc === 'coupon' ? 'Preparing…' : 'Coupon (cash bill)'}
+              {printingDoc === 'coupon'
+                ? 'Preparing…'
+                : receiptNos.length > 1
+                  ? `Coupons (cash bill) ×${receiptNos.length}`
+                  : 'Coupon (cash bill)'}
             </button>
           )}
           {/* DELETE, in the clerk's word, in the project's destructive style
               (gecko-btn-danger + the trash icon, as every other delete on the
               system reads). It is still a VOID underneath — the number is kept
               and never reused — which is why the dialog says so before it is
-              pressed, and why the EIR stays readable afterwards with a VOIDED
-              badge on it. */}
+              pressed, and why the EIR stays readable afterwards, badged
+              DELETED rather than gone. */}
           {mayVoid && (
             <button className="gecko-btn gecko-btn-danger gecko-btn-sm" onClick={() => setVoiding(true)}>
               <Icon name="trash" size={14} /> Delete EIR
             </button>
+          )}
+          {/* ONE LINK PER RECEIPT, so a part can be reprinted on its own —
+              which is exactly what a clerk needs when the browser blocked the
+              second tab and only the first coupon came out. Only shown when
+              there is more than one; a single receipt has the button. */}
+          {receiptNos.length > 1 && mayCollect && (
+            <div className="gecko-print-note gecko-print-note-left">
+              {receiptNos.map(no => (
+                <button key={no} className="gecko-link gecko-link-button gecko-coupon-reprint"
+                  disabled={printingDoc !== null}
+                  onClick={() => void printCoupons([no])}>
+                  Coupon {no}
+                </button>
+              ))}
+            </div>
           )}
           {/* The EIR prints VALUES ONLY onto pre-printed stationery. At "Fit to
               page" every value lands a few millimetres out and the whole form

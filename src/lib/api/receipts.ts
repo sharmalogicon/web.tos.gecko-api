@@ -10,6 +10,8 @@
  *   POST /api/revenue/window/receipts/{id}/void       with a reason
  */
 import { apiDownload, apiGet, apiSend, saveBlob } from './client';
+import { openPdf } from './open-pdf';
+import { ApiError } from './problem';
 
 export interface ReceiptLine {
   lineNo: number;
@@ -90,6 +92,78 @@ export const RECEIPTS_PATH = '/api/revenue/window/receipts';
 export const receiptPath = (id: string) => `${RECEIPTS_PATH}/${encodeURIComponent(id)}`;
 export const receiptPdfPath = (id: string) => `${receiptPath(id)}/receipt.pdf`;
 export const couponPdfPath = (id: string) => `${receiptPath(id)}/coupon.pdf`;
+
+/**
+ * EVERY PART OF A SPLIT RECEIPT, PRINTED — not just the first.
+ *
+ * A split makes several tax invoices out of one, and the driver leaves with
+ * ALL of them: each part carries its own number, its own boxes and its own
+ * total. Three screens had their own one-document version of this and each
+ * printed part 1 only (owner 2026-10-28), so there is one of these now and
+ * they all call it.
+ *
+ * AWAITED IN TURN, FIRST PART FIRST. Firing them together makes the browser
+ * treat every tab after the first as a pop-up, and the order they come out of
+ * the printer is the order the clerk staples them in.
+ *
+ * A FAILURE ON ONE DOES NOT COST THE OTHERS. A 404 means that part has no such
+ * document — a credit part has no coupon — and the rest are still owed to the
+ * driver, so it is recorded and the run goes on. A 403 is the exception: the
+ * permission is not per receipt, so the second would refuse exactly as the
+ * first did and stopping saves three identical failures.
+ *
+ * If the browser blocks a tab, `openPdf` saves the file instead. Nothing here
+ * second-guesses that: the clerk has the document either way, and the caller
+ * says so by offering a per-part reprint link.
+ */
+export interface PrintedParts {
+  /** Receipt numbers whose document opened or saved. */
+  printed: string[];
+  /** Receipt numbers the API has no such document for (404). */
+  missing: string[];
+  /** Set when the run stopped early — a refusal that would repeat. */
+  refused: string | null;
+}
+
+export async function printReceiptParts(
+  parts: { receiptId: string; receiptNo: string }[],
+  kind: 'receipt' | 'coupon',
+): Promise<PrintedParts> {
+  const out: PrintedParts = { printed: [], missing: [], refused: null };
+  const pathOf = kind === 'coupon' ? couponPdfPath : receiptPdfPath;
+  const suffix = kind === 'coupon' ? '-coupon.pdf' : '.pdf';
+  for (const part of parts) {
+    try {
+      await openPdf(pathOf(part.receiptId), `${part.receiptNo}${suffix}`);
+      out.printed.push(part.receiptNo);
+    } catch (e: unknown) {
+      const err = e instanceof ApiError ? e : null;
+      if (err?.status === 404) { out.missing.push(part.receiptNo); continue; }
+      out.refused = err?.status === 403
+        ? 'That document needs a permission you do not have at this depot.'
+        : err?.title ?? 'Could not reach the Gecko API.';
+      break;
+    }
+  }
+  return out;
+}
+
+/** What to tell the clerk after {@link printReceiptParts}, or null if nothing needs saying. */
+export function printedPartsToast(r: PrintedParts, kind: 'receipt' | 'coupon'):
+  { variant: 'success' | 'warning' | 'danger'; title: string; message: string } | null {
+  const noun = kind === 'coupon' ? 'coupon' : 'receipt';
+  const list = (xs: string[]) => xs.join(', ');
+  if (r.refused) return { variant: 'danger', title: `${noun === 'coupon' ? 'Coupons' : 'Receipts'} not printed`, message: r.refused };
+  if (r.printed.length === 0 && r.missing.length > 0)
+    return { variant: 'danger', title: `No ${noun} printed`, message: `There is no ${noun} on ${list(r.missing)}.` };
+  if (r.missing.length > 0)
+    return { variant: 'warning', title: `Some ${noun}s printed`, message: `Printed ${list(r.printed)}; no ${noun} on ${list(r.missing)}.` };
+  // One document opening IS its own feedback. Several is worth saying, because
+  // a blocked tab becomes a saved file the clerk has to go and find.
+  if (r.printed.length > 1)
+    return { variant: 'success', title: `${r.printed.length} ${noun}s sent to print`, message: list(r.printed) };
+  return null;
+}
 /**
  * The CASH INVOICE form — an overlay for the depot's pre-printed stationery, so
  * it prints values at fixed places and looks sparse on plain paper. Needs

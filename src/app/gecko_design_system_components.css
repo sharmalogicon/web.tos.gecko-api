@@ -10515,6 +10515,29 @@ th.gecko-cell-tight {
 }
 .gecko-link-button:disabled { opacity: 0.6; cursor: default; }
 
+/* One reprint link per part of a SPLIT receipt, under the EIR's print buttons.
+   They sit on the print-note line, so they inherit its 11px and its muted
+   colour; this only spaces them and keeps a number from breaking in half. */
+.gecko-coupon-reprint {
+  margin-right: 12px;
+  white-space: nowrap;
+}
+.gecko-coupon-reprint:last-child { margin-right: 0; }
+
+/* The one thing a toast can offer to do — "Print all 3". Underlined rather
+   than a button so it cannot be mistaken for the close control beside it. */
+.gecko-toast-action {
+  margin-top: 6px;
+  padding: 0;
+  border: 0;
+  background: none;
+  font: inherit;
+  font-weight: 600;
+  color: inherit;
+  text-decoration: underline;
+  cursor: pointer;
+}
+
 /* ── §48  The party search's dropdown ───────────────────────────────────────
    Its rows used to be `.gecko-btn`s: one line tall, nowrap, fixed height. A
    Thai company name overran its own row and printed over the next one, and the
