@@ -12,6 +12,7 @@ import { DamagePanel } from './DamagePanel';
 import { BookingPicker, type BookableBox } from '../../_components/BookingPicker';
 import { WalkInBoxPicker } from './WalkInBoxPicker';
 import { PartyPicker } from '@/components/ui/PartyPicker';
+import { PartyName } from '@/components/ui/PartyName';
 import {
   NO_WALK_IN_ORDER_TYPE, WALK_IN_REFUSALS, walkInOrderTypeFor, type WalkInBox, type WalkInOrderType,
 } from '@/lib/api/walk-in';
@@ -541,7 +542,7 @@ export function MoveCard({
                 ) : (
                   <>
                     <GateField label="Shipping line" frozen>
-                      <div className="gecko-readonly-value">{move.lineCode || '—'}</div>
+                      <div className="gecko-readonly-value"><PartyName code={move.lineCode} resolve /></div>
                     </GateField>
                     <GateField label="Equipment type" frozen>
                       <div className="gecko-readonly-value">{move.equipmentTypeCode || '—'}</div>
@@ -624,7 +625,7 @@ export function MoveCard({
               <GateField label="Customer" required={!carries} error={err('customerCode')}
                 frozen={carries}>
                 {carries ? (
-                  <div className="gecko-readonly-value gecko-text-mono">{move.customerCode || '—'}</div>
+                  <div className="gecko-readonly-value"><PartyName code={move.customerCode} resolve /></div>
                 ) : (
                   <PartyPicker role="CUSTOMER" value={move.customerCode || null} nameFirst
                     placeholder="Search the customer…"
@@ -681,7 +682,7 @@ export function MoveCard({
 
               <GateField label="Agent" error={err('agentCode')} frozen={carries}>
                 {carries ? (
-                  <div className="gecko-readonly-value gecko-text-mono">{move.agentCode || '—'}</div>
+                  <div className="gecko-readonly-value"><PartyName code={move.agentCode} resolve /></div>
                 ) : (
                   <PartyPicker role="SHIPPING_LINE" value={move.agentCode || null} nameFirst
                     placeholder="Search the agent…"

@@ -1,6 +1,7 @@
 "use client";
 import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { Icon } from '@/components/ui/Icon';
+import { PartyName } from '@/components/ui/PartyName';
 import { apiGet } from '@/lib/api/client';
 import { ApiError } from '@/lib/api/problem';
 import { formatDateTime } from '@/lib/format';
@@ -164,7 +165,9 @@ export function TruckInYardPicker({ branchId, value, disabled, error, onPick, on
               <span className="gecko-text-mono gecko-booking-row-ref">{v.truckPlate}</span>
               <span className="gecko-flex-1 gecko-min-w-0 gecko-booking-row-bl">
                 {v.visitNo}
-                {v.haulierCode ? <span className="gecko-cell-meta"> · {v.haulierCode}</span> : null}
+                {v.haulierCode
+                  ? <span className="gecko-cell-meta"> · <PartyName code={v.haulierCode} resolve inline /></span>
+                  : null}
               </span>
               <span className="gecko-cell-meta gecko-truck-row-boxes">
                 {(v.pickups ?? []).filter(p => p.status === 'PLANNED')

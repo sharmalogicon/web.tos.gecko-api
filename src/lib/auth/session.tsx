@@ -4,6 +4,7 @@ import React, { createContext, useCallback, useContext, useEffect, useMemo, useS
 import * as client from "../api/client";
 import type { Me } from "../api/client";
 import { clearApiCache } from "../api/api-cache";
+import { clearPartyNames } from "../api/party-names";
 
 /**
  * Who is signed in, for the whole app.
@@ -151,6 +152,7 @@ export function SessionProvider({ children }: { children: React.ReactNode }) {
 
   const signIn = useCallback(async (email: string, password: string) => {
     clearApiCache();
+    clearPartyNames();
     await client.login(email, password);
     setTokenReady(true);
     await load();
@@ -159,6 +161,7 @@ export function SessionProvider({ children }: { children: React.ReactNode }) {
   const signOut = useCallback(async () => {
     await client.logout();
     clearApiCache();
+    clearPartyNames();
     setUser(null);
     setTokenReady(false);
     setStatus("anonymous");

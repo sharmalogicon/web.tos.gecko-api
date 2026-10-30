@@ -1,6 +1,7 @@
 "use client";
 import React, { useCallback, useEffect, useState } from 'react';
 import { Icon } from '@/components/ui/Icon';
+import { PartyName } from '@/components/ui/PartyName';
 import { Modal } from '@/components/ui/Modal';
 import { apiGet, apiSend } from '@/lib/api/client';
 import { ApiError } from '@/lib/api/problem';
@@ -191,7 +192,8 @@ export function TransferContainersModal<TDetail>({
               <span className="gecko-transfer-row-main">
                 <span className="gecko-mono-strong">{t.orderNo}</span>
                 <span className="gecko-cell-meta">
-                  {t.carrierRef ? `${t.carrierRef} · ` : ''}{t.customerCode ?? 'no customer'}
+                  {t.carrierRef ? `${t.carrierRef} · ` : ''}
+                  {t.customerCode ? <PartyName code={t.customerCode} resolve inline /> : 'no customer'}
                   {t.voyage ? ` · ${t.voyage}` : ''}
                 </span>
               </span>

@@ -2,6 +2,7 @@
 import React, { useCallback, useState } from 'react';
 import Link from 'next/link';
 import { Icon } from '@/components/ui/Icon';
+import { PartyName } from '@/components/ui/PartyName';
 import { useToast } from '@/components/ui/Toast';
 import { openPdf } from '@/lib/api/open-pdf';
 import { apiGet } from '@/lib/api/client';
@@ -276,7 +277,7 @@ export function GateOutForm() {
               onPick={v => void pickTruck(v)} onClear={clear} />
           </GateField>
           <GateField label="Haulier" frozen>
-            <div className="gecko-readonly-value gecko-text-mono">{truck.haulierCode || '—'}</div>
+            <div className="gecko-readonly-value"><PartyName code={truck.haulierCode} resolve /></div>
           </GateField>
           <GateField label="Truck category" frozen>
             <div className="gecko-readonly-value gecko-text-mono">{truck.truckCategoryCode || '—'}</div>

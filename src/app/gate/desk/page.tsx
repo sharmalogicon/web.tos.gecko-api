@@ -2,6 +2,7 @@
 import React, { useCallback, useMemo, useState } from 'react';
 import Link from 'next/link';
 import { Icon } from '@/components/ui/Icon';
+import { PartyName } from '@/components/ui/PartyName';
 import { useToast } from '@/components/ui/Toast';
 import { apiGet, apiSend } from '@/lib/api/client';
 import { ApiError } from '@/lib/api/problem';
@@ -504,7 +505,9 @@ function Line({ label, value }: { label: string; value: React.ReactNode }) {
   return (
     <div className="gecko-row gecko-row-between" style={{ gap: 12, padding: '3px 0' }}>
       <span className="gecko-cell-meta">{label}</span>
-      <span style={{ fontSize: 13, fontWeight: 500, textAlign: 'right' }}>{value ?? '—'}</span>
+      {/* A div, not a span: a party's value is a name with its code on a
+          second line under it, and a div cannot sit inside a span. */}
+      <div style={{ fontSize: 13, fontWeight: 500, textAlign: 'right' }}>{value ?? '—'}</div>
     </div>
   );
 }
@@ -517,8 +520,8 @@ function BookingCard({ view }: { view: GatePreflight }) {
         <div>
           <Line label="Order" value={<Link href={`/bookings/${b.bookingId}`} className="gecko-link">{b.orderNo}</Link>} />
           <Line label="Order type" value={b.orderTypeCode} />
-          <Line label="Line" value={b.lineCode} />
-          <Line label="Customer" value={b.customerCode ?? '—'} />
+          <Line label="Line" value={<PartyName code={b.lineCode} resolve />} />
+          <Line label="Customer" value={<PartyName code={b.customerCode} resolve />} />
           <Line label="Vessel call" value={b.callRef ?? '—'} />
           <Line label="Valid to" value={b.validTo ?? '—'} />
         </div>
@@ -664,7 +667,7 @@ function Receipt({ eir, onNext }: { eir: GateTransaction; onNext: () => void }) 
 
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))', gap: 10, marginTop: 16 }}>
         <Line label="Order" value={eir.orderNo} />
-        <Line label="Line" value={eir.lineCode} />
+        <Line label="Line" value={<PartyName code={eir.lineCode} name={eir.lineName} resolve />} />
         <Line label="Equipment" value={eir.equipmentTypeCode ?? '—'} />
         <Line label="Gross weight" value={eir.grossWeightKg ? `${eir.grossWeightKg.toLocaleString()} kg` : '—'} />
         <Line label="Seals" value={eir.seals.length ? eir.seals.map(s => s.sealNo).join(', ') : '—'} />

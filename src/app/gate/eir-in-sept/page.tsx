@@ -3,6 +3,7 @@
 import React, { useCallback, useMemo, useState } from 'react';
 import Link from 'next/link';
 import { Icon } from '@/components/ui/Icon';
+import { PartyName } from '@/components/ui/PartyName';
 import { FormSection, Field } from '@/components/ui/OpsPrimitives';
 import { useToast } from '@/components/ui/Toast';
 import { apiGet, apiSend } from '@/lib/api/client';
@@ -365,7 +366,7 @@ export default function GateInPage() {
                 <div className="gecko-eirin-readback">{onBooking.orderTypeCode}</div>
               </Field>
               <Field label="Line">
-                <div className="gecko-eirin-readback">{onBooking.lineCode}</div>
+                <div className="gecko-eirin-readback"><PartyName code={onBooking.lineCode} resolve /></div>
               </Field>
             </FormSection>
           ) : (

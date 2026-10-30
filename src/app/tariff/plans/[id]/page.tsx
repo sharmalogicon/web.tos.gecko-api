@@ -3,6 +3,7 @@ import React, { useCallback, useMemo, useState, use } from 'react';
 import Link from 'next/link';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { Icon } from '@/components/ui/Icon';
+import { PartyName } from '@/components/ui/PartyName';
 import { useToast } from '@/components/ui/Toast';
 import { EmptyState } from '@/components/ui/EmptyState';
 import { Fact } from '@/components/ui/Fact';
@@ -610,7 +611,9 @@ function PartyChip({ label, code }: { label: string; code: string | null }) {
     }}>
       <div className="gecko-field-label gecko-mb-1">{label}</div>
       {code
-        ? <div className="gecko-id-link" style={{ fontSize: 13, color: 'var(--gecko-primary-700)' }}>{code}</div>
+        ? <div className="gecko-id-link" style={{ fontSize: 13, color: 'var(--gecko-primary-700)' }}>
+            <PartyName code={code} resolve />
+          </div>
         : <div style={{ fontSize: 12, color: 'var(--gecko-text-disabled)', fontStyle: 'italic' }}>any</div>}
     </div>
   );

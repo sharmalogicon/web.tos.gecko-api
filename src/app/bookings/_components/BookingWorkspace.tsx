@@ -7,6 +7,7 @@ import { ApiError } from '@/lib/api/problem';
 import { useFacility } from '@/lib/api/facility';
 import { useSession } from '@/lib/auth/session';
 import { PartyPicker } from '@/components/ui/PartyPicker';
+import { PartyName } from '@/components/ui/PartyName';
 import { BookingPrintMenu } from './BookingPrintMenu';
 import { useCodeList } from '@/lib/api/lookups';
 import { PortPicker } from './PortPicker';
@@ -911,7 +912,7 @@ function ContainerDrawer({ container, onClose, onDuplicate, onDelete, onSave, re
 // ─── Tabs ─────────────────────────────────────────────────────────────────────
 
 /** A value the API derives or the sailing owns — shown, never typed. */
-function Derived({ label, value, mono }: { label: string; value: string | null; mono?: boolean }) {
+function Derived({ label, value, mono }: { label: string; value: React.ReactNode; mono?: boolean }) {
   return (
     <div className="gecko-stack gecko-stack-xs">
       <div className="gecko-eyebrow">{label}</div>
@@ -1009,7 +1010,7 @@ function TabVoyage({ form, patch, created, dirty, readOnly, direction, canOverri
             {editMode
               ? <PartyPicker role="SHIPPING_LINE" value={form.agentCode || null}
                   onChange={v => patch({ agentCode: v ?? '' })} placeholder="Search agent or line…" />
-              : <div className="gecko-readonly-value">{form.agentCode || '—'}</div>}
+              : <div className="gecko-readonly-value"><PartyName code={form.agentCode} resolve /></div>}
           </div>
           <div>
             <div className="gecko-eyebrow gecko-eyebrow-set gecko-mb-1">
@@ -1018,16 +1019,16 @@ function TabVoyage({ form, patch, created, dirty, readOnly, direction, canOverri
             {editMode
               ? <PartyPicker role="CUSTOMER" value={form.customerCode || null}
                   onChange={v => patch({ customerCode: v ?? '' })} placeholder={`Search ${customerLabel.toLowerCase()}…`} />
-              : <div className="gecko-readonly-value">{form.customerCode || '—'}</div>}
+              : <div className="gecko-readonly-value"><PartyName code={form.customerCode} resolve /></div>}
           </div>
           {/* Derived by the API from the line's MDM operator code — never sent. */}
-          <Derived label="Container Owner" value={created?.containerOwnerCode ?? null} mono />
+          <Derived label="Container Owner" value={<PartyName code={created?.containerOwnerCode} resolve />} />
           <div>
             <div className="gecko-eyebrow gecko-mb-1">Freight Forwarder</div>
             {editMode
               ? <PartyPicker role="FORWARDER" value={form.forwarderCode || null}
                   onChange={v => patch({ forwarderCode: v ?? '' })} placeholder="Search forwarder…" />
-              : <div className="gecko-readonly-value">{form.forwarderCode || '—'}</div>}
+              : <div className="gecko-readonly-value"><PartyName code={form.forwarderCode} resolve /></div>}
           </div>
         </div>
       </div>

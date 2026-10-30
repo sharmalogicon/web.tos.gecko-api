@@ -10524,6 +10524,18 @@ th.gecko-cell-tight {
 }
 .gecko-coupon-reprint:last-child { margin-right: 0; }
 
+/* The line column of the equipment pool. The name leads and the code sits
+   under it; the column is capped so a long Thai company name cannot push the
+   count columns off the right of the table. */
+.gecko-pool-line {
+  max-width: 220px;
+}
+.gecko-pool-line > .gecko-cell-meta {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
 /* The one thing a toast can offer to do — "Print all 3". Underlined rather
    than a button so it cannot be mistaken for the close control beside it. */
 .gecko-toast-action {

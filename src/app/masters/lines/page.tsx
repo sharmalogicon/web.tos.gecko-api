@@ -2,6 +2,7 @@
 import React, { useEffect, useState } from 'react';
 import Link from 'next/link';
 import { Icon } from '@/components/ui/Icon';
+import { PartyName } from '@/components/ui/PartyName';
 import { EmptyState } from '@/components/ui/EmptyState';
 import { ExportButton } from '@/components/ui/ExportButton';
 import { TablePagination } from '@/components/ui/TablePagination';
@@ -141,7 +142,9 @@ export default function ShippingLinesPage() {
                       ? <span className="gecko-badge gecko-badge-xs gecko-badge-info">Line</span>
                       : <span className="gecko-row" style={{ gap: 6 }}>
                           <span className="gecko-badge gecko-badge-xs gecko-badge-gray">Agent</span>
-                          <span className="gecko-cell-meta">for {line.principalLineCode}</span>
+                          <span className="gecko-cell-meta">
+                    for <PartyName code={line.principalLineCode} name={line.principalLineName} resolve inline />
+                  </span>
                         </span>}
                   </td>
                   <td style={{ color: 'var(--gecko-text-secondary)' }}>{line.allianceName ?? line.allianceCode ?? '—'}</td>

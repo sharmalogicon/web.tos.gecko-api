@@ -3,6 +3,7 @@ import React, { useEffect, useRef, useState } from 'react';
 import { Icon } from '@/components/ui/Icon';
 import { ApiError } from '@/lib/api/problem';
 import { searchParties, type PartySummary, type PartyRole } from '@/lib/api/parties';
+import { seedPartyName, usePartyName } from '@/lib/api/party-names';
 
 /**
  * Debounced search over GET /api/master/parties. Shows code + name; the value
@@ -33,6 +34,15 @@ export function PartyPicker({ role, value, onChange, placeholder, error, disable
   const [failure, setFailure] = useState<string | null>(null);
   const [label, setLabel] = useState<string | null>(null);
   const box = useRef<HTMLDivElement>(null);
+  /**
+   * THE NAME OF A VALUE THAT WAS ALREADY STORED.
+   *
+   * `label` is only set when the clerk picks from the list, so a form
+   * OPENED on a saved party had none and the field printed the code as its
+   * own name — "20261955 (20261955)". The code is looked up instead, once
+   * per code per session; until it answers the code still shows, as before.
+   */
+  const stored = usePartyName(label ? null : value);
 
   useEffect(() => {
     if (!open) return;
@@ -45,6 +55,9 @@ export function PartyPicker({ role, value, onChange, placeholder, error, disable
           setItems(page.items);
           setTotal(page.totalCount);
           setFailure(null);
+          // Every row names a party: remember them, so the same codes shown
+          // elsewhere on this screen cost no further reads.
+          for (const party of page.items) seedPartyName(party.partyCode, party.nameLocal?.trim() || party.nameEn);
         })
         .catch((e: unknown) => {
           if (cancelled) return;
@@ -73,13 +86,13 @@ export function PartyPicker({ role, value, onChange, placeholder, error, disable
               {/* The NAME is what a clerk recognises; the code is filing. The
                   name takes the width and ellipsises rather than spilling out
                   of the box, which a long Thai company name did. */}
-              <span className="gecko-party-chosen-name">{label ?? value}</span>
+              <span className="gecko-party-chosen-name">{label ?? stored ?? value}</span>
               <span className="gecko-cell-meta gecko-mono gecko-party-chosen-code">({value})</span>
             </>
           ) : (
             <>
               <span className="gecko-mono-strong">{value}</span>
-              <span className="gecko-flex-1 gecko-cell-meta gecko-party-chosen-name">{label ?? ''}</span>
+              <span className="gecko-flex-1 gecko-cell-meta gecko-party-chosen-name">{label ?? stored ?? ''}</span>
             </>
           )}
           {!disabled && (
@@ -111,7 +124,11 @@ export function PartyPicker({ role, value, onChange, placeholder, error, disable
         onKeyDown={e => {
           if (e.key === 'Enter') {
             e.preventDefault();
-            if (items[0]) { onChange(items[0].partyCode, items[0]); setLabel(items[0].nameEn); setOpen(false); }
+            if (items[0]) {
+              onChange(items[0].partyCode, items[0]);
+              setLabel(nameFirst ? (items[0].nameLocal?.trim() || items[0].nameEn) : items[0].nameEn);
+              setOpen(false);
+            }
             else takeTypedCode();
           }
           if (e.key === 'Escape') setOpen(false);

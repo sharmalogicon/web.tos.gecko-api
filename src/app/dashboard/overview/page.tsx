@@ -2,6 +2,7 @@
 
 import React from 'react';
 import { Icon } from '@/components/ui/Icon';
+import { PartyName } from '@/components/ui/PartyName';
 import { RefreshButton } from '@/components/ui/RefreshButton';
 import { useFacility } from '@/lib/api/facility';
 import {
@@ -406,7 +407,7 @@ export default function DashboardOverviewPage() {
                             <td className="gecko-mono gecko-dash-cell-unit">{move.containerNo}</td>
                             <td>{move.isoCode ? <span className="gecko-badge gecko-badge-gray gecko-badge-xs">{move.isoCode}</span> : <span className="gecko-cell-meta">—</span>}</td>
                             <td><MoveDirection move={move} /></td>
-                            <td className="gecko-dash-cell-line">{move.lineCode ?? '—'}</td>
+                            <td className="gecko-dash-cell-line"><PartyName code={move.lineCode} resolve inline /></td>
                             <td className="gecko-cell-meta gecko-mono">{move.truckPlate ?? '—'}</td>
                             <td className="gecko-mono gecko-dash-cell-time">{timeOfDay(move.at)}</td>
                             <td><MoveStatus status={move.status} /></td>

@@ -2,6 +2,7 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { DateField } from '@/components/ui/DateField';
 import { Icon } from '@/components/ui/Icon';
+import { PartyName } from '@/components/ui/PartyName';
 import { Modal } from '@/components/ui/Modal';
 import { useToast } from '@/components/ui/Toast';
 import { apiGet, apiSend, newIdempotencyKey } from '@/lib/api/client';
@@ -547,8 +548,8 @@ export default function CashWindowPage() {
                   <Field label="Order" value={<span style={{ fontFamily: 'var(--gecko-font-mono, monospace)', fontWeight: 700 }}>{booking.orderNo}</span>} />
                   <Field label="Customer" value={customerName ? <>{customerName} <span className="gecko-text-muted">({booking.customerCode})</span></> : booking.customerCode ?? '—'} />
                   <Field label="Type" value={booking.orderTypeCode} />
-                  {booking.lineCode && <Field label="Line" value={booking.lineCode} />}
-                  {booking.agentCode && <Field label="Agent" value={booking.agentCode} />}
+                  {booking.lineCode && <Field label="Line" value={<PartyName code={booking.lineCode} resolve inline />} />}
+                  {booking.agentCode && <Field label="Agent" value={<PartyName code={booking.agentCode} resolve inline />} />}
                   <Field label="Status" value={<span className={`gecko-badge ${booking.status === 'OPEN' ? 'gecko-badge-success' : 'gecko-badge-gray'}`}>{booking.status}</span>} />
                   {booking.paidUntil && <Field label="Quoted to" value={shortDate(booking.paidUntil)} />}
                 </div>

@@ -5,6 +5,7 @@ import { usePathname, useRouter, useSearchParams } from 'next/navigation';
 import { Icon } from '@/components/ui/Icon';
 import { BarcodeScanInput } from '@/components/ui/BarcodeDisplay';
 import { EmptyState } from '@/components/ui/EmptyState';
+import { PartyName } from '@/components/ui/PartyName';
 import { useApi, useApiList, type Paged } from '@/lib/api/use-api';
 import { useSession } from '@/lib/auth/session';
 import { dwellLabel, formatContainerNo, formatDate, formatDateTime, type GateTransactionSummary } from '@/lib/api/tos';
@@ -93,6 +94,7 @@ function UnitInquiry() {
   const reg = registry.data;
   // The stay the header describes: the open one, else the newest closed one.
   const latest = current ?? s?.visits[0] ?? null;
+  const bannerLine = current?.lineCode ?? s?.visits[0]?.lineCode ?? s?.bookings[0]?.lineCode ?? reg?.ownerCode ?? null;
   const loaded = !!s && s.containerNo === asked;
   const nothing = loaded && s.visits.length === 0 && s.bookings.length === 0 && moveRows.length === 0 && !reg;
 
@@ -172,7 +174,11 @@ function UnitInquiry() {
             <Divider />
             <Banner label="Type" value={[reg?.typeCode ?? current?.equipmentTypeCode ?? s.visits[0]?.equipmentTypeCode, reg?.isoCode && `ISO ${reg.isoCode}`].filter(Boolean).join(' · ') || '—'} />
             <Divider />
-            <Banner label="Line" value={current?.lineCode ?? s.visits[0]?.lineCode ?? s.bookings[0]?.lineCode ?? reg?.ownerCode ?? '—'} />
+            {/* Whichever read knows the line: the visit standing in the yard
+                first, then its history, then a booking, and the registry's
+                owner last @d which is the box's owner, not its line, but on a
+                box that has never moved it is the only party there is. */}
+            <Banner label="Line" value={<PartyName code={bannerLine} resolve mono={false} />} />
             <Divider />
             <div>
               <div className="gecko-eyebrow">Status</div>
@@ -417,8 +423,8 @@ function NowTab({ current, last, yard, registry, registryError, canRegistry }: {
             <>
               <FactGroup title="Identity">
                 <Fact label="Type · ISO" value={[registry.typeCode, registry.isoCode].filter(Boolean).join(' · ') || '—'} mono />
-                <Fact label="Owner" value={registry.ownerCode ?? '—'} />
-                <Fact label="Lessor" value={registry.lessorCode ?? '—'} />
+                <Fact label="Owner" value={<PartyName code={registry.ownerCode} resolve />} />
+                <Fact label="Lessor" value={<PartyName code={registry.lessorCode} resolve />} />
                 <Fact label="Ownership" value={registry.ownershipType.replace(/_/g, ' ').toLowerCase()} />
               </FactGroup>
 
@@ -538,7 +544,7 @@ function VisitsTab({ visits }: { visits: StoryVisit[] }) {
                 ) : <span className="gecko-cell-meta">in yard</span>}
               </td>
               <td>{v.fullEmpty}</td>
-              <td>{v.lineCode}</td>
+              <td><PartyName code={v.lineCode} resolve /></td>
               <td className="gecko-mono">{v.positionText ?? '—'}</td>
               <td>{v.daysInYard}</td>
               <td>
@@ -659,8 +665,8 @@ function BookingsTab({ story, canBookings }: { story: ContainerStory; canBooking
             </td>
             <td>{b.orderTypeCode}</td>
             <td>{b.branchCode ?? '—'}</td>
-            <td>{b.lineCode}</td>
-            <td>{b.customerCode ?? '—'}</td>
+            <td><PartyName code={b.lineCode} resolve /></td>
+            <td><PartyName code={b.customerCode} resolve /></td>
             <td>{formatDateTime(b.assignedAt)}</td>
             <td>{b.isOpen ? 'yes' : `ended ${formatDateTime(b.endedAt)}${b.endReason ? ` (${b.endReason.toLowerCase()})` : ''}`}</td>
             <td>{b.bookingStatus}</td>

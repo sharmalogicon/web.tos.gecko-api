@@ -13,6 +13,7 @@
 import React, { useState } from 'react';
 import Link from 'next/link';
 import { Icon } from '@/components/ui/Icon';
+import { PartyName } from '@/components/ui/PartyName';
 import { useApi, useApiList } from '@/lib/api/use-api';
 import { useServerList } from '@/lib/api/use-server-list';
 import { saveBlob } from '@/lib/api/client';
@@ -204,7 +205,7 @@ export default function OperationalReportsPage() {
                 <td className="gecko-mono">{e.movementCode}</td>
                 <td>{e.fullEmpty}</td>
                 <td className="gecko-mono">{e.orderNo}</td>
-                <td className="gecko-mono">{e.lineCode}</td>
+                <td><PartyName code={e.lineCode} resolve /></td>
                 <td className="gecko-mono">{e.truckPlate}</td>
                 <td>
                   <span className={`gecko-badge ${e.status === 'VOIDED' ? 'gecko-badge-gray' : 'gecko-badge-success'}`}>{e.status === 'VOIDED' ? 'Deleted' : 'Completed'}</span>

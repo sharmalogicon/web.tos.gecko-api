@@ -2,6 +2,7 @@
 import React, { useState, useMemo } from 'react';
 import Link from 'next/link';
 import { Icon } from '@/components/ui/Icon';
+import { PartyName } from '@/components/ui/PartyName';
 import { TablePagination } from '@/components/ui/TablePagination';
 import { TableSkeleton } from '@/components/ui/TableSkeleton';
 import { useApiList } from '@/lib/api/use-api';
@@ -290,19 +291,10 @@ export default function BookingRegisterPage() {
                   <div style={{ fontFamily: 'var(--gecko-font-mono)', fontWeight: 600 }}>{b.orderTypeCode}</div>
                   <div className="gecko-cell-meta">{b.directionCode}</div>
                 </td>
-                <td className="gecko-text-mono">{b.lineCode}</td>
-                {/* The name is what a clerk recognises; the code is filing.
-                    Falls back to the code alone while the API sends no name. */}
-                <td>
-                  {b.customerName
-                    ? (
-                      <>
-                        <span className="gecko-cell-tight">{b.customerName}</span>
-                        <span className="gecko-cell-meta gecko-text-mono">{b.customerCode}</span>
-                      </>
-                    )
-                    : <span className="gecko-text-mono">{b.customerCode ?? '—'}</span>}
-                </td>
+                <td><PartyName code={b.lineCode} resolve /></td>
+                {/* The name is what a clerk recognises; the code is filing. The
+                    read sends the customer's name; the line's is looked up. */}
+                <td><PartyName code={b.customerCode} name={b.customerName} resolve /></td>
                 <td>
                   {b.vesselCallId
                     ? <Link href={`/masters/vessels/schedule/${b.vesselCallId}`} className="gecko-id-link">{b.callRef}</Link>

@@ -3,6 +3,7 @@ import React, { useMemo, useState } from 'react';
 import Link from 'next/link';
 import { Icon } from '@/components/ui/Icon';
 import { EmptyState } from '@/components/ui/EmptyState';
+import { PartyName } from '@/components/ui/PartyName';
 import { usePagination, TablePagination } from '@/components/ui/TablePagination';
 import { useApiList } from '@/lib/api/use-api';
 import { useSession } from '@/lib/auth/session';
@@ -144,7 +145,7 @@ export default function YardStockPage() {
                 <tr key={row.containerVisitId}>
                   <td style={{ fontFamily: 'var(--gecko-font-mono, monospace)' }}>{formatContainerNo(row.containerNo)}</td>
                   <td>{row.equipmentTypeCode ?? '—'}</td>
-                  <td>{row.lineCode}</td>
+                  <td><PartyName code={row.lineCode} resolve /></td>
                   <td>
                     <span className={`gecko-badge gecko-badge-xs gecko-badge-${row.fullEmpty === 'FULL' ? 'info' : 'gray'}`}>
                       {row.fullEmpty === 'FULL' ? 'Laden' : 'Empty'}

@@ -5,6 +5,7 @@ import { useRouter } from 'next/navigation';
 import { useToast } from '@/components/ui/Toast';
 import { SendToInvoiceModal, type InvoiceCandidate } from '../statement/_components/StatementModals';
 import { Icon } from '@/components/ui/Icon';
+import { PartyName } from '@/components/ui/PartyName';
 import { DateField } from '@/components/ui/DateField';
 import { PartyPicker } from '@/components/ui/PartyPicker';
 import type { PartyRole } from '@/lib/api/parties';
@@ -425,7 +426,7 @@ export default function UnbilledOrdersPage_() {
                       <td>{formatDate(o.bookedAt)}</td>
                       <td>{o.bookingTypeCode}</td>
                       <td>{o.orderTypeCode}</td>
-                      <td className="gecko-text-mono">{o.agentCode ?? '—'}</td>
+                      <td><PartyName code={o.agentCode} name={o.agentName} resolve /></td>
                       <td>{o.customerName ?? o.customerCode ?? '—'}</td>
                       <td className="gecko-text-mono">{o.vesselCode ?? '—'}</td>
                       <td className="gecko-text-mono">{o.voyage ?? '—'}</td>

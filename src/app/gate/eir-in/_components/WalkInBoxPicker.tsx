@@ -1,6 +1,7 @@
 "use client";
 import React, { useEffect, useRef, useState } from 'react';
 import { Icon } from '@/components/ui/Icon';
+import { PartyName } from '@/components/ui/PartyName';
 import { useApi } from '@/lib/api/use-api';
 import { formatContainerNo } from '@/lib/api/tos';
 import { dwellLabel } from '@/lib/api/tos';
@@ -99,9 +100,13 @@ export function WalkInBoxPicker({ branchId, fullEmpty, draftId, exclude, value, 
             <button key={row.containerNo} type="button" className="gecko-walkin-pick-item"
               onClick={() => choose(row)}>
               <span className="gecko-walkin-pick-no">{formatContainerNo(row.containerNo)}</span>
+              {/* The type and grade are codes by nature; the LINE is a company,
+                  so it is named here as it is everywhere else. */}
               <span className="gecko-walkin-pick-facts">
-                {[row.equipmentTypeCode, row.lineCode, row.gradeCode && `grade ${row.gradeCode}`, row.conditionCode]
-                  .filter(Boolean).join(' · ')}
+                {row.equipmentTypeCode ? `${row.equipmentTypeCode} · ` : ''}
+                <PartyName code={row.lineCode} resolve inline />
+                {[row.gradeCode && `grade ${row.gradeCode}`, row.conditionCode]
+                  .filter(Boolean).map(x => ` · ${x}`).join('')}
               </span>
               <span className="gecko-walkin-pick-where">
                 {row.positionText ?? 'no slot'}

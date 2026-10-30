@@ -4,6 +4,7 @@ import Link from 'next/link';
 import { useParams } from 'next/navigation';
 import { DateField } from '@/components/ui/DateField';
 import { Icon } from '@/components/ui/Icon';
+import { PartyName } from '@/components/ui/PartyName';
 import { useToast } from '@/components/ui/Toast';
 import { useApi } from '@/lib/api/use-api';
 import { apiSend } from '@/lib/api/client';
@@ -510,10 +511,12 @@ export default function VesselCallDetailPage() {
                   <tr><td colSpan={5} className="gecko-cell-meta" style={{ textAlign: 'center', padding: 20 }}>No lines — nobody can book against this call.</td></tr>
                 ) : lines.map(l => (
                   <tr key={l.vesselCallLineId}>
-                    <td style={{ fontFamily: 'var(--gecko-font-mono)', fontWeight: 700 }}>{l.lineCode}</td>
+                    <td><PartyName code={l.lineCode} resolve /></td>
                     <td style={{ fontFamily: 'var(--gecko-font-mono)' }}>{l.voyageIn ?? '—'}</td>
                     <td style={{ fontFamily: 'var(--gecko-font-mono)' }}>{l.voyageOut ?? '—'}</td>
-                    <td>{l.agentCode ?? <span className="gecko-cell-meta">—</span>}</td>
+                    <td>{l.agentCode
+                      ? <PartyName code={l.agentCode} resolve />
+                      : <span className="gecko-cell-meta">—</span>}</td>
                     <td>{l.serviceCode ?? <span className="gecko-cell-meta">—</span>}</td>
                   </tr>
                 ))}
@@ -545,7 +548,9 @@ export default function VesselCallDetailPage() {
                     <tr key={c.vesselCallCutoffId}>
                       <td style={{ fontFamily: 'var(--gecko-font-mono)', fontWeight: 700 }}>{c.kind}</td>
                       <td>
-                        {c.lineCode ? <>line <strong>{c.lineCode}</strong></> : c.branchId ? null : 'whole call'}
+                        {c.lineCode
+                          ? <>line <strong><PartyName code={c.lineCode} resolve inline /></strong></>
+                          : c.branchId ? null : 'whole call'}
                         {c.branchId && <span title={c.branchId}>{c.lineCode ? ' · ' : ''}one branch</span>}
                       </td>
                       <td style={{ fontFamily: 'var(--gecko-font-mono)' }}>{fmt(c.at)}</td>

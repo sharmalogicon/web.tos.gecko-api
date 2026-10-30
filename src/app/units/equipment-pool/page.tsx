@@ -15,6 +15,7 @@ import { Icon } from '@/components/ui/Icon';
 import { FilterPopover, FilterField, SortOption } from '@/components/ui/FilterPopover';
 import { usePagination, TablePagination } from '@/components/ui/TablePagination';
 import { EmptyState } from '@/components/ui/EmptyState';
+import { PartyName } from '@/components/ui/PartyName';
 import { useApi, useApiList } from '@/lib/api/use-api';
 import { saveBlob } from '@/lib/api/client';
 import { useSession } from '@/lib/auth/session';
@@ -233,9 +234,8 @@ export default function EquipmentPoolPage() {
             )}
             {pageItems.map(p => (
               <tr key={`${p.lineCode}|${p.equipmentTypeCode}|${p.gradeCode}|${p.conditionCode}`}>
-                <td>
-                  <div className="gecko-mono-strong">{p.lineCode}</div>
-                  {p.lineName && <div className="gecko-cell-meta gecko-truncate" style={{ maxWidth: 200 }}>{p.lineName}</div>}
+                <td className="gecko-pool-line">
+                  <PartyName code={p.lineCode} name={p.lineName} />
                 </td>
                 <td>
                   <span className="gecko-mono-strong">{p.equipmentTypeCode ?? '—'}</span>
