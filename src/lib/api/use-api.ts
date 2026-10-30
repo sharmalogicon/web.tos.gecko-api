@@ -4,7 +4,7 @@ import { useCallback, useEffect, useState } from "react";
 import { apiGet } from "./client";
 import { ApiError } from "./problem";
 import { useSession } from "../auth/session";
-import { cachedAnswer, rememberAnswer } from "./api-cache";
+import { cacheGeneration, cachedAnswer, rememberAnswer } from "./api-cache";
 
 /** Every list endpoint answers with this envelope. */
 export interface Paged<T> {
@@ -41,6 +41,29 @@ export function useApi<T>(path: string | null): ApiResource<T> {
   const reload = useCallback(() => setNonce(n => n + 1), []);
   // The token is enough to read with: no need to wait for /auth/me as well.
   const canRead = status === "authenticated" || (status === "loading" && tokenReady);
+
+  // SIGNING IN OR OUT DROPS WHAT THIS HOOK IS HOLDING.
+  //
+  // `clearApiCache()` empties the shared map, but this hook's own `data` state
+  // survives it, so after a sign-out and a sign-in as ANOTHER TENANT the
+  // sidebar, the depot strip and an invoice header each went on painting the
+  // previous tenant's company until the new read landed. Brief, and it reads
+  // exactly like one customer being shown another's data.
+  //
+  // Only on a cache clear — NOT on every path change. Paging a register
+  // changes the path with nothing cached for the new page, and blanking the
+  // table there would replace "the rows you were reading" with an empty box
+  // for the length of a round trip.
+  //
+  // Adjusted during render rather than in an effect: the old tenant's rows
+  // must never be painted once, even for a frame.
+  // https://react.dev/learn/you-might-not-need-an-effect
+  const [seenGeneration, setSeenGeneration] = useState(cacheGeneration);
+  if (seenGeneration !== cacheGeneration()) {
+    setSeenGeneration(cacheGeneration());
+    setData(null);
+    setError(null);
+  }
 
   useEffect(() => {
     if (path === null || (status === "loading" && !tokenReady)) return;

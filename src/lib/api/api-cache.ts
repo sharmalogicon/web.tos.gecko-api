@@ -19,6 +19,22 @@ export function rememberAnswer(path: string, data: unknown): void {
   if (entries.size > MAX_ENTRIES) entries.delete(entries.keys().next().value as string);
 }
 
+/**
+ * HOW MANY TIMES THE CACHE HAS BEEN EMPTIED, i.e. how many sign-ins ago.
+ *
+ * Emptying the map is not enough on its own: every mounted `useApi` still
+ * holds the last answer in its own state, and goes on painting it until a new
+ * read lands. Two tenants now share the live site, so that stale answer can be
+ * the OTHER tenant's company. Readers compare this number and drop what they
+ * are holding when it moves.
+ */
+let generation = 0;
+
+export function cacheGeneration(): number {
+  return generation;
+}
+
 export function clearApiCache(): void {
   entries.clear();
+  generation++;
 }

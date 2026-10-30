@@ -361,7 +361,7 @@ export const OPERATIONAL_REPORTS: ReportDef[] = [
     params: ['agent'],
     document: { path: '/api/tos/reports/shore-pass-2', params: { agent: 'agentCode', dateFrom: 'dateFrom', dateTo: 'dateTo' }, required: ['dateFrom', 'dateTo'] } },
 
-  { id: 'op-shore-pass-3', title: 'Shore Pass #3 (Kerry Siam)', description: 'A terminal&rsquo;s printed shore-pass request form.',
+  { id: 'op-shore-pass-3', title: 'Shore Pass #3', description: 'A terminal&rsquo;s printed shore-pass request form.',
     category: 'operational', group: 'Out-Bound Reports', icon: 'fileText',
     params: ['agent'],
     document: { path: '/api/tos/reports/shore-pass-3', params: { agent: 'agentCode', dateFrom: 'dateFrom', dateTo: 'dateTo' }, required: ['dateFrom', 'dateTo'] } },
@@ -429,7 +429,7 @@ export const ACCOUNTS_REPORTS: ReportDef[] = [
     params: ['agent', 'vessel', 'voyage'],
     document: { path: '/api/revenue/reports/accounting/paper', params: { agent: 'agentCode', vessel: 'vesselCode', voyage: 'voyageNo', dateFrom: 'dateFrom', dateTo: 'dateTo' }, required: ['dateFrom', 'dateTo'] } },
 
-  { id: 'ac-inbound-sct', title: 'Inbound SCT', description: 'Inbound charges flowing into SCT (Siam Container Terminal) accounting.',
+  { id: 'ac-inbound-sct', title: 'Inbound charges', description: 'Inbound charges flowing into terminal accounting.',
     category: 'accounts', group: 'Accounting Reports', icon: 'arrowDown',
     params: ['agent', 'customer', 'blNo', 'vessel', 'voyage'],
     document: { path: '/api/revenue/reports/accounting/inbound-sct', params: { agent: 'agentCode', customer: 'customerCode', blNo: 'bookingBlNo', vessel: 'vesselCode', voyage: 'voyageNo', dateFrom: 'dateFrom', dateTo: 'dateTo' }, required: ['dateFrom', 'dateTo'] } },

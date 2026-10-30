@@ -266,7 +266,8 @@ const VISIBLE_NAV = NAV
 
 function Sidebar({ collapsed, onToggle }: { collapsed: boolean, onToggle: () => void }) {
   const pathname = usePathname();
-  const { company } = useFacility();
+  const { company, branch } = useFacility();
+  const wordmark = companyLabel(company) ?? branch?.displayName ?? 'Gecko';
   // Who is signed in, and signing out, both belong to the account menu at the
   // foot of this sidebar now — the row that showed them is that menu's trigger.
   // Determine active module based on URL path
@@ -298,10 +299,11 @@ function Sidebar({ collapsed, onToggle }: { collapsed: boolean, onToggle: () => 
         </div>
         {!collapsed && (
           <div className="gecko-brand-wordmark">
-            {/* The operator's own name, from the company the selected depot trades
-                as. Falls back to the product name while it loads, and for a branch
-                the API has no company for. */}
-            <span className="gecko-logo-text" title={companyLabel(company) ?? undefined}>{companyLabel(company) ?? 'GECKO'}</span>
+            {/* The operator's own name, from the company the selected depot
+                trades as, then the depot's own name, then the product. Two
+                tenants share this build, so the fall-back must never be one of
+                THEIR names — 'Gecko' here is the product wordmark. */}
+            <span className="gecko-logo-text" title={wordmark}>{wordmark}</span>
             <span className="gecko-brand-wordmark-line">TOS</span>
           </div>
         )}
@@ -542,8 +544,15 @@ export function AppShell({ children }: { children: React.ReactNode }) {
   // Auth-shaped pages render bare — no sidebar, no header, no breadcrumbs.
   // Currently /login; future /forgot, /reset, /onboarding follow the same pattern.
   // Gate kiosk is also chromeless: it runs full-screen on a gatehouse display.
-  if (pathname?.startsWith('/login') || pathname?.startsWith('/gate/kiosk')) {
+  if (pathname?.startsWith('/login')) {
     return <ToastProvider>{children}</ToastProvider>;
+  }
+  // The kiosk is chromeless too, but it is a SIGNED-IN depot screen and it
+  // names its own depot on the gatehouse display. Without the provider round
+  // it, useFacility() throws and the kiosk white-screens; with it, the kiosk
+  // reads the same depot as every other screen.
+  if (pathname?.startsWith('/gate/kiosk')) {
+    return <ToastProvider><FacilityProvider>{children}</FacilityProvider></ToastProvider>;
   }
 
   return (

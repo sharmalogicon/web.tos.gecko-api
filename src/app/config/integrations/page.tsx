@@ -1,6 +1,7 @@
 "use client";
 import React, { useState, useEffect, useMemo } from 'react';
 import { Icon } from '@/components/ui/Icon';
+import { useFacility } from '@/lib/api/facility';
 import { useToast } from '@/components/ui/Toast';
 
 // ════════════════════════════════════════════════════════════════════════════
@@ -124,7 +125,7 @@ const TEMPLATES: Record<string, Record<Locale, TemplateContent>> = {
   'container.ready_for_pickup': {
     en: {
       title:        'Container ready for pickup',
-      body:         'Your container is now positioned and available for collection at Laem Chabang ICD.',
+      body:         'Your container is now positioned and available for collection at {depot}.',
       containerNo:  'MAEU8842710',
       bookingNo:    'EGLV149602390729',
       yardSpot:     'A-12-3',
@@ -135,7 +136,7 @@ const TEMPLATES: Record<string, Record<Locale, TemplateContent>> = {
     },
     th: {
       title:        'ตู้คอนเทนเนอร์พร้อมรับ',
-      body:         'ตู้ของท่านพร้อมรับแล้วที่ ICD แหลมฉบัง',
+      body:         'ตู้ของท่านพร้อมรับแล้วที่ {depot}',
       containerNo:  'MAEU8842710',
       bookingNo:    'EGLV149602390729',
       yardSpot:     'A-12-3',
@@ -227,6 +228,8 @@ const PREVIEW_EVENTS = Object.keys(TEMPLATES);
 
 export default function IntegrationsPage() {
   const { toast } = useToast();
+  // The tenant's own depot, never a typed place name.
+  const depot = useFacility().branch?.displayName ?? 'this depot';
   const [loaded, setLoaded]   = useState(false);
   const [tab, setTab]         = useState<Tab>('channels');
   const [config, setConfig]   = useState<IntegrationsConfig>(DEFAULT_CONFIG);
@@ -340,7 +343,7 @@ export default function IntegrationsPage() {
             )}
           </div>
           <div className="gecko-page-subtitle">
-            Configure how Gecko reaches your customers, truckers, and ops team — Laem Chabang ICD
+            Configure how Gecko reaches your customers, truckers, and ops team — {depot}
           </div>
         </div>
 
@@ -902,7 +905,12 @@ function PreviewsTab({ config }: { config: IntegrationsConfig }) {
   const [eventId, setEventId] = useState<string>(PREVIEW_EVENTS[0]);
   const [locale, setLocale]   = useState<Locale>('en');
 
-  const template = TEMPLATES[eventId]?.[locale];
+  // {depot} is filled from the tenant's own branch, so the preview shows the
+  // depot the message would really name. One substitution here serves all four
+  // channel previews below.
+  const depot = useFacility().branch?.displayName ?? 'this depot';
+  const raw = TEMPLATES[eventId]?.[locale];
+  const template = raw && { ...raw, body: raw.body.replace('{depot}', depot) };
 
   return (
     <div className="gecko-stack" style={{ gap: 14 }}>
@@ -1172,6 +1180,7 @@ function SlackMessagePreview({ template, config }: { template: TemplateContent; 
 }
 
 function EmailMessagePreview({ template, config }: { template: TemplateContent; config: IntegrationsConfig }) {
+  const depot = useFacility().branch?.displayName ?? 'this depot';
   const fromName  = config.channels.email?.email?.fromName  || 'Gecko TOS';
   const fromEmail = config.channels.email?.email?.fromEmail || 'notifications@gecko-api.com';
 
@@ -1218,7 +1227,7 @@ function EmailMessagePreview({ template, config }: { template: TemplateContent; 
 
         <hr style={{ border: 'none', borderTop: '1px solid #e5e7eb', margin: '20px 0' }} />
         <div style={{ fontSize: 12, color: '#5f6368', lineHeight: 1.6 }}>
-          <strong>Gecko TOS · Laem Chabang ICD</strong><br />
+          <strong>Gecko TOS · {depot}</strong><br />
           This is a transactional notification. <a href="#" style={{ color: '#3B82F6' }}>Manage preferences</a> · <a href="#" style={{ color: '#3B82F6' }}>Contact support</a>
         </div>
       </div>

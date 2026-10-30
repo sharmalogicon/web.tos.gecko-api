@@ -1,6 +1,7 @@
 "use client";
 import React, { useState, useMemo } from 'react';
 import { Icon } from '@/components/ui/Icon';
+import { useFacility } from '@/lib/api/facility';
 import { PASSWORD_MAX_LENGTH, PASSWORD_MIN_LENGTH } from '@/lib/api/client';
 
 // ── Role definitions ───────────────────────────────────────────────────────────
@@ -568,6 +569,11 @@ function PermissionsTab() {
 // ── Main Page ──────────────────────────────────────────────────────────────────
 
 export default function UsersRolesPage() {
+  // Depot and yard from the signed-in tenant's own data — never a typed
+  // place name: two tenants share this build.
+  const facility = useFacility();
+  const where = [facility.branch?.displayName ?? 'this depot', facility.yard?.nameEn]
+    .filter(Boolean).join(' · ');
   const [tab, setTab] = useState<'users' | 'roles'>('users');
   const [search, setSearch] = useState('');
   const [roleFilter, setRoleFilter] = useState('');
@@ -909,7 +915,7 @@ export default function UsersRolesPage() {
           <div className="gecko-banner gecko-banner-info">
             <Icon name="info" size={15} className="gecko-banner-icon" />
             <div style={{ lineHeight: 1.6 }}>
-              <strong>Laem Chabang Terminal — Logicon TOS.</strong> Role assignments control gate lane access, billing authority, and yard plan visibility.
+              <strong>Who may do what, at {where}.</strong> Role assignments control gate lane access, billing authority, and yard plan visibility.
               Suspended accounts cannot log in but audit history is preserved. Use the <em>Roles &amp; Permissions</em> tab to review module-level access before assigning roles.
             </div>
           </div>

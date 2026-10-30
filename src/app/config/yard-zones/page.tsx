@@ -1,6 +1,7 @@
 "use client";
 import React, { useState, useEffect, useMemo, useRef, useCallback } from 'react';
 import { Icon } from '@/components/ui/Icon';
+import { useFacility } from '@/lib/api/facility';
 import { useToast } from '@/components/ui/Toast';
 
 // ─── Types & constants ────────────────────────────────────────────────────────
@@ -120,6 +121,11 @@ function blockFromPreset(p: Preset, blocks: YardBlock[]): YardBlock {
 // ─── Page ─────────────────────────────────────────────────────────────────────
 
 export default function YardConfigPage() {
+  // Depot and yard from the signed-in tenant's own data — never a typed
+  // place name: two tenants share this build.
+  const facility = useFacility();
+  const where = [facility.branch?.displayName ?? 'this depot', facility.yard?.nameEn]
+    .filter(Boolean).join(' · ');
   const { toast } = useToast();
   const [blocks, setBlocks] = useState<YardBlock[]>([]);
   const [selectedId, setSelectedId] = useState<string | null>(null);
@@ -241,7 +247,7 @@ export default function YardConfigPage() {
             )}
           </div>
           <p className="gecko-page-subtitle">
-            Visual layout — Laem Chabang ICD · Import Yard · {lastSavedAt ? `auto-saved ${new Date(lastSavedAt).toLocaleTimeString()}` : 'not yet saved'}
+            Visual layout — {where} · {lastSavedAt ? `auto-saved ${new Date(lastSavedAt).toLocaleTimeString()}` : 'not yet saved'}
           </p>
         </div>
 

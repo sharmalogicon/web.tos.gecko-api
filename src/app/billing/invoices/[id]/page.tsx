@@ -141,7 +141,10 @@ export default function InvoiceDetailPage() {
                 the branch's company — on a tax document, typed-in markup is the
                 one thing that must never be wrong. */}
             <div className="gecko-invoice-from">
-              <div className="gecko-invoice-from-name">{company?.nameEn ?? branch?.displayName ?? 'GECKO'}</div>
+              {/* The REGISTERED name, not the short one: this is the issuer
+                  line of a tax document. 'Depot' is the last resort — a
+                  neutral word, never another tenant's name. */}
+              <div className="gecko-invoice-from-name">{company?.nameEn ?? branch?.displayName ?? 'Depot'}</div>
               {company?.nameLocal && <div>{company.nameLocal}</div>}
               {branch && <div>{branch.displayName}</div>}
               {company?.taxId && <div>Tax ID: <span className="gecko-mono">{company.taxId}</span></div>}

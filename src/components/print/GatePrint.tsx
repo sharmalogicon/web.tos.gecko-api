@@ -35,8 +35,19 @@ export interface GatePrintData {
   documentType: 'EIR-OUT' | 'EIR-IN';
   documentNo: string;        // e.g. GOUT-2026-05-18-001
   visitId: string;           // e.g. GIN-4429
+  /** The company the depot trades as — companyLabel(company), never typed. */
   depotName: string;
-  depotBranch: string;       // e.g. "Laem Chabang ICD · Yard A"
+  /** The depot, and the yard when there is one: `branch.displayName · yard.nameEn`. */
+  depotBranch: string;
+  /**
+   * The issuing company's tax id, for the cash receipt.
+   *
+   * OPTIONAL, AND NEVER INVENTED. This was the literal '0105560000000'
+   * printed on every receipt this template produced — one tenant's number
+   * on another tenant's tax document, which is the one thing a printed
+   * document must never get wrong. Omit it and the line does not print.
+   */
+  taxId?: string | null;
   printedAt: Date;
   cashierName: string;
   gateClerkName: string;
@@ -550,7 +561,7 @@ function PrintableReceipt({ data }: { data: GatePrintData }) {
     <>
       <h1>{data.depotName.toUpperCase()}</h1>
       <div className="center small">{data.depotBranch}</div>
-      <div className="center small">Tax ID: 0105560000000</div>
+      {data.taxId && <div className="center small">Tax ID: {data.taxId}</div>}
       <hr />
       <div className="center" style={{ fontWeight: 700 }}>CASH RECEIPT</div>
       <div className="center small">{data.documentType === 'EIR-OUT' ? 'Gate-Out · Outbound' : 'Gate-In · Inbound'}</div>

@@ -103,7 +103,7 @@ export function YardLayout({ yards, canManage }: { yards: Yard[]; canManage: boo
               )}
             </>
           }
-          note="Blocks inside the yard, and how many rows × bays × tiers each takes. A depot that locates boxes at yard level (KORAKIT) needs none."
+          note="Blocks inside the yard, and how many rows × bays × tiers each takes. A depot that locates boxes at yard level needs none."
         />
       </div>
 

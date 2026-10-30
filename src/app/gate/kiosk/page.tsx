@@ -3,6 +3,7 @@ import React, { useState, useEffect, useRef, useCallback } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { Icon } from '@/components/ui/Icon';
+import { useFacility } from '@/lib/api/facility';
 
 /* ──────────────────────────────────────────────────────────────────────────
    Prefill handoff — kiosk → /gate/desk (the one screen that records a move)
@@ -134,6 +135,9 @@ const COUNTDOWN_START = 5;
 
 export default function GateKioskPage() {
   const router = useRouter();
+  // The depot this kiosk stands in, from the signed-in tenant's own data.
+  // Never a typed place name: two tenants share this build.
+  const depotName = useFacility().branch?.displayName ?? 'Depot';
   const [state, setState] = useState<KioskState>({ stage: 'idle' });
   const [buffer, setBuffer] = useState('');
   const [now, setNow] = useState(new Date());
@@ -298,7 +302,7 @@ export default function GateKioskPage() {
             G
           </div>
           <div>
-            <div style={{ fontSize: 18, fontWeight: 700, letterSpacing: '-0.01em' }}>Laem Chabang ICD</div>
+            <div style={{ fontSize: 18, fontWeight: 700, letterSpacing: '-0.01em' }}>{depotName}</div>
             <div style={{ fontSize: 11, color: '#94a3b8', letterSpacing: '0.06em', textTransform: 'uppercase', fontWeight: 600 }}>
               Gate Kiosk · Lane IN-03
             </div>
@@ -406,6 +410,7 @@ export default function GateKioskPage() {
    ────────────────────────────────────────────────────────────────────────── */
 
 function IdleScreen() {
+  const depotName = useFacility().branch?.displayName ?? 'the depot';
   return (
     <div style={{ textAlign: 'center', animation: 'kiosk-fade-in 300ms ease' }}>
       <div style={{ position: 'relative', width: 220, height: 220, margin: '0 auto 32px' }}>
@@ -431,7 +436,7 @@ function IdleScreen() {
         </div>
       </div>
       <div style={{ fontSize: 38, fontWeight: 700, letterSpacing: '-0.02em', marginBottom: 14 }}>
-        Welcome to Laem Chabang ICD
+        Welcome to {depotName}
       </div>
       <div style={{ fontSize: 22, color: '#94a3b8', fontWeight: 500 }}>
         Hold the QR code from your appointment in front of the scanner

@@ -3,6 +3,7 @@ import React, { useState, useMemo } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { Icon } from '@/components/ui/Icon';
+import { useFacility } from '@/lib/api/facility';
 import { ExportButton } from '@/components/ui/ExportButton';
 import { RefreshButton } from '@/components/ui/RefreshButton';
 
@@ -130,6 +131,11 @@ function inDateFilter(date: string, filter: DateFilter): boolean {
 // ─── Page ───────────────────────────────────────────────────────────────────────
 
 export default function GateAppointmentsPage() {
+  // Depot and yard from the signed-in tenant's own data — never a typed
+  // place name: two tenants share this build.
+  const facility = useFacility();
+  const where = [facility.branch?.displayName ?? 'this depot', facility.yard?.nameEn]
+    .filter(Boolean).join(' · ');
   const router = useRouter();
   const [search, setSearch] = useState('');
   const [dateFilter, setDateFilter] = useState<DateFilter>('TODAY');
@@ -195,7 +201,7 @@ export default function GateAppointmentsPage() {
             <span className="gecko-pill gecko-pill-primary">{filtered.length} of {scoped.length}</span>
           </div>
           <p className="gecko-page-subtitle">
-            Time-slot bookings for trucker arrivals — Laem Chabang ICD · Import Yard
+            Time-slot bookings for trucker arrivals — {where}
           </p>
         </div>
         <div className="gecko-page-header-actions">

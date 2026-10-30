@@ -68,13 +68,21 @@ export const saveSeries = (s: NumberSeries) =>
 export const deleteSeries = (s: NumberSeries) =>
   apiSend<void>('DELETE', `${NUMBER_SERIES_PATH}/${s.numberSeriesId}?rowVersion=${encodeURIComponent(s.rowVersion!)}`);
 
-/** What the next numbers look like, e.g. INV-202609-00001 (the proc formats the real one). */
-export function previewNumber(s: NumberSeries, branchCode = 'KTC', today = new Date()): string {
+/**
+ * What the next numbers look like, e.g. INV-202609-00001 (the proc formats the
+ * real one).
+ *
+ * The branch code has NO DEFAULT. It used to fall back to 'KTC', which is
+ * KORAKIT's depot — so a second tenant previewing its own series was shown a
+ * number with another depot's code in it. With no branch chosen the segment is
+ * simply left out, which is honest about what is not yet known.
+ */
+export function previewNumber(s: NumberSeries, branchCode?: string | null, today = new Date()): string {
   const yyyy = String(today.getFullYear());
   const mm = String(today.getMonth() + 1).padStart(2, '0');
   const date = { NONE: '', YY: yyyy.slice(2), YYYY: yyyy, YYMM: yyyy.slice(2) + mm, YYYYMM: yyyy + mm }[s.datePartFormat] ?? '';
   const number = String(Math.max(1, s.startNumber || 1)).padStart(s.numberLength || 1, '0');
-  return [s.prefix, s.includeBranchCode ? branchCode : null, date, number].filter(Boolean).join(s.separator ?? '');
+  return [s.prefix, s.includeBranchCode ? branchCode ?? null : null, date, number].filter(Boolean).join(s.separator ?? '');
 }
 
 export const DATE_PARTS = ['NONE', 'YY', 'YYYY', 'YYMM', 'YYYYMM'].map(v => ({ value: v, label: v }));
