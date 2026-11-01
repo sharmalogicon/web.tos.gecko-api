@@ -149,6 +149,12 @@ export function MoveCard({
    * location is simply keyed — which is what KORAKIT has always done.
    */
   const yardSlots = useYardHasSlots(move.yardId || null);
+  /**
+   * What the Location box SHOWS at a mapped yard. Kept here and not on the
+   * draft because it is not what gets sent: a block code, or a half-typed
+   * label, is a note to the clerk, and the API would refuse either as a slot.
+   */
+  const [slotText, setSlotText] = React.useState(move.yardSlotLabel || move.positionText);
   const mapped = locationMode === 'SLOT' && yardSlots.hasSlots;
   const required = requiredFor(move);
   const needs = (f: string) => required.includes(f);
@@ -1008,14 +1014,35 @@ export function MoveCard({
                            read as a slot of this yard; what is picked sets the
                            slot outright. Either answers "where it goes". */
                         keyIn={{
-                          text: move.positionText,
+                          text: slotText,
                           error: err('positionText'),
-                          onText: text => onChange({ positionText: text }),
+                          /**
+                           * WHAT IS TYPED IS SHOWN, NOT SENT (owner,
+                           * 2026-11-01: no validation errors at the gate for
+                           * the yard location).
+                           *
+                           * At a mapped yard the API reads `positionText` as a
+                           * slot label and refuses anything else — including
+                           * the block code that picking a block puts here, so
+                           * choosing block A answered "No slot "A" in this
+                           * yard". Only a slot the picker actually resolved
+                           * travels, as `yardSlotId`; the text stays on the
+                           * screen as what the clerk meant, and the barrier
+                           * opens either way.
+                           */
+                          onText: text => {
+                            setSlotText(text);
+                            if (move.positionText) onChange({ positionText: '' });
+                          },
                         }}
-                        onChange={slot => onChange({
-                          yardSlotId: slot?.yardSlotId ?? '',
-                          yardSlotLabel: slot?.label ?? '',
-                        })}
+                        onChange={slot => {
+                          setSlotText(slot?.label ?? '');
+                          onChange({
+                            yardSlotId: slot?.yardSlotId ?? '',
+                            yardSlotLabel: slot?.label ?? '',
+                            positionText: '',
+                          });
+                        }}
                       />
                     </GateField>
                   )

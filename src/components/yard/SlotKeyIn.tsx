@@ -120,7 +120,7 @@ export function SlotKeyIn({
           {shown.length === 0 ? (
             <div className="gecko-cell-meta gecko-slotkey-note">
               {emptyNote ?? (typed
-                ? 'No slot of this yard matches — key it anyway and the yard will check it.'
+                ? 'No slot of this yard matches. Pick a block below — that is enough; the yard records the exact place when the box is put away.'
                 : 'Pick a block below, or key the location.')}
             </div>
           ) : shown.map((o, i) => (
