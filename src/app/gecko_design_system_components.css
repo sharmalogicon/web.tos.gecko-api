@@ -12310,3 +12310,28 @@ th.gecko-cell-tight {
   flex: 0 0 auto;
   text-align: right;
 }
+
+
+/* ── §50  How storage and electricity were worked out ──────────────────
+   A GECKO clerk read "S-111 ค่าฝากตู้หนักเกิน ฿539.99" to a driver on 2026-11-01 and
+   could not say where the figure came from. The quote knew: 13 days in the
+   yard, 6 of them charged at ฿84.11, 20-10 to 01-11, under STANDARD_240. One
+   grey line under the charge, indented so it reads as the charge's own
+   working and not as another charge. */
+
+.gecko-charge-why {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 6px;
+  /* Indented under the charge name, clear of the amount column. */
+  padding: 1px 72px 2px 10px;
+  font-size: var(--gecko-table-meta);
+  line-height: 1.45;
+  color: var(--gecko-text-secondary);
+  opacity: 0.9;
+}
+
+/* The same sentence where there is no charge above it to indent under —
+   "Within free days (13 days in yard): no storage." */
+.gecko-charge-why-flush { padding-left: 0; }

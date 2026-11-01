@@ -10,6 +10,7 @@ import { BoxesOnTop } from '@/components/yard/BoxesOnTop';
 import { useSession } from '@/lib/auth/session';
 import { useConditions } from '@/lib/api/lookups';
 import { formatContainerNo, type GateFinding } from '@/lib/api/tos';
+import { formatDateTime } from '@/lib/format';
 import { GateField } from '../../_components/GateField';
 import { VasPanel } from './VasPanel';
 import { DamagePanel } from './DamagePanel';
@@ -21,7 +22,7 @@ import {
   NO_WALK_IN_ORDER_TYPE, WALK_IN_REFUSALS, walkInOrderTypeFor, type WalkInBox, type WalkInOrderType,
 } from '@/lib/api/walk-in';
 import {
-  beforeLastMoveIssue, boxLooksRight, mayMintNumber, needsDigitReason, needsLateReason,
+  beforeLastMoveIssue, boxLooksRight, hasStorageCharge, mayMintNumber, needsDigitReason, needsLateReason,
   editable, grossOf, isDamaged, locationLabel, normaliseBox, needsSlotOverride, onBooking, overMaxWeight,
   pickupHasNoOrder, requiredFor, rowIssues,
   type MoveDraft, type SealRow,
@@ -347,6 +348,17 @@ export function MoveCard({
               onBlur={() => { if (move.containerNo.trim() && boxLooksRight(move.containerNo)) onLook(); }} />
           )}
           {move.looking && <span className="gecko-cell-meta">looking…</span>}
+          {/* HOW LONG THIS BOX HAS STOOD IN THE YARD, beside its number.
+              The number that decides the storage, in the one place the clerk
+              is already looking when the driver asks. Amber when storage is
+              actually being charged on it; plain grey when the days are only
+              a fact. */}
+          {move.stayDays !== null && (
+            <span className={`gecko-badge gecko-badge-xs ${hasStorageCharge(move) ? 'gecko-badge-warning' : 'gecko-badge-gray'}`}
+              title={move.inAt ? `In yard since ${formatDateTime(move.inAt)}` : undefined}>
+              {move.stayDays} days in yard
+            </span>
+          )}
         </div>
 
         <div className="gecko-move-spacer" />

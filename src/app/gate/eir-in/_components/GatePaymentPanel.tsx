@@ -2,7 +2,8 @@
 import React, { useState } from 'react';
 import { Icon } from '@/components/ui/Icon';
 import { TRUCK_LIMIT_NOTE } from '@/lib/api/gate-trips';
-import type { MoveDraft } from './visit-moves';
+import { chargeWhy, freeDaysNote } from './visit-moves';
+import type { MoveDraft, QuoteLineLike, StayFacts } from './visit-moves';
 
 /**
  * What the truck owes, and the one button that commits it.
@@ -51,8 +52,16 @@ export function GatePaymentPanel({
   const pending = moves.filter(m => !m.result);
   const drops = moves.filter(m => m.trip === 'DROP_OFF_CONT').length;
   const picks = moves.filter(m => m.trip === 'PICK_UP_CONT').length;
-  const lines = pending.flatMap(m => m.due.map(d => ({ ...d, box: m.containerNo })));
-  const later = pending.flatMap(m => m.billedLater.map(d => ({ ...d, box: m.containerNo })));
+  /**
+   * EVERY LINE CARRIES ITS BOX'S STAY.
+   *
+   * Storage is priced off how long the box stood in the yard, and that fact
+   * belongs to the box, not to the line. Flattening the truck's lines without
+   * it is what left the clerk holding an amount and no way to explain it.
+   */
+  const withStay = (m: MoveDraft) => ({ box: m.containerNo, inAt: m.inAt, stayDays: m.stayDays });
+  const lines = pending.flatMap(m => m.due.map(d => ({ ...d, ...withStay(m) })));
+  const later = pending.flatMap(m => m.billedLater.map(d => ({ ...d, ...withStay(m) })));
   const laterTotal = later.reduce((n, l) => n + l.total, 0);
   /**
    * Charges no tariff prices.
@@ -63,7 +72,15 @@ export function GatePaymentPanel({
    * service happened and was not billed — but they add nothing to the totals
    * and they do not hold the Save.
    */
-  const unpriced = pending.flatMap(m => m.noPrice.map(d => ({ ...d, box: m.containerNo })));
+  const unpriced = pending.flatMap(m => m.noPrice.map(d => ({ ...d, ...withStay(m) })));
+  /**
+   * Boxes whose storage was CHECKED and came to nothing — inside their free
+   * days. There is no line to hang this under, which is exactly the problem:
+   * silence here reads as storage nobody worked out.
+   */
+  const freeDays = pending
+    .map(m => ({ key: m.key, box: m.containerNo, note: freeDaysNote(m) }))
+    .filter(f => f.note);
   /**
    * Charges already dealt with — prepaid on an earlier receipt, or waived.
    *
@@ -117,12 +134,28 @@ export function GatePaymentPanel({
         ) : (
           <div className="gecko-stack-sm">
             {lines.map((l, i) => (
-              <div key={`${l.chargeCode}-${i}`} className="gecko-visit-charge-line">
-                <span className="gecko-flex-1 gecko-min-w-0">
-                  {l.chargeName || l.chargeCode}
-                  <span className="gecko-cell-meta"> · {l.paymentTermCode ?? 'CASH'}</span>
-                </span>
-                <span className="gecko-text-mono">{money(l.total, currency)}</span>
+              <div key={`${l.chargeCode}-${i}`}>
+                <div className="gecko-visit-charge-line">
+                  <span className="gecko-flex-1 gecko-min-w-0">
+                    {l.chargeName || l.chargeCode}
+                    <span className="gecko-cell-meta"> · {l.paymentTermCode ?? 'CASH'}</span>
+                  </span>
+                  <span className="gecko-text-mono">{money(l.total, currency)}</span>
+                </div>
+                <Why line={l} stay={l} />
+              </div>
+            ))}
+          </div>
+        )}
+
+        {/* STORAGE WAS CHECKED AND IS FREE. Said whether or not anything else
+            is owed: "no storage" is an answer a driver asks for, and the box
+            inside its free days has no line to carry it. */}
+        {freeDays.length > 0 && (
+          <div className="gecko-stack-xs gecko-mt-1">
+            {freeDays.map(f => (
+              <div key={`fd-${f.key}`} className="gecko-charge-why gecko-charge-why-flush">
+                {f.box ? `${f.box} · ` : ''}{f.note}
               </div>
             ))}
           </div>
@@ -162,12 +195,15 @@ export function GatePaymentPanel({
             {showUnpriced && (
               <div className="gecko-stack-xs gecko-mt-1">
                 {unpriced.map((l, i) => (
-                  <div key={`np-${l.chargeCode}-${i}`} className="gecko-visit-charge-line">
-                    <span className="gecko-flex-1 gecko-min-w-0">
-                      {l.chargeName || l.chargeCode}
-                      <span className="gecko-cell-meta"> · {l.chargeCode}</span>
-                    </span>
-                    <span className="gecko-cell-meta">not charged</span>
+                  <div key={`np-${l.chargeCode}-${i}`}>
+                    <div className="gecko-visit-charge-line">
+                      <span className="gecko-flex-1 gecko-min-w-0">
+                        {l.chargeName || l.chargeCode}
+                        <span className="gecko-cell-meta"> · {l.chargeCode}</span>
+                      </span>
+                      <span className="gecko-cell-meta">not charged</span>
+                    </div>
+                    <Why line={l} stay={l} />
                   </div>
                 ))}
               </div>
@@ -190,14 +226,17 @@ export function GatePaymentPanel({
           <div className="gecko-eyebrow">Billed later</div>
           <div className="gecko-stack-sm">
             {later.map((l, i) => (
-              <div key={`${l.chargeCode}-${i}`} className="gecko-visit-charge-line">
-                <span className="gecko-flex-1 gecko-min-w-0">
-                  {l.chargeName || l.chargeCode}
-                  {l.byHaulierTerm && (
-                    <span className="gecko-cell-meta"> · on the haulier&apos;s credit term</span>
-                  )}
-                </span>
-                <span className="gecko-text-mono">{money(l.total, currency)}</span>
+              <div key={`${l.chargeCode}-${i}`}>
+                <div className="gecko-visit-charge-line">
+                  <span className="gecko-flex-1 gecko-min-w-0">
+                    {l.chargeName || l.chargeCode}
+                    {l.byHaulierTerm && (
+                      <span className="gecko-cell-meta"> · on the haulier&apos;s credit term</span>
+                    )}
+                  </span>
+                  <span className="gecko-text-mono">{money(l.total, currency)}</span>
+                </div>
+                <Why line={l} stay={l} credit />
               </div>
             ))}
             <div className="gecko-row gecko-row-between gecko-visit-total gecko-visit-total-muted">
@@ -268,6 +307,30 @@ export function GatePaymentPanel({
         </div>
       )}
     </aside>
+  );
+}
+
+/**
+ * HOW A STORAGE OR ELECTRICITY LINE WAS WORKED OUT, under the line.
+ *
+ * Grey, one line, and only for the two charges whose amount comes from
+ * something the driver cannot see. `chargeWhy` is where the sentence is built;
+ * this is only where it is put on the screen.
+ */
+function Why({ line, stay, credit }: { line: QuoteLineLike; stay: StayFacts; credit?: boolean }) {
+  const why = chargeWhy(line, stay);
+  if (!why) return null;
+  return (
+    <div className="gecko-charge-why">
+      <span>{why}</span>
+      {/* Billed later, so the clerk takes nothing for it — said on the line
+          that explains it rather than left to the block heading alone. */}
+      {credit && (
+        <span className="gecko-badge gecko-badge-xs gecko-badge-info">
+          On credit — invoiced, not paid here
+        </span>
+      )}
+    </div>
   );
 }
 

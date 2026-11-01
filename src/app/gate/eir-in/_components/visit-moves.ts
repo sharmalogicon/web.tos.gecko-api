@@ -22,7 +22,7 @@ import type {
 } from '@/lib/api/tos';
 import type { TripDamage, TripRowResult, VasOption } from '@/lib/api/gate-trips';
 import { directionOfTrip, numberOrNull, requiredGateFields, textOrNull } from '@/lib/api/tos';
-import { formatDateTime } from '@/lib/format';
+import { formatDateTime, formatDayMonth, formatDayMonthTime } from '@/lib/format';
 import type { TripRow } from '@/lib/api/gate-trips';
 import type { YardLocationMode } from '@/lib/api/yard-map';
 import type { ApiError } from '@/lib/api/problem';
@@ -201,6 +201,17 @@ export interface MoveDraft {
    * the clerk exactly the same card.
    */
   moneyNotes: SettledLike[];
+  /**
+   * What the quote tried and PRICED AT ZERO — storage inside its free days.
+   *
+   * Not an error and not a charge, so it belongs in neither list; without it a
+   * box whose storage was checked and came to nothing is indistinguishable from
+   * a box nobody checked.
+   */
+  pricedZero: SettledLike[];
+  /** When this box came into the yard, and how long it has stood there. */
+  inAt: string | null;
+  stayDays: number | null;
   /** The server's own sentence about this box, when it has one. */
   quoteNote: string | null;
   /**
@@ -264,6 +275,123 @@ export interface QuoteLineLike {
   taxAmount: number;
   total: number;
   currencyCode?: string | null;
+  /**
+   * HOW THE PRICE WAS WORKED OUT — all of it from the quote, none of it
+   * computed here.
+   *
+   * A driver asked why he owed ภ39.99 for storage and the clerk could not say
+   * (GECKO, 2026-11-01): the panel had the amount and threw the working away.
+   * The quote had it all along — the days in the yard, the days charged, the
+   * rate, the period and the tariff — so the fields are kept and printed under
+   * the line.
+   */
+  kind?: string | null;
+  quantity?: number | null;
+  unitRate?: number | null;
+  billingUnitCode?: string | null;
+  serviceFrom?: string | null;
+  serviceTo?: string | null;
+  scheduleNo?: string | null;
+}
+
+/** What the box's own stay says, for the lines priced off it. */
+export interface StayFacts {
+  /** When the box came into the yard. */
+  inAt: string | null;
+  /** Days it has stood there, the server's count — never this screen's. */
+  stayDays: number | null;
+}
+
+/** A number as a clerk writes it: 6, not 6.00; 13.5 stays 13.5. */
+const plain = (n: number) => Number(n.toFixed(2)).toLocaleString('en-US');
+const baht = (n: number) => `฿${n.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+
+/** DAY → "day", HOUR → "hour", and anything else in the server's own word. */
+const unitWord = (code: string | null | undefined) =>
+  (code ?? 'DAY').trim().toLowerCase().replace(/_/g, ' ') || 'day';
+
+/**
+ * WHY THIS LINE COSTS WHAT IT COSTS, in one sentence.
+ *
+ * Storage and electricity are the two charges a driver argues about, because
+ * both are worked out from something he cannot see: how long the box stood in
+ * the yard, and how long it was plugged in. Everything here comes off the quote
+ * — the one sum is the average rate, and only when the tariff is tiered and
+ * there is no single rate to print.
+ *
+ * Null for every other kind: a lift is a lift, and a sentence under it saying
+ * so would only crowd the bill.
+ */
+export function chargeWhy(line: QuoteLineLike, stay: StayFacts): string | null {
+  const kind = (line.kind ?? '').trim().toUpperCase();
+  const parts: string[] = [];
+
+  if (kind === 'REEFER') {
+    // Electricity is priced in HOUR BANDS — the first 24 hours, then each hour
+    // after — so "N h × rate" would be arithmetic that does not come to the
+    // amount. The hours are the fact worth showing; the bands are the tariff's.
+    if (line.quantity === null || line.quantity === undefined) return null;
+    parts.push(`Plugged in ${plain(line.quantity)} h`);
+    if (line.scheduleNo) parts.push(line.scheduleNo);
+    return parts.join(' · ');
+  }
+
+  if (kind !== 'STORAGE') return null;
+
+  if (stay.inAt) parts.push(`In yard since ${formatDayMonthTime(stay.inAt)}`);
+  if (stay.stayDays !== null) parts.push(`${plain(stay.stayDays)} days`);
+
+  const qty = line.quantity ?? null;
+  if (qty !== null) {
+    const unit = unitWord(line.billingUnitCode);
+    const charged = line.unitRate !== null && line.unitRate !== undefined
+      ? `charged ${plain(qty)} ${unit}s × ${baht(line.unitRate)}`
+      // A TIERED RATE HAS NO SINGLE RATE. The average is the only honest figure
+      // to print, and it says it is an average rather than passing for the rate.
+      : qty > 0
+        ? `charged ${plain(qty)} ${unit}s at ${baht(line.amount / qty)}/${unit} avg`
+        : `charged ${plain(qty)} ${unit}s`;
+    const period = line.serviceFrom && line.serviceTo
+      ? ` (${formatDayMonth(line.serviceFrom)} – ${formatDayMonth(line.serviceTo)})`
+      : '';
+    parts.push(charged + period);
+  }
+
+  if (line.scheduleNo) parts.push(line.scheduleNo);
+  // Nothing known is not an explanation: better no line than an empty one.
+  return parts.length > 0 ? parts.join(' · ') : null;
+}
+
+/** True when this line is storage — the kind the stay chip turns amber for. */
+const isStorageLine = (l: QuoteLineLike) => (l.kind ?? '').trim().toUpperCase() === 'STORAGE';
+
+/** Storage is being charged on this box, whoever ends up paying it. */
+export const hasStorageCharge = (move: MoveDraft) =>
+  [...move.due, ...move.billedLater, ...move.noPrice].some(isStorageLine);
+
+/**
+ * THE STORAGE CHARGE CODES — S-110 (empty) and S-111 (full), suffixed or not.
+ *
+ * `tried` carries a charge code and an outcome but no `kind`, so the code is
+ * the only way to recognise the storage the quote considered and priced at
+ * nothing.
+ */
+export const isStorageCode = (code: string | null | undefined) =>
+  /^S-?11[01]\b/i.test((code ?? '').trim());
+
+/**
+ * STORAGE WAS CHECKED AND CAME TO NOTHING — say so.
+ *
+ * A box inside its free days has no storage line at all, which on a bill looks
+ * exactly like a box whose storage nobody worked out. The quote knows better:
+ * it tried S-110/S-111 and priced it at zero. This is that, in the clerk's
+ * words, so a driver asking "and the storage?" gets an answer.
+ */
+export function freeDaysNote(move: MoveDraft): string | null {
+  if (move.stayDays === null) return null;
+  if (hasStorageCharge(move)) return null;
+  if (!move.pricedZero.some(t => isStorageCode(t.chargeCode))) return null;
+  return `Within free days (${plain(move.stayDays)} days in yard): no storage.`;
 }
 
 /** The condition a box arrives in unless the clerk says otherwise. */
@@ -347,6 +475,9 @@ export function blankMove(trip: TripType, defaults: {
     noPrice: [],
     settled: [],
     moneyNotes: [],
+    pricedZero: [],
+    inAt: null,
+    stayDays: null,
     quoteNote: null,
     quoteError: null,
     quoteTotal: 0,

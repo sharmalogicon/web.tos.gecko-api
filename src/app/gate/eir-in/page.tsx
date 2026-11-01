@@ -55,6 +55,13 @@ import { ErrorBanner } from '@/components/ui/ErrorBanner';
 interface QuoteBox {
   bookingContainerId: string | null;
   nextMovementCode: string | null;
+  /**
+   * The box's stay, which is what storage is priced off. The window has
+   * answered these all along; `/window/preview` fills them for a walk-in too
+   * since 2026-11-01, where they used to be null.
+   */
+  inAt?: string | null;
+  stayDays?: number | null;
   due?: QuoteLineLike[];
   billedLater?: QuoteLineLike[];
   noPrice?: QuoteLineLike[];
@@ -266,6 +273,11 @@ export default function GateInPage() {
               // up as due or no-price lines.
               settled: (box?.tried ?? []).filter(t => t.outcome === 'SETTLED'),
               moneyNotes: (box?.tried ?? []).filter(t => MONEY_NOTES.includes(t.outcome)),
+              // Storage the quote worked out and charged nothing for — the box
+              // is inside its free days. Kept so the card can say so.
+              pricedZero: (box?.tried ?? []).filter(t => t.outcome === 'PRICED_ZERO'),
+              inAt: box?.inAt ?? null,
+              stayDays: box?.stayDays ?? null,
               vasMenu: box?.vasMenu ?? [],
               quoteNote: box?.note ?? null,
               quoteError: box ? null : 'The quote did not answer for this box.',
@@ -283,7 +295,8 @@ export default function GateInPage() {
           const err = e instanceof ApiError ? e : new ApiError(0, 'The Gecko API did not answer.');
           for (const m of group) {
             patchMove(m.key, {
-              due: [], billedLater: [], noPrice: [], settled: [], moneyNotes: [], quoteTotal: 0, quoteTax: 0,
+              due: [], billedLater: [], noPrice: [], settled: [], moneyNotes: [], pricedZero: [],
+              inAt: null, stayDays: null, quoteTotal: 0, quoteTax: 0,
               quoteError: err.title || err.message,
             });
           }
@@ -313,6 +326,9 @@ export default function GateInPage() {
             noPrice: box?.noPrice ?? [],
             settled: (box?.tried ?? []).filter(t => t.outcome === 'SETTLED'),
             moneyNotes: (box?.tried ?? []).filter(t => MONEY_NOTES.includes(t.outcome)),
+            pricedZero: (box?.tried ?? []).filter(t => t.outcome === 'PRICED_ZERO'),
+            inAt: box?.inAt ?? null,
+            stayDays: box?.stayDays ?? null,
             vasMenu: box?.vasMenu ?? [],
             quoteNote: box?.note ?? null,
             quoteError: null,
@@ -322,7 +338,8 @@ export default function GateInPage() {
         } catch (e) {
           const err = e instanceof ApiError ? e : new ApiError(0, 'The Gecko API did not answer.');
           patchMove(m.key, {
-            due: [], billedLater: [], noPrice: [], settled: [], quoteTotal: 0, quoteTax: 0,
+            due: [], billedLater: [], noPrice: [], settled: [], pricedZero: [],
+            inAt: null, stayDays: null, quoteTotal: 0, quoteTax: 0,
             quoteError: err.title || err.message,
           });
         }

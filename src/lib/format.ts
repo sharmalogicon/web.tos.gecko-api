@@ -61,6 +61,29 @@ export function formatTime(value: string | null | undefined): string {
   return Number.isNaN(at.getTime()) ? '—' : `${pad(at.getHours())}:${pad(at.getMinutes())}`;
 }
 
+/**
+ * JUST THE DAY AND MONTH, dd-MM.
+ *
+ * For a sentence that names several dates in a row — "charged 6 days
+ * (20-10 – 01-11)" — where the year is the same for all of them and repeating
+ * it four times is noise. The separator is the app's hyphen, not a slash: one
+ * date convention, read the same way on every screen (see the top of this file).
+ */
+export function formatDayMonth(value: string | null | undefined): string {
+  if (!value) return '—';
+  const at = instantOf(value);
+  if (Number.isNaN(at.getTime())) return '—';
+  return `${pad(at.getDate())}-${pad(at.getMonth() + 1)}`;
+}
+
+/** dd-MM HH:mm — the same short day, when the clock matters too. */
+export function formatDayMonthTime(value: string | null | undefined): string {
+  if (!value) return '—';
+  const at = instantOf(value);
+  if (Number.isNaN(at.getTime())) return '—';
+  return `${pad(at.getDate())}-${pad(at.getMonth() + 1)} ${pad(at.getHours())}:${pad(at.getMinutes())}`;
+}
+
 /** dd-MM-yyyy with the weekday in front, for a day that is being planned. */
 export function formatDayDate(value: string | null | undefined): string {
   if (!value) return '—';
