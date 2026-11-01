@@ -5,6 +5,32 @@
 `/api/tos/gate/transactions` (EIRs), the container's holds, and
 `/api/master/equipment/{id}/history` (the registry row).
 
+## 0. ANSWERED — the names shipped, 2026-11-01
+
+Every field below is live: `eventByName` on visit events, `createdBy` /
+`createdByName` and `voidedBy` / `voidedByName` on gate moves (list and
+detail), and `appliedBy(Name)` / `releasedByName` on holds. All additions;
+nothing existing changed.
+
+The rule the screen was built on is confirmed:
+
+- **id null** = no person did it → *System activity*.
+- **id present, name null** = a person this tenant does not list (a desktop
+  migration) → the id, not the system.
+- Existing Azure data was checked: every gate move has a creator, every visit
+  event has a user, and the only applier-less hold is an automatic one — so no
+  old row is wrongly labelled.
+
+Answers to the questions below: `eventBy` is always a user id (1); a null means
+the system (2); the gate move keeps its own creator (3); the hold's applier was
+already stored, only the names are new (4).
+
+The web client reads all of them as of this commit. The fields are typed
+optional so a depot on an older API degrades to the id, or to silence, rather
+than to `undefined`.
+
+---
+
 The log's whole promise is *"what happened to this box, and who did it"*. It
 keeps the first half. Checked against the running API's OpenAPI
 (`localhost:5100/openapi/v1.json`, 2026-11-01), here is the second half:

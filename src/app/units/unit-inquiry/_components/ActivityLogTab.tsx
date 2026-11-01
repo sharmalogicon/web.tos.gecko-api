@@ -64,14 +64,20 @@ interface Entry {
  * sent one yet — it is still shown, short, with the whole of it on hover, so
  * the trail can be followed by somebody who can look it up.
  */
-function Who({ id, name }: { id?: string | null; name?: string | null }) {
+export function Who({ id, name, verb = 'by' }: {
+  id?: string | null; name?: string | null;
+  /** "by" for whoever did it, "deleted by" for whoever undid it. */
+  verb?: string;
+}) {
   const said = name?.trim();
-  if (said) return <span className="gecko-cm-log-who">by {said}</span>;
+  if (said) return <span className="gecko-cm-log-who">{verb} {said}</span>;
   const who = id?.trim();
+  // NO ID IS THE SYSTEM. A person whose name this tenant does not know is NOT
+  // the system — they get their id, which is what an auditor follows.
   if (!who) return <span className="gecko-cm-log-who gecko-cm-log-who-system">System activity</span>;
   return (
     <span className="gecko-cm-log-who" title={who}>
-      by user <span className="gecko-mono">{who.length > 12 ? `${who.slice(0, 8)}…` : who}</span>
+      {verb} user <span className="gecko-mono">{who.length > 12 ? `${who.slice(0, 8)}…` : who}</span>
     </span>
   );
 }
@@ -86,7 +92,12 @@ const KIND_LABEL: Record<Kind, string> = {
 export function ActivityLogTab({ story, moves, holdsNow, holdsReleased, registry, canReadRegistry }: {
   story: ContainerStory;
   moves: GateTransactionSummary[];
-  holdsNow: { containerHoldId: string; holdCode: string; description: string | null; appliedAt: string; applyReason: string }[];
+  /** Only the parts of an active hold this log shows — the applier included. */
+  holdsNow: {
+    containerHoldId: string; holdCode: string; description: string | null;
+    appliedAt: string; applyReason: string;
+    appliedBy?: string | null; appliedByName?: string | null;
+  }[];
   holdsReleased: Hold[];
   registry: RegistryRow | null;
   canReadRegistry: boolean;
@@ -131,6 +142,17 @@ export function ActivityLogTab({ story, moves, holdsNow, holdsReleased, registry
           </>
         ),
         note: [t.fullEmpty, t.truckPlate, t.orderNo].filter(Boolean).join(' · ') || null,
+        /* Two people can stand behind one EIR: whoever recorded the move, and
+           whoever deleted it afterwards. The second is the one an argument is
+           usually about, so it is named rather than left to the badge. */
+        who: (
+          <>
+            <Who id={t.createdBy} name={t.createdByName} />
+            {t.status === 'VOIDED' && (t.voidedBy || t.voidedByName) && (
+              <Who id={t.voidedBy} name={t.voidedByName} verb="deleted by" />
+            )}
+          </>
+        ),
         where: null,
       });
     }
@@ -144,6 +166,8 @@ export function ActivityLogTab({ story, moves, holdsNow, holdsReleased, registry
         title: `Hold applied · ${h.holdCode}`,
         detail: h.description ? <span>{h.description}</span> : undefined,
         note: h.applyReason,
+        // An automatic hold has no applier, and says so rather than nothing.
+        who: <Who id={h.appliedBy} name={h.appliedByName} />,
         where: null,
       });
     }
@@ -158,6 +182,7 @@ export function ActivityLogTab({ story, moves, holdsNow, holdsReleased, registry
         icon: 'lock',
         title: `Hold applied · ${h.holdCode}`,
         note: h.applyReason,
+        who: <Who id={h.appliedBy} name={h.appliedByName} />,
         where: h.branchCode,
       });
       if (h.releasedAt) {
@@ -169,6 +194,7 @@ export function ActivityLogTab({ story, moves, holdsNow, holdsReleased, registry
           title: `Hold released · ${h.holdCode}`,
           detail: h.releaseRef ? <span className="gecko-mono">{h.releaseRef}</span> : undefined,
           note: h.releaseReason,
+          who: <Who id={h.releasedBy} name={h.releasedByName} verb="released by" />,
           where: h.branchCode,
         });
       }

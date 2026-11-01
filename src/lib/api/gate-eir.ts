@@ -12,6 +12,8 @@ export interface EirDetail extends GateTransaction {
   tareWeightKg: number | null; tempObservedC: number | null; isoCode: string | null;
   positionText: string | null; surveyId: string | null; remarks: string | null;
   voidedAt: string | null; voidedBy: string | null; voidReason: string | null;
+  /** The clerk who recorded the move, and the one who deleted it (API 2026-11-01). */
+  createdBy?: string | null; createdByName?: string | null; voidedByName?: string | null;
   replacesGateTransactionId: string | null;
 }
 
@@ -37,6 +39,8 @@ export interface ActiveHold {
   containerHoldId: string; holdCode: string; description: string | null; holdType: string | null;
   blockingScope: string | null; releaseAuthority: string | null; priority: number | null; displayColorHex: string | null;
   appliedAt: string; applyReason: string; source: string; heldVia: "CONTAINER" | "BOOKING";
+  /** Who put it on (API 2026-11-01). A null id is an automatic hold. */
+  appliedBy?: string | null; appliedByName?: string | null;
   bookingId: string | null; orderNo: string | null;
 }
 

@@ -31,12 +31,16 @@ export interface StoryEvent {
   toValue: string | null;
   eventAt: string;
   /**
-   * WHO DID IT. The API sends the user's id; `eventByName` is what the screen
-   * wants and does not have yet (docs/ACTIVITY_LOG_WHO_FOR_API.md), so it is
-   * optional here and the log shows the name the moment it arrives.
+   * WHO DID IT — the user's id, and the name to put on the screen beside it
+   * (API 2026-11-01, docs/ACTIVITY_LOG_WHO_FOR_API.md).
    *
-   * Null is not "unknown": it is the system itself — an automatic plug-in at
-   * the gate, a status the server moved on — and the log says so.
+   * A NULL ID IS THE SYSTEM ITSELF: nobody did it — a full reefer plugged in
+   * by the gate, a status the server moved on. An id with a null NAME is a
+   * person whose account this tenant does not list (a desktop migration), and
+   * is shown as an id rather than passed off as the system.
+   *
+   * `eventByName` stays optional so a depot on an older build degrades to the
+   * id instead of showing `undefined`.
    */
   eventBy: string | null;
   eventByName?: string | null;

@@ -11,6 +11,8 @@ export interface Hold {
   releaseAuthority: string | null; priority: number | null; displayColorHex: string | null;
   appliedAt: string; appliedBy: string | null; applyReason: string; externalRef: string | null; source: string;
   releasedAt: string | null; releasedBy: string | null; releaseReason: string | null; releaseRef: string | null;
+  /** The names beside those two ids (API 2026-11-01); a null id is the system. */
+  appliedByName?: string | null; releasedByName?: string | null;
   releaseSource: string | null; isActive: boolean; rowVersion: string;
 }
 

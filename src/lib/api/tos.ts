@@ -266,6 +266,13 @@ export interface GateTransactionSummary {
   containerNo: string; orderNo: string; lineCode: string; truckPlate: string;
   transactionAt: string; isLate: boolean; status: string;
   /**
+   * WHO RECORDED THE MOVE, and who deleted it (API 2026-11-01). The void pair
+   * is filled only on a VOIDED row. Optional: an older build sends neither,
+   * and the activity log then says nothing rather than inventing a system.
+   */
+  createdBy?: string | null; createdByName?: string | null;
+  voidedBy?: string | null; voidedByName?: string | null;
+  /**
    * The numbers the depot actually quotes — the carrier's booking number and
    * the B/L (API 2026-10-08). `orderNo` beside them is Gecko's own filing
    * number: right for a URL, wrong for the heading of a register column.
