@@ -273,17 +273,24 @@ export const OPERATIONAL_REPORTS: ReportDef[] = [
    * billed later, so there is NO INVOICE NUMBER on the sheet. That is the point
    * of it, not an omission.
    */
-  { id: 'op-credit-collection', title: 'Credit Collection Report', description: 'Gate-in / gate-out moves made on credit (billed later, no invoice no.), with the size summary.',
+  /**
+   * THE CREDIT HALF OF THE PAIR, read the same way as the cash half: by the
+   * clerk who recorded the moves, not by the thirteen gate filters it used to
+   * carry. The API ignores those now. Its range takes a TIME for the same
+   * reason Cash Collection's does — a shift is not a day.
+   *
+   * `cashierUser` is the drawer's field for "which user"; here it names the
+   * gate clerk rather than a cashier, and travels as `userId`.
+   */
+  { id: 'op-credit-collection', title: 'Credit Collection Report (By User)',
+    description: 'Credit charges of the gate moves, by the clerk who recorded them: every move with its charges, VAT and totals per user; voided moves listed separately.',
     category: 'operational', group: 'In-Bound Reports', icon: 'truck',
-    params: ['agent', 'forwarder', 'customer', 'vessel', 'voyage', 'typeSize', 'emptyLoaded',
-      'bookingType', 'orderType', 'blNo', 'haulier', 'movementCode', 'yardLocation'],
+    params: ['cashierUser', 'bookingType'],
+    dateTime: true,
     document: {
       path: '/api/tos/reports/credit-collection',
       params: {
-        agent: 'agentCode', forwarder: 'forwarderCode', customer: 'customerCode',
-        vessel: 'vesselCode', voyage: 'voyageNo', typeSize: 'size', emptyLoaded: 'fullEmpty',
-        bookingType: 'bookingType', orderType: 'orderType', blNo: 'bookingBlNo',
-        haulier: 'haulierCode', movementCode: 'movementCode', yardLocation: 'yardId',
+        cashierUser: 'userId', bookingType: 'bookingType',
         dateFrom: 'dateFrom', dateTo: 'dateTo',
       },
       required: ['dateFrom', 'dateTo'],
