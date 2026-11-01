@@ -18,6 +18,23 @@ export const GATE_MOVES_PATH = '/api/tos/reports/gate-moves';
 export const RECEIPTS_PATH = '/api/revenue/reports/receipts';
 export const RECEIPTS_LIST_PATH = '/api/revenue/reports/receipts/list';
 
+/**
+ * EVERY USER OF THE TENANT, for the reports that are read "by user".
+ *
+ * Not `/api/users`: that is gated on user-manage, which the clerk running a
+ * report does not hold. This one answers to the gate report permission, which
+ * they do — the same reasoning that once pointed this dropdown at the receipts
+ * report, except that list only held people who had already taken money, so
+ * GECKO offered exactly one name.
+ */
+export const REPORT_USERS_PATH = '/api/tos/reports/users';
+
+export interface ReportUser {
+  userId: string;
+  name: string;
+  email: string | null;
+}
+
 export const reportPath = (base: string, branchId: string, from: string, to: string) =>
   `${base}?branchId=${encodeURIComponent(branchId)}&from=${from}&to=${to}`;
 

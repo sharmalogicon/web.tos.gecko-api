@@ -5,7 +5,7 @@ import { DateField } from '../ui/DateField';
 import { useApi, useApiList } from '@/lib/api/use-api';
 import { PartyPicker } from '@/components/ui/PartyPicker';
 import type { PartyRole } from '@/lib/api/parties';
-import { RECEIPTS_PATH, reportPath, type ReceiptsReport } from '@/lib/api/reports';
+import { REPORT_USERS_PATH, type ReportUser } from '@/lib/api/reports';
 import { useFacility } from '@/lib/api/facility';
 import { useMovements } from '@/lib/api/lookups';
 import { yardsPath, type Yard } from '@/lib/api/yards';
@@ -118,18 +118,19 @@ export function ReportParamsDrawer({ report, onClose, onGenerate, busy, problem 
   const { movements } = useMovements();
 
   /**
-   * The cashiers to choose from.
+   * THE USERS TO CHOOSE FROM — all of the tenant's, not only the ones who have
+   * already appeared in a report.
    *
-   * NOT /api/users: that is gated on user-manage, which an accounts clerk does
-   * not have — the dropdown would be empty for exactly the people running this
-   * report. The receipts report needs `revenue.charge.view`, the same as the
-   * report itself, and answers the cashiers who took money in the range.
+   * It was built from the receipts report, so a name turned up only after that
+   * person had taken money in the chosen range: GECKO offered "GECKO Admin"
+   * and nobody else, and a clerk looking for the colleague whose shift they
+   * were checking could not find them. `/api/tos/reports/users` answers to the
+   * gate report permission — which whoever is running this report already
+   * holds — and lists everyone, sorted, whether or not they have done anything
+   * yet. Still not `/api/users`: that one is gated on user-manage.
    */
   const wantsCashier = Boolean(report?.params.includes('cashierUser'));
-  const { data: receiptsReport } = useApi<ReceiptsReport>(
-    wantsCashier && branchId && vals.dateFrom && vals.dateTo
-      ? reportPath(RECEIPTS_PATH, branchId, vals.dateFrom.slice(0, 10), vals.dateTo.slice(0, 10))
-      : null);
+  const { data: reportUsers } = useApi<ReportUser[]>(wantsCashier ? REPORT_USERS_PATH : null);
 
   const parties = (rows: PartyRow[] | null): Opt[] => [
     { value: '', label: 'Any' },
@@ -298,8 +299,14 @@ export function ReportParamsDrawer({ report, onClose, onGenerate, busy, problem 
           {need('cashierUser') && (
             <SelectField label={PARAM_LABELS.cashierUser} value={vals.cashierUser ?? ''}
               onChange={v => set('cashierUser', v)}
-              opts={[{ value: '', label: 'Any' }, ...(receiptsReport?.cashiers ?? [])
-                .map(c => ({ value: c.cashierUserId, label: c.cashierName ?? c.cashierUserId }))]} />
+              /* The name is what a clerk recognises; the e-mail tells two
+                 Somchais apart. A native dropdown cannot grey half an option,
+                 so the address simply follows the name. */
+              opts={[{ value: '', label: 'Any' }, ...(reportUsers ?? [])
+                .map(u => ({
+                  value: u.userId,
+                  label: u.email ? `${u.name} — ${u.email}` : u.name,
+                }))]} />
           )}
           {need('movementCode') && (
             <SelectField label={PARAM_LABELS.movementCode} value={vals.movementCode ?? ''}
