@@ -190,9 +190,25 @@ export function SlotPicker({
           value={blockId ?? ''}
           disabled={disabled || blocks.length === 0}
           aria-label="Block"
-          onChange={e => setBlockId(e.target.value || null)}
+          onChange={e => {
+            const id = e.target.value || null;
+            setBlockId(id);
+            /**
+             * THE BLOCK IS AN ANSWER ON ITS OWN (owner, 2026-11-01).
+             *
+             * "Sometimes the gate user doesn't know where the exact location
+             * of the container would be" — so picking the block fills the
+             * location with the block's code, and the row is complete. A stack
+             * clicked afterwards replaces it with the full slot label; nobody
+             * is made to guess a bay and a tier to get a truck through.
+             */
+            if (!keyIn) return;
+            const code = blocks.find(b => b.yardBlockId === id)?.blockCode ?? '';
+            // Only when nothing more precise has been said already.
+            if (!value) keyIn.onText(code);
+          }}
         >
-          <option value="">{blocks.length === 0 ? 'No blocks in this yard' : 'Pick a block…'}</option>
+          <option value="">{blocks.length === 0 ? 'No blocks in this yard' : 'Pick a block — that is enough…'}</option>
           {blocks.map(b => {
             const free = Math.max(0, (b.slotCount - b.blockedSlotCount) - b.tally.boxes);
             return (
@@ -213,7 +229,11 @@ export function SlotPicker({
                 </button>
               )}
             </span>
-          : <span className="gecko-cell-meta">No slot picked</span>}
+          : <span className="gecko-cell-meta">
+              {keyIn?.text.trim()
+                ? 'The block is enough — click a stack only if you know it'
+                : 'No slot picked'}
+            </span>}
       </div>
 
       {map.error && <div className="gecko-field-error">{map.error.explanation ?? map.error.message}</div>}

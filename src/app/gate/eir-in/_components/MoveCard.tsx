@@ -986,10 +986,13 @@ export function MoveCard({
                     sees exactly this input, unchanged. GECKO picks a stack on
                     its own yard map, and the server writes the position text
                     from the slot — so there is no Position box to type into. */}
+                {/* WHERE IT GOES IS NOT REQUIRED, and the BLOCK alone answers
+                    it (owner, 2026-11-01): the gate often does not know where
+                    the box will end up, the yard does, and it decides later. */}
                 {mapped
                   ? (
-                    <GateField label="Location" required={needs('place')} error={err('yardSlotId')} span={3}
-                      hint="Key it, take one the yard suggests, or click a stack — whichever is quicker.">
+                    <GateField label="Location" error={err('yardSlotId')} span={3}
+                      hint="Pick the block — that is enough. Click a stack, or key it, only if you know the slot.">
                       <SlotPicker
                         yardId={move.yardId || null}
                         value={move.yardSlotId || null}

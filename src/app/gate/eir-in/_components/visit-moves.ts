@@ -549,7 +549,15 @@ export function requiredFor(
    * nothing to pick and no box to type in.
    */
   if (locationMode !== 'SLOT' || !hasSlotMap) return fields;
-  return fields.map(f => (f === 'positionText' ? 'place' : f));
+  /**
+   * THE EXACT PLACE IS NOT THE GATE'S TO KNOW (owner, 2026-11-01): "sometimes
+   * the gate user doesn't know where the exact location of the container would
+   * be — just choose the block." So on a mapped yard nothing about the place
+   * is demanded: the clerk picks a block, or nothing, and the yard puts the
+   * box where it goes. Holding a truck at the barrier for a bay and a tier
+   * only teaches people to type something false.
+   */
+  return fields.filter(f => f !== 'positionText' && f !== 'yardSlotId');
 }
 
 /**
