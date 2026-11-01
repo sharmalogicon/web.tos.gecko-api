@@ -48,6 +48,32 @@ interface Entry {
   detail?: React.ReactNode;
   note?: string | null;
   where?: string | null;
+  /**
+   * WHO DID IT, where the source knows. Left out where it does not: a gate
+   * transaction carries no clerk and a hold carries no user, and printing
+   * "System activity" over a person's work would be a lie the log cannot be
+   * trusted after. See docs/ACTIVITY_LOG_WHO_FOR_API.md.
+   */
+  who?: React.ReactNode;
+}
+
+/**
+ * The person behind an entry, or the system when nobody is recorded.
+ *
+ * A name is what a clerk can act on. An id with no name is the API not having
+ * sent one yet — it is still shown, short, with the whole of it on hover, so
+ * the trail can be followed by somebody who can look it up.
+ */
+function Who({ id, name }: { id?: string | null; name?: string | null }) {
+  const said = name?.trim();
+  if (said) return <span className="gecko-cm-log-who">by {said}</span>;
+  const who = id?.trim();
+  if (!who) return <span className="gecko-cm-log-who gecko-cm-log-who-system">System activity</span>;
+  return (
+    <span className="gecko-cm-log-who" title={who}>
+      by user <span className="gecko-mono">{who.length > 12 ? `${who.slice(0, 8)}…` : who}</span>
+    </span>
+  );
 }
 
 const KIND_LABEL: Record<Kind, string> = {
@@ -85,6 +111,7 @@ export function ActivityLogTab({ story, moves, holdsNow, holdsReleased, registry
             ? <span className="gecko-mono">{[e.fromValue, e.toValue].filter(Boolean).join(' → ')}</span>
             : undefined,
           note: e.remarks,
+          who: <Who id={e.eventBy} name={e.eventByName} />,
           where: v.branchCode,
         });
       }
@@ -171,7 +198,10 @@ export function ActivityLogTab({ story, moves, holdsNow, holdsReleased, registry
             ))}
           </span>
         ) : undefined,
-        note: [h.reason, h.byName && `by ${h.byName}`].filter(Boolean).join(' \u00b7 ') || null,
+        note: h.reason ?? null,
+        // The registry's history has carried the name since 2026-10-12; it
+        // moves out of the note so every entry says who in the same place.
+        who: <Who id={h.by} name={h.byName} />,
       });
     });
 
@@ -234,7 +264,12 @@ export function ActivityLogTab({ story, moves, holdsNow, holdsReleased, registry
                 {e.where && <span className="gecko-cell-meta gecko-cm-log-where">{e.where}</span>}
               </div>
               {e.detail && <div className="gecko-cm-log-detail">{e.detail}</div>}
-              {e.note && <div className="gecko-cell-meta">{e.note}</div>}
+              {(e.note || e.who) && (
+                <div className="gecko-cell-meta gecko-cm-log-foot">
+                  {e.note}
+                  {e.who}
+                </div>
+              )}
             </div>
           </li>
         ))}

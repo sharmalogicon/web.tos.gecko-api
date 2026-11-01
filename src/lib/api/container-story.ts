@@ -30,7 +30,16 @@ export interface StoryEvent {
   fromValue: string | null;
   toValue: string | null;
   eventAt: string;
+  /**
+   * WHO DID IT. The API sends the user's id; `eventByName` is what the screen
+   * wants and does not have yet (docs/ACTIVITY_LOG_WHO_FOR_API.md), so it is
+   * optional here and the log shows the name the moment it arrives.
+   *
+   * Null is not "unknown": it is the system itself — an automatic plug-in at
+   * the gate, a status the server moved on — and the log says so.
+   */
   eventBy: string | null;
+  eventByName?: string | null;
   referenceId: string | null;
   remarks: string | null;
 }
