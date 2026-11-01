@@ -12424,3 +12424,23 @@ th.gecko-cell-tight {
   color: var(--gecko-info-700);
 }
 [data-theme="dark"] .gecko-tariff-live-edit { color: var(--gecko-info-300); }
+
+/* ── §54  Who did it, on the container's activity log ───────────────────────
+   The log answers "what happened to this box, and who did it" — and said the
+   second half only for registry changes until the API sent the names. It sits
+   on its OWN line under the remark (owner, 2026-11-01): sharing a line put it
+   in a different place on every entry, depending on how long the remark ran,
+   and the name is the thing a reader scans for. Italic, because it is an
+   aside about the entry rather than part of what happened.
+
+   "System activity" is said only where the source really records no person —
+   printing it over a clerk's work would make the log untrustworthy. */
+
+.gecko-cm-log-byline {
+  font-style: italic;
+  margin-top: 2px;
+}
+.gecko-cm-log-who { white-space: nowrap; }
+/* Two of them on one entry: recorded by one clerk, deleted by another. */
+.gecko-cm-log-who + .gecko-cm-log-who { margin-left: 10px; }
+.gecko-cm-log-who-system { opacity: 0.85; }

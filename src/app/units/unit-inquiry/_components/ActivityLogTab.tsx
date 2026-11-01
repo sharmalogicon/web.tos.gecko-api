@@ -290,12 +290,12 @@ export function ActivityLogTab({ story, moves, holdsNow, holdsReleased, registry
                 {e.where && <span className="gecko-cell-meta gecko-cm-log-where">{e.where}</span>}
               </div>
               {e.detail && <div className="gecko-cm-log-detail">{e.detail}</div>}
-              {(e.note || e.who) && (
-                <div className="gecko-cell-meta gecko-cm-log-foot">
-                  {e.note}
-                  {e.who}
-                </div>
-              )}
+              {e.note && <div className="gecko-cell-meta">{e.note}</div>}
+              {/* WHO DID IT, ON ITS OWN LINE, ALWAYS (owner, 2026-11-01).
+                  It shared a line with the remark, so it landed in a different
+                  place on every entry depending on how long the remark was —
+                  and the one thing a reader scans a log for is the name. */}
+              {e.who && <div className="gecko-cell-meta gecko-cm-log-byline">{e.who}</div>}
             </div>
           </li>
         ))}
