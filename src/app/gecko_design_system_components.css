@@ -12354,3 +12354,73 @@ th.gecko-cell-tight {
 /* A disabled Edit still says why in its title, so it stays readable rather
    than fading into the strip's rule. */
 .gecko-strip-value .gecko-btn[disabled] { opacity: 0.45; }
+
+
+/* ── §52  Keying a yard location, with the yard suggesting ───────────────
+   A clerk at the barrier usually knows where the box is going; hunting for it
+   on a map is slower than typing it, and a depot whose yard has no slots has
+   no map to hunt on. So the box is always free text and the list is help —
+   the yard's own suggestions first, then the free slots of the open block. */
+
+.gecko-slotkey { position: relative; }
+
+.gecko-slotkey-menu {
+  position: absolute;
+  z-index: var(--gecko-z-menu, 40);
+  top: calc(100% + 4px);
+  left: 0;
+  right: 0;
+  max-height: 260px;
+  overflow-y: auto;
+  padding: 4px;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.gecko-slotkey-row {
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+  width: 100%;
+  padding: 6px 8px;
+  border: 0;
+  border-radius: var(--gecko-radius-sm);
+  background: none;
+  text-align: left;
+  cursor: pointer;
+}
+.gecko-slotkey-row-on { background: var(--gecko-primary-50); }
+[data-theme="dark"] .gecko-slotkey-row-on { background: rgba(59, 130, 246, 0.14); }
+
+.gecko-slotkey-row-label { flex: 0 0 auto; }
+/* The reason the yard likes it — long, and the first thing to give up room. */
+.gecko-slotkey-row-why {
+  flex: 1 1 auto;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.gecko-slotkey-row-score {
+  flex: 0 0 auto;
+  font-size: var(--gecko-text-xs);
+  font-weight: var(--gecko-font-weight-semibold);
+  color: var(--gecko-primary-700);
+}
+[data-theme="dark"] .gecko-slotkey-row-score { color: var(--gecko-primary-200); }
+
+.gecko-slotkey-note { padding: 8px; }
+
+/* ── §53  A tariff that is approved and still open to a change ──────────────
+   "Frozen" is about the price having been in force, not about approval: a
+   tariff approved today that starts in January has priced nothing yet, so it
+   is edited in place. Said in the header where the frozen note used to be, in
+   the blue of news rather than the grey of a closed door. */
+
+.gecko-tariff-live-edit {
+  font-size: 11px;
+  font-style: italic;
+  color: var(--gecko-info-700);
+}
+[data-theme="dark"] .gecko-tariff-live-edit { color: var(--gecko-info-300); }

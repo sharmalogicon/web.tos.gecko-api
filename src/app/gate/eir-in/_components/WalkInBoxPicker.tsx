@@ -6,6 +6,7 @@ import { useApi } from '@/lib/api/use-api';
 import { formatContainerNo } from '@/lib/api/tos';
 import { dwellLabel } from '@/lib/api/tos';
 import { walkInBoxesPath, type WalkInBox, type WalkInBoxPage } from '@/lib/api/walk-in';
+import { placeInWords, useYardSettings } from '@/lib/api/yard-map';
 
 /**
  * THE WALK-IN PICK-UP PICKER — which box in the yard is the truck taking?
@@ -35,6 +36,8 @@ export function WalkInBoxPicker({ branchId, fullEmpty, draftId, exclude, value, 
   onPick: (box: WalkInBox) => void;
   disabled?: boolean;
 }) {
+  /** SLOT or AREA: whether a box without a place is missing a slot or a location. */
+  const { locationMode } = useYardSettings();
   const [text, setText] = useState('');
   const [search, setSearch] = useState('');
   const [open, setOpen] = useState(false);
@@ -109,7 +112,11 @@ export function WalkInBoxPicker({ branchId, fullEmpty, draftId, exclude, value, 
                   .filter(Boolean).map(x => ` · ${x}`).join('')}
               </span>
               <span className="gecko-walkin-pick-where">
-                {row.positionText ?? 'no slot'}
+                {/* The same words as the pick-up row and the printed form —
+                    a box is in one place, however the screen was reached. At a
+                    depot that types its own areas there are no slots to be
+                    missing, so nothing is called one. */}
+                {placeInWords(row.positionText) ?? (locationMode === 'SLOT' ? 'no slot' : 'no location')}
                 {row.daysInYard !== null && <span className="gecko-cell-meta"> · {dwellLabel(row.daysInYard)}</span>}
               </span>
               {row.isHeld && <span className="gecko-badge gecko-badge-xs gecko-badge-error">HOLD</span>}

@@ -512,7 +512,17 @@ export const boxLooksRight = (value: string) => CONTAINER_PATTERN.test(normalise
  * before the POST rather than by a 400 after it. FULL/EMPTY comes from the
  * booking step the preflight returned, never from anything the clerk picked.
  */
-export function requiredFor(move: MoveDraft, locationMode: YardLocationMode = 'AREA'): string[] {
+export function requiredFor(
+  move: MoveDraft,
+  locationMode: YardLocationMode = 'AREA',
+  /**
+   * Has the yard this row names actually got slots? A SLOT depot whose yard
+   * has never been laid out has nothing to pick, so it keys the location like
+   * an AREA depot. True by default: the old behaviour, for the callers that
+   * do not know.
+   */
+  hasSlotMap = true,
+): string[] {
   const fields = requiredGateFields(
     move.trip,
     // Preflight is the authority once it has answered; before that the box the
@@ -524,16 +534,22 @@ export function requiredFor(move: MoveDraft, locationMode: YardLocationMode = 'A
     move.known?.nextStep ?? null,
   );
   /**
-   * AT A SLOT DEPOT, THE POSITION IS THE SLOT.
+   * WHERE THE BOX GOES, HOWEVER THIS DEPOT SAYS IT.
    *
    * The order type's tick says a drop-off must say where the box goes; the
-   * depot's `yard.location_mode` says HOW. In SLOT mode there is no Position
-   * box on the card at all — the clerk picks a stack — so demanding
-   * `positionText` would hold up a Save that is complete, and the server would
-   * refuse the typed position anyway (it writes its own from the slot).
+   * depot's `yard.location_mode` and the yard's own layout say HOW:
+   *
+   *   AREA, or a SLOT yard with no slots    the location is typed
+   *   a SLOT yard with slots                a slot picked OR the same thing
+   *                                         keyed — `place`, satisfied by
+   *                                         either
+   *
+   * It used to demand `yardSlotId` outright on any SLOT depot, which held up
+   * a complete Save at GECKO: a yard whose slots were never generated offered
+   * nothing to pick and no box to type in.
    */
-  if (locationMode !== 'SLOT') return fields;
-  return fields.map(f => (f === 'positionText' ? 'yardSlotId' : f));
+  if (locationMode !== 'SLOT' || !hasSlotMap) return fields;
+  return fields.map(f => (f === 'positionText' ? 'place' : f));
 }
 
 /**
@@ -563,7 +579,9 @@ export const onBooking = (m: MoveDraft): boolean =>
 export const mayMintNumber = (m: MoveDraft) => m.isWalkIn && m.trip === 'DROP_OFF_CONT';
 
 /** A row is ready when it has a plausible box and whatever the server demands. */
-export function rowIssues(move: MoveDraft, locationMode: YardLocationMode = 'AREA'): string[] {
+export function rowIssues(
+  move: MoveDraft, locationMode: YardLocationMode = 'AREA', hasSlotMap = true,
+): string[] {
   const issues: string[] = [];
   if (!move.containerNo.trim()) {
     // Blank is allowed here, but then nothing can be read off a registry entry
@@ -584,7 +602,17 @@ export function rowIssues(move: MoveDraft, locationMode: YardLocationMode = 'ARE
    * that same hard-coded rule, so nothing changed for a depot that has not set
    * one.
    */
-  for (const field of requiredFor(move, locationMode)) {
+  for (const field of requiredFor(move, locationMode, hasSlotMap)) {
+    /**
+     * A PLACE IS A PLACE, picked or keyed. There is no `place` on the draft to
+     * read — it is either of two fields — and a clerk who typed a location
+     * must not be told the row is unfinished because they did not click a
+     * stack for it.
+     */
+    if (field === 'place') {
+      if (!move.yardSlotId && !move.positionText.trim()) issues.push('Where it goes');
+      continue;
+    }
     if (field === 'seals') {
       if (!move.seals.some(s => s.sealNo.trim())) issues.push('At least one seal');
       continue;
@@ -637,6 +665,7 @@ export function rowIssues(move: MoveDraft, locationMode: YardLocationMode = 'ARE
 
 const FIELD_LABELS: Record<string, string> = {
   yardId: 'Yard',
+  place: 'Where it goes',
   positionText: 'Position',
   yardSlotId: 'Slot',
   tareWeightKg: 'Tare weight',

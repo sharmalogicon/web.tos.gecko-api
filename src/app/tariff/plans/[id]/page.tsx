@@ -301,7 +301,20 @@ export default function TariffScheduleDetailPage({ params }: { params: Promise<{
             <span className={`gecko-pill gecko-pill-${tone.tone}`}>
               <Icon name={tone.icon} size={11} style={{ marginBottom: -1, marginRight: 4 }} /> {tone.label}
             </span>
-            {!s.isEditable && <span style={{ fontSize: 11, color: 'var(--gecko-text-disabled)', fontStyle: 'italic' }}>frozen — a change is a new version</span>}
+            {/* FROZEN IS ABOUT THE PRICE HAVING BEEN IN FORCE, not about
+                approval. A tariff approved today that starts in January has
+                priced nothing yet, so it is still edited in place — same
+                number, same version, still approved. One that has been in
+                force since last month is another matter: changing it would
+                rewrite what customers were already charged, and that is what
+                a new version is for. */}
+            {!s.isEditable
+              ? <span style={{ fontSize: 11, color: 'var(--gecko-text-disabled)', fontStyle: 'italic' }}>frozen — a change is a new version</span>
+              : s.status === 'APPROVED' && (
+                <span className="gecko-tariff-live-edit">
+                  Approved, starts {formatDate(s.effectiveFrom)} — edits apply to this version directly.
+                </span>
+              )}
           </div>
           <div className="gecko-row gecko-row-baseline gecko-row-wrap gecko-mt-1" style={{ gap: 12 }}>
             <h1 className="gecko-page-title">{s.name}</h1>
@@ -363,7 +376,10 @@ export default function TariffScheduleDetailPage({ params }: { params: Promise<{
               <Icon name="cornerUpLeft" size={14} /> Withdraw
             </button>
           )}
-          {s.status === 'APPROVED' && canManage && (
+          {/* A future tariff is EDITED, not revised: offering both would ask
+              the clerk to choose between two words for the same intention,
+              and the wrong choice leaves a stray version behind. */}
+          {s.status === 'APPROVED' && !s.isEditable && canManage && (
             <button className="gecko-btn gecko-btn-primary gecko-btn-sm" disabled={busy !== null}
               onClick={() => setAskRevise(true)}>
               <Icon name="copy" size={14} /> {busy === 'revise' ? 'Copying…' : 'New version'}

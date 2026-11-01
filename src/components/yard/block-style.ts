@@ -31,12 +31,16 @@ export interface BlockStyle {
 /**
  * The colour each block type is drawn in, and what it is called on screen.
  *
- * These are the eight values org.yard_block.block_type allows
+ * These are the nine values org.yard_block.block_type allows
  * (ck_yard_block__type); anything else is a block the API would refuse.
  */
 export const TYPE_STYLE: Record<BlockType, BlockStyle> = {
   IMPORT:       { label: 'Import',  fill: '#dbeafe', stroke: '#2563eb', text: '#1e3a8a' },
   EXPORT:       { label: 'Export',  fill: '#d1fae5', stroke: '#059669', text: '#064e3b' },
+  /* Indigo: a full box of no particular direction. Near the import blue
+     because it is full like one, and far enough from it — and from the empty
+     grey beside it — to tell apart on a map of twenty blocks. */
+  FULL:         { label: 'Full',    fill: '#e0e7ff', stroke: '#4f46e5', text: '#312e81' },
   EMPTY:        { label: 'Empty',   fill: '#f3f4f6', stroke: '#6b7280', text: '#374151' },
   REEFER:       { label: 'Reefer',  fill: '#cffafe', stroke: '#0891b2', text: '#155e75' },
   DAMAGE:       { label: 'Damage',  fill: '#fee2e2', stroke: '#dc2626', text: '#7f1d1d' },

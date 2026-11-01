@@ -8,6 +8,7 @@ import {
 import { formatDate } from '@/lib/format';
 import { departureSourceLabel } from '@/lib/api/yard-work';
 import { TYPE_STYLE, UNTYPED_STYLE, typeLabel } from './block-style';
+import { SlotKeyIn, type SlotOption } from './SlotKeyIn';
 
 /**
  * WHERE THIS BOX IS GOING TO STAND — a block, then a stack.
@@ -39,7 +40,7 @@ import { TYPE_STYLE, UNTYPED_STYLE, typeLabel } from './block-style';
  * opinion, not a gate.
  */
 export function SlotPicker({
-  yardId, value, valueLabel, onChange, excludeSlotIds = [], disabled, reloadKey, suggestFor,
+  yardId, value, valueLabel, onChange, excludeSlotIds = [], disabled, reloadKey, suggestFor, keyIn,
 }: {
   /** The yard the block list comes from. Null shows nothing to pick. */
   yardId: string | null;
@@ -58,6 +59,18 @@ export function SlotPicker({
    * is right until the clerk has keyed enough to describe the box.
    */
   suggestFor?: YardSuggestionQuery | null;
+  /**
+   * THE LOCATION, TYPED. Given it, the picker grows a box above the grid: the
+   * yard suggests as the clerk types, and whatever is left in it is sent as
+   * `positionText` for the API to read as a slot of this yard. Left out, the
+   * picker is what it always was — a map and nothing to type into.
+   */
+  keyIn?: {
+    text: string;
+    onText: (text: string) => void;
+    /** The API's own refusal for the typed location. */
+    error?: string | null;
+  };
 }) {
   const map = useYardMap(yardId);
   const blocks = useMemo(() => map.data?.yardId === yardId ? map.data.blocks : [], [map.data, yardId]);
@@ -80,7 +93,19 @@ export function SlotPicker({
     : null;
   // A block the clerk chose in ANOTHER yard is not in this list; the picked
   // slot, or nothing, is then what is open.
-  const blockId = (chosen && blocks.some(b => b.yardBlockId === chosen) ? chosen : null) ?? slotBlockId;
+  /**
+   * A typed location names its block before it names anything else, so the
+   * block is opened as it is typed: the grid shows what is being keyed, and
+   * the key-in box can offer that block's free slots rather than only the
+   * yard's suggestions. Derived from the text — no effect, nothing to keep in
+   * step, right on the first render.
+   */
+  const typedBlockCode = keyIn?.text.trim().split(/[-/\s]+/)[0]?.toUpperCase() || null;
+  const typedBlockId = typedBlockCode
+    ? blocks.find(b => b.blockCode.toUpperCase() === typedBlockCode)?.yardBlockId ?? null
+    : null;
+  const blockId = (chosen && blocks.some(b => b.yardBlockId === chosen) ? chosen : null)
+    ?? slotBlockId ?? typedBlockId;
   const setBlockId = setChosen;
   const stacks = useYardStacks(blockId);
 
@@ -106,8 +131,32 @@ export function SlotPicker({
   const pick = (stack: YardStack) => {
     const slot = lowestFreeSlot(stack);
     if (!slot || taken.has(slot.yardSlotId)) return;
-    onChange({ yardSlotId: slot.yardSlotId, label: slot.label });
+    take({ yardSlotId: slot.yardSlotId, label: slot.label });
   };
+
+  /** Taking a slot — clicked on the grid, on a chip, or out of the key-in list. */
+  const take = (slot: { yardSlotId: string; label: string }) => {
+    onChange(slot);
+    // The box shows what was picked, so there is one place to read the answer
+    // whichever way it was given.
+    keyIn?.onText(slot.label);
+  };
+
+  /**
+   * WHAT THE KEY-IN BOX CAN OFFER: the yard's own suggestions first, in its
+   * order of preference, then the free slots of whichever block is open. Both
+   * are the same decision as clicking the grid.
+   */
+  const offered: SlotOption[] = [
+    ...(suggested?.suggestions ?? []).map(x => ({
+      yardSlotId: x.yardSlotId, label: x.label, note: x.reasons[0] ?? null, score: x.score,
+    })),
+    ...(stacks.data?.yardBlockId === blockId ? stacks.data.rows : []).flatMap(row =>
+      row.bays.flatMap(bay => {
+        const free = lowestFreeSlot(bay);
+        return free && !taken.has(free.yardSlotId) ? [{ yardSlotId: free.yardSlotId, label: free.label }] : [];
+      })),
+  ];
 
   if (!yardId) {
     return <div className="gecko-cell-meta">Pick the yard first.</div>;
@@ -115,6 +164,26 @@ export function SlotPicker({
 
   return (
     <div className="gecko-stack gecko-slotpick">
+      {keyIn && (
+        <SlotKeyIn
+          value={keyIn.text}
+          error={keyIn.error ?? null}
+          disabled={disabled}
+          options={offered}
+          /* The yard's best guess, shown as the shape to type rather than as a
+             value already in the box: it is a suggestion, not a decision. */
+          placeholder={best[0] ? `e.g. ${best[0].label}` : 'Block-Row-Bay-Tier, e.g. A-B-03-2'}
+          onText={text => {
+            keyIn.onText(text);
+            // What is typed is the answer now, so a slot picked a moment ago
+            // must not ride along underneath it.
+            const match = offered.find(o => o.label.toUpperCase() === text.trim().toUpperCase());
+            onChange(match ? { yardSlotId: match.yardSlotId, label: match.label } : null);
+          }}
+          onPick={take}
+        />
+      )}
+
       <div className="gecko-row gecko-slotpick-head">
         <select
           className="gecko-input gecko-input-sm gecko-slotpick-block"
@@ -139,7 +208,7 @@ export function SlotPicker({
               {valueLabel}
               {!disabled && (
                 <button type="button" className="gecko-btn gecko-btn-ghost gecko-btn-sm gecko-btn-icon"
-                  aria-label="Clear the slot" onClick={() => onChange(null)}>
+                  aria-label="Clear the slot" onClick={() => { onChange(null); keyIn?.onText(''); }}>
                   <Icon name="x" size={12} />
                 </button>
               )}
@@ -172,7 +241,7 @@ export function SlotPicker({
               disabled={disabled || taken.has(x.yardSlotId)}
               className={`gecko-slotpick-chip${value === x.yardSlotId ? ' gecko-slotpick-chip-picked' : ''}`}
               title={x.reasons.join(' ') || `Score ${x.score}`}
-              onClick={() => { setBlockId(x.yardBlockId); onChange({ yardSlotId: x.yardSlotId, label: x.label }); }}
+              onClick={() => { setBlockId(x.yardBlockId); take({ yardSlotId: x.yardSlotId, label: x.label }); }}
             >
               <span className="gecko-slotpick-chip-label">{x.label}</span>
               <span className="gecko-slotpick-chip-score">{x.score > 0 ? `+${x.score}` : x.score}</span>
@@ -186,8 +255,9 @@ export function SlotPicker({
           it, rather than an empty row of chips the clerk has to interpret. */}
       {suggested && suggested.candidates === 0 && (
         <div className="gecko-cell-meta gecko-slotpick-nofit">
-          No slot in {suggested.yardCode} fits this box — try another yard, or a supervisor can override a slot
-          that breaks the yard&apos;s rules.
+          No slot in {suggested.yardCode} fits this box — try another yard
+          {keyIn ? ', key the location above, or a supervisor can override a slot that breaks the yard’s rules.'
+            : ', or a supervisor can override a slot that breaks the yard’s rules.'}
         </div>
       )}
       {advice.error && advice.error.status !== 400 && (

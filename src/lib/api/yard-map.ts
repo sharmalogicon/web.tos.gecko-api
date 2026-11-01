@@ -107,11 +107,18 @@ export function useYardSettings(): YardSettings {
 
 // ── 2. the layout ──────────────────────────────────────────────────────────
 
-/** org.yard_block.block_type — what the block is for. Null = untyped. */
-export type BlockType = 'IMPORT' | 'EXPORT' | 'EMPTY' | 'REEFER' | 'DAMAGE' | 'HAZ' | 'OOG' | 'TRANSHIPMENT';
+/**
+ * org.yard_block.block_type — what the block is for. Null = untyped.
+ *
+ * FULL (gecko_master 42) is full boxes of ANY direction: a domestic customer's
+ * full box is neither an import nor an export, and before this there was no
+ * block type that would take it without lying about where it came from.
+ */
+export type BlockType =
+  | 'IMPORT' | 'EXPORT' | 'FULL' | 'EMPTY' | 'REEFER' | 'DAMAGE' | 'HAZ' | 'OOG' | 'TRANSHIPMENT';
 
 export const BLOCK_TYPES: readonly BlockType[] = [
-  'IMPORT', 'EXPORT', 'EMPTY', 'REEFER', 'DAMAGE', 'HAZ', 'OOG', 'TRANSHIPMENT',
+  'IMPORT', 'EXPORT', 'FULL', 'EMPTY', 'REEFER', 'DAMAGE', 'HAZ', 'OOG', 'TRANSHIPMENT',
 ];
 
 /** The API holds ONE size per block (`allocatedSizeFt`), not a set of ISO types. */
@@ -312,6 +319,28 @@ export interface YardMap {
 
 export const yardMapPath = (yardId: string) => `/api/tos/yard/map?yardId=${encodeURIComponent(yardId)}`;
 
+/**
+ * HAS THIS YARD GOT SLOTS TO PICK FROM?
+ *
+ * The depot's `yard.location_mode` says the tenant works in slots; it does not
+ * say that THIS yard has been laid out yet. GECKO is a SLOT depot whose YARD 1
+ * had two blocks with no slots generated and whose YARD 2 had no blocks at
+ * all — so the gate showed "No blocks in this yard", a disabled select, and no
+ * way to say where the box was going at all.
+ *
+ * `known` is false while the map is being read or could not be read: nothing
+ * is decided on a guess, and the screens fall back to free key-in, which is
+ * the answer that always works.
+ */
+export function useYardHasSlots(yardId: string | null): { hasSlots: boolean; known: boolean } {
+  const { data, loading, error } = useApi<YardMap>(yardId ? yardMapPath(yardId) : null);
+  const answered = !!yardId && !loading && !error && data?.yardId === yardId;
+  return {
+    hasSlots: answered && (data?.blocks ?? []).some(b => b.slotCount > 0),
+    known: answered,
+  };
+}
+
 /** The live map of one yard. Pass null to ask nothing. */
 export function useYardMap(yardId: string | null) {
   return useApi<YardMap>(yardId ? yardMapPath(yardId) : null);
@@ -471,6 +500,44 @@ export const locateContainer = (containerNo: string) =>
 /** The same read, declaratively, for a screen that is already showing a box. */
 export function useYardLocation(containerNo: string | null) {
   return useApi<YardLocation[]>(containerNo ? yardLocatePath(containerNo) : null);
+}
+
+/** A slot label pulled apart: "A-B-03-2" is block A, row B, bay 03, tier 2. */
+export interface SlotWords { block: string; row: string; bay: string; tier: string }
+
+/**
+ * A POSITION TEXT READ AS A SLOT, or null when it is not one.
+ *
+ * Every list prints a slot as BLOCK-ROW-BAY-TIER, and the last three parts are
+ * always row, bay, tier — a block code may itself contain a dash, so it is
+ * whatever comes before them rather than simply the first part. A depot that
+ * types its own areas (KORAKIT's ก) has nothing of the sort, which is exactly
+ * what the null answer is for: show what was keyed, untouched.
+ */
+export function readSlotLabel(text: string | null | undefined): SlotWords | null {
+  const parts = (text ?? '').trim().toUpperCase().split(/[-/\s]+/).filter(Boolean);
+  if (parts.length < 4) return null;
+  return {
+    block: parts.slice(0, parts.length - 3).join('-'),
+    row: parts[parts.length - 3],
+    bay: parts[parts.length - 2],
+    tier: parts[parts.length - 1],
+  };
+}
+
+/**
+ * WHERE THE BOX STANDS, in the words a driver is told it in.
+ *
+ * "A-B-03-2" reads back as "Block A · Bay 03 · Row B · Tier 2" — bay before
+ * row, which is the order the printed Truck-In form uses and the order the
+ * yard walks it. Anything that is not a slot label is returned as it was
+ * keyed, and nothing at all is null.
+ */
+export function placeInWords(text: string | null | undefined): string | null {
+  const said = (text ?? '').trim();
+  if (!said) return null;
+  const slot = readSlotLabel(said);
+  return slot ? `Block ${slot.block} · Bay ${slot.bay} · Row ${slot.row} · Tier ${slot.tier}` : said;
 }
 
 // ── 6. moving a box inside the depot ───────────────────────────────────────
@@ -641,8 +708,9 @@ export function useYardSuggestions(query: YardSuggestionQuery | null) {
  *   SIZE_STACK   a box on a box of another length — a stack is one length
  *   OOG_ON_TOP   anything on top of an out-of-gauge box
  *   RESERVED     another party's box in a block kept for a line or customer
- *   BLOCK_TYPE   EMPTY block ← a full box; IMPORT / EXPORT / TRANSHIPMENT ← an
- *                empty; REEFER ← not a reefer; DAMAGE ← a serviceable box
+ *   BLOCK_TYPE   EMPTY block ← a full box; FULL / IMPORT / EXPORT /
+ *                TRANSHIPMENT ← an empty; REEFER ← not a reefer;
+ *                DAMAGE ← a serviceable box
  *   REEFER_PLUG  a full reefer in a slot with no plug
  *   DG_BLOCK     dangerous goods outside a DG or HAZ block
  *   OOG_BLOCK    an out-of-gauge box outside an OOG block or row

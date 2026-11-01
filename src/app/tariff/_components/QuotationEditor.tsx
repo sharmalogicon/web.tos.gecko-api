@@ -122,6 +122,16 @@ export function QuotationEditor({ initial }: { initial?: QuotationInitial }) {
   // Seeded when editing: `saveHeader` then PUTs instead of POSTing, which is
   // what makes this the same screen for both jobs.
   const [created, setCreated] = useState<Schedule | null>(initial?.schedule ?? null);
+  /**
+   * EDITING AN APPROVED TARIFF IN PLACE (API, 2026-11-01).
+   *
+   * Approved and not yet in force: the prices may still be worked on, and the
+   * SCOPE may not — who it is for, what module, which branch, which booking.
+   * The API refuses a scope change with a 400 or a clash against another
+   * approved tariff; the fields are locked here so the clerk meets the rule
+   * before filling a form rather than after saving it.
+   */
+  const approvedInPlace = (created ?? initial?.schedule)?.status === 'APPROVED';
   const [rowVersion, setRowVersion] = useState<string | null>(initial?.schedule.rowVersion ?? null);
   const [saving, setSaving] = useState<'save' | 'excel' | null>(null);
   const [banner, setBanner] = useState<string | null>(null);
@@ -348,7 +358,7 @@ export function QuotationEditor({ initial }: { initial?: QuotationInitial }) {
                 it stays on its own line above them. */}
             <div className="gecko-row gecko-row-wrap" style={{ gap: 8 }}>
               {(['PUBLIC', 'CONTRACT', 'SPOT'] as ScheduleType[]).map(t => (
-                <button key={t} type="button" disabled={!!created && created.scheduleType !== t}
+                <button key={t} type="button" disabled={approvedInPlace || (!!created && created.scheduleType !== t)}
                   className={`gecko-btn gecko-btn-sm ${type === t ? 'gecko-btn-primary' : 'gecko-btn-outline'}`}
                   onClick={() => changeType(t)}>
                   <Icon name={TYPE_TONE[t].icon} size={13} /> {TYPE_TONE[t].label}
@@ -380,14 +390,16 @@ export function QuotationEditor({ initial }: { initial?: QuotationInitial }) {
                 {type !== 'PUBLIC' && (
                   <>
                     <Labelled label="Agent / shipping line (optional)">
-                      <PartyPicker role="SHIPPING_LINE" value={agent} onChange={c => setAgent(c)} error={headerError('agentPartyCode')} />
+                      <PartyPicker role="SHIPPING_LINE" value={agent} onChange={c => setAgent(c)} error={headerError('agentPartyCode')}
+                        disabled={approvedInPlace} />
                     </Labelled>
                     <Labelled label="Customer">
                       <PartyPicker role="CUSTOMER" value={customer} onChange={c => setCustomer(c)} error={headerError('customerPartyCode')}
-                        disabled={!!created && created.versionNo > 1} />
+                        disabled={approvedInPlace || (!!created && created.versionNo > 1)} />
                     </Labelled>
                     <Labelled label="Forwarder (optional)">
-                      <PartyPicker role="FORWARDER" value={forwarder} onChange={c => setForwarder(c)} error={headerError('forwarderPartyCode')} />
+                      <PartyPicker role="FORWARDER" value={forwarder} onChange={c => setForwarder(c)} error={headerError('forwarderPartyCode')}
+                        disabled={approvedInPlace} />
                     </Labelled>
                   </>
                 )}
@@ -395,6 +407,7 @@ export function QuotationEditor({ initial }: { initial?: QuotationInitial }) {
                 {type === 'SPOT' && (
                   <Labelled label="Booking ref" error={headerError('bookingRef')}>
                     <input className="gecko-input gecko-text-mono" value={bookingRef} maxLength={30}
+                      disabled={approvedInPlace}
                       onChange={e => setBookingRef(e.target.value.toUpperCase())} />
                   </Labelled>
                 )}
@@ -413,13 +426,18 @@ export function QuotationEditor({ initial }: { initial?: QuotationInitial }) {
                     "10/3/2026" both got on screen. This one reads dd-MM-yyyy
                     everywhere and carries Clear / Today. */}
                 <Labelled label="Effective from" error={headerError('effectiveFrom')}>
-                  <DateField value={effectiveFrom} onChange={setEffectiveFrom} placeholder="dd-mm-yyyy" />
+                  {/* An approved tariff cannot be dragged back into the past:
+                      the API refuses it (400 on effectiveFrom), so the picker
+                      does not offer it. A draft may start whenever it likes. */}
+                  <DateField value={effectiveFrom} onChange={setEffectiveFrom} placeholder="dd-mm-yyyy"
+                    min={approvedInPlace ? today() : undefined} />
                 </Labelled>
                 <Labelled label="Effective to" error={headerError('effectiveTo')} hint="Blank = open-ended.">
                   <DateField value={effectiveTo} onChange={setEffectiveTo} placeholder="open-ended" />
                 </Labelled>
                 <Labelled label="Branch" error={headerError('branchId')}>
-                  <select className="gecko-input" value={branchId} onChange={e => setBranchId(e.target.value)}>
+                  <select className="gecko-input" value={branchId} disabled={approvedInPlace}
+                    onChange={e => setBranchId(e.target.value)}>
                     <option value="">All branches</option>
                     {(branches ?? []).filter(b => b.isActive).map(b => (
                       <option key={b.branchId} value={b.branchId}>{b.branchCode} — {b.displayName}</option>

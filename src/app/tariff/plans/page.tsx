@@ -210,7 +210,18 @@ export default function TariffPlansPage() {
                   </td>
                   <td style={{ textAlign: 'right' }} className="gecko-text-mono">{s.rateCount}</td>
                   <td><span className={`gecko-pill gecko-pill-${STATUS_TONE[s.status] ?? 'neutral'}`}>{s.status}</span></td>
-                  <td><span className={`gecko-pill gecko-pill-${STATUS_TONE[s.lifecycle] ?? 'neutral'}`}>{s.lifecycle}</span></td>
+                  <td className="gecko-row gecko-gap-1">
+                    <span className={`gecko-pill gecko-pill-${STATUS_TONE[s.lifecycle] ?? 'neutral'}`}>{s.lifecycle}</span>
+                    {/* Approved, and still open to a change: it has not priced
+                        anything yet. Worth seeing from the list, because it is
+                        the difference between editing and revising. */}
+                    {s.status === 'APPROVED' && s.isEditable && (
+                      <span className="gecko-badge gecko-badge-xs gecko-badge-info"
+                        title="Starts later — edits apply to this version, not a new one">
+                        Editable
+                      </span>
+                    )}
+                  </td>
                 </tr>
               );
             })}

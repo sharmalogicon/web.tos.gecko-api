@@ -7,6 +7,7 @@ import { freeTimeDraftsOf, rateDraftsOf } from '../../../_components/tariff-draf
 import { QuotationEditor } from '../../../_components/QuotationEditor';
 import type { FreeTimeSet, RateSet, Schedule } from '@/lib/api/revenue';
 import { ApiError } from '@/lib/api/problem';
+import { formatDate } from '@/lib/format';
 import { ErrorBanner } from '@/components/ui/ErrorBanner';
 
 /**
@@ -78,8 +79,8 @@ export default function EditQuotationPage({ params }: { params: Promise<{ id: st
     return (
       <div className="gecko-card gecko-card-padded gecko-stack">
         <div className="gecko-alert gecko-alert-warning">
-          {s.scheduleNo} v{s.versionNo} is {s.status.toLowerCase()} — an approved price is never edited.
-          Start a new version from the quotation and change that.
+          {s.scheduleNo} v{s.versionNo} has been in force since {formatDate(s.effectiveFrom)}, before today —
+          start a new version to change it. A tariff that has not started yet is edited here directly.
         </div>
         <Link href={`/tariff/plans/${id}`} className="gecko-btn gecko-btn-primary gecko-btn-sm gecko-self-start">
           <Icon name="arrowRight" size={13} /> Open {s.scheduleNo}

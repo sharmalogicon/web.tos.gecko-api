@@ -799,6 +799,8 @@ const TYPE_OPTIONS = BLOCK_TYPES.map(t => ({ value: t, label: TYPE_STYLE[t].labe
 function typeRule(type: BlockType | null): string {
   switch (type) {
     case 'EMPTY': return 'The gate refuses a FULL box here (BLOCK_TYPE).';
+    // Full boxes of any direction — a domestic customer's box belongs here.
+    case 'FULL':
     case 'IMPORT':
     case 'EXPORT':
     case 'TRANSHIPMENT': return 'The gate refuses an EMPTY box here (BLOCK_TYPE).';

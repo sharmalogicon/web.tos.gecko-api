@@ -285,6 +285,8 @@ function DoneSheet({ job, machine, machines, onPickMachine, onClose, onDone }: {
   const [scanned, setScanned] = useState('');
   const [where, setWhere] = useState<'PLANNED' | 'SLOT' | 'AREA'>(planned ? 'PLANNED' : 'SLOT');
   const [slot, setSlot] = useState<{ yardSlotId: string; label: string } | null>(null);
+  /** The slot keyed rather than clicked; the API reads it as a slot of the yard. */
+  const [slotText, setSlotText] = useState('');
   const [area, setArea] = useState('');
   const [override, setOverride] = useState('');
   const [saving, setSaving] = useState(false);
@@ -295,7 +297,9 @@ function DoneSheet({ job, machine, machines, onPickMachine, onClose, onDone }: {
   const wrongBox = box !== '' && box !== job.containerNo;
   const needsPlace = job.jobType !== 'PULL' && !planned;
   const ready = box === job.containerNo
-    && (job.jobType === 'PULL' || where === 'PLANNED' || (where === 'SLOT' ? !!slot : area.trim().length > 0));
+    // A slot that was keyed rather than clicked is an answer too.
+    && (job.jobType === 'PULL' || where === 'PLANNED'
+      || (where === 'SLOT' ? !!slot || slotText.trim().length > 0 : area.trim().length > 0));
 
   const send = async () => {
     setSaving(true);
@@ -306,8 +310,15 @@ function DoneSheet({ job, machine, machines, onPickMachine, onClose, onDone }: {
         // "As planned" sends no place at all: the server then confirms the
         // job's own destination, which is one fewer thing to disagree about.
         toYardSlotId: job.jobType === 'PULL' || where !== 'SLOT' ? null : slot?.yardSlotId ?? null,
-        toYardId: job.jobType === 'PULL' || where !== 'AREA' ? null : job.toYardId,
-        toPositionText: job.jobType === 'PULL' || where !== 'AREA' ? null : area.trim().toUpperCase() || null,
+        // A keyed slot needs its yard named with it — the text is read as a
+        // slot OF that yard — where a picked one carries its own.
+        toYardId: job.jobType === 'PULL' ? null
+          : where === 'AREA' || (where === 'SLOT' && !slot && slotText.trim()) ? job.toYardId
+          : null,
+        toPositionText: job.jobType === 'PULL' ? null
+          : where === 'AREA' ? area.trim().toUpperCase() || null
+          : where === 'SLOT' && !slot ? slotText.trim().toUpperCase() || null
+          : null,
         overrideReason: canOverride && override.trim() ? override.trim() : null,
         // What did it: the API checks the machine can lift this box at this
         // tier, and the KPIs count the job against it.
@@ -401,6 +412,11 @@ function DoneSheet({ job, machine, machines, onPickMachine, onClose, onDone }: {
                 disabled={saving}
                 reloadKey={reloadKey}
                 suggestFor={job.toYardId ? { yardId: job.toYardId, containerNo: job.containerNo, limit: 5 } : null}
+                keyIn={{
+                  text: slotText,
+                  error: error?.forField('toPositionText') ?? null,
+                  onText: setSlotText,
+                }}
               />
             )}
             {where === 'AREA' && (

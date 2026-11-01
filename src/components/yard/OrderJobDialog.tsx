@@ -42,6 +42,8 @@ export function OrderJobDialog({ branchId, containerNo, kind, onClose, onOrdered
   const [yardId, setYardId] = useState(headerYard?.yardId ?? yards[0]?.yardId ?? '');
   const [where, setWhere] = useState<'DRIVER' | 'SLOT' | 'AREA'>('DRIVER');
   const [slot, setSlot] = useState<{ yardSlotId: string; label: string } | null>(null);
+  /** The slot keyed rather than clicked; the API reads it as a slot of the yard. */
+  const [slotText, setSlotText] = useState('');
   const [area, setArea] = useState('');
   const [priority, setPriority] = useState(5);
   const [reason, setReason] = useState('');
@@ -50,7 +52,9 @@ export function OrderJobDialog({ branchId, containerNo, kind, onClose, onOrdered
 
   const box = normaliseContainerNo(typed);
   const ready = box.length >= 4
-    && (jobType === 'PULL' || where === 'DRIVER' || (where === 'SLOT' ? !!slot : area.trim().length > 0));
+    // A slot that was keyed rather than clicked is an answer too.
+    && (jobType === 'PULL' || where === 'DRIVER'
+      || (where === 'SLOT' ? !!slot || slotText.trim().length > 0 : area.trim().length > 0));
 
   const send = async () => {
     setSaving(true);
@@ -62,7 +66,12 @@ export function OrderJobDialog({ branchId, containerNo, kind, onClose, onOrdered
         containerNo: box,
         toYardId: jobType === 'PULL' || where === 'DRIVER' ? null : yardId || null,
         toYardSlotId: jobType === 'PULL' || where !== 'SLOT' ? null : slot?.yardSlotId ?? null,
-        toPositionText: jobType === 'PULL' || where !== 'AREA' ? null : area.trim().toUpperCase() || null,
+        // A slot keyed instead of clicked travels as the position text, which
+        // the API reads as a slot of the yard above — same check, fewer clicks.
+        toPositionText: jobType === 'PULL' ? null
+          : where === 'AREA' ? area.trim().toUpperCase() || null
+          : where === 'SLOT' && !slot ? slotText.trim().toUpperCase() || null
+          : null,
         priority,
         reason: reason.trim() || null,
       });
@@ -162,6 +171,11 @@ export function OrderJobDialog({ branchId, containerNo, kind, onClose, onOrdered
                 onChange={setSlot}
                 disabled={saving}
                 suggestFor={yardId && box.length >= 4 ? { yardId, containerNo: box, limit: 5 } : null}
+                keyIn={{
+                  text: slotText,
+                  error: error?.forField('toPositionText') ?? null,
+                  onText: setSlotText,
+                }}
               />
             )}
             {where === 'AREA' && (

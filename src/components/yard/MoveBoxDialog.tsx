@@ -9,7 +9,7 @@ import { useSession } from '@/lib/auth/session';
 import { formatContainerNo } from '@/lib/api/tos';
 import { instantFromLocalInput, localInputValue } from '@/lib/format';
 import {
-  GATE_OVERRIDE, canOverrideRefusal, moveYardBox, useYardSettings, type YardLocation,
+  GATE_OVERRIDE, canOverrideRefusal, moveYardBox, useYardHasSlots, useYardSettings, type YardLocation,
 } from '@/lib/api/yard-map';
 import { SlotPicker } from './SlotPicker';
 import { ErrorBanner } from '@/components/ui/ErrorBanner';
@@ -65,10 +65,19 @@ export function MoveBoxDialog({ location, onClose, onMoved, onMoveInstead }: {
    */
   const { locationMode } = useYardSettings();
   const [howPicked, setHowPicked] = useState<'SLOT' | 'AREA' | null>(null);
-  const how: 'SLOT' | 'AREA' = howPicked ?? (locationMode === 'AREA' ? 'AREA' : 'SLOT');
-  const setHow = setHowPicked;
   const [yardId, setYardId] = useState<string>(location.yardId ?? yards[0]?.yardId ?? '');
+  // A yard with no slots has nothing to pick, whatever the depot's mode says.
+  const yardSlots = useYardHasSlots(yardId || null);
+  const how: 'SLOT' | 'AREA' = howPicked
+    ?? (locationMode === 'AREA' || (yardSlots.known && !yardSlots.hasSlots) ? 'AREA' : 'SLOT');
+  const setHow = setHowPicked;
   const [slot, setSlot] = useState<{ yardSlotId: string; label: string } | null>(null);
+  /**
+   * A SLOT KEYED RATHER THAN CLICKED. The API reads it as a slot of this yard
+   * and checks it exactly as a picked one, so a clerk who knows the label need
+   * not go looking for it on the map.
+   */
+  const [slotText, setSlotText] = useState('');
   /**
    * The box's own area to start from: correcting ก to ข is an edit of one
    * character, not a field to fill from scratch. A box standing in a SLOT
@@ -93,14 +102,18 @@ export function MoveBoxDialog({ location, onClose, onMoved, onMoveInstead }: {
     setSaving(true);
     setError(null);
     try {
+      const keyed = slotText.trim().toUpperCase();
       const to = await moveYardBox({
         branchId: location.branchId,
         containerNo: location.containerNo,
         toYardSlotId: how === 'SLOT' ? slot?.yardSlotId ?? null : null,
-        // An area move names its yard; a slot names its own, so sending the
-        // yard with it would only be another thing that can disagree.
-        toYardId: how === 'AREA' ? yardId || null : null,
-        toPositionText: how === 'AREA' ? area.trim().toUpperCase() || null : null,
+        // An area move names its yard; a PICKED slot names its own, so sending
+        // the yard with it would only be another thing that can disagree. A
+        // KEYED slot does need it: the text is read as a slot OF THAT YARD.
+        toYardId: how === 'AREA' || (how === 'SLOT' && !slot && keyed) ? yardId || null : null,
+        toPositionText: how === 'AREA'
+          ? area.trim().toUpperCase() || null
+          : slot ? null : keyed || null,
         reason: reason.trim() || null,
         // Only once the yard has refused a rule and the user may override it:
         // a reason from anyone else is a 400 on this field.
@@ -125,7 +138,7 @@ export function MoveBoxDialog({ location, onClose, onMoved, onMoveInstead }: {
     }
   };
 
-  const ready = how === 'SLOT' ? !!slot : area.trim().length > 0;
+  const ready = how === 'SLOT' ? (!!slot || slotText.trim().length > 0) : area.trim().length > 0;
   /** The 409 that names a box standing on top, so it can be offered instead. */
   const standsOnTop = error?.status === 409 ? onTop[0] ?? null : null;
 
@@ -200,6 +213,11 @@ export function MoveBoxDialog({ location, onClose, onMoved, onMoveInstead }: {
               onChange={setSlot}
               disabled={saving || blocked}
               reloadKey={reloadKey}
+              keyIn={{
+                text: slotText,
+                error: error?.forField('toPositionText') ?? null,
+                onText: setSlotText,
+              }}
               // The box is already in the yard, so the yard reads its own facts
               // — type, line, customer, DG, out of gauge — and leaves its
               // current slot out of the suggestions.

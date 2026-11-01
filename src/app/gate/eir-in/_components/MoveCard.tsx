@@ -4,7 +4,9 @@ import Link from 'next/link';
 import { Icon } from '@/components/ui/Icon';
 import { useApiList } from '@/lib/api/use-api';
 import { useFacility } from '@/lib/api/facility';
-import { GATE_OVERRIDE, useYardSettings, type YardSuggestionQuery } from '@/lib/api/yard-map';
+import {
+  GATE_OVERRIDE, placeInWords, useYardHasSlots, useYardSettings, type YardSuggestionQuery,
+} from '@/lib/api/yard-map';
 import { SlotPicker } from '@/components/yard/SlotPicker';
 import { BoxesOnTop } from '@/components/yard/BoxesOnTop';
 import { useSession } from '@/lib/auth/session';
@@ -137,7 +139,18 @@ export function MoveCard({
   // Held and priced — not committed. The Save is what writes it.
   const held = move.reserved;
   const done = !!move.result;
-  const required = requiredFor(move, locationMode);
+  /**
+   * A MAP IS ONLY A MAP WHERE THERE IS ONE.
+   *
+   * The depot setting says this tenant works in slots; whether the yard on
+   * THIS row has any is the yard's own business, and GECKO's YARD 1 had none
+   * until somebody generated them. Where there are slots the clerk gets the
+   * grid and a box that suggests as it is typed; where there are not, the
+   * location is simply keyed — which is what KORAKIT has always done.
+   */
+  const yardSlots = useYardHasSlots(move.yardId || null);
+  const mapped = locationMode === 'SLOT' && yardSlots.hasSlots;
+  const required = requiredFor(move, locationMode, mapped);
   const needs = (f: string) => required.includes(f);
 
   /**
@@ -224,7 +237,7 @@ export function MoveCard({
   /** The yard refused this slot on a rule, and invited an override. */
   const slotOverride = locationMode === 'SLOT' && needsSlotOverride(move, slotRefused);
 
-  const issues = rowIssues(move, locationMode);
+  const issues = rowIssues(move, locationMode, mapped);
   /**
    * TIME RUNS ONE WAY FOR A BOX. Separate from `issues` because it is not a
    * blank field to fill in — the clerk fixes it on the truck's clock, above,
@@ -933,6 +946,21 @@ export function MoveCard({
                 <input className="gecko-input gecko-text-mono" maxLength={40} value={move.paperlessCode}
                   onChange={e => onChange({ paperlessCode: e.target.value.toUpperCase() })} />
               </GateField>
+
+              {/* WHERE THE BOX IS STANDING NOW — a pick-up's last fact.
+                  The driver has to be sent somewhere, and until now the card
+                  that announced the pick-up said everything about the box
+                  except where it is: the clerk read it off the printed form,
+                  or off another screen. The preflight has carried it all
+                  along. Read-only: a pick-up does not place a box, it fetches
+                  one. */}
+              {!drop && (
+                <GateField label="Yard location" frozen>
+                  <div className="gecko-readonly-value gecko-text-mono">
+                    {placeInWords(move.known?.inYard?.positionText) ?? '—'}
+                  </div>
+                </GateField>
+              )}
             </div>
           </div>
 
@@ -958,10 +986,10 @@ export function MoveCard({
                     sees exactly this input, unchanged. GECKO picks a stack on
                     its own yard map, and the server writes the position text
                     from the slot — so there is no Position box to type into. */}
-                {locationMode === 'SLOT'
+                {mapped
                   ? (
-                    <GateField label="Slot" required={needs('yardSlotId')} error={err('yardSlotId')} span={3}
-                      hint="Click a stack: the box goes on the ground, or on the box already there.">
+                    <GateField label="Location" required={needs('place')} error={err('yardSlotId')} span={3}
+                      hint="Key it, take one the yard suggests, or click a stack — whichever is quicker.">
                       <SlotPicker
                         yardId={move.yardId || null}
                         value={move.yardSlotId || null}
@@ -970,20 +998,31 @@ export function MoveCard({
                         disabled={done}
                         reloadKey={slotReload}
                         suggestFor={suggestFor}
+                        /* What is typed is sent as the position for the API to
+                           read as a slot of this yard; what is picked sets the
+                           slot outright. Either answers "where it goes". */
+                        keyIn={{
+                          text: move.positionText,
+                          error: err('positionText'),
+                          onText: text => onChange({ positionText: text }),
+                        }}
                         onChange={slot => onChange({
                           yardSlotId: slot?.yardSlotId ?? '',
                           yardSlotLabel: slot?.label ?? '',
-                          // The slot IS the position now; a leftover typed one
-                          // would be sent for a box that has a slot.
-                          positionText: '',
                         })}
                       />
                     </GateField>
                   )
                   : (
-                    <GateField label="Position" required={needs('positionText')} error={err('positionText')}>
+                    <GateField label="Position" required={needs('positionText')} error={err('positionText')}
+                      /* A SLOT depot whose yard has no slots: say why there is
+                         nothing to pick, rather than leaving a clerk hunting
+                         for the map the rest of the tenant has. */
+                      hint={locationMode === 'SLOT' && yardSlots.known
+                        ? 'This yard has no slot map yet — key the location.' : undefined}>
                       <input className="gecko-input gecko-text-mono" maxLength={40} value={move.positionText}
-                        placeholder="A-03-2-1"
+                        placeholder={locationMode === 'SLOT' ? 'Bay-Row-Tier, e.g. 03-B-2' : 'A-03-2-1'}
+                        disabled={done}
                         onChange={e => onChange({ positionText: e.target.value.toUpperCase() })} />
                     </GateField>
                   )}
