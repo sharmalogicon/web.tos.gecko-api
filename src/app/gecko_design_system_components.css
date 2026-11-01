@@ -12335,3 +12335,22 @@ th.gecko-cell-tight {
 /* The same sentence where there is no charge above it to indent under —
    "Within free days (13 days in yard): no storage." */
 .gecko-charge-why-flush { padding-left: 0; }
+
+
+/* ── §51  A fact in the strip that can be changed where it is read ────────
+   The container master showed a box's location and offered no way to correct
+   it: the Move button sat in the page header, nowhere near the value it
+   changes. The fact and its Edit now share a line — the value takes the room,
+   the button keeps its own. */
+
+.gecko-strip-value {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 8px;
+  min-width: 0;
+}
+.gecko-strip-value > .gecko-truncate { min-width: 0; }
+/* A disabled Edit still says why in its title, so it stays readable rather
+   than fading into the strip's rule. */
+.gecko-strip-value .gecko-btn[disabled] { opacity: 0.45; }

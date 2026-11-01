@@ -107,6 +107,20 @@ function UnitInquiry() {
    * moved from here: the yard list in the dialog is this depot's.
    */
   const canMoveThis = !!spot && !!branch && spot.branchId === branch.branchId && canAt(YARD_MANAGE, spot.branchId);
+  /**
+   * EDITING THE LOCATION, from the strip that shows it.
+   *
+   * Open to anyone for now (owner, 2026-11-01) — the permission is not asked
+   * here, only whether there is a location to change at all: a box that has
+   * gone out has none, and a box standing at another depot is not moved from
+   * this one. The API still holds `tos.yard.manage`, so a clerk without it
+   * meets the server's own refusal in the dialog rather than a dead button.
+   */
+  const canEditLocation = !!spot && !!branch && spot.branchId === branch.branchId;
+  const locationEditNote = canEditLocation ? 'Change where this box stands'
+    : !current ? 'The box is not in a yard — there is nothing to move.'
+    : !spot ? 'Where this box stands is not on the yard map yet.'
+    : 'This box stands at another depot — switch the depot above to move it.';
 
   // The search is the whole number, so the reefer "contains" search is narrowed to this box.
   const sessions = (reefer.data?.items ?? []).filter(r => r.containerNo === asked);
@@ -227,16 +241,32 @@ function UnitInquiry() {
           <div className="gecko-ui-strip">
             <Strip label={current ? 'Depot · yard' : 'Last depot · yard'}
               value={latest ? [latest.branchCode, yard?.yardCode].filter(Boolean).join(' · ') || '—' : '—'} />
-            <Strip label="Position" mono value={!current ? '—' : (
-              <>
-                {latest?.positionText ?? 'no slot'}
-                {/* The dig: nothing can be lifted from under another box, so
-                    this is what the yard moves before this one can go. */}
-                {spot && spot.boxesOnTop.length > 0 && (
-                  <div className="gecko-cell-meta">Under: {spot.boxesOnTop.join(', ')}</div>
-                )}
-              </>
-            )} />
+            {/* WHERE THE BOX STANDS, AND THE WAY TO CHANGE IT (owner,
+                2026-11-01). It was labelled Position and read-only: the only
+                way to correct a box keyed into the wrong spot was the Move
+                button at the top of the page, which a clerk reading the strip
+                had no reason to look at. Same field, named the way the depot
+                names it, with the Move dialog one click from the value it
+                changes. A box that has gone out has no location at all — N/A,
+                and nothing to press. */}
+            <Strip label="Location" mono
+              value={!current ? 'N/A' : (
+                <>
+                  {latest?.positionText ?? 'no slot'}
+                  {/* The dig: nothing can be lifted from under another box, so
+                      this is what the yard moves before this one can go. */}
+                  {spot && spot.boxesOnTop.length > 0 && (
+                    <div className="gecko-cell-meta">Under: {spot.boxesOnTop.join(', ')}</div>
+                  )}
+                </>
+              )}
+              action={
+                <button type="button" className="gecko-btn gecko-btn-ghost gecko-btn-sm"
+                  disabled={!canEditLocation} title={locationEditNote}
+                  onClick={() => spot && setMoving(spot)}>
+                  <Icon name="edit" size={13} /> Edit
+                </button>
+              } />
             <Strip label="Full / empty" value={latest?.fullEmpty ?? '—'} />
             <Strip label={current ? 'In yard' : 'Gated out'}
               value={!latest ? '—'
@@ -789,12 +819,19 @@ function Divider() {
   return <div style={{ height: 32, width: 1, background: 'var(--gecko-border)' }} />;
 }
 
-function Strip({ label, value, mono }: { label: string; value: React.ReactNode; mono?: boolean }) {
+function Strip({ label, value, mono, action }: {
+  label: string; value: React.ReactNode; mono?: boolean;
+  /** A button that changes this fact, beside the fact itself. */
+  action?: React.ReactNode;
+}) {
   return (
     <div style={{ padding: '12px 18px', borderRight: '1px solid var(--gecko-border)' }}>
       <div className="gecko-eyebrow">{label}</div>
-      <div className="gecko-truncate" style={{ fontSize: 13, fontWeight: 600, fontFamily: mono ? 'var(--gecko-font-mono)' : 'inherit', marginTop: 3 }}>
-        {value}
+      <div className="gecko-strip-value">
+        <div className="gecko-truncate" style={{ fontSize: 13, fontWeight: 600, fontFamily: mono ? 'var(--gecko-font-mono)' : 'inherit', marginTop: 3 }}>
+          {value}
+        </div>
+        {action}
       </div>
     </div>
   );

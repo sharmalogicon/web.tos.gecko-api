@@ -8,7 +8,9 @@ import { useFacility } from '@/lib/api/facility';
 import { useSession } from '@/lib/auth/session';
 import { formatContainerNo } from '@/lib/api/tos';
 import { instantFromLocalInput, localInputValue } from '@/lib/format';
-import { GATE_OVERRIDE, canOverrideRefusal, moveYardBox, type YardLocation } from '@/lib/api/yard-map';
+import {
+  GATE_OVERRIDE, canOverrideRefusal, moveYardBox, useYardSettings, type YardLocation,
+} from '@/lib/api/yard-map';
 import { SlotPicker } from './SlotPicker';
 import { ErrorBanner } from '@/components/ui/ErrorBanner';
 
@@ -52,10 +54,30 @@ export function MoveBoxDialog({ location, onClose, onMoved, onMoveInstead }: {
   /** A supervisor may stow against the yard's rules, with a written reason. */
   const canOverride = canAt(GATE_OVERRIDE, location.branchId);
 
-  const [how, setHow] = useState<'SLOT' | 'AREA'>('SLOT');
+  /**
+   * THE DEPOT'S OWN WAY OF SAYING WHERE, until the clerk says otherwise.
+   *
+   * KORAKIT locates by AREA — a typed code like ก — and has no stacks to
+   * pick from, so a dialog that always opened on the slot picker opened on an
+   * empty list and the clerk had to know to click past it. The depot's setting
+   * decides which radio starts on; choosing one pins it for the rest of the
+   * dialog, settings or not.
+   */
+  const { locationMode } = useYardSettings();
+  const [howPicked, setHowPicked] = useState<'SLOT' | 'AREA' | null>(null);
+  const how: 'SLOT' | 'AREA' = howPicked ?? (locationMode === 'AREA' ? 'AREA' : 'SLOT');
+  const setHow = setHowPicked;
   const [yardId, setYardId] = useState<string>(location.yardId ?? yards[0]?.yardId ?? '');
   const [slot, setSlot] = useState<{ yardSlotId: string; label: string } | null>(null);
-  const [area, setArea] = useState('');
+  /**
+   * The box's own area to start from: correcting ก to ข is an edit of one
+   * character, not a field to fill from scratch. A box standing in a SLOT
+   * starts empty — its position text is the slot's label, which would be the
+   * wrong thing to type into an area.
+   */
+  const [areaTyped, setAreaTyped] = useState<string | null>(null);
+  const area = areaTyped ?? (location.yardSlotId ? '' : location.positionText ?? '');
+  const setArea = setAreaTyped;
   const [reason, setReason] = useState('');
   const [override, setOverride] = useState('');
   const [when, setWhen] = useState(() => localInputValue());
