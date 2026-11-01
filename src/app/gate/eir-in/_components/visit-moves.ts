@@ -24,7 +24,6 @@ import type { TripDamage, TripRowResult, VasOption } from '@/lib/api/gate-trips'
 import { directionOfTrip, numberOrNull, requiredGateFields, textOrNull } from '@/lib/api/tos';
 import { formatDateTime, formatDayMonth, formatDayMonthTime } from '@/lib/format';
 import type { TripRow } from '@/lib/api/gate-trips';
-import type { YardLocationMode } from '@/lib/api/yard-map';
 import type { ApiError } from '@/lib/api/problem';
 
 export interface SealRow { sealNo: string; sealType: string; isIntact: boolean }
@@ -511,18 +510,15 @@ export const boxLooksRight = (value: string) => CONTAINER_PATTERN.test(normalise
  * The fields the server will insist on for THIS row, so the clerk is told
  * before the POST rather than by a 400 after it. FULL/EMPTY comes from the
  * booking step the preflight returned, never from anything the clerk picked.
+ *
+ * WHERE THE BOX GOES IS NOT AMONG THEM UNLESS THE ORDER TYPE SAYS SO (owner
+ * and API, 2026-11-01): "sometimes the gate user doesn't know where the exact
+ * location of the container would be — just choose the block." A slot is never
+ * demanded at any depot, mapped yard or not; `requirePosition` on the step is
+ * the only thing that puts `positionText` on this list, and a block, a typed
+ * location or a picked stack all satisfy it.
  */
-export function requiredFor(
-  move: MoveDraft,
-  locationMode: YardLocationMode = 'AREA',
-  /**
-   * Has the yard this row names actually got slots? A SLOT depot whose yard
-   * has never been laid out has nothing to pick, so it keys the location like
-   * an AREA depot. True by default: the old behaviour, for the callers that
-   * do not know.
-   */
-  hasSlotMap = true,
-): string[] {
+export function requiredFor(move: MoveDraft): string[] {
   const fields = requiredGateFields(
     move.trip,
     // Preflight is the authority once it has answered; before that the box the
@@ -548,16 +544,7 @@ export function requiredFor(
    * a complete Save at GECKO: a yard whose slots were never generated offered
    * nothing to pick and no box to type in.
    */
-  if (locationMode !== 'SLOT' || !hasSlotMap) return fields;
-  /**
-   * THE EXACT PLACE IS NOT THE GATE'S TO KNOW (owner, 2026-11-01): "sometimes
-   * the gate user doesn't know where the exact location of the container would
-   * be — just choose the block." So on a mapped yard nothing about the place
-   * is demanded: the clerk picks a block, or nothing, and the yard puts the
-   * box where it goes. Holding a truck at the barrier for a bay and a tier
-   * only teaches people to type something false.
-   */
-  return fields.filter(f => f !== 'positionText' && f !== 'yardSlotId');
+  return fields;
 }
 
 /**
@@ -587,9 +574,7 @@ export const onBooking = (m: MoveDraft): boolean =>
 export const mayMintNumber = (m: MoveDraft) => m.isWalkIn && m.trip === 'DROP_OFF_CONT';
 
 /** A row is ready when it has a plausible box and whatever the server demands. */
-export function rowIssues(
-  move: MoveDraft, locationMode: YardLocationMode = 'AREA', hasSlotMap = true,
-): string[] {
+export function rowIssues(move: MoveDraft): string[] {
   const issues: string[] = [];
   if (!move.containerNo.trim()) {
     // Blank is allowed here, but then nothing can be read off a registry entry
@@ -610,14 +595,12 @@ export function rowIssues(
    * that same hard-coded rule, so nothing changed for a depot that has not set
    * one.
    */
-  for (const field of requiredFor(move, locationMode, hasSlotMap)) {
+  for (const field of requiredFor(move)) {
     /**
-     * A PLACE IS A PLACE, picked or keyed. There is no `place` on the draft to
-     * read — it is either of two fields — and a clerk who typed a location
-     * must not be told the row is unfinished because they did not click a
-     * stack for it.
+     * A POSITION THE ORDER TYPE REALLY DEMANDS is satisfied by anything that
+     * says where the box went: a typed location, a picked stack, or a block.
      */
-    if (field === 'place') {
+    if (field === 'positionText') {
       if (!move.yardSlotId && !move.positionText.trim()) issues.push('Where it goes');
       continue;
     }

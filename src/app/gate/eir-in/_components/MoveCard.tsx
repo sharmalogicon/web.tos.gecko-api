@@ -150,7 +150,7 @@ export function MoveCard({
    */
   const yardSlots = useYardHasSlots(move.yardId || null);
   const mapped = locationMode === 'SLOT' && yardSlots.hasSlots;
-  const required = requiredFor(move, locationMode, mapped);
+  const required = requiredFor(move);
   const needs = (f: string) => required.includes(f);
 
   /**
@@ -237,7 +237,7 @@ export function MoveCard({
   /** The yard refused this slot on a rule, and invited an override. */
   const slotOverride = locationMode === 'SLOT' && needsSlotOverride(move, slotRefused);
 
-  const issues = rowIssues(move, locationMode, mapped);
+  const issues = rowIssues(move);
   /**
    * TIME RUNS ONE WAY FOR A BOX. Separate from `issues` because it is not a
    * blank field to fill in — the clerk fixes it on the truck's clock, above,
@@ -991,8 +991,11 @@ export function MoveCard({
                     the box will end up, the yard does, and it decides later. */}
                 {mapped
                   ? (
-                    <GateField label="Location" error={err('yardSlotId')} span={3}
-                      hint="Pick the block — that is enough. Click a stack, or key it, only if you know the slot.">
+                    <GateField label="Location" required={needs('positionText')}
+                      error={err('yardSlotId')} span={3}
+                      hint={needs('positionText')
+                        ? 'This order type asks where the box goes. A block is enough — click a stack, or key it, if you know the slot.'
+                        : 'Optional — leave it empty if you don’t know yet; the yard records it when the box is put away.'}>
                       <SlotPicker
                         yardId={move.yardId || null}
                         value={move.yardSlotId || null}
@@ -1022,7 +1025,9 @@ export function MoveCard({
                          nothing to pick, rather than leaving a clerk hunting
                          for the map the rest of the tenant has. */
                       hint={locationMode === 'SLOT' && yardSlots.known
-                        ? 'This yard has no slot map yet — key the location.' : undefined}>
+                        ? 'This yard has no slot map yet — key the location.'
+                        : needs('positionText') ? undefined
+                        : 'Optional — leave it empty if you don’t know yet; the yard records it when the box is put away.'}>
                       <input className="gecko-input gecko-text-mono" maxLength={40} value={move.positionText}
                         placeholder={locationMode === 'SLOT' ? 'Bay-Row-Tier, e.g. 03-B-2' : 'A-03-2-1'}
                         disabled={done}

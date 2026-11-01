@@ -84,9 +84,16 @@ export function requiredGateFields(
   const seal = step?.requireSeal ?? step?.checkSealNo ?? false;
   const weight = step?.requireCargoWeight ?? step?.checkGrossWeight ?? false;
   const yard = step?.requireYard ?? false;
-  // Today's rule, kept as the fallback so merging this changes nothing: a box
-  // put down in an unrecorded slot is one the next shift has to go and find.
-  const position = step?.requirePosition ?? drop;
+  /**
+   * WHERE THE BOX GOES IS ASKED FOR ONLY WHEN THE ORDER TYPE ASKS (owner and
+   * API, 2026-11-01). It used to fall back to "every drop-off", on the
+   * reasoning that a box in an unrecorded slot is one the next shift has to go
+   * and find — true, and beside the point at the barrier: the gate often does
+   * not know yet, the yard records it when the box is put away, and a clerk
+   * held up for it types something false instead. No order type at KORAKIT or
+   * GECKO ticks it today, and the API accepts a gate-in with no place at all.
+   */
+  const position = step?.requirePosition ?? false;
 
   if (seal) required.push("seals");
   if (trip === "PICK_UP_CONT") {

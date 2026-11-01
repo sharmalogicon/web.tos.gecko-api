@@ -181,6 +181,25 @@ export default function NewOrderTypePage() {
           busy={saving} errors={chargeErrors} />
       </div>
 
+      {/* WHICH OF THE THREE CALLS WAS REFUSED, beside the button that sent
+          them. The banner at the top of the page is two screens up by the time
+          the charges are filled in, and "it did nothing" is what a clerk
+          reports when a refusal lands where they are not looking. The order
+          type itself is already saved by then, which is the part worth
+          saying out loud: pressing Save again sends only what is left. */}
+      {apiError && (
+        <div role="alert" className="gecko-alert gecko-alert-error gecko-row">
+          <Icon name="alertCircle" size={16} />
+          <span>
+            {!progress
+              ? `The order type was refused. ${apiError.explanation ?? apiError.message}`
+              : !progress.stepsSaved
+                ? `${progress.code} is saved; its GATE STEPS were refused. ${apiError.explanation ?? apiError.message} Fix the rows above and save again — only the steps and charges are sent.`
+                : `${progress.code} is saved with its steps; its CHARGES were refused. ${apiError.explanation ?? apiError.message} Fix them above and save again.`}
+          </span>
+        </div>
+      )}
+
       <div className="gecko-row gecko-row-right">
         <Link href="/masters/order-types" className="gecko-btn gecko-btn-outline">Cancel</Link>
         <button className="gecko-btn gecko-btn-primary" onClick={save} disabled={saving}>

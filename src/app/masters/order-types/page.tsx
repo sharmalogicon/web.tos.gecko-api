@@ -594,6 +594,7 @@ export default function OrderTypeMasterPage() {
                         localErrors={ruleFormErrors} apiError={actionError} />
                       <div className="gecko-row gecko-row-right">
                         <button className="gecko-btn gecko-btn-outline" onClick={cancel} disabled={busy}>Cancel</button>
+                        <SaveRefusal error={actionError} what="rules" />
                         <button className="gecko-btn gecko-btn-primary" onClick={saveRulesPanel}
                           disabled={busy || !rulesDiffer(ruleForm, savedRules)}>
                           <Icon name="save" size={16} /> {busy ? 'Saving…' : 'Save rules'}
@@ -628,6 +629,12 @@ export default function OrderTypeMasterPage() {
                   {mode === 'steps' && vocabulary ? (
                     <div className="gecko-stack gecko-stack-md">
                       <StepsEditor rows={stepRows} onChange={setStepRows} vocabulary={vocabulary} localErrors={stepRowErrors} apiError={actionError} requiresVesselSchedule={ot?.requiresVesselSchedule ?? true} />
+                      {/* THE REFUSAL, BESIDE THE BUTTON THAT CAUSED IT.
+                          The page-level banner sits above the Rules card, two
+                          screens up from here: a clerk who pressed Save steps
+                          at the bottom of a long order type saw nothing happen
+                          and pressed it again. */}
+                      <SaveRefusal error={actionError} what="steps" />
                       <div className="gecko-row gecko-row-right">
                         <button className="gecko-btn gecko-btn-outline" onClick={cancel} disabled={busy}>Cancel</button>
                         <button className="gecko-btn gecko-btn-primary" onClick={saveSteps} disabled={busy}>
@@ -714,6 +721,30 @@ export default function OrderTypeMasterPage() {
         message="It disappears from every list, with its steps and charges. Bookings already made keep the steps they copied, and the history keeps every version. To stop using it without deleting it, Deactivate instead."
         confirmLabel="Delete order type"
       />
+    </div>
+  );
+}
+
+/**
+ * WHAT THE SERVER REFUSED, where the clerk is looking.
+ *
+ * The page keeps one banner for the order type as a whole, near the top. A
+ * panel's own Save is often two screens below it, and a refusal nobody sees is
+ * a Save that looks like it did nothing — which is how the same steps get sent
+ * three times.
+ */
+function SaveRefusal({ error, what }: { error: ApiError | null; what: string }) {
+  if (!error) return null;
+  return (
+    <div role="alert" className="gecko-alert gecko-alert-error gecko-row">
+      <Icon name="alertCircle" size={14} />
+      <span>
+        {isStale(error)
+          ? `Someone else saved this order type while you were working — reload, then save the ${what} again.`
+          : error.status === 400 && Object.keys(error.fieldErrors).length > 0
+            ? `The ${what} were refused — see the marked rows above.`
+            : error.explanation ? `${error.title} ${error.explanation}` : error.message}
+      </span>
     </div>
   );
 }
