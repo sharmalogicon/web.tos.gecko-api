@@ -298,21 +298,28 @@ export const OPERATIONAL_REPORTS: ReportDef[] = [
    * Gate-In / Gate-Out itself still sends no `paymentChannel` and still lists
    * every move, paid or not.
    */
-  { id: 'op-cash-collection', title: 'Cash Collection Report', description: 'Gate-in / gate-out moves paid at the window, with the size summary.',
+  /**
+   * THE DESKTOP'S TMS.Accounting.CashReceiptByUser, not a gate movement list.
+   *
+   * It ran the gate-in-out report with `paymentChannel: CASH` pinned to it and
+   * thirteen gate filters, which answers "which boxes moved and were paid for"
+   * — a different question from the one finance asks at the end of a shift:
+   * what each cashier took, receipt by receipt, with its VAT and withholding,
+   * and which receipts were cancelled. The range takes a TIME because a shift
+   * is not a day (06:00 to 07:59 is a real query here).
+   */
+  { id: 'op-cash-collection', title: 'Cash Collection Report (By User)',
+    description: 'Cash received at the gate window, by cashier: every receipt with its charges, VAT, W/H tax and totals per user; cancelled receipts listed separately.',
     category: 'operational', group: 'In-Bound Reports', icon: 'truck',
-    params: ['agent', 'forwarder', 'customer', 'vessel', 'voyage', 'typeSize', 'emptyLoaded',
-      'bookingType', 'orderType', 'blNo', 'haulier', 'movementCode', 'yardLocation'],
+    params: ['cashierUser', 'bookingType'],
+    dateTime: true,
     document: {
-      path: '/api/tos/reports/gate-in-out',
+      path: '/api/tos/reports/cash-collection',
       params: {
-        agent: 'agentCode', forwarder: 'forwarderCode', customer: 'customerCode',
-        vessel: 'vesselCode', voyage: 'voyageNo', typeSize: 'size', emptyLoaded: 'fullEmpty',
-        bookingType: 'bookingType', orderType: 'orderType', blNo: 'bookingBlNo',
-        haulier: 'haulierCode', movementCode: 'movementCode', yardLocation: 'yardId',
+        cashierUser: 'cashierUserId', bookingType: 'bookingType',
         dateFrom: 'dateFrom', dateTo: 'dateTo',
       },
       required: ['dateFrom', 'dateTo'],
-      fixed: { paymentChannel: 'CASH' },
     } },
 
   { id: 'op-gate-in-out-agent', title: 'Gate-In / Gate-Out (By Agent)', description: 'Gate movements grouped by shipping line / agent.',
