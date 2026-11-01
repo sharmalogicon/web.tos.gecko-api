@@ -5,6 +5,7 @@ import { Icon } from '@/components/ui/Icon';
 import { Modal } from '@/components/ui/Modal';
 import { ApiError } from '@/lib/api/problem';
 import { formatBaht, voidReceipt, type Receipt } from '@/lib/api/window';
+import { ErrorBanner } from '@/components/ui/ErrorBanner';
 
 /**
  * Void a wrong receipt — POST /api/revenue/window/receipts/{id}/void
@@ -54,15 +55,7 @@ export function VoidReceiptModal({ receipt, onClose, onVoided }: {
                  placeholder="e.g. keyed the wrong customer" onChange={e => setReason(e.target.value)} />
           {fieldError && <div className="gecko-field-error">{fieldError}</div>}
         </div>
-        {failure && !fieldError && (
-          <div className="gecko-alert gecko-alert-error">
-            <Icon name="alertCircle" size={18} />
-            <div>
-              <div style={{ fontWeight: 600 }}>{failure.title}</div>
-              {failure.explanation && <div>{failure.explanation}</div>}
-            </div>
-          </div>
-        )}
+        {!fieldError && <ErrorBanner error={failure} fallback="The receipt could not be deleted." />}
         <div className="gecko-row" style={{ justifyContent: 'flex-end', gap: 8 }}>
           <button type="button" className="gecko-btn gecko-btn-outline" onClick={onClose}>Keep it</button>
           <button type="submit" className="gecko-btn gecko-btn-danger" disabled={saving || reason.trim().length < 5}>

@@ -8,7 +8,8 @@ import {
   DISCOUNT_LABEL, repriceCharge, sellingRate, setChargeLock, waiveCharge, WAIVE_REASON_LABEL,
   WAIVE_REASONS, type DiscountType, type WaiveReasonCode,
 } from '@/lib/api/statement-writes';
-import { apiProblem } from './problem';
+import { apiProblem, type StatementProblem } from './problem';
+import { ErrorBanner } from '@/components/ui/ErrorBanner';
 
 /**
  * ONE charge, as Vector's Charge Details panel edits it.
@@ -38,7 +39,7 @@ export function ChargeDetailModal({ row, onClose, onDone }: {
   const [reason, setReason] = useState('');
   const [reasonCode, setReasonCode] = useState<WaiveReasonCode>('GOODWILL');
   const [busy, setBusy] = useState<string | null>(null);
-  const [error, setError] = useState<{ title: string; detail: string } | null>(null);
+  const [error, setError] = useState<StatementProblem | null>(null);
 
   if (!row || !c) return null;
 
@@ -121,12 +122,7 @@ export function ChargeDetailModal({ row, onClose, onDone }: {
       }
     >
       <div className="gecko-stack">
-        {error && (
-          <div role="alert" className="gecko-alert gecko-alert-error">
-            <Icon name="alertCircle" size={18} />
-            <div><strong>{error.title}</strong><div>{error.detail}</div></div>
-          </div>
-        )}
+        {error && <ErrorBanner error={error.error} heading={error.title} detail={error.detail} />}
 
         {c.isLocked && (
           <div className="gecko-alert gecko-alert-info">

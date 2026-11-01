@@ -8,6 +8,7 @@ import { useApi, useApiList } from '@/lib/api/use-api';
 import { apiSend } from '@/lib/api/client';
 import { ApiError } from '@/lib/api/problem';
 import { formatDateTime } from '@/lib/format';
+import { ErrorBanner } from '@/components/ui/ErrorBanner';
 
 /**
  * LIVE: POST /api/tos/bookings (gecko_tos batch B).
@@ -215,15 +216,11 @@ export default function NewBookingPage() {
         </div>
       </div>
 
-      {error && (
-        <div role="alert" className="gecko-alert gecko-alert-error gecko-row" style={{ gap: 10, alignItems: 'flex-start' }}>
-          <Icon name="alertCircle" size={16} />
-          <div>
-            <div style={{ fontWeight: 700 }}>{error.status === 409 ? 'Refused' : 'The booking was not created'}</div>
-            <div>{error.message}{errorCount > 1 ? ` (${errorCount} fields need attention — marked below)` : ''}</div>
-          </div>
-        </div>
-      )}
+      <ErrorBanner
+        error={error}
+        heading={error?.status === 409 ? 'Refused' : 'The booking was not created'}
+        note={errorCount > 1 ? `${errorCount} fields need attention — they are marked below.` : undefined}
+      />
 
       <Section title="Order" icon="clipboardList">
         <div className="gecko-grid-3" style={{ gap: 16 }}>

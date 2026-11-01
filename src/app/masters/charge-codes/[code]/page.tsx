@@ -15,6 +15,7 @@ import {
 } from '@/lib/api/charge-codes';
 import { ChargeCodeForm, chargeErrors, formFromCharge, requestFromCharge, type ChargeFormValue } from '../_components/ChargeCodeForm';
 import { VariantsEditor, requestFromRows, rowsFromVariants, variantErrors, type VariantRow } from '../_components/VariantsEditor';
+import { ErrorBanner } from '@/components/ui/ErrorBanner';
 
 /**
  * One charge code: its own fields, and its billing matrix (bill-to × payment
@@ -152,7 +153,7 @@ export default function ChargeCodeDetailPage() {
         {back}
         {error.status === 404
           ? <EmptyState icon="search" title={`No charge code ${code}`} description="It may have been deleted, or the code is mistyped." />
-          : <div role="alert" className="gecko-alert gecko-alert-error">{error.message}</div>}
+          : <ErrorBanner error={error} />}
       </div>
     );
   }
@@ -161,7 +162,7 @@ export default function ChargeCodeDetailPage() {
       <div className="gecko-stack gecko-stack-xl" style={PAGE}>
         {back}
         {vocabularyError
-          ? <div role="alert" className="gecko-alert gecko-alert-error">{vocabularyError.message}</div>
+          ? <ErrorBanner error={vocabularyError} />
           : <div className="gecko-cell-meta">{loading ? 'Loading charge code…' : ''}</div>}
       </div>
     );

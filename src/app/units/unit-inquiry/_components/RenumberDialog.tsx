@@ -4,6 +4,7 @@ import { Icon } from '@/components/ui/Icon';
 import { Modal } from '@/components/ui/Modal';
 import { Field } from '@/components/ui/FormGrid';
 import { ApiError } from '@/lib/api/problem';
+import { ErrorBanner } from '@/components/ui/ErrorBanner';
 import { formatContainerNo } from '@/lib/api/tos';
 import { isWellFormedContainerNo, normaliseContainerNo } from '@/lib/api/container-story';
 import { renumberContainer, type RenumberResult } from '@/lib/api/container-master';
@@ -88,19 +89,13 @@ export function RenumberDialog({ containerNo, rowVersion, onClose, onDone }: {
         </Field>
 
         {error && !error.forField('newContainerNo') && !error.forField('reason') && (
-          <div className="gecko-alert gecko-alert-error">
-            <Icon name="alertCircle" size={18} />
-            <div>
-              <strong>{error.title}</strong>
-              <div>
-                {error.status === 409
-                  ? (error.explanation
-                    ?? 'That number is already registered or already in use — in the yard, on a booking, or held.')
-                  : error.explanation ?? error.message}
-              </div>
-              {error.status === 409 && <div>If someone else saved this box meanwhile, close and re-open this page.</div>}
-            </div>
-          </div>
+          <ErrorBanner
+            error={error}
+            detail={error.status === 409 && !error.explanation
+              ? 'That number is already registered or already in use — in the yard, on a booking, or held.'
+              : undefined}
+            note={error.status === 409 ? 'If someone else saved this box meanwhile, close and re-open this page.' : undefined}
+          />
         )}
 
         <div className="gecko-row gecko-row-right">

@@ -12,6 +12,7 @@ import {
   type Receipt, type ReceiptLine, type SplitPart,
 } from '@/lib/api/receipts';
 import { CustomerPicker, type PickedCustomer } from './PartyPicker';
+import { ErrorBanner } from '@/components/ui/ErrorBanner';
 
 /**
  * SPLIT A GATE RECEIPT between the parties who actually owe it.
@@ -348,25 +349,17 @@ export function SplitReceiptModal({ receiptId, onClose, onDone }: {
         </>
       }>
       <div className="gecko-stack">
-        {readError && (
-          <div role="alert" className="gecko-alert gecko-alert-error">
-            <Icon name="alertCircle" size={18} />
-            <div><strong>{readError.title}</strong><div>{readError.explanation ?? readError.message}</div></div>
-          </div>
-        )}
+        <ErrorBanner error={readError} fallback="The receipt could not be read." />
         {loading && !receipt && <div className="gecko-cell-meta">Reading the receipt…</div>}
 
-        {problem && (
-          <div role="alert" className="gecko-alert gecko-alert-error">
-            <Icon name="alertCircle" size={18} />
-            <div>
-              <strong>{problem.status === 409 ? 'The server refused it' : problem.title || 'It was refused'}</strong>
-              <div>{problem.status === 409
-                ? problem.explanation ?? 'Dividing a receipt needs a gate receipt of today, and the parts must come to what was taken.'
-                : problem.explanation ?? problem.message}</div>
-            </div>
-          </div>
-        )}
+        <ErrorBanner
+          error={problem}
+          fallback="It was refused."
+          heading={problem?.status === 409 ? 'The server refused it' : undefined}
+          detail={problem?.status === 409 && !problem.explanation
+            ? 'Dividing a receipt needs a gate receipt of today, and the parts must come to what was taken.'
+            : undefined}
+        />
 
         {receipt && !splittable && (
           <div role="status" className="gecko-alert gecko-alert-warning">

@@ -6,6 +6,7 @@ import { usePathname, useRouter } from 'next/navigation';
 import { useSession } from '@/lib/auth/session';
 import { companyLabel } from '@/lib/api/org';
 import { FacilityProvider, useFacility } from '@/lib/api/facility';
+import { useYardSettings } from '@/lib/api/yard-map';
 import { Icon } from '../ui/Icon';
 import { UserMenu } from './UserMenu';
 import { ToastProvider } from '../ui/Toast';
@@ -19,6 +20,31 @@ function titleCaseSegment(s: string) {
   return s.replace(/[-_]/g, ' ').replace(/\b\w/g, c => c.toUpperCase());
 }
 
+/**
+ * WHICH MODULE A PAGE BELONGS TO: the one that LINKS it.
+ *
+ * It used to be the module whose id matched the first path segment, which is
+ * right for most pages and wrong for every page a group borrows: Container
+ * Inquiry sits under Gate & Yard at /units/container-inquiry, and the yard's
+ * work screens live at /yard/... under Gate & Yard and Dashboard. Those got no
+ * breadcrumb and no highlighted group at all.
+ *
+ * The longest matching child wins, which is the same rule the sidebar uses to
+ * decide which link is active. The id lookup stays as the fall-back, so a page
+ * that is in no menu (a detail route of a hidden screen) reads as it did.
+ */
+function moduleOf(path: string): NavModule | undefined {
+  const linked = NAV.filter(m => m.children.some(c => path === c.path || path.startsWith(c.path + '/')));
+  if (linked.length > 0) {
+    return linked.reduce((best, m) => {
+      const longest = (mod: NavModule) => Math.max(...mod.children
+        .filter(c => path === c.path || path.startsWith(c.path + '/')).map(c => c.path.length));
+      return longest(m) > longest(best) ? m : best;
+    });
+  }
+  return NAV.find(m => m.id === path.split('/').filter(Boolean)[0]);
+}
+
 function useNavMatch(pathname: string | null) {
   return useMemo(() => {
     const path = pathname ?? '/';
@@ -29,7 +55,7 @@ function useNavMatch(pathname: string | null) {
       return { pageTitle: 'Workspace', breadcrumbs: ['Workspace'] };
     }
 
-    const mod = NAV.find(m => m.id === segments[0]);
+    const mod = moduleOf(path);
     if (!mod) {
       // Route not in NAV (e.g. /404, /unauth). Title-case the first segment.
       const label = titleCaseSegment(segments[0]);
@@ -115,14 +141,41 @@ function useNavMatch(pathname: string | null) {
  *                  Notifications      /config/integrations
  *                  Approval Workflows /config/approval-workflows
  */
-const NAV = [
+interface NavChild {
+  id: string;
+  label: string;
+  path: string;
+  /**
+   * ONLY FOR A DEPOT THAT HAS THE YARD MAP ON (`yard.map_enabled`).
+   *
+   * Not a permission: see the note on VISIBLE_NAV. It is the depot's own
+   * setting, and the two tenants on this build differ on it — GECKO draws its
+   * yard in blocks, KORAKIT locates boxes by an area code and has no blocks at
+   * all, so for KORAKIT these screens would be an empty canvas. Switching
+   * depot in the header re-reads it.
+   */
+  needsYardMap?: boolean;
+}
+
+interface NavModule {
+  id: string;
+  icon: string;
+  label: string;
+  children: NavChild[];
+}
+
+const NAV: NavModule[] = [
   { id: 'dashboard', icon: 'home', label: 'Dashboard',
-    // Only the two dashboards we intend to make real (his call, 2026-09-29).
-    // Both are bound now — the server counts every figure on them — so both are
-    // in LIVE_PATHS. The other ten are in HIDDEN_DASHBOARDS below.
+    // Only the two dashboards we intend to make real (his call, 2026-09-29),
+    // and since 2026-10-30 the yard map for the depots that have one. All three
+    // are bound — the server counts every figure on them — so all three are in
+    // LIVE_PATHS. The other ten are in HIDDEN_DASHBOARDS below.
     children: [
       { id: 'overview',       label: 'Overview',               path: '/dashboard/overview' },
       { id: 'gate-traffic',   label: 'Gate & Traffic',         path: '/dashboard/gate-traffic' },
+      { id: 'yard-glance',    label: 'Yard at a Glance',       path: '/dashboard/yard-glance', needsYardMap: true },
+      { id: 'yard-kpis',      label: 'Yard KPIs',              path: '/yard/kpis', needsYardMap: true },
+      { id: 'yard-3d',        label: 'Yard 3D',                path: '/yard/3d', needsYardMap: true },
     ]
   },
   { id: 'bookings', icon: 'clipboardList', label: 'Bookings',
@@ -148,6 +201,12 @@ const NAV = [
       { id: 'eir-in-register', label: 'EIR-In Register', path: '/gate/eir-in-register' },
       { id: 'eir-out-register', label: 'EIR-Out Register', path: '/gate/eir-out-register' },
       { id: 'container-status', label: 'Container Status Update', path: '/gate/container-status' },
+      // The yard's own work, for the depots that have a map (Phase 4). Jobs is
+      // used on a handheld in a cab; the check is used on foot.
+      { id: 'yard-jobs', label: 'Yard Jobs', path: '/yard/jobs', needsYardMap: true },
+      { id: 'yard-checks', label: 'Yard Check', path: '/yard/checks', needsYardMap: true },
+      // What is leaving soon, and what has to be dug out of the way first.
+      { id: 'yard-prestage', label: 'Pre-staging', path: '/yard/prestage', needsYardMap: true },
     ]
   },
   { id: 'billing', icon: 'invoice', label: 'Billing',
@@ -196,7 +255,10 @@ const NAV = [
   },
   { id: 'config', icon: 'settings', label: 'Configuration',
     children: [
-      { id: 'yard-zones',     label: 'Yard Zones & Blocks',  path: '/config/yard-zones' },
+      { id: 'yard-zones',     label: 'Yard Zones & Blocks',  path: '/config/yard-zones', needsYardMap: true },
+      // What each machine can lift and how high: the reason a job can be
+      // refused to a driver, so it belongs beside the depot's other rules.
+      { id: 'yard-equipment', label: 'Yard Machines',        path: '/yard/equipment', needsYardMap: true },
       { id: 'roles',          label: 'Roles & Rights',       path: '/config/roles' },
       { id: 'users',          label: 'Users & Roles',        path: '/config/users' },
       { id: 'system-params',  label: 'System Parameters',    path: '/config/system-params' },
@@ -260,18 +322,31 @@ const NAV = [
 // as live but blocked underneath (the June Gate In, the two mock reports) kept
 // its menu entry and answered "Not available in this edition" when clicked.
 // One function, one answer: a link is shown only if the path is actually served.
-const VISIBLE_NAV = NAV
-  .map(m => ({ ...m, children: m.children.filter(c => isPathAvailable(c.path)) }))
-  .filter(m => m.children.length > 0);
+//
+// THE ONE THING THE DEPOT DECIDES, not the build, is the yard map: a screen
+// marked `needsYardMap` is offered only where `yard.map_enabled` is on. That is
+// read per depot, so this cannot be a module constant any more — the menu is
+// built inside the sidebar, which sits inside the FacilityProvider.
+function visibleNav(yardMapEnabled: boolean): NavModule[] {
+  return NAV
+    .map(m => ({ ...m, children: m.children.filter(c => isPathAvailable(c.path) && (!c.needsYardMap || yardMapEnabled)) }))
+    .filter(m => m.children.length > 0);
+}
 
 function Sidebar({ collapsed, onToggle }: { collapsed: boolean, onToggle: () => void }) {
   const pathname = usePathname();
   const { company, branch } = useFacility();
   const wordmark = companyLabel(company) ?? branch?.displayName ?? 'Gecko';
+  // The yard-map screens appear for the depots that have the map on. Until the
+  // setting has been read it is off, so the entry arrives a moment late rather
+  // than appearing and then vanishing.
+  const { mapEnabled } = useYardSettings();
+  const nav = useMemo(() => visibleNav(mapEnabled), [mapEnabled]);
   // Who is signed in, and signing out, both belong to the account menu at the
   // foot of this sidebar now — the row that showed them is that menu's trigger.
-  // Determine active module based on URL path
-  const activeModule = pathname ? pathname.split('/')[1] : 'dashboard';
+  // The group to highlight and open: the one that links this page (see
+  // moduleOf), not whatever the first path segment happens to be called.
+  const activeModule = moduleOf(pathname ?? '/')?.id ?? (pathname ? pathname.split('/')[1] : 'dashboard');
   
   const [openGroups, setOpenGroups] = useState<Set<string>>(new Set([activeModule]));
 
@@ -310,7 +385,7 @@ function Sidebar({ collapsed, onToggle }: { collapsed: boolean, onToggle: () => 
       </div>
 
       <nav className="gecko-sidebar-nav" role="navigation" aria-label="Main navigation" style={{ overflowY: 'auto' }}>
-        {VISIBLE_NAV.map((mod) => {
+        {nav.map((mod) => {
           const isActiveMod = activeModule === mod.id;
           const isOpen = openGroups.has(mod.id);
           return (
@@ -370,10 +445,11 @@ function Sidebar({ collapsed, onToggle }: { collapsed: boolean, onToggle: () => 
           menu existed; the row opens the menu and the menu signs you out.
 
           The "Demo · reset data" button lived here too. It called seedDemoData(),
-          which overwrites the yard layout and sample data, and was hidden only
-          by the old pilot flag. With one edition there is nowhere safe to show
-          it: KORAKIT is live, and reseeding a live depot is not an undoable
-          mistake. Removed 2026-10-05. */}
+          which overwrote the yard layout with a fabricated one, and was hidden
+          only by the old pilot flag. With one edition there is nowhere safe to
+          show it: KORAKIT is live, and reseeding a live depot is not an
+          undoable mistake. Removed 2026-10-05; src/lib/demo-seed.ts itself was
+          deleted on 2026-10-30, when the yard layout moved to the server. */}
       <div className="gecko-sidebar-footer">
         <UserMenu collapsed={collapsed} />
       </div>
@@ -533,13 +609,12 @@ export function AppShell({ children }: { children: React.ReactNode }) {
     }
   }, [pageTitle]);
 
-  // Demo safety net — seed yard layout + sample data on first load if missing.
-  // Fresh browser / wiped storage shouldn't sink the demo.
   // autoSeedIfEmpty() ran here. It wrote a fabricated yard layout into every
   // user's localStorage on first load, for /config/yard-zones and
-  // /dashboard/yard-glance to read. Neither is served, so it did nothing today
-  // — and the day one of them is unblocked it would have shown KORAKIT an
-  // invented yard as if it were their own. Removed 2026-10-05.
+  // /dashboard/yard-glance to read. Removed 2026-10-05, and on 2026-10-30 both
+  // those screens were bound to the API — the layout is gecko_master
+  // org.yard_block now and the counts are the server's, so there is no browser
+  // copy of a yard left to seed. demo-seed.ts is deleted.
 
   // Auth-shaped pages render bare — no sidebar, no header, no breadcrumbs.
   // Currently /login; future /forgot, /reset, /onboarding follow the same pattern.

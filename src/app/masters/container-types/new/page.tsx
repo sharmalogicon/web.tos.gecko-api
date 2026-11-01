@@ -10,6 +10,7 @@ import { createEquipmentType, replaceIsoCodes, useEquipmentVocabulary } from '@/
 import {
   EMPTY_TYPE, EquipmentTypeForm, IsoCodesEditor, isoErrors, requestFromType, typeErrors, type IsoRow, type TypeFormValue,
 } from '../_components/EquipmentTypeEditors';
+import { ErrorBanner } from '@/components/ui/ErrorBanner';
 
 /**
  * New container type: its fields and its ISO 6346 codes, saved as two calls
@@ -71,7 +72,7 @@ export default function NewContainerTypePage() {
         {crumbs}
         {!canManage
           ? <div role="alert" className="gecko-alert gecko-alert-warning">Creating container types needs the mdm.equipment.manage permission (Tenant owner or Ops manager).</div>
-          : vocabularyError ? <div role="alert" className="gecko-alert gecko-alert-error">{vocabularyError.message}</div>
+          : vocabularyError ? <ErrorBanner error={vocabularyError} />
           : <div className="gecko-cell-meta">Loading…</div>}
       </div>
     );
@@ -92,12 +93,10 @@ export default function NewContainerTypePage() {
             <Link href={`/masters/container-types/${created.id}`} className="gecko-link">open it</Link>.</span>
         </div>
       )}
-      {apiError && (
-        <div role="alert" className="gecko-alert gecko-alert-error gecko-row">
-          <Icon name="alertCircle" size={16} />
-          <span>{Object.keys(apiError.fieldErrors).length > 0 ? 'Some values were refused — see the marked fields.' : apiError.explanation ? `${apiError.title} ${apiError.explanation}` : apiError.message}</span>
-        </div>
-      )}
+      <ErrorBanner
+        error={apiError}
+        detail={apiError && Object.keys(apiError.fieldErrors).length > 0 ? 'Some values were refused — see the marked fields.' : undefined}
+      />
 
       <div className="gecko-card gecko-card-padded gecko-stack gecko-stack-md">
         <div className="gecko-form-section-title">Container type</div>

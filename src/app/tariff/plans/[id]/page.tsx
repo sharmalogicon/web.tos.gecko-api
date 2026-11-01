@@ -26,6 +26,7 @@ import {
   type FreeTimeSet, type Rate, type RateSet, type Schedule,
 } from '@/lib/api/revenue';
 import { ExcelImportPanel } from '../../_components/ExcelImportPanel';
+import { ErrorBanner } from '@/components/ui/ErrorBanner';
 
 /**
  * LIVE against gecko_revenue. One version of one price agreement.
@@ -404,11 +405,7 @@ export default function TariffScheduleDetailPage({ params }: { params: Promise<{
       {/* Body */}
       <div className="gecko-stack gecko-stack-lg" style={{ flex: 1, padding: 24, maxWidth: 'var(--gecko-container-max)', width: '100%', margin: '0 auto' }}>
 
-        {rateSet.error && tab !== 'overview' && (
-          <div role="alert" className="gecko-alert gecko-alert-warning gecko-row" style={{ gap: 10 }}>
-            <Icon name="alertCircle" size={16} /><span>{rateSet.error.message}</span>
-          </div>
-        )}
+        {tab !== 'overview' && <ErrorBanner error={rateSet.error} tone="warning" />}
 
         {tab === 'overview' && (
           <>

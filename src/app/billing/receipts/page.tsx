@@ -40,6 +40,7 @@ import {
   presetRange, RECEIPTS_LIST_PATH, REPORT_PERMISSIONS, toCsv, type ReceiptRow,
 } from '@/lib/api/reports';
 import { CHANNEL_LABEL } from '@/lib/api/window';
+import { ErrorBanner } from '@/components/ui/ErrorBanner';
 
 type Preset = 'today' | 'yesterday' | 'thisMonth' | 'lastMonth';
 
@@ -128,15 +129,7 @@ export default function CashReceiptsPage() {
         </div>
       )}
 
-      {list.error && mayView && (
-        <div role="alert" className="gecko-alert gecko-alert-error">
-          <Icon name="alertCircle" size={18} />
-          <div>
-            <strong>{list.error.title}</strong>
-            {list.error.explanation && <div>{list.error.explanation}</div>}
-          </div>
-        </div>
-      )}
+      {mayView && <ErrorBanner error={list.error} />}
 
       <section className="gecko-table-card gecko-table-card-menus">
         <div className="gecko-table-toolbar">

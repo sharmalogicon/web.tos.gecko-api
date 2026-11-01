@@ -8,6 +8,7 @@ import { useApiList } from '@/lib/api/use-api';
 import { useSession } from '@/lib/auth/session';
 import { useContainerCounts } from '@/lib/api/equipment-types';
 import { isPathAvailable } from '@/lib/edition';
+import { ErrorBanner } from '@/components/ui/ErrorBanner';
 
 /**
  * LIVE against gecko_master (Gecko.MasterData, batch A).
@@ -150,13 +151,11 @@ export default function ContainerTypesPage() {
         </div>
       </div>
 
-      {types.error && (
-        <div role="alert" className="gecko-alert gecko-alert-warning gecko-row" style={{ gap: 10 }}>
-          <Icon name="alertCircle" size={16} />
-          <span>{types.error.message}</span>
-          {types.error.status === 401 && <Link href="/login" className="gecko-link">Sign in</Link>}
-        </div>
-      )}
+      <ErrorBanner
+        error={types.error}
+        tone="warning"
+        action={types.error?.status === 401 ? <Link href="/login" className="gecko-link">Sign in</Link> : undefined}
+      />
 
       <div className="gecko-row gecko-row-start" style={{ gap: 24 }}>
 

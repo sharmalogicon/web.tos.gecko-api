@@ -6,6 +6,7 @@ import { EmptyState } from '@/components/ui/EmptyState';
 import type { ApiError } from '@/lib/api/problem';
 import type { PublicHoliday } from '@/lib/api/logistics';
 import { formatDay } from '@/lib/api/gate-hours';
+import { ErrorBanner } from '@/components/ui/ErrorBanner';
 
 /** Read-only: the holidays that close this depot's gate. Edited on /masters/public-holidays. */
 export function DepotHolidays({ year, rows, loading, error }: { year: number; rows: PublicHoliday[] | null; loading: boolean; error: ApiError | null }) {
@@ -22,11 +23,7 @@ export function DepotHolidays({ year, rows, loading, error }: { year: number; ro
         </Link>
       </div>
 
-      {error && (
-        <div role="alert" className="gecko-alert gecko-alert-error gecko-row" style={{ gap: 10 }}>
-          <Icon name="alertCircle" size={16} /><span>{error.explanation ?? error.message}</span>
-        </div>
-      )}
+      <ErrorBanner error={error} />
 
       <div className="gecko-table-card">
         <table className="gecko-table gecko-table-compact">

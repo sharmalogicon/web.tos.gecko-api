@@ -34,6 +34,12 @@ export const LIVE_PATHS: readonly string[] = [
   // '/dashboard', which would also serve the ten retired fixture dashboards.
   '/dashboard/overview',
   '/dashboard/gate-traffic',
+  // The yard map, bound 2026-10-30 (GET /api/tos/yard/map): every count on it
+  // is the server's. It is served for EVERY depot because the route guard
+  // cannot know the depot's settings — the page itself reads
+  // yard.map_enabled and says the map is not turned on for a depot that has it
+  // off, and the menu hides it there. See useYardSettings().
+  '/dashboard/yard-glance',
   '/bookings',                   // register, /bookings/new, /bookings/[id]
   // Off the menu since 2026-10-01 — the depot has no barrier, so EIR-In
   // replaced it — but kept reachable as a fallback.
@@ -77,7 +83,23 @@ export const LIVE_PATHS: readonly string[] = [
   '/masters/lines',
   '/masters/lookups',
   '/masters/yards',
+  // The yard's work, bound 2026-10-30 (Phase 4): the forklift's job list, the
+  // stock check and the per-block figures. Served for every depot and shown
+  // only where yard.map_enabled is on, like the two screens above.
+  '/yard/jobs',
+  '/yard/checks',
+  '/yard/kpis',
+  // Phase 5: the depot's machines (what can lift what), pre-staging (what is
+  // leaving soon and what is on top of it), and the yard in three dimensions.
+  '/yard/equipment',
+  '/yard/prestage',
+  '/yard/3d',
   '/config/system-params',
+  // The block layout on the server, bound 2026-10-30: blocks, where they sit on
+  // the map, and the slots generated from them, all in gecko_master org.yard_*.
+  // Nothing of it is in localStorage any more. Served for every depot, shown
+  // only where yard.map_enabled is on — same rule as /dashboard/yard-glance.
+  '/config/yard-zones',
   '/masters/ports',
   '/masters/commodities',
   '/masters/locations',

@@ -3,11 +3,12 @@ import React, { useState } from 'react';
 import { Icon } from '@/components/ui/Icon';
 import { Modal } from '@/components/ui/Modal';
 import { apiSend } from '@/lib/api/client';
-import { ProblemAlert, problemOf, type Problem } from './ProblemAlert';
+import { ApiError, problemOf } from '@/lib/api/problem';
 import {
   CHANNEL_LABEL, PAYMENT_CHANNELS, formatBaht, toSatang,
   type CloseShiftRequest, type OpenShiftRequest, type Shift,
 } from '@/lib/api/window';
+import { ErrorBanner } from '@/components/ui/ErrorBanner';
 
 /**
  * The drawer: a cashier cannot take money without an open one (the API answers
@@ -24,14 +25,14 @@ export function DrawerBar({
 }) {
   const [float, setFloat] = useState('');
   const [busy, setBusy] = useState(false);
-  const [error, setError] = useState<Problem | null>(null);
+  const [error, setError] = useState<ApiError | null>(null);
   const [closing, setClosing] = useState(false);
 
   async function open(e: React.FormEvent) {
     e.preventDefault();
     if (!branchId) return;
     const openingFloat = toSatang(Number(float || 0));
-    if (Number.isNaN(openingFloat) || openingFloat < 0) { setError({ title: 'The float must be zero or more.', detail: null }); return; }
+    if (Number.isNaN(openingFloat) || openingFloat < 0) { setError(new ApiError(0, 'The float must be zero or more.')); return; }
     setBusy(true); setError(null);
     try {
       const body: OpenShiftRequest = { branchId, openingFloat, currencyCode: 'THB' };
@@ -68,7 +69,7 @@ export function DrawerBar({
           <button type="submit" className="gecko-btn gecko-btn-primary" disabled={busy || !branchId}>
             <Icon name="lock" size={16} /> {busy ? 'Opening…' : 'Open drawer'}
           </button>
-          {error && <ProblemAlert problem={error} style={{ flexBasis: '100%' }} />}
+          {error && <ErrorBanner error={error} style={{ flexBasis: '100%' }} />}
         </form>
       ) : (
         <div className="gecko-row" style={{ gap: 24, alignItems: 'center', flexWrap: 'wrap' }}>
@@ -117,7 +118,7 @@ function CloseDrawerDialog({ shift, onClose, onClosed }: { shift: Shift; onClose
   const [counts, setCounts] = useState<Record<string, string>>({});
   const [note, setNote] = useState('');
   const [busy, setBusy] = useState(false);
-  const [error, setError] = useState<Problem | null>(null);
+  const [error, setError] = useState<ApiError | null>(null);
   const [result, setResult] = useState<Shift | null>(null);
 
   const counted = (c: string) => toSatang(Number(counts[c] || 0));
@@ -195,7 +196,7 @@ function CloseDrawerDialog({ shift, onClose, onClosed }: { shift: Shift; onClose
           <input id="closeNote" className="gecko-input" value={note} onChange={e => setNote(e.target.value)} />
         </div>
       )}
-      {error && <ProblemAlert problem={error} style={{ marginTop: 12 }} />}
+      {error && <ErrorBanner error={error} style={{ marginTop: 12 }} />}
     </Modal>
   );
 }

@@ -33,6 +33,7 @@ import { openPdf } from '@/lib/api/open-pdf';
 import { useFacility } from '@/lib/api/facility';
 import { amount } from '@/lib/api/charges';
 import { INVOICE_STATUS, invoicePath, lineView, type InvoiceDetail } from '@/lib/api/invoices';
+import { ErrorBanner } from '@/components/ui/ErrorBanner';
 
 export default function InvoiceDetailPage() {
   const params = useParams<{ id: string }>();
@@ -102,17 +103,11 @@ export default function InvoiceDetailPage() {
         </div>
       </div>
 
-      {error && (
-        <div role="alert" className="gecko-alert gecko-alert-error">
-          <Icon name="alertCircle" size={18} />
-          <div>
-            <strong>{error.status === 404 ? 'No such invoice' : error.title}</strong>
-            <div>{error.status === 404
-              ? 'It may have been raised in another branch, or the link is stale.'
-              : error.explanation ?? error.message}</div>
-          </div>
-        </div>
-      )}
+      <ErrorBanner
+        error={error}
+        heading={error?.status === 404 ? 'No such invoice' : undefined}
+        detail={error?.status === 404 ? 'It may have been raised in another branch, or the link is stale.' : undefined}
+      />
 
       {loading && !data && <div className="gecko-card gecko-card-padded gecko-cell-meta">Loading the invoice…</div>}
 

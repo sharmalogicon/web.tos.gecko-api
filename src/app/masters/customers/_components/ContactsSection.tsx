@@ -8,6 +8,7 @@ import { ApiError } from '@/lib/api/problem';
 import {
   CONTACT_ROLES, createContact, deleteContact, updateContact, type PartyContact, type SaveContactRequest,
 } from '@/lib/api/parties';
+import { ErrorBanner } from '@/components/ui/ErrorBanner';
 
 /**
  * A party's contacts — for a migrated depot mostly tax-invoice addresses.
@@ -88,12 +89,11 @@ export function ContactsSection({ partyCode, contacts, canEdit, onChanged }: {
 
       {editing && (
         <div className="gecko-card-padded gecko-stack gecko-stack-md">
-          {error && (
-            <div role="alert" className="gecko-alert gecko-alert-error">
-              {stale ? 'Someone else changed this contact. Cancel, and open it again to see their change.'
-                : Object.keys(error.fieldErrors).length > 0 ? 'Some values were refused — see the marked fields.' : error.message}
-            </div>
-          )}
+          <ErrorBanner
+            error={error}
+            detail={stale ? 'Someone else changed this contact. Cancel, and open it again to see their change.'
+              : error && Object.keys(error.fieldErrors).length > 0 ? 'Some values were refused — see the marked fields.' : undefined}
+          />
           <FormGrid columns={3}>
             <Field label="Role" required error={err('contactType')}>
               <select className="gecko-select" value={draft.contactType} onChange={e => setDraft({ ...draft, contactType: e.target.value })}>
@@ -123,7 +123,7 @@ export function ContactsSection({ partyCode, contacts, canEdit, onChanged }: {
           </div>
         </div>
       )}
-      {!editing && error && <div role="alert" className="gecko-alert gecko-alert-error">{error.message}</div>}
+      {!editing && <ErrorBanner error={error} />}
 
       <table className="gecko-table">
         <thead>

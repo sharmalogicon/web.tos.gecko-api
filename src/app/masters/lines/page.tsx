@@ -10,6 +10,7 @@ import { useApi, type Paged } from '@/lib/api/use-api';
 import { EDI_MESSAGES, shippingLinesQueryPath, type LineRole, type ShippingLine } from '@/lib/api/shipping-lines';
 import { useSession } from '@/lib/auth/session';
 import { LineModal } from './_components/LineModal';
+import { ErrorBanner } from '@/components/ui/ErrorBanner';
 
 function useDebounced<T>(value: T, ms = 300): T {
   const [debounced, setDebounced] = useState(value);
@@ -91,11 +92,7 @@ export default function ShippingLinesPage() {
         </label>
       </div>
 
-      {error && (
-        <div role="alert" className="gecko-alert gecko-alert-error gecko-row" style={{ gap: 10 }}>
-          <Icon name="alertCircle" size={16} /><span>{error.message}</span>
-        </div>
-      )}
+      <ErrorBanner error={error} />
 
       <div className="gecko-table-card">
         <table className="gecko-table gecko-table-comfortable">

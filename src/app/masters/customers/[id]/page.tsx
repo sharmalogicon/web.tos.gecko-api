@@ -13,6 +13,7 @@ import { PartyForm, formFromParty, localErrors, requestFromForm, type PartyFormV
 import { RoleBadge } from '../_components/RoleBadge';
 import { ContactsSection } from '../_components/ContactsSection';
 import { formatDateTime } from '@/lib/format';
+import { ErrorBanner } from '@/components/ui/ErrorBanner';
 
 function Info({ label, value, mono, lang }: { label: string; value: React.ReactNode; mono?: boolean; lang?: string }) {
   return (
@@ -83,7 +84,7 @@ export default function CustomerDetailPage() {
         </Link>
         {error.status === 404
           ? <EmptyState icon="search" title={`No customer ${code}`} description="It may have been removed, or the code is mistyped." />
-          : <div role="alert" className="gecko-alert gecko-alert-error">{error.message}</div>}
+          : <ErrorBanner error={error} />}
       </div>
     );
   }
@@ -138,19 +139,17 @@ export default function CustomerDetailPage() {
       {editing && form ? (
         <>
           {saveError && (
-            <div role="alert" className="gecko-alert gecko-alert-error gecko-row" style={{ gap: 10 }}>
-              <Icon name="alertCircle" size={16} />
-              <span>
-                {isStale
-                  ? 'Someone else saved this customer while you were editing. Reload to see their changes, then make yours again.'
-                  : saveError.message}
-              </span>
-              {isStale && (
-                <button className="gecko-btn gecko-btn-outline gecko-btn-sm" onClick={() => { setEditing(false); reload(); }}>
+            <ErrorBanner
+              error={saveError}
+              detail={isStale
+                ? 'Someone else saved this customer while you were editing. Reload to see their changes, then make yours again.'
+                : undefined}
+              action={isStale ? (
+                <button type="button" className="gecko-error-banner-link" onClick={() => { setEditing(false); reload(); }}>
                   <Icon name="refresh" size={14} /> Reload
                 </button>
-              )}
-            </div>
+              ) : undefined}
+            />
           )}
           <div className="gecko-card" style={{ padding: 24 }}>
             <PartyForm value={form} original={formFromParty(party)} onChange={setForm} showErrors={submitted} apiError={saveError} mode="edit" />

@@ -9,6 +9,7 @@ import { useApi, type Paged } from '@/lib/api/use-api';
 import { PARTY_ROLES, partiesQueryPath, type PartyRole, type PartySummary } from '@/lib/api/parties';
 import { RoleBadge } from './_components/RoleBadge';
 import { useSession } from '@/lib/auth/session';
+import { ErrorBanner } from '@/components/ui/ErrorBanner';
 
 /** Waits until typing pauses, so each keystroke is not a query over 9,500 customers. */
 function useDebounced<T>(value: T, ms = 300): T {
@@ -92,11 +93,7 @@ export default function CustomersListPage() {
         </label>
       </div>
 
-      {error && (
-        <div role="alert" className="gecko-alert gecko-alert-error gecko-row" style={{ gap: 10 }}>
-          <Icon name="alertCircle" size={16} /><span>{error.message}</span>
-        </div>
-      )}
+      <ErrorBanner error={error} />
 
       <div className="gecko-table-card">
         <table className="gecko-table gecko-table-comfortable">

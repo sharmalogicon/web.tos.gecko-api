@@ -144,6 +144,13 @@ const EVENT_LABEL: Record<string, string> = {
   SURVEY: 'Surveyed',
   // Written by the Container Master's yard panel (API 2026-10-12). Named here
   // because the fallback turns EMR_REMARKS into "Emr remarks".
+  /**
+   * A yard move (`POST /api/tos/yard/moves`, yard map Phase 2): the box stayed
+   * in the depot and changed place. `fromValue` is where it stood — null for a
+   * box that had no position — `toValue` where it stands now, and the reason
+   * the clerk gave is in the event's remarks.
+   */
+  SHIFT: 'Moved in the yard',
   CONDITION_CHANGE: 'Condition changed',
   GRADE_CHANGE: 'Grade changed',
   EMR_REMARKS: 'EMR remarks',

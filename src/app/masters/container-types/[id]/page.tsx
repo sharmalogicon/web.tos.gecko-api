@@ -17,6 +17,7 @@ import {
   EquipmentTypeForm, IsoCodesEditor, formFromType, isoErrors, requestFromType, rowsFromIso, typeErrors,
   type IsoRow, type TypeFormValue,
 } from '../_components/EquipmentTypeEditors';
+import { ErrorBanner } from '@/components/ui/ErrorBanner';
 
 /**
  * One container type (by id): its fields and its ISO 6346 mapping, edited one
@@ -89,7 +90,7 @@ export default function ContainerTypeDetailPage() {
         <Link href="/masters/container-types" className="gecko-btn gecko-btn-outline gecko-btn-sm"><Icon name="arrowLeft" size={16} /> Container types</Link>
         {error?.status === 404 || error?.status === 400
           ? <EmptyState icon="search" title="No such container type" description="It may have been deleted, or the link is wrong." />
-          : error ? <div role="alert" className="gecko-alert gecko-alert-error">{error.message}</div>
+          : error ? <ErrorBanner error={error} />
           : <div className="gecko-cell-meta">{loading ? 'Loading container type…' : ''}</div>}
       </div>
     );

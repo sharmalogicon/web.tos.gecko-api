@@ -5,6 +5,7 @@ import { DateField } from '@/components/ui/DateField';
 import { useCodeList } from '@/lib/api/lookups';
 import { defaultHandoverMode, handoverModeLabel, handoverModesFor } from '@/lib/api/tos';
 import { useContainerEntry, type GridRow } from '@/lib/api/use-container-entry';
+import { ErrorBanner } from '@/components/ui/ErrorBanner';
 
 /**
  * Entering boxes onto a booking (GATE_API_FOR_UI.md §16b).
@@ -65,13 +66,11 @@ export function ContainerEntryGrid({ bookingId, directionCode, requirements, onS
         </div>
       )}
 
-      {entry.failure && (
-        <div role="alert" className="gecko-alert gecko-alert-warning gecko-row" style={{ gap: 10 }}>
-          <Icon name="alertCircle" size={16} />
-          <span className="gecko-flex-1">{entry.failure.message}</span>
-          <button className="gecko-btn gecko-btn-outline gecko-btn-sm" onClick={() => void entry.flush()}>Send again</button>
-        </div>
-      )}
+      <ErrorBanner
+        error={entry.failure}
+        tone="warning"
+        retry={{ label: 'Send again', onClick: () => void entry.flush() }}
+      />
 
       {/* How full each line is — the question the clerk is actually answering */}
       <div className="gecko-row gecko-row-wrap" style={{ gap: 8 }}>

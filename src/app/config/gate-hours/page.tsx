@@ -14,6 +14,7 @@ import { StatusStrip } from './_components/StatusStrip';
 import { WeeklyWindows } from './_components/WeeklyWindows';
 import { OneOffDates } from './_components/OneOffDates';
 import { DepotHolidays } from './_components/DepotHolidays';
+import { ErrorBanner } from '@/components/ui/ErrorBanner';
 
 interface Branch { branchId: string; branchCode: string; displayName: string }
 
@@ -96,11 +97,7 @@ export default function GateHoursPage() {
         }
       />
 
-      {branchError && (
-        <div role="alert" className="gecko-alert gecko-alert-error gecko-row" style={{ gap: 10 }}>
-          <Icon name="alertCircle" size={16} /><span>{branchError.explanation ?? branchError.message}</span>
-        </div>
-      )}
+      <ErrorBanner error={branchError} />
 
       <StatusStrip status={status.data} error={status.error} loading={status.loading} />
 

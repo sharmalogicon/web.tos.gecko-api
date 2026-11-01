@@ -11,6 +11,7 @@ import { useApi } from '@/lib/api/use-api';
 import { useSession } from '@/lib/auth/session';
 import { VESSELS_PATH, deleteCoded, vesselPath, type Vessel } from '@/lib/api/logistics';
 import { VesselForm, localErrors } from '../_components/VesselForm';
+import { ErrorBanner } from '@/components/ui/ErrorBanner';
 
 /** A vessel by its code (the IMO may be empty, so it cannot be the address). */
 export default function VesselDetailPage() {
@@ -76,11 +77,10 @@ export default function VesselDetailPage() {
         <span className="gecko-breadcrumb-current">{vesselCode}</span>
       </nav>
 
-      {loadError && (
-        <div role="alert" className="gecko-alert gecko-alert-error gecko-row" style={{ gap: 10 }}>
-          <Icon name="alertCircle" size={16} /><span>{loadError.status === 404 ? `There is no vessel ${vesselCode}.` : loadError.message}</span>
-        </div>
-      )}
+      <ErrorBanner
+        error={loadError}
+        heading={loadError?.status === 404 ? `There is no vessel ${vesselCode}.` : undefined}
+      />
       {loading && !data && !loadError && <div className="gecko-cell-meta">Loading…</div>}
 
       {data && draft && (
@@ -105,12 +105,12 @@ export default function VesselDetailPage() {
             )}
           </div>
 
-          {error && (
-            <div role="alert" className="gecko-alert gecko-alert-error gecko-row" style={{ gap: 10 }}>
-              <Icon name="alertCircle" size={16} /><span>{error.message}</span>
-              {error.status === 409 && <button className="gecko-btn gecko-btn-outline gecko-btn-sm" onClick={() => { setError(null); reload(); }}>Reload</button>}
-            </div>
-          )}
+          <ErrorBanner
+            error={error}
+            retry={error?.status === 409
+              ? { label: 'Reload', onClick: () => { setError(null); reload(); } }
+              : undefined}
+          />
 
           <div className="gecko-card" style={{ padding: 24 }}>
             <VesselForm value={draft} onChange={setDraft} isNew={false} readOnly={!canManage} errors={errors} apiError={error} />

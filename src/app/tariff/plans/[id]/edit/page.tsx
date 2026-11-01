@@ -6,6 +6,8 @@ import { useApi } from '@/lib/api/use-api';
 import { freeTimeDraftsOf, rateDraftsOf } from '../../../_components/tariff-drafts';
 import { QuotationEditor } from '../../../_components/QuotationEditor';
 import type { FreeTimeSet, RateSet, Schedule } from '@/lib/api/revenue';
+import { ApiError } from '@/lib/api/problem';
+import { ErrorBanner } from '@/components/ui/ErrorBanner';
 
 /**
  * EDIT A QUOTATION — the same screen that creates one.
@@ -59,9 +61,10 @@ export default function EditQuotationPage({ params }: { params: Promise<{ id: st
   if (failure || !schedule.data) {
     return (
       <div className="gecko-card gecko-card-padded gecko-stack">
-        <div className="gecko-alert gecko-alert-error">
-          {failure?.status === 404 ? 'No such tariff version.' : failure?.message ?? 'This quotation could not be loaded.'}
-        </div>
+        <ErrorBanner
+          error={failure ?? new ApiError(0, 'This quotation could not be loaded.')}
+          heading={failure?.status === 404 ? 'No such tariff version.' : undefined}
+        />
         <Link href="/tariff/plans" className="gecko-btn gecko-btn-outline gecko-btn-sm gecko-self-start">
           <Icon name="arrowLeft" size={13} /> Back to tariff schedules
         </Link>

@@ -7,6 +7,7 @@ import { useToast } from '@/components/ui/Toast';
 import { ApiError } from '@/lib/api/problem';
 import { createParty } from '@/lib/api/parties';
 import { EMPTY_PARTY, PartyForm, localErrors, requestFromForm, type PartyFormValue } from '../_components/PartyForm';
+import { ErrorBanner } from '@/components/ui/ErrorBanner';
 
 /** "A party with this tax id and branch already exists: P001234. …" → P001234 */
 function existingCodeFrom(error: ApiError): string | null {
@@ -53,17 +54,14 @@ export default function NewCustomerPage() {
         </div>
       </div>
 
-      {error && (
-        <div role="alert" className="gecko-alert gecko-alert-error gecko-row" style={{ gap: 10 }}>
-          <Icon name="alertCircle" size={16} />
-          <span>{error.message}</span>
-          {duplicateOf && (
-            <Link href={`/masters/customers/${encodeURIComponent(duplicateOf)}`} className="gecko-btn gecko-btn-outline gecko-btn-sm">
-              Open {duplicateOf}
-            </Link>
-          )}
-        </div>
-      )}
+      <ErrorBanner
+        error={error}
+        action={duplicateOf ? (
+          <Link href={`/masters/customers/${encodeURIComponent(duplicateOf)}`} className="gecko-error-banner-link">
+            Open {duplicateOf}
+          </Link>
+        ) : undefined}
+      />
 
       <div className="gecko-card" style={{ padding: 24 }}>
         <PartyForm value={form} onChange={setForm} showErrors={submitted} apiError={error} mode="create" />

@@ -7,6 +7,7 @@ import { ApiError } from '@/lib/api/problem';
 import { PORTS_PATH, type Port } from '@/lib/api/logistics';
 import { fromRegistry, requestFrom, saveRegistry, type RegistryRow } from '@/lib/api/container-master';
 import { formatDateTime } from '@/lib/format';
+import { ErrorBanner } from '@/components/ui/ErrorBanner';
 
 /**
  * FIXED PORTS — Vector's "Fix Port Details", on its own tab.
@@ -102,16 +103,13 @@ function Ports({ registry, canEdit, onSaved }: {
 
   return (
     <div className="gecko-stack gecko-cm-stack">
-      {failure && (
-        <div className="gecko-alert gecko-alert-error">
-          <Icon name="alertCircle" size={18} />
-          <div>
-            <strong>{failure.forField('fixedPortCodes') ?? failure.title}</strong>
-            {failure.status === 409 && <div>Somebody else saved this container first. It was re-read — apply your change again.</div>}
-            {failure.status !== 409 && failure.explanation && <div>{failure.explanation}</div>}
-          </div>
-        </div>
-      )}
+      <ErrorBanner
+        error={failure}
+        heading={failure?.forField('fixedPortCodes')}
+        detail={failure?.status === 409
+          ? 'Somebody else saved this container first. It was re-read — apply your change again.'
+          : undefined}
+      />
 
       <section className="gecko-cm-section">
         <div className="gecko-cm-section-head">

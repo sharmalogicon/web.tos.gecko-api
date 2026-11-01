@@ -24,6 +24,7 @@ import {
   YARD_STOCK_PERMISSIONS, teuLabel, yardStockPath,
   type StockLoad, type YardStock, type YardStockPool,
 } from '@/lib/api/yard-stock';
+import { ErrorBanner } from '@/components/ui/ErrorBanner';
 
 interface Branch { branchId: string; branchCode: string; displayName: string }
 
@@ -156,15 +157,7 @@ export default function EquipmentPoolPage() {
         </div>
       </div>
 
-      {error && (
-        <div className="gecko-alert gecko-alert-error">
-          <Icon name="alertCircle" size={18} />
-          <div>
-            <div style={{ fontWeight: 600 }}>{error.title}</div>
-            {error.explanation && <div>{error.explanation}</div>}
-          </div>
-        </div>
-      )}
+      <ErrorBanner error={error} />
 
       {/* ── KPI Strip ── */}
       <div className="gecko-grid-5">

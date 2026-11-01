@@ -27,6 +27,7 @@ import {
   amount, CHARGES_PATH, CHARGE_PERMISSIONS, CHARGE_SOURCE, CHARGE_STATUS, payerLabel,
   type Charge, type ChargeSource, type ChargeStatus,
 } from '@/lib/api/charges';
+import { ErrorBanner } from '@/components/ui/ErrorBanner';
 
 interface Branch { branchId: string; branchCode: string; displayName: string }
 
@@ -93,15 +94,7 @@ export default function ServiceOrdersPage() {
         </div>
       </div>
 
-      {list.error && (
-        <div className="gecko-alert gecko-alert-error">
-          <Icon name="alertCircle" size={18} />
-          <div>
-            <div style={{ fontWeight: 600 }}>{list.error.title}</div>
-            {list.error.explanation && <div>{list.error.explanation}</div>}
-          </div>
-        </div>
-      )}
+      <ErrorBanner error={list.error} />
 
       {/* Filters */}
       <div className="gecko-card" style={{ padding: 14 }}>

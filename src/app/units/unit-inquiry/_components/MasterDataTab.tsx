@@ -15,6 +15,7 @@ import {
 import { RenumberDialog, renumberSummary } from './RenumberDialog';
 import { formatContainerNo } from '@/lib/api/tos';
 import { formatDateTime } from '@/lib/format';
+import { ErrorBanner } from '@/components/ui/ErrorBanner';
 
 /**
  * CONTAINER MASTER — the registry row a clerk edits (Vector's "Container
@@ -121,15 +122,11 @@ function MasterForm_({ registry, canEdit, onSaved, onRenumbered }: {
   return (
     <div className="gecko-stack gecko-cm-stack">
 
-      {failure && failure.status !== 400 && (
-        <div className="gecko-alert gecko-alert-error">
-          <Icon name="alertCircle" size={18} />
-          <div>
-            <strong>{failure.title}</strong>
-            {failure.explanation && <div>{failure.explanation}</div>}
-            {failure.status === 409 && <div>The record was re-read; apply your change again.</div>}
-          </div>
-        </div>
+      {failure?.status !== 400 && (
+        <ErrorBanner
+          error={failure}
+          note={failure?.status === 409 ? 'The record was re-read; apply your change again.' : undefined}
+        />
       )}
 
       {/* ── identity ─────────────────────────────────────────────────────── */}

@@ -7,6 +7,7 @@ import { TablePagination } from '@/components/ui/TablePagination';
 import { TableSkeleton } from '@/components/ui/TableSkeleton';
 import { useApiList } from '@/lib/api/use-api';
 import { formatDate } from '@/lib/format';
+import { ErrorBanner } from '@/components/ui/ErrorBanner';
 
 /**
  * LIVE against gecko_tos (booking.booking + vw_booking_progress), batch B.
@@ -183,13 +184,11 @@ export default function BookingRegisterPage() {
         </div>
       </div>
 
-      {error && (
-        <div role="alert" className="gecko-alert gecko-alert-warning gecko-row" style={{ gap: 10 }}>
-          <Icon name="alertCircle" size={16} />
-          <span>{error.message}</span>
-          {error.status === 401 && <Link href="/login" className="gecko-link">Sign in</Link>}
-        </div>
-      )}
+      <ErrorBanner
+        error={error}
+        tone="warning"
+        action={error?.status === 401 ? <Link href="/login" className="gecko-link">Sign in</Link> : undefined}
+      />
 
       <div className="gecko-grid-3" style={{ gap: 10 }}>
         {[

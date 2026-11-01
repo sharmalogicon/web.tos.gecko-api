@@ -13,6 +13,7 @@ import {
   type GateFinding, type GatePreflight, type GateTransaction, type GateTransactionRequest, type TripType,
 } from '@/lib/api/tos';
 import { useSetting, useTruckCategories } from '@/lib/api/lookups';
+import { ErrorBanner } from '@/components/ui/ErrorBanner';
 
 /**
  * THE GATE DESK — live against gecko_tos (PLAN §5.2–§5.5, Phase 5).
@@ -264,17 +265,8 @@ export default function GateDeskPage() {
 
       {/* A 400 is shown on the field it names (below); this carries the rest —
           the heading plus anything the server said that is not field-specific. */}
-      {error && (
-        <div className="gecko-alert gecko-alert-error">
-          <Icon name="alertCircle" size={18} />
-          <div>
-            <div>{error.title}</div>
-            {error.status !== 400 && error.explanation && (
-              <div className="gecko-cell-meta">{error.explanation}</div>
-            )}
-          </div>
-        </div>
-      )}
+      {/* A 400 is already marked on the field it is about. */}
+      <ErrorBanner error={error} detail={error?.status === 400 ? false : undefined} />
 
       {/* ── what the barrier said ──────────────────────────────────────── */}
       {view && <Decision view={view} />}

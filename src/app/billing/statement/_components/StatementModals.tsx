@@ -11,7 +11,8 @@ import {
   type DiscountType, type WaiveReasonCode,
 } from '@/lib/api/statement-writes';
 import { sendToInvoice, type InvoiceTerm } from '@/lib/api/invoices';
-import { apiProblem } from './problem';
+import { apiProblem, type StatementProblem } from './problem';
+import { ErrorBanner } from '@/components/ui/ErrorBanner';
 
 /**
  * The four things Vector's cost sheet does to MANY lines at once, plus sending
@@ -64,7 +65,7 @@ export function ChargeAddModal({ mode, orderNo, rows, chargeCodes, commercial, m
   const [remarks, setRemarks] = useState('');
   const [picked, setPicked] = useState<Set<string>>(() => new Set(boxes.map(b => b.bookingContainerId)));
   const [busy, setBusy] = useState(false);
-  const [error, setError] = useState<{ title: string; detail: string } | null>(null);
+  const [error, setError] = useState<StatementProblem | null>(null);
 
   const bulk = mode !== 'manual';
   const rate = Number(originalRate);
@@ -245,7 +246,7 @@ export function WaiveSelectedModal({ selected, currency, onClose, onDone }: {
   const [reasonCode, setReasonCode] = useState<WaiveReasonCode>('GOODWILL');
   const [reason, setReason] = useState('');
   const [busy, setBusy] = useState(false);
-  const [error, setError] = useState<{ title: string; detail: string } | null>(null);
+  const [error, setError] = useState<StatementProblem | null>(null);
 
   const total = selected.reduce((n, r) => n + r.charge.total, 0);
   const ready = reason.trim().length >= 3;
@@ -316,7 +317,7 @@ export function RegenerateModal({ orderNo, rows, onClose, onDone }: {
   const [keepManual, setKeepManual] = useState(true);
   const [reason, setReason] = useState('');
   const [busy, setBusy] = useState(false);
-  const [error, setError] = useState<{ title: string; detail: string } | null>(null);
+  const [error, setError] = useState<StatementProblem | null>(null);
 
   const quoted = rows.filter(r => r.charge.status === 'QUOTED');
   const locked = quoted.filter(r => r.charge.isLocked).length;
@@ -410,34 +411,81 @@ export const candidateOf = (r: StatementRow): InvoiceCandidate => ({
   currencyCode: r.charge.currencyCode,
 });
 
-export function SendToInvoiceModal({ kind, term, selected, currency, onClose, onDone }: {
+/** One payer's share of the ticked lines — the unit an invoice is made of. */
+interface PayerShare {
+  key: string;
+  code: string | null;
+  name: string;
+  lines: InvoiceCandidate[];
+  /** Incl. VAT, as every `total` on a charge line is. */
+  total: number;
+}
+
+/**
+ * THE TICKED LINES, SPLIT BY WHO PAYS, in the order they were ticked.
+ *
+ * A payer with no code is kept apart by name rather than lumped in with the
+ * others: two unnamed payers are still two invoices.
+ */
+export function payerShares(lines: InvoiceCandidate[]): PayerShare[] {
+  const by = new Map<string, PayerShare>();
+  for (const l of lines) {
+    const key = l.payerCode ?? `name:${l.payerName ?? ''}`;
+    let share = by.get(key);
+    if (!share) {
+      share = { key, code: l.payerCode, name: l.payerName ?? l.payerCode ?? 'unnamed payer', lines: [], total: 0 };
+      by.set(key, share);
+    }
+    share.lines.push(l);
+    share.total += l.total;
+  }
+  return [...by.values()];
+}
+
+export function SendToInvoiceModal({ kind, term, selected, currency, onClose, onDone, onStale }: {
   kind: 'new' | 'existing';
   term: InvoiceTerm;
   selected: InvoiceCandidate[];
   currency: string;
   onClose: () => void;
   onDone: (message: string) => void;
+  /**
+   * The send met lines that are already on an invoice, so the list behind this
+   * modal is out of date. A screen that can re-read itself should — the clerk
+   * did nothing wrong. Leave it out where there is nothing to re-read.
+   */
+  onStale?: () => void;
 }) {
   const [invoiceNo, setInvoiceNo] = useState('');
   const [remarks, setRemarks] = useState('');
   const [busy, setBusy] = useState(false);
-  const [error, setError] = useState<{ title: string; detail: string } | null>(null);
+  const [error, setError] = useState<StatementProblem | null>(null);
   const [done, setDone] = useState<{ invoiceNo: string; invoiceId: string } | null>(null);
+  /** Which payer this invoice is for. Null means the first one, derived below. */
+  const [payer, setPayer] = useState<string | null>(null);
 
   // Only lines on THIS term, and only ones that can still go on an invoice.
   // The API refuses the whole send if one line is wrong, so the selection is
   // narrowed here rather than letting twenty good lines fail for one.
-  const lines = selected.filter(r => r.paymentTermCode === term
+  const sendable = selected.filter(r => r.paymentTermCode === term
     && (r.status === undefined || r.status === 'QUOTED' || r.status === 'UNBILLED'));
-  const other = selected.length - lines.length;
-  const total = lines.reduce((n, r) => n + r.total, 0);
+  const other = selected.length - sendable.length;
 
-  // One invoice is one payer: the API answers 409 on a mixed selection, and
-  // naming the payers here is more use than that refusal.
-  const payers = [...new Set(lines.map(r => r.payerName ?? r.payerCode ?? 'unnamed'))];
-  const mixed = payers.length > 1;
+  /**
+   * ONE INVOICE IS ONE PAYER — SO THE CLERK CHOOSES WHICH.
+   *
+   * This used to be a red refusal: "These lines are for 3 payers (…). One
+   * invoice is one payer." True, and useless — a GECKO clerk met it on
+   * 2026-11-01 with nine orders ticked and no way forward but to untick by hand
+   * and guess who owned what. The split is arithmetic the screen can do, so it
+   * does it: one radio per payer, and the first is ready to send.
+   */
+  const shares = payerShares(sendable);
+  const chosen = shares.find(s => s.key === payer) ?? shares[0] ?? null;
+  const lines = chosen?.lines ?? [];
+  const total = chosen?.total ?? 0;
 
-  const ready = lines.length > 0 && !mixed && !busy
+  const ready = lines.length > 0 && !busy
     && (kind === 'new' || invoiceNo.trim().length > 0);
 
   const what = `${kind === 'new' ? 'New' : 'Existing'} ${term.toLowerCase()} invoice`;
@@ -456,7 +504,21 @@ export function SendToInvoiceModal({ kind, term, selected, currency, onClose, on
       setDone({ invoiceNo: r.invoiceNo, invoiceId: r.invoiceId });
       onDone(`${r.invoiceNo} · ${r.lines} lines · ${amount(r.total, r.currencyCode)}`);
     } catch (e) {
-      setError(apiProblem(e, 'invoice'));
+      const problem = apiProblem(e, 'invoice');
+      if (problem.error.status === 409) {
+        // Someone else invoiced these while the list sat open. The screen that
+        // owns the list re-reads it; this says what happened in those words.
+        onStale?.();
+        setError({
+          title: 'Some lines were invoiced a moment ago',
+          detail: onStale
+            ? 'An invoice is issued once and never added to. The list is up to date now — tick what is left and send again.'
+            : 'An invoice is issued once and never added to. Reload and send what is left.',
+          error: problem.error,
+        });
+      } else {
+        setError(problem);
+      }
     } finally {
       setBusy(false);
     }
@@ -467,7 +529,7 @@ export function SendToInvoiceModal({ kind, term, selected, currency, onClose, on
       title={done ? `Invoice ${done.invoiceNo} issued` : what}
       subtitle={done
         ? 'Issued and final. The lines on it are now INVOICED.'
-        : `${lines.length} ${term.toLowerCase()} line${lines.length === 1 ? '' : 's'} · ${amount(total, currency)}`}
+        : `${lines.length} ${term.toLowerCase()} line${lines.length === 1 ? '' : 's'} · ${amount(total, currency)} incl. VAT`}
       footer={done
         ? (
           <>
@@ -482,8 +544,10 @@ export function SendToInvoiceModal({ kind, term, selected, currency, onClose, on
           <>
             <span className="gecko-modal-footer-note gecko-flex-1">
               {lines.length === 0 ? `None of the ticked lines is on ${term.toLowerCase()} terms and still open.`
-                : mixed ? 'One invoice is one payer. Tick the lines for a single payer.'
-                  : kind === 'existing' && !invoiceNo.trim() ? 'Enter the invoice number to add them to.' : ''}
+                : kind === 'existing' && !invoiceNo.trim() ? 'Enter the invoice number to add them to.'
+                  : shares.length > 1
+                    ? `${shares.length - 1} other payer${shares.length === 2 ? '' : 's'} wait for an invoice of their own.`
+                    : ''}
             </span>
             <button className="gecko-btn gecko-btn-outline gecko-btn-sm" onClick={onClose} disabled={busy}>Cancel</button>
             <button className="gecko-btn gecko-btn-primary gecko-btn-sm" disabled={!ready} onClick={go}>
@@ -524,10 +588,38 @@ export function SendToInvoiceModal({ kind, term, selected, currency, onClose, on
               </div>
             )}
 
-            {mixed && (
-              <div className="gecko-alert gecko-alert-error">
-                <Icon name="alertCircle" size={16} />
-                <span>These lines are for {payers.length} payers ({payers.join(', ')}). One invoice is one payer.</span>
+            {shares.length > 1 && (
+              <div className="gecko-payer-pick">
+                <div className="gecko-payer-pick-head">
+                  <strong>These lines are for {shares.length} payers.</strong> One invoice is one payer —
+                  choose whose go on this one.
+                </div>
+                <div role="radiogroup" aria-label="Payer">
+                  {shares.map(s => (
+                    <label key={s.key}
+                      className={`gecko-radio gecko-payer-choice${s.key === chosen?.key ? ' gecko-payer-choice-on' : ''}`}>
+                      <input type="radio" name="gecko-invoice-payer" checked={s.key === chosen?.key}
+                        onChange={() => setPayer(s.key)} />
+                      <span className="gecko-payer-choice-who">
+                        <span className="gecko-payer-choice-name">{s.name}</span>
+                        {s.code && s.code.toUpperCase() !== s.name.toUpperCase() && (
+                          <span className="gecko-cell-meta gecko-mono">{s.code}</span>
+                        )}
+                      </span>
+                      <span className="gecko-payer-choice-sum">
+                        <span className="gecko-cell-meta">
+                          {s.lines.length} line{s.lines.length === 1 ? '' : 's'}
+                        </span>
+                        <span className="gecko-mono-strong">
+                          {amount(s.total, s.lines[0]?.currencyCode ?? currency)}
+                        </span>
+                      </span>
+                    </label>
+                  ))}
+                </div>
+                <div className="gecko-cell-meta">
+                  The other payers’ lines stay on the list for their own invoice.
+                </div>
               </div>
             )}
 
@@ -555,13 +647,8 @@ export function SendToInvoiceModal({ kind, term, selected, currency, onClose, on
 
 // ── shared bits ──────────────────────────────────────────────────────────────
 
-function Problem({ p }: { p: { title: string; detail: string } }) {
-  return (
-    <div role="alert" className="gecko-alert gecko-alert-error">
-      <Icon name="alertCircle" size={18} />
-      <div><strong>{p.title}</strong><div>{p.detail}</div></div>
-    </div>
-  );
+function Problem({ p }: { p: StatementProblem }) {
+  return <ErrorBanner error={p.error} heading={p.title} detail={p.detail} />;
 }
 
 function Field({ label, required, children }: { label: string; required?: boolean; children: React.ReactNode }) {

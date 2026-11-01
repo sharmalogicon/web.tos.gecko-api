@@ -3,7 +3,7 @@ import React, { useState, useMemo, useRef, useEffect, useCallback } from 'react'
 import { apiGet, apiSend, newIdempotencyKey } from '@/lib/api/client';
 import { BATCH_MAX, BOOKING_CONTAINER_MAX, newClientLineId } from '@/lib/api/booking-entry';
 import { defaultHandoverMode, handoverModesFor } from '@/lib/api/tos';
-import { ApiError } from '@/lib/api/problem';
+import { ApiError, problemOf } from '@/lib/api/problem';
 import { useFacility } from '@/lib/api/facility';
 import { useSession } from '@/lib/auth/session';
 import { PartyPicker } from '@/components/ui/PartyPicker';
@@ -31,6 +31,7 @@ import {
   type OrderTypeMovement as OrderTypeMovementDef,
   type OrderTypeVAS as OrderTypeVASDef,
 } from '@/lib/order-types-catalog';
+import { ErrorBanner } from '@/components/ui/ErrorBanner';
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -1138,11 +1139,15 @@ function TabVoyage({ form, patch, created, dirty, readOnly, direction, canOverri
           and this is the button that says what happens next. */}
       <div className="gecko-action-toolbar gecko-action-toolbar-between" style={{ alignItems: 'center' }}>
         {saveError && (
-          <div role="alert" className="gecko-field-error gecko-flex-1">
-            {saveError.status === 409 && saveError.extension<string>('existingOrderNo')
+          <ErrorBanner
+            compact
+            className="gecko-flex-1"
+            error={saveError}
+            fallback="The booking was not saved."
+            detail={saveError.status === 409 && saveError.extension<string>('existingOrderNo')
               ? `That booking already exists: ${saveError.extension<string>('existingOrderNo')}.`
-              : saveError.message}
-          </div>
+              : undefined}
+          />
         )}
         {!saveError && (
           <div className="gecko-cell-meta gecko-flex-1">
@@ -3671,7 +3676,7 @@ function CloneBookingDialog({ sourceOrderNo, lines, boxes, onClose, onClone, onD
   const [carrierRef, setCarrierRef] = useState('');
   const [customerRef, setCustomerRef] = useState('');
   const [busy, setBusy] = useState(false);
-  const [error, setError] = useState<string | null>(null);
+  const [error, setError] = useState<ApiError | null>(null);
 
   const ready = carrierRef.trim().length > 0 && !busy;
 
@@ -3682,8 +3687,7 @@ function CloneBookingDialog({ sourceOrderNo, lines, boxes, onClose, onClone, onD
     try {
       onDone(await onClone(carrierRef, customerRef));
     } catch (e) {
-      const err = e instanceof ApiError ? e : new ApiError(0, 'The booking could not be cloned.');
-      setError(err.forField('carrierRef') ?? err.explanation ?? err.message);
+      setError(problemOf(e, 'The booking could not be cloned.'));
     } finally {
       setBusy(false);
     }
@@ -3710,12 +3714,8 @@ function CloneBookingDialog({ sourceOrderNo, lines, boxes, onClose, onClone, onD
       }
     >
       <div className="gecko-stack">
-        {error && (
-          <div role="alert" className="gecko-alert gecko-alert-error">
-            <Icon name="alertCircle" size={18} />
-            <div><strong>Could not clone it</strong><div>{error}</div></div>
-          </div>
-        )}
+        {/* The hand-written message on the number itself beats the framework's. */}
+        <ErrorBanner error={error} heading="Could not clone it" detail={error?.forField('carrierRef')} />
 
         <div className="gecko-form-group">
           <label className="gecko-label gecko-label-required" htmlFor="cloneCarrierRef">

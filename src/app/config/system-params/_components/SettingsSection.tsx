@@ -5,10 +5,33 @@ import { useToast } from '@/components/ui/Toast';
 import { ApiError } from '@/lib/api/problem';
 import { saveSetting, type SettingValueType, type TenantSetting } from '@/lib/api/system-params';
 
+/**
+ * SETTINGS WHOSE VALUE IS A CHOICE, not free text.
+ *
+ * The platform declares these as STRING because that is what they are stored
+ * as, and the endpoint answers 400 on `settingValue` for anything off the
+ * list. A text box there invites the 400: the clerk types "slot" or "Slot" and
+ * is told off for it. The list the API accepts is the list on screen.
+ */
+const CHOICES: Record<string, { value: string; label: string }[]> = {
+  'yard.location_mode': [
+    { value: 'AREA', label: 'Area code' },
+    { value: 'SLOT', label: 'Block / row / bay / tier' },
+  ],
+};
+
 /** The editor a declared type gets. '' in the draft = "no value at this scope". */
-function ValueInput({ type, value, onChange, disabled, label }: {
-  type: SettingValueType; value: string; onChange: (v: string) => void; disabled: boolean; label: string;
+function ValueInput({ settingKey, type, value, onChange, disabled, label }: {
+  settingKey: string; type: SettingValueType; value: string; onChange: (v: string) => void; disabled: boolean; label: string;
 }) {
+  const choices = CHOICES[settingKey];
+  if (choices)
+    return (
+      <select className="gecko-input gecko-input-sm" value={value} disabled={disabled} aria-label={label} onChange={e => onChange(e.target.value)}>
+        <option value="">— not set —</option>
+        {choices.map(c => <option key={c.value} value={c.value}>{c.label}</option>)}
+      </select>
+    );
   if (type === 'BOOL')
     return (
       <select className="gecko-input gecko-input-sm" value={value} disabled={disabled} aria-label={label} onChange={e => onChange(e.target.value)}>
@@ -26,8 +49,11 @@ function ValueInput({ type, value, onChange, disabled, label }: {
   );
 }
 
-const shown = (type: SettingValueType, v: string | null) =>
-  v === null ? '—' : type === 'BOOL' ? (v === 'true' ? 'Yes' : 'No') : v;
+const shown = (type: SettingValueType, v: string | null, settingKey?: string) =>
+  v === null ? '—'
+    : type === 'BOOL' ? (v === 'true' ? 'Yes' : 'No')
+    // A choice reads as the words it was picked by, here as well as in its editor.
+    : (settingKey && CHOICES[settingKey]?.find(c => c.value === v)?.label) ?? v;
 
 /**
  * One scope of one setting: its own value (or none), saved with that scope's
@@ -62,7 +88,7 @@ function ScopeEditor({ setting, branchId, canManage, onSaved }: {
     <div>
       <div className="gecko-row" style={{ gap: 6 }}>
         <div style={{ flex: 1, minWidth: 0 }}>
-          <ValueInput type={setting.valueType} value={draft} onChange={setDraft} disabled={!canManage || saving}
+          <ValueInput settingKey={setting.settingKey} type={setting.valueType} value={draft} onChange={setDraft} disabled={!canManage || saving}
             label={`${setting.settingKey} (${branchId ? 'this depot' : 'tenant'})`} />
         </div>
         {canManage && dirty && (
@@ -107,7 +133,7 @@ export function SettingsTable({ settings, branchId, canManage, onSaved }: {
                   <div className="gecko-cell-sub gecko-text-mono">{s.settingKey} · {s.valueType}</div>
                 </div>
               </td>
-              <td className="gecko-cell-meta">{shown(s.valueType, s.defaultValue)}</td>
+              <td className="gecko-cell-meta">{shown(s.valueType, s.defaultValue, s.settingKey)}</td>
               <td><ScopeEditor setting={s} branchId={null} canManage={canManage} onSaved={onSaved} /></td>
               <td>
                 {s.allowedScope === 'BRANCH'
@@ -118,7 +144,7 @@ export function SettingsTable({ settings, branchId, canManage, onSaved }: {
               </td>
               <td>
                 <div className="gecko-cell-two-line">
-                  <div className="gecko-cell-primary">{shown(s.valueType, s.value)}</div>
+                  <div className="gecko-cell-primary">{shown(s.valueType, s.value, s.settingKey)}</div>
                   <div className="gecko-cell-sub">from {s.resolvedFrom.toLowerCase()}</div>
                 </div>
               </td>

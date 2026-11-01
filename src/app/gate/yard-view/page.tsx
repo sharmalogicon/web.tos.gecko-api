@@ -23,6 +23,7 @@ import {
   YARD_STOCK_PERMISSIONS, occupancy, teuLabel, yardStockPath,
   type StockLoad, type YardStock, type YardStockGroup, type YardStockTally, type YardStockYard,
 } from '@/lib/api/yard-stock';
+import { ErrorBanner } from '@/components/ui/ErrorBanner';
 
 interface Branch { branchId: string; branchCode: string; displayName: string }
 
@@ -147,15 +148,7 @@ export default function YardViewPage() {
         </div>
       </div>
 
-      {error && (
-        <div className="gecko-alert gecko-alert-error">
-          <Icon name="alertCircle" size={18} />
-          <div>
-            <div style={{ fontWeight: 600 }}>{error.title}</div>
-            {error.explanation && <div>{error.explanation}</div>}
-          </div>
-        </div>
-      )}
+      <ErrorBanner error={error} />
 
       {/* KPI strip */}
       <div className="gecko-grid-5">

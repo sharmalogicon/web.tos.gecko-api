@@ -15,6 +15,7 @@ import {
   AGE_LABEL, AGE_TONE, AUTHORITY_LABEL, HOLD_SOURCES, ageLabel, scopeLabel,
   type HoldBoardRow, type HoldSummary,
 } from '@/lib/api/holds';
+import { ErrorBanner } from '@/components/ui/ErrorBanner';
 
 /**
  * HOLDS BOARD — live against gecko_tos `yard.container_hold` (TIER3 §7).
@@ -84,15 +85,7 @@ export default function HoldsBoardPage() {
         </div>
       </div>
 
-      {error && (
-        <div className="gecko-alert gecko-alert-error">
-          <Icon name="alertCircle" size={18} />
-          <div>
-            <div style={{ fontWeight: 600 }}>{error.title}</div>
-            {error.explanation && <div>{error.explanation}</div>}
-          </div>
-        </div>
-      )}
+      <ErrorBanner error={error} />
 
       <div className="gecko-grid-5" style={{ gap: 14 }}>
         <Kpi label="Active holds" value={s?.active} accent="var(--gecko-error-400)" sub={s ? `${s.byHold.length} hold codes` : undefined} />

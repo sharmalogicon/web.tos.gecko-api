@@ -8,6 +8,7 @@ import { usePagination, TablePagination } from '@/components/ui/TablePagination'
 import { useApiList } from '@/lib/api/use-api';
 import { useSession } from '@/lib/auth/session';
 import { dwellLabel, formatContainerNo, formatDateTime, type YardContainer } from '@/lib/api/tos';
+import { ErrorBanner } from '@/components/ui/ErrorBanner';
 
 /**
  * WHAT IS IN THE YARD — live against gecko_tos `yard.vw_container_in_yard`.
@@ -111,12 +112,7 @@ export default function YardStockPage() {
         </div>
       </div>
 
-      {error && (
-        <div className="gecko-alert gecko-alert-error">
-          <Icon name="alertCircle" size={18} />
-          <div>{error.message}</div>
-        </div>
-      )}
+      <ErrorBanner error={error} />
 
       {!loading && rows.length === 0 ? (
         <EmptyState

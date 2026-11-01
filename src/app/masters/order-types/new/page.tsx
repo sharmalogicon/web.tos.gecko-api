@@ -16,6 +16,7 @@ import { StepsEditor, blankStep, requestFromSteps, stepErrors, type StepRow } fr
 import { ChargesTables } from '../_components/ChargesTables';
 import { RulesEditor } from '../_components/RulesPanel';
 import { chargeRowErrors, requestFromCharges, type ChargeRow } from '../_components/charge-rows';
+import { ErrorBanner } from '@/components/ui/ErrorBanner';
 
 /**
  * New order type: its fields, its gate steps, and the charges it raises — saved
@@ -110,7 +111,7 @@ export default function NewOrderTypePage() {
     return (
       <div className="gecko-stack gecko-stack-xl" style={PAGE}>
         {header}
-        {failed ? <div role="alert" className="gecko-alert gecko-alert-error">{failed.message}</div> : <div className="gecko-cell-meta">Loading…</div>}
+        {failed ? <ErrorBanner error={failed} /> : <div className="gecko-cell-meta">Loading…</div>}
       </div>
     );
   }
@@ -135,12 +136,12 @@ export default function NewOrderTypePage() {
           </span>
         </div>
       )}
-      {apiError && (
-        <div role="alert" className="gecko-alert gecko-alert-error gecko-row">
-          <Icon name="alertCircle" size={16} />
-          <span>{Object.keys(apiError.fieldErrors).length > 0 ? 'Some values were refused — see the marked fields and rows.' : apiError.message}</span>
-        </div>
-      )}
+      <ErrorBanner
+        error={apiError}
+        detail={apiError && Object.keys(apiError.fieldErrors).length > 0
+          ? 'Some values were refused — see the marked fields and rows.'
+          : undefined}
+      />
 
       <div className="gecko-card gecko-card-padded gecko-stack gecko-stack-md">
         <div className="gecko-form-section-title">Order type</div>

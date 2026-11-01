@@ -45,6 +45,7 @@ import {
 } from '@/lib/api/cash-bills';
 import { CustomerPicker, defaultAddress, payerFrom, type PickedCustomer } from '../_components/PartyPicker';
 import { PaymentPanel } from './_components/PaymentPanel';
+import { ErrorBanner } from '@/components/ui/ErrorBanner';
 
 export default function CustomerCashBillPage() {
   return (
@@ -292,17 +293,14 @@ function CashBill() {
         </div>
       )}
 
-      {problem && (
-        <div role="alert" className="gecko-alert gecko-alert-error">
-          <Icon name="alertCircle" size={18} />
-          <div>
-            <strong>{problem.status === 409 ? 'Those lines have moved' : problem.title || 'The bill was not saved'}</strong>
-            <div>{problem.status === 409
-              ? 'Somebody billed or changed one of these charges while this screen was open. The list has been re-read — check the ticks and the total, then save again.'
-              : problem.explanation ?? problem.message}</div>
-          </div>
-        </div>
-      )}
+      <ErrorBanner
+        error={problem}
+        fallback="The bill was not saved."
+        heading={problem?.status === 409 ? 'Those lines have moved' : undefined}
+        detail={problem?.status === 409
+          ? 'Somebody billed or changed one of these charges while this screen was open. The list has been re-read — check the ticks and the total, then save again.'
+          : undefined}
+      />
 
       {/* ── 1 · Who it is made out to ─────────────────────────────────────── */}
       <section className="gecko-card gecko-card-padded gecko-stack-md">
@@ -349,12 +347,7 @@ function CashBill() {
           </button>
         </div>
 
-        {error && (
-          <div className="gecko-alert gecko-alert-error">
-            <Icon name="alertCircle" size={18} />
-            <div><strong>{error.title}</strong>{error.explanation && <div>{error.explanation}</div>}</div>
-          </div>
-        )}
+        <ErrorBanner error={error} />
 
         <div className="gecko-table-clip">
           <table className="gecko-table gecko-table-compact gecko-table-fixed">

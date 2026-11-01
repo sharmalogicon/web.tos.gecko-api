@@ -6,8 +6,7 @@ import { PartyName } from '@/components/ui/PartyName';
 import { Modal } from '@/components/ui/Modal';
 import { useToast } from '@/components/ui/Toast';
 import { apiGet, apiSend, newIdempotencyKey } from '@/lib/api/client';
-import { ApiError } from '@/lib/api/problem';
-import { ProblemAlert, problemOf, type Problem } from './ProblemAlert';
+import { ApiError, problemOf } from '@/lib/api/problem';
 import { useApi, useApiList } from '@/lib/api/use-api';
 import { useSession } from '@/lib/auth/session';
 import {
@@ -23,6 +22,7 @@ import { SplitReceiptModal } from '../_components/SplitReceiptModal';
 import { canChangePayer, printReceiptParts, printedPartsToast } from '@/lib/api/receipts';
 import { ReceiptView, usePrintReceipt } from './ReceiptView';
 import { formatDate } from '@/lib/format';
+import { ErrorBanner } from '@/components/ui/ErrorBanner';
 
 /**
  * THE CASH WINDOW — live against /api/revenue/window.
@@ -107,7 +107,7 @@ export default function CashWindowPage() {
   const [booking, setBooking] = useState<WindowBooking | null>(null);
   const [customerName, setCustomerName] = useState<string | null>(null);
   const [quoting, setQuoting] = useState(false);
-  const [quoteError, setQuoteError] = useState<Problem | null>(null);
+  const [quoteError, setQuoteError] = useState<ApiError | null>(null);
   const [selected, setSelected] = useState<Set<string>>(new Set());
 
   // ── payment ──
@@ -118,7 +118,7 @@ export default function CashWindowPage() {
   const [payerAddress, setPayerAddress] = useState('');
   const [fullInvoice, setFullInvoice] = useState(false);
   const [paying, setPaying] = useState(false);
-  const [payError, setPayError] = useState<Problem | null>(null);
+  const [payError, setPayError] = useState<ApiError | null>(null);
   const [receipt, setReceipt] = useState<Receipt | null>(null);
   const [waiving, setWaiving] = useState<{ box: WindowBox; line: QuoteLine } | null>(null);
   // Paying again after a void: which voided receipt of this booking the new one replaces ('' = none).
@@ -537,7 +537,7 @@ export default function CashWindowPage() {
                 ))}
               </div>
             )}
-            {quoteError && <ProblemAlert problem={quoteError} style={{ marginTop: 12 }} />}
+            {quoteError && <ErrorBanner error={quoteError} style={{ marginTop: 12 }} />}
           </form>
 
           {booking && (
@@ -742,7 +742,7 @@ export default function CashWindowPage() {
                     </div>
                   </div>
                 </div>
-                {payError && <ProblemAlert problem={payError} style={{ marginTop: 14 }} />}
+                {payError && <ErrorBanner error={payError} style={{ marginTop: 14 }} />}
               </form>
             </>
           )}
@@ -949,7 +949,7 @@ function WaiveDialog({ box, line, paidUntil, onClose, onDone }: {
   const toast = useToast();
   const [reason, setReason] = useState('');
   const [busy, setBusy] = useState(false);
-  const [error, setError] = useState<Problem | null>(null);
+  const [error, setError] = useState<ApiError | null>(null);
 
   async function submit() {
     setBusy(true); setError(null);
@@ -979,7 +979,7 @@ function WaiveDialog({ box, line, paidUntil, onClose, onDone }: {
         <label className="gecko-form-label" htmlFor="waiveReason">Reason (kept on the charge)</label>
         <textarea id="waiveReason" className="gecko-input" rows={3} value={reason} onChange={e => setReason(e.target.value)} autoFocus />
       </div>
-      {error && <ProblemAlert problem={error} style={{ marginTop: 10 }} />}
+      {error && <ErrorBanner error={error} style={{ marginTop: 10 }} />}
     </Modal>
   );
 }

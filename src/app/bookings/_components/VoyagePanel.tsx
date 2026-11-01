@@ -12,6 +12,7 @@ import {
   exceptionId, isLive, revokeCutoffException,
   type CutoffException, type EffectiveCutoff,
 } from '@/lib/api/booking-voyage';
+import { ErrorBanner } from '@/components/ui/ErrorBanner';
 
 /**
  * Vessel & Voyage, as Vector lays it out.
@@ -255,7 +256,7 @@ function OverrideDialog({ bookingId, kind, label, current, onClose, onDone }: {
       }
     >
       <div className="gecko-stack">
-        {error && <div role="alert" className="gecko-alert gecko-alert-error">{error.message}</div>}
+        <ErrorBanner error={error} />
         <div className="gecko-cell-meta">
           The sailing says {current ? formatDateTime(current) : 'nothing for this cut-off'}.
         </div>

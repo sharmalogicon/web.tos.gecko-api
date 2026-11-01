@@ -11,6 +11,7 @@ import {
   blankUnbilledQuery, money, UNBILLED_ORDERS_PATH, unbilledParams,
   type UnbilledOrder, type UnbilledOrdersPage,
 } from '@/lib/api/unbilled-orders';
+import { ErrorBanner } from '@/components/ui/ErrorBanner';
 
 /**
  * VIEW A — the register of statements, as the June screen opened on it.
@@ -159,12 +160,7 @@ export function StatementRegister({ onOpen }: { onOpen: (orderNo: string) => voi
           />
         </div>
 
-        {error && (
-          <div className="gecko-alert gecko-alert-error">
-            <Icon name="alertCircle" size={18} />
-            <div><strong>{error.title}</strong>{error.explanation && <div>{error.explanation}</div>}</div>
-          </div>
-        )}
+        <ErrorBanner error={error} />
 
         <div className="gecko-table-clip">
         <table className="gecko-table gecko-table-compact gecko-table-fixed">

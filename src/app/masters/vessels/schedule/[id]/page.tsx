@@ -10,6 +10,7 @@ import { useApi } from '@/lib/api/use-api';
 import { apiSend } from '@/lib/api/client';
 import { ApiError } from '@/lib/api/problem';
 import { formatDateTime } from '@/lib/format';
+import { ErrorBanner } from '@/components/ui/ErrorBanner';
 
 /**
  * LIVE against gecko_tos (vessel.vessel_call + vessel_call_line +
@@ -121,14 +122,14 @@ function ErrorBox({ error }: { error: ApiError | null }) {
   if (!error) return null;
   const fields = Object.entries(error.fieldErrors);
   return (
-    <div role="alert" className="gecko-alert gecko-alert-error" style={{ display: 'block' }}>
-      <div className="gecko-row" style={{ gap: 8 }}><Icon name="alertCircle" size={16} /><span>{error.message}</span></div>
-      {fields.length > 1 && (
-        <ul style={{ margin: '6px 0 0 24px', padding: 0, fontSize: 12 }}>
+    <ErrorBanner
+      error={error}
+      detail={fields.length > 1 ? (
+        <ul className="gecko-error-banner-fields">
           {fields.map(([k, v]) => <li key={k}><code>{k}</code>: {v.join(' ')}</li>)}
         </ul>
-      )}
-    </div>
+      ) : undefined}
+    />
   );
 }
 

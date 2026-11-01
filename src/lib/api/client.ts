@@ -1,4 +1,4 @@
-import { ApiError, toApiError } from "./problem";
+import { ApiError, offlineError, toApiError } from "./problem";
 
 /**
  * THE ONLY PLACE THAT TALKS TO Gecko.Api.
@@ -132,14 +132,29 @@ export async function api<T>(path: string, init: RequestInit = {}): Promise<T> {
   return (await response.json()) as T;
 }
 
+/**
+ * A request that never reached the server at all — the network is down, the
+ * laptop's wifi dropped, the API is stopped — throws a TypeError from fetch
+ * with a browser-written message ("Failed to fetch", "NetworkError when
+ * attempting to fetch resource"), which no clerk can act on. ONE place turns
+ * that into one sentence they can, so every screen says the same thing.
+ */
+async function reach(path: string, init: RequestInit, token: string | undefined, binary: boolean): Promise<Response> {
+  try {
+    return await send(path, init, token, binary);
+  } catch {
+    throw offlineError();
+  }
+}
+
 /** Sends with the bearer token, refreshing once on 401; throws an ApiError for any failure. */
 async function authorised(path: string, init: RequestInit, binary: boolean): Promise<Response> {
   const token = await tokenForRequest();
-  let response = await send(path, init, token ?? undefined, binary);
+  let response = await reach(path, init, token ?? undefined, binary);
 
   if (response.status === 401 && token) {
     const renewed = await refresh();
-    if (renewed) response = await send(path, init, renewed.token, binary);
+    if (renewed) response = await reach(path, init, renewed.token, binary);
   }
 
   if (!response.ok) throw await toApiError(response);
@@ -226,7 +241,7 @@ export function saveBlob(blob: Blob, filename: string): void {
 
 /** Email + password for an access token; the refresh cookie is set by the response. */
 export async function login(email: string, password: string): Promise<AccessToken> {
-  const response = await send("/auth/login", { method: "POST", body: JSON.stringify({ email, password }) });
+  const response = await reach("/auth/login", { method: "POST", body: JSON.stringify({ email, password }) }, undefined, false);
   if (!response.ok) throw await toApiError(response);
   return store(await response.json());
 }

@@ -8,12 +8,16 @@ import { EmptyState } from '@/components/ui/EmptyState';
 import { PartyName } from '@/components/ui/PartyName';
 import { useApi, useApiList, type Paged } from '@/lib/api/use-api';
 import { useSession } from '@/lib/auth/session';
+import { useFacility } from '@/lib/api/facility';
 import { dwellLabel, formatContainerNo, formatDate, formatDateTime, type GateTransactionSummary } from '@/lib/api/tos';
 import { eirPath, formatKg, type ContainerHolds } from '@/lib/api/gate-eir';
 import { statusLabel } from '@/lib/format';
 import type { Hold } from '@/lib/api/holds';
 import { REEFER_SESSIONS_PATH, type ReeferSession } from '@/lib/api/reefer';
 import { yardsPath, type Yard } from '@/lib/api/yards';
+import { YARD_MANAGE, useYardLocation, type YardLocation } from '@/lib/api/yard-map';
+import { MoveBoxDialog } from '@/components/yard/MoveBoxDialog';
+import { ExpectedDepartureLine } from '@/components/yard/ExpectedDeparture';
 import {
   STORY_PERMISSIONS, eventLabel, isWellFormedContainerNo, normaliseContainerNo, registryPath, storyPath,
   type ContainerStory, type StoryVisit,
@@ -23,6 +27,7 @@ import { MasterDataTab } from './_components/MasterDataTab';
 import { FixedPortsTab } from './_components/FixedPortsTab';
 import { YardStatePanel } from './_components/YardStatePanel';
 import { ActivityLogTab } from './_components/ActivityLogTab';
+import { ErrorBanner } from '@/components/ui/ErrorBanner';
 
 /**
  * CONTAINER MASTER — one box, whole: what it IS and what has happened to it.
@@ -61,7 +66,10 @@ function UnitInquiry() {
   const pathname = usePathname();
   const params = useSearchParams();
   const { can, canAt } = useSession();
+  const { branch } = useFacility();
   const [tab, setTab] = useState<Tab>('now');
+  /** The box being moved, from `/yard/locate` · null when no dialog is open. */
+  const [moving, setMoving] = useState<YardLocation | null>(null);
 
   const typed = params.get('no') ?? '';
   const no = normaliseContainerNo(typed);
@@ -85,6 +93,20 @@ function UnitInquiry() {
   const current = s?.current ?? null;
   const yards = useApiList<Yard>(current?.yardId && can(STORY_PERMISSIONS.yardView) ? yardsPath(current.branchId) : null);
   const yard = current?.yardId ? yards.data?.find(y => y.yardId === current.yardId) ?? null : null;
+  /**
+   * WHERE IT STANDS, in slot terms. The story knows the position TEXT; only
+   * `/yard/locate` knows the slot behind it, the block it is in, and what is
+   * standing on top of it $d which is what decides whether it can be moved at
+   * all. Read only for a box that is in a yard; a 404 simply leaves it null.
+   */
+  const located = useYardLocation(current ? asked : null);
+  const spot = located.data?.find(l => l.containerNo === s?.containerNo) ?? null;
+  /**
+   * Moving is offered for a box at the depot the header is on, and only to
+   * someone holding tos.yard.manage there. Another depot's box is shown, never
+   * moved from here: the yard list in the dialog is this depot's.
+   */
+  const canMoveThis = !!spot && !!branch && spot.branchId === branch.branchId && canAt(YARD_MANAGE, spot.branchId);
 
   // The search is the whole number, so the reefer "contains" search is narrowed to this box.
   const sessions = (reefer.data?.items ?? []).filter(r => r.containerNo === asked);
@@ -113,6 +135,19 @@ function UnitInquiry() {
           </div>
         </div>
         <div className="gecko-toolbar">
+          {/* A box standing in a slot can be shown on the yard map; the search
+              there takes the number, so the link is the same lookup. */}
+          {spot?.yardSlotId && (
+            <Link href={`/dashboard/yard-glance?find=${encodeURIComponent(spot.containerNo)}`}
+              className="gecko-btn gecko-btn-outline gecko-btn-sm">
+              <Icon name="mapPin" size={16} /> Show on map
+            </Link>
+          )}
+          {canMoveThis && (
+            <button className="gecko-btn gecko-btn-outline gecko-btn-sm" onClick={() => setMoving(spot)}>
+              <Icon name="transferH" size={16} /> Move
+            </button>
+          )}
           <Link href="/gate/stock" className="gecko-btn gecko-btn-outline gecko-btn-sm">
             <Icon name="layers" size={16} /> Yard stock
           </Link>
@@ -150,15 +185,7 @@ function UnitInquiry() {
           description="The box's current stay, its history at your depots, its EIRs, holds, bookings and registry record." />
       )}
 
-      {asked && story.error && story.error.status !== 400 && (
-        <div className="gecko-alert gecko-alert-error">
-          <Icon name="alertCircle" size={18} />
-          <div>
-            <div style={{ fontWeight: 600 }}>{story.error.title}</div>
-            {story.error.explanation && <div>{story.error.explanation}</div>}
-          </div>
-        </div>
-      )}
+      {asked && story.error?.status !== 400 && <ErrorBanner error={story.error} />}
 
       {asked && !loaded && !story.error && <div className="gecko-cell-meta" style={{ padding: 12 }}>Reading the box&apos;s story…</div>}
 
@@ -200,13 +227,39 @@ function UnitInquiry() {
           <div className="gecko-ui-strip">
             <Strip label={current ? 'Depot · yard' : 'Last depot · yard'}
               value={latest ? [latest.branchCode, yard?.yardCode].filter(Boolean).join(' · ') || '—' : '—'} />
-            <Strip label="Position" value={current ? latest?.positionText ?? 'no slot' : '—'} mono />
+            <Strip label="Position" mono value={!current ? '—' : (
+              <>
+                {latest?.positionText ?? 'no slot'}
+                {/* The dig: nothing can be lifted from under another box, so
+                    this is what the yard moves before this one can go. */}
+                {spot && spot.boxesOnTop.length > 0 && (
+                  <div className="gecko-cell-meta">Under: {spot.boxesOnTop.join(', ')}</div>
+                )}
+              </>
+            )} />
             <Strip label="Full / empty" value={latest?.fullEmpty ?? '—'} />
             <Strip label={current ? 'In yard' : 'Gated out'}
               value={!latest ? '—'
                 : current ? `${dwellLabel(latest.daysInYard)} (since ${formatDateTime(latest.gateInAt)})`
                 : latest.gateOutAt ? formatDateTime(latest.gateOutAt) : '—'} />
           </div>
+
+          {/* WHEN IT IS EXPECTED TO LEAVE (yard map Phase 5). Only for a box
+              that is here: a date for a box that has gone is noise. The yard
+              stows by this, so it is worth a planner's minute to set it. */}
+          {spot && (
+            <div className="gecko-ui-strip gecko-strip-departure">
+              <ExpectedDepartureLine
+                branchId={spot.branchId}
+                containerNo={spot.containerNo}
+                at={spot.expectedDepartureAt}
+                source={spot.departureSource}
+                note={spot.departureNote}
+                canEdit={canMoveThis}
+                onChanged={() => located.reload()}
+              />
+            </div>
+          )}
 
           <div className="gecko-row" style={{ gap: 0, padding: '0 20px', borderBottom: '1px solid var(--gecko-border)', flexWrap: 'wrap' }}>
             {([
@@ -309,6 +362,19 @@ function UnitInquiry() {
             {tab === 'reefer' && <ReeferTab sessions={sessions} />}
           </div>
         </div>
+      )}
+
+      {moving && (
+        <MoveBoxDialog
+          location={moving}
+          onClose={() => setMoving(null)}
+          onMoved={() => {
+            // The stay's position and its journal both changed.
+            story.reload();
+            located.reload();
+            setMoving(null);
+          }}
+        />
       )}
     </div>
   );

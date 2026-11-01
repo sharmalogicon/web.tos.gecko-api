@@ -25,7 +25,7 @@ import { Modal } from '@/components/ui/Modal';
 import { useToast } from '@/components/ui/Toast';
 import { useApi } from '@/lib/api/use-api';
 import { useSession } from '@/lib/auth/session';
-import { ApiError } from '@/lib/api/problem';
+import { ApiError, problemOf } from '@/lib/api/problem';
 import { amount } from '@/lib/api/charges';
 import { formatContainerNo } from '@/lib/api/tos';
 import {
@@ -34,6 +34,7 @@ import {
 } from '@/lib/api/receipts';
 import { SplitReceiptModal } from '../../_components/SplitReceiptModal';
 import { openPdf } from '@/lib/api/open-pdf';
+import { ErrorBanner } from '@/components/ui/ErrorBanner';
 
 export default function CashBillPage() {
   const params = useParams<{ id: string }>();
@@ -134,17 +135,11 @@ export default function CashBillPage() {
         </div>
       </div>
 
-      {error && (
-        <div role="alert" className="gecko-alert gecko-alert-error">
-          <Icon name="alertCircle" size={18} />
-          <div>
-            <strong>{error.status === 404 ? 'No such receipt' : error.title}</strong>
-            <div>{error.status === 404
-              ? 'It may belong to another branch, or the link is stale.'
-              : error.explanation ?? error.message}</div>
-          </div>
-        </div>
-      )}
+      <ErrorBanner
+        error={error}
+        heading={error?.status === 404 ? 'No such receipt' : undefined}
+        detail={error?.status === 404 ? 'It may belong to another branch, or the link is stale.' : undefined}
+      />
 
       {loading && !r && <div className="gecko-card gecko-card-padded gecko-cell-meta">Loading the receipt…</div>}
       {!loading && !r && !error && (
@@ -407,7 +402,7 @@ function VoidDialog({ receiptId, receiptNo, total, onClose, onDone }: {
 }) {
   const [reason, setReason] = useState('');
   const [busy, setBusy] = useState(false);
-  const [problem, setProblem] = useState<{ title: string; detail: string } | null>(null);
+  const [problem, setProblem] = useState<ApiError | null>(null);
   const ready = reason.trim().length >= 3 && !busy;
 
   async function go() {
@@ -418,8 +413,7 @@ function VoidDialog({ receiptId, receiptNo, total, onClose, onDone }: {
       await voidReceipt(receiptId, reason.trim());
       onDone();
     } catch (e) {
-      const err = e instanceof ApiError ? e : new ApiError(0, 'The receipt could not be deleted.');
-      setProblem({ title: err.title || 'Could not delete it', detail: err.explanation ?? err.message });
+      setProblem(problemOf(e, 'The receipt could not be deleted.'));
     } finally {
       setBusy(false);
     }
@@ -439,12 +433,7 @@ function VoidDialog({ receiptId, receiptNo, total, onClose, onDone }: {
         </>
       }>
       <div className="gecko-stack">
-        {problem && (
-          <div role="alert" className="gecko-alert gecko-alert-error">
-            <Icon name="alertCircle" size={18} />
-            <div><strong>{problem.title}</strong><div>{problem.detail}</div></div>
-          </div>
-        )}
+        <ErrorBanner error={problem} />
         <div className="gecko-alert gecko-alert-warning">
           <Icon name="alertCircle" size={16} />
           <span>

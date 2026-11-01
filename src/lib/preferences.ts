@@ -38,6 +38,25 @@ function write(key: string, value: string): void {
 }
 
 /**
+ * ANOTHER PER-DEVICE CONVENIENCE, through the same guarded pair.
+ *
+ * The yard's handheld remembers which machine the cab drives, so a driver does
+ * not pick it on every job (`MACHINE_PREFERENCE_KEY`). It is the same kind of
+ * thing as the theme: THIS BROWSER ONLY, never sent anywhere, and the screen
+ * must work when it comes back empty — which it does in a private window, with
+ * site data cleared, and on the server, where there is no localStorage at all.
+ *
+ * Nothing that matters may live here. A choice the next shift has to see goes
+ * to the API.
+ */
+export const readPreference = (key: string): string | null =>
+  typeof window === 'undefined' ? null : read(key);
+
+export const writePreference = (key: string, value: string): void => {
+  if (typeof window !== 'undefined') write(key, value);
+};
+
+/**
  * Put the choices on the document.
  *
  * `data-theme` is what the stylesheet's dark rules key off; `lang` is what a

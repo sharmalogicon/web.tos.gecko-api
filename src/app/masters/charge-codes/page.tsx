@@ -9,6 +9,7 @@ import { useApiList } from '@/lib/api/use-api';
 import { useSession } from '@/lib/auth/session';
 import { useCommercialVocabulary, type ChargeCode } from '@/lib/api/charge-codes';
 import { isPathAvailable } from '@/lib/edition';
+import { ErrorBanner } from '@/components/ui/ErrorBanner';
 
 /**
  * LIVE against gecko_master (commercial.charge_code).
@@ -133,13 +134,11 @@ export default function ChargeCodesPage() {
         </div>
       </div>
 
-      {error && (
-        <div role="alert" className="gecko-alert gecko-alert-warning gecko-row" style={{ gap: 10 }}>
-          <Icon name="alertCircle" size={16} />
-          <span>{error.message}</span>
-          {error.status === 401 && <Link href="/login" className="gecko-link">Sign in</Link>}
-        </div>
-      )}
+      <ErrorBanner
+        error={error}
+        tone="warning"
+        action={error?.status === 401 ? <Link href="/login" className="gecko-link">Sign in</Link> : undefined}
+      />
 
       {totalCount > (data?.length ?? 0) && (
         <div role="status" className="gecko-alert gecko-alert-info gecko-row">

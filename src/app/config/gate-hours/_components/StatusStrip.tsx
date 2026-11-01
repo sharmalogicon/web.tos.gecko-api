@@ -3,6 +3,7 @@ import React from 'react';
 import { Icon } from '@/components/ui/Icon';
 import type { ApiError } from '@/lib/api/problem';
 import { formatDay, wallTime, type GateHoursState, type GateHoursStatus } from '@/lib/api/gate-hours';
+import { ErrorBanner } from '@/components/ui/ErrorBanner';
 
 const STATE_LABEL: Record<GateHoursState, string> = {
   OPEN: 'Open now',
@@ -21,11 +22,7 @@ function when(iso: string, now: string): string {
 /** Open now or closed, from GET /gate-hours/status — the same answer the barrier gets. */
 export function StatusStrip({ status, error, loading }: { status: GateHoursStatus | null; error: ApiError | null; loading: boolean }) {
   if (error) {
-    return (
-      <div role="alert" className="gecko-alert gecko-alert-error gecko-row" style={{ gap: 10 }}>
-        <Icon name="alertCircle" size={16} /><span>{error.explanation ?? error.message}</span>
-      </div>
-    );
+    return <ErrorBanner error={error} />;
   }
   if (!status) {
     return <div className="gecko-card gecko-cell-meta" style={{ padding: '12px 16px' }}>{loading ? 'Checking the gate…' : 'Pick a depot.'}</div>;

@@ -24,6 +24,7 @@ import {
   type GateMovesGroup, type GateMovesReport,
 } from '@/lib/api/reports';
 import { ReportKpi, ReportParams, ReportTable, type Depot } from '../_components/ReportParams';
+import { ErrorBanner } from '@/components/ui/ErrorBanner';
 
 const TOP = 15;
 
@@ -102,15 +103,7 @@ export default function OperationalReportsPage() {
       <ReportParams depots={depots} branchId={branchId} onBranch={setPicked}
                     from={range.from} to={range.to} onRange={(from, to) => setRange({ from, to })} />
 
-      {report.error && (
-        <div className="gecko-alert gecko-alert-error">
-          <Icon name="alertCircle" size={18} />
-          <div>
-            <div style={{ fontWeight: 600 }}>{report.error.title}</div>
-            {report.error.explanation && <div>{report.error.explanation}</div>}
-          </div>
-        </div>
-      )}
+      <ErrorBanner error={report.error} />
 
       {/* KPIs */}
       <div className="gecko-grid-5">

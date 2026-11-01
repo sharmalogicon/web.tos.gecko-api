@@ -12,6 +12,7 @@ import { useSession } from '@/lib/auth/session';
 import { useApi } from '@/lib/api/use-api';
 import { apiSend } from '@/lib/api/client';
 import { ApiError } from '@/lib/api/problem';
+import { ErrorBanner } from '@/components/ui/ErrorBanner';
 
 /**
  * LIVE against gecko_master (equipment.hold) — list, create, edit, soft-delete.
@@ -274,11 +275,7 @@ function HoldModal({ hold, events, readOnly, onClose, onSaved }: {
         {/* Body — a disabled fieldset makes every input and switch in it read-only */}
         <fieldset disabled={readOnly || saving} className="gecko-stack gecko-stack-xl gecko-flex-1" style={{ padding: '22px 24px', overflowY: 'auto', border: 'none', margin: 0, minWidth: 0 }}>
 
-          {error && (
-            <div role="alert" className="gecko-alert gecko-alert-error gecko-row" style={{ gap: 10 }}>
-              <Icon name="alertCircle" size={16} /><span>{error.message}</span>
-            </div>
-          )}
+          <ErrorBanner error={error} />
 
           <div>
             {sectionHead('Identity')}
@@ -497,13 +494,11 @@ export default function HoldsPage() {
         </div>
       </div>
 
-      {error && (
-        <div role="alert" className="gecko-alert gecko-alert-warning gecko-row" style={{ gap: 10 }}>
-          <Icon name="alertCircle" size={16} />
-          <span>{error.message}</span>
-          {error.status === 401 && <Link href="/login" className="gecko-link">Sign in</Link>}
-        </div>
-      )}
+      <ErrorBanner
+        error={error}
+        tone="warning"
+        action={error?.status === 401 ? <Link href="/login" className="gecko-link">Sign in</Link> : undefined}
+      />
 
       {/* Stats */}
       <div className="gecko-row gecko-row-wrap gecko-stack-md">

@@ -19,6 +19,7 @@ import { StepsEditor, requestFromSteps, rowsFromSteps, stepErrors, type StepRow 
 import { ChargesTables } from './_components/ChargesTables';
 import { RulesEditor, RulesSummary, rulesDiffer, rulesFrom, walkInShape } from './_components/RulesPanel';
 import { chargeRowErrors, requestFromCharges, rowsFromCharges, type ChargeRow } from './_components/charge-rows';
+import { ErrorBanner } from '@/components/ui/ErrorBanner';
 
 /**
  * LIVE against gecko_master (commercial.order_type + order_type_movement +
@@ -406,13 +407,11 @@ export default function OrderTypeMasterPage() {
         </div>
       </div>
 
-      {error && (
-        <div role="alert" className="gecko-alert gecko-alert-warning gecko-row" style={{ gap: 10 }}>
-          <Icon name="alertCircle" size={16} />
-          <span>{error.message}</span>
-          {error.status === 401 && <Link href="/login" className="gecko-link">Sign in</Link>}
-        </div>
-      )}
+      <ErrorBanner
+        error={error}
+        tone="warning"
+        action={error?.status === 401 ? <Link href="/login" className="gecko-link">Sign in</Link> : undefined}
+      />
 
       {totalCount > (all?.length ?? 0) && (
         <div role="status" className="gecko-alert gecko-alert-info gecko-row">
@@ -499,11 +498,7 @@ export default function OrderTypeMasterPage() {
         {/* RIGHT: Detail area */}
         <div className="gecko-flex-1 gecko-stack gecko-stack-lg" style={{ minWidth: 0 }}>
 
-          {detailError && (
-            <div role="alert" className="gecko-alert gecko-alert-warning gecko-row" style={{ gap: 10 }}>
-              <Icon name="alertCircle" size={16} /><span>{detailError.message}</span>
-            </div>
-          )}
+          <ErrorBanner error={detailError} tone="warning" />
 
           {!ot ? (
             <div className="gecko-card" style={{ borderRadius: 14, padding: 32, textAlign: 'center', color: 'var(--gecko-text-secondary)' }}>

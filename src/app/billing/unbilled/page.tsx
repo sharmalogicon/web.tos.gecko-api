@@ -1,5 +1,5 @@
 "use client";
-import React, { useCallback, useEffect, useMemo, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { useToast } from '@/components/ui/Toast';
@@ -7,8 +7,9 @@ import { SendToInvoiceModal, type InvoiceCandidate } from '../statement/_compone
 import { Icon } from '@/components/ui/Icon';
 import { PartyName } from '@/components/ui/PartyName';
 import { DateField } from '@/components/ui/DateField';
-import { PartyPicker } from '@/components/ui/PartyPicker';
+import { PartyPicker, type PartyPickerHandle } from '@/components/ui/PartyPicker';
 import type { PartyRole } from '@/lib/api/parties';
+import { usePartyName } from '@/lib/api/party-names';
 import { apiDownload, apiGet, saveBlob } from '@/lib/api/client';
 import { openPdf } from '@/lib/api/open-pdf';
 import { useApi, useApiList } from '@/lib/api/use-api';
@@ -25,6 +26,7 @@ import {
   type UnbilledLine, type UnbilledOrder, type UnbilledOrdersPage, type UnbilledProgress,
   type UnbilledQuery,
 } from '@/lib/api/unbilled-orders';
+import { ErrorBanner } from '@/components/ui/ErrorBanner';
 
 /**
  * UNBILLED ORDERS — Vector's billing worklist, on §22.
@@ -38,6 +40,21 @@ import {
  * The lines read is per order (it answers 400 without `OrderNo`), so several
  * ticked orders mean several reads, concatenated.
  */
+
+/**
+ * The three filters that are a COMPANY rather than a code typed by hand.
+ *
+ * They are resolved before every search and they are what the chips above the
+ * grid name, so the set lives here rather than being written out three times.
+ */
+const PARTY_FILTERS = ['agentCode', 'forwarderCode', 'customerCode'] as const;
+type PartyFilter = (typeof PARTY_FILTERS)[number];
+
+const FILTER_LABELS: Record<PartyFilter, string> = {
+  agentCode: 'Agent',
+  forwarderCode: 'Forwarder',
+  customerCode: 'Billing customer',
+};
 
 interface PartyRow { partyCode: string; nameEn: string }
 interface OrderTypeRow { orderTypeCode: string; descriptionEn: string; bookingTypeCode?: string | null; isActive?: boolean }
@@ -55,8 +72,21 @@ export default function UnbilledOrdersPage_() {
   const [applied, setApplied] = useState<UnbilledQuery>(blankUnbilledQuery);
   const [picked, setPicked] = useState<Set<string>>(new Set());
   const [openOrder, setOpenOrder] = useState<string | null>(null);
+  /** What each company box could not be made sense of. Empty is the normal day. */
+  const [filterErrors, setFilterErrors] = useState<Partial<Record<PartyFilter, string>>>({});
+  const [searching, setSearching] = useState(false);
+  /** Set when a send met lines someone else had already invoiced. */
+  const [overtaken, setOvertaken] = useState(false);
 
   const set = (p: Partial<UnbilledQuery>) => setForm(f => ({ ...f, ...p }));
+
+  // The pickers answer what was typed into them and never picked — see search().
+  const agentPicker = useRef<PartyPickerHandle>(null);
+  const forwarderPicker = useRef<PartyPickerHandle>(null);
+  const customerPicker = useRef<PartyPickerHandle>(null);
+  const pickers: Record<PartyFilter, React.RefObject<PartyPickerHandle | null>> = {
+    agentCode: agentPicker, forwarderCode: forwarderPicker, customerCode: customerPicker,
+  };
 
   const orders = useServerList<UnbilledOrder>(
     UNBILLED_ORDERS_PATH, unbilledParams(applied, branchId), 'orders', !!branchId && mayView);
@@ -123,11 +153,75 @@ export default function UnbilledOrdersPage_() {
 
   const totals = useMemo(() => selectionTotals(rows, picked), [rows, picked]);
 
-  const search = () => { setApplied(form); setPicked(new Set()); setOpenOrder(null); };
+  /**
+   * SEARCH — INCLUDING THE COMPANY A CLERK TYPED AND NEVER PICKED.
+   *
+   * On 2026-11-01 at GECKO a clerk typed one company into Billing customer,
+   * pressed Search, and was given every company in the depot; they then ticked
+   * all nine orders and were refused by the invoice modal for mixing payers.
+   * The cause was here: a PartyPicker only sets its value when a suggestion is
+   * clicked or Enter is pressed, so `customerCode` stayed '' and no
+   * `CustomerCode` was sent. The API filters perfectly — the screen never asked
+   * it to.
+   *
+   * So each company box is resolved against the server first. One match is
+   * taken, exactly as Enter does. Anything else STOPS the search and says which
+   * case it was: a grid of everybody is a worse answer than a question.
+   */
+  const search = async () => {
+    setSearching(true);
+    try {
+      const next = { ...form };
+      const problems: Partial<Record<PartyFilter, string>> = {};
+      for (const key of PARTY_FILTERS) {
+        const picker = pickers[key].current;
+        if (!picker) continue;
+        const said = await picker.commit();
+        if (said.kind === 'taken') next[key] = said.code;
+        else if (said.kind === 'many') problems[key] = 'Pick the company from the list.';
+        else if (said.kind === 'none') {
+          problems[key] = said.inactive > 0
+            ? `Only retired companies match “${said.text}”.`
+            : `No company matches “${said.text}”.`;
+        }
+        else if (said.kind === 'failed') problems[key] = said.message;
+      }
+      setFilterErrors(problems);
+      // The grid keeps showing what it showed: nothing was narrowed, and
+      // nothing was quietly widened either.
+      if (Object.keys(problems).length > 0) return;
+      setForm(next);
+      setApplied(next);
+      setPicked(new Set());
+      setOpenOrder(null);
+      setOvertaken(false);
+    } finally {
+      setSearching(false);
+    }
+  };
+
   const reset = () => {
     const blank = blankUnbilledQuery();
     setForm(blank); setApplied(blank); setPicked(new Set()); setOpenOrder(null);
+    setFilterErrors({}); setOvertaken(false);
   };
+
+  /** Picking the company answers the question Search asked about it. */
+  const clearFilterError = (key: PartyFilter) =>
+    setFilterErrors(e => (e[key] === undefined ? e : { ...e, [key]: undefined }));
+
+  /** A chip's ✕: that one filter goes and the grid is read again at once. */
+  const clearFilter = (patch: Partial<UnbilledQuery>) => {
+    setForm(f => ({ ...f, ...patch }));
+    setApplied(a => ({ ...a, ...patch }));
+    setPicked(new Set());
+    setOpenOrder(null);
+  };
+
+  /** What the grid is filtered by — the APPLIED query, never the form. */
+  const chips = appliedChips(applied);
+  /** The form has moved on from what the grid is showing. */
+  const unapplied = (Object.keys(form) as (keyof UnbilledQuery)[]).some(k => form[k] !== applied[k]);
 
   /**
    * The CASH lines of whatever is shown, and the customer they are owed by.
@@ -149,8 +243,9 @@ export default function UnbilledOrdersPage_() {
    * The CREDIT lines of whatever is shown, for `/invoices/send`.
    *
    * One invoice is one payer, one branch, one currency — the API refuses a
-   * mixed send outright — so the modal narrows to the first payer and says how
-   * many it left behind, the same way the Booking Statement does.
+   * mixed send outright — so the modal asks WHICH payer and sends only that
+   * one's lines, leaving the rest on this list for their own invoice. It used
+   * to refuse the clerk instead, which is how 2026-11-01 ended in a dead end.
    */
   const creditLines = useMemo<InvoiceCandidate[]>(
     () => visibleLines.filter(l => l.paymentTermCode === 'CREDIT').map(l => ({
@@ -265,13 +360,16 @@ export default function UnbilledOrdersPage_() {
       <div className="gecko-card gecko-card-padded gecko-stack">
         <div className="gecko-unbilled-filters">
           <Field label="Agent">
-            <Party role="SHIPPING_LINE" value={form.agentCode} onChange={v => set({ agentCode: v })} />
+            <Party role="SHIPPING_LINE" value={form.agentCode} ref={agentPicker}
+              error={filterErrors.agentCode} onChange={v => { set({ agentCode: v }); clearFilterError('agentCode'); }} />
           </Field>
           <Field label="Forwarder">
-            <Party role="FORWARDER" value={form.forwarderCode} onChange={v => set({ forwarderCode: v })} />
+            <Party role="FORWARDER" value={form.forwarderCode} ref={forwarderPicker}
+              error={filterErrors.forwarderCode} onChange={v => { set({ forwarderCode: v }); clearFilterError('forwarderCode'); }} />
           </Field>
           <Field label="Billing customer">
-            <Party role="CUSTOMER" value={form.customerCode} onChange={v => set({ customerCode: v })} />
+            <Party role="CUSTOMER" value={form.customerCode} ref={customerPicker}
+              error={filterErrors.customerCode} onChange={v => { set({ customerCode: v }); clearFilterError('customerCode'); }} />
           </Field>
           <Field label="Booking - B/L no.">
             <input className="gecko-input" value={form.carrierRef}
@@ -346,15 +444,49 @@ export default function UnbilledOrdersPage_() {
         )}
 
         <div className="gecko-row gecko-row-end gecko-gap-2">
+          {unapplied && (
+            <span className="gecko-cell-meta gecko-unbilled-unapplied">Filters changed: press Search.</span>
+          )}
           <button className="gecko-btn gecko-btn-outline gecko-btn-sm" onClick={reset}>Reset</button>
-          <button className="gecko-btn gecko-btn-primary gecko-btn-sm" disabled={!branchId} onClick={search}>
-            <Icon name="filter" size={13} /> Search
+          <button className="gecko-btn gecko-btn-primary gecko-btn-sm" disabled={!branchId || searching}
+            onClick={() => void search()}>
+            {searching
+              ? <span className="gecko-spinner gecko-spinner-sm" />
+              : <Icon name="filter" size={13} />}
+            {searching ? 'Looking…' : 'Search'}
           </button>
         </div>
       </div>
 
-      {orders.error && (
-        <div className="gecko-alert gecko-alert-error">{orders.error.message}</div>
+      <ErrorBanner error={orders.error} />
+
+      {/* ── what the grid is actually filtered by ─────────────────── */}
+      {chips.length > 0 && (
+        <div className="gecko-filter-chips">
+          <span className="gecko-cell-meta">Filtered by</span>
+          {chips.map(c => (
+            <span key={c.key} className="gecko-filter-chip">
+              <span className="gecko-filter-chip-label">{c.label}:</span>
+              <span className="gecko-filter-chip-value">
+                {c.partyCode ? <PartyChip code={c.partyCode} /> : c.text}
+              </span>
+              <button type="button" className="gecko-filter-chip-x" aria-label={`Clear ${c.label}`}
+                title={`Clear ${c.label}`} onClick={() => clearFilter(c.clear)}>
+                <Icon name="x" size={11} />
+              </button>
+            </span>
+          ))}
+          <button type="button" className="gecko-btn gecko-btn-ghost gecko-btn-sm" onClick={reset}>
+            Clear all
+          </button>
+        </div>
+      )}
+
+      {overtaken && (
+        <div className="gecko-error-note gecko-error-note-warning">
+          <Icon name="alertCircle" size={13} />
+          <div>Some lines were invoiced a moment ago; the list is up to date now.</div>
+        </div>
       )}
 
       {/* ── the orders ──────────────────────────────────────────────────── */}
@@ -542,9 +674,13 @@ export default function UnbilledOrdersPage_() {
           <Fact label="Orders" value={String(totals.orders)} />
           <Fact label="Boxes" value={String(totals.boxes)} />
           <Fact label="Lines" value={String(totals.lines)} />
-          <Fact label="Amount" value={totals.amount.toFixed(2)} />
+          {/* A clerk read AMOUNT 2,962.60 here and ฿3,170.00 in the invoice
+              modal and took them for two different selections (GECKO,
+              2026-11-01). They are the same money either side of 7% VAT, and
+              now they say so. */}
+          <Fact label="Amount (excl. VAT)" value={totals.amount.toFixed(2)} />
           <Fact label="VAT" value={totals.tax.toFixed(2)} />
-          <Fact label="Total" value={money(totals.total, totals.currencyCode)} strong />
+          <Fact label="Total (incl. VAT)" value={money(totals.total, totals.currencyCode)} strong />
         </div>
         <div className="gecko-row gecko-gap-2 gecko-flex-wrap">
           {/* Cash does not go to an invoice at all (API owner, 2026-10-08):
@@ -578,7 +714,7 @@ export default function UnbilledOrdersPage_() {
             title={creditLines.length === 0
               ? 'Tick an order with open CREDIT charges.'
               : `${creditLines.length} credit line(s) on the shown orders`}
-            onClick={() => setInvoicing(true)}>
+            onClick={() => { setOvertaken(false); setInvoicing(true); }}>
             <Icon name="send" size={13} /> New credit invoice
           </button>
         </div>
@@ -589,8 +725,18 @@ export default function UnbilledOrdersPage_() {
           kind="new" term="CREDIT" selected={creditLines}
           currency={creditLines[0]?.currencyCode ?? 'THB'}
           onClose={() => setInvoicing(false)}
+          onStale={() => {
+            // Another clerk, or another tab, invoiced these while this list sat
+            // open. Re-read rather than leaving the modal arguing with a grid
+            // that is already wrong.
+            setOvertaken(true);
+            setLinesNonce(n => n + 1);
+            orders.reload();
+            summary.reload();
+          }}
           onDone={message => {
             setInvoicing(false);
+            setOvertaken(false);
             toast.toast({ variant: 'success', title: 'Credit invoice issued', message });
             // The lines are INVOICED now, so the worklist they came from has to
             // be re-read or it still offers them — the lines, AND the order rows,
@@ -615,13 +761,80 @@ function Field({ label, children }: { label: string; children: React.ReactNode }
 }
 
 /** A party filter: empty is "all", and clearing the picker goes back to it. */
-function Party({ role, value, onChange }: {
+function Party({ role, value, onChange, error, ref }: {
   role: PartyRole; value: string; onChange: (v: string) => void;
+  /** What Search could not make of the text left in the box. */
+  error?: string;
+  ref?: React.Ref<PartyPickerHandle>;
 }) {
   return (
     <PartyPicker role={role} value={value || null} nameFirst placeholder="All — search to narrow…"
-      onChange={code => onChange(code ?? '')} />
+      error={error} ref={ref} onChange={code => onChange(code ?? '')} />
   );
+}
+
+/** One applied filter, as a chip: what it is, what it says, and what clears it. */
+interface Chip {
+  key: string;
+  label: string;
+  /** A company, looked up for its name. */
+  partyCode?: string;
+  /** Anything else, already in words. */
+  text?: string;
+  clear: Partial<UnbilledQuery>;
+}
+
+/** Back to "all" for one filter — which for Filter by is ALL, not ''. */
+const blankValue = (key: keyof UnbilledQuery): Partial<UnbilledQuery> =>
+  key === 'progress' ? { progress: 'ALL' } : ({ [key]: '' } as Partial<UnbilledQuery>);
+
+/**
+ * THE APPLIED QUERY, IN ONE LINE OF CHIPS.
+ *
+ * The filter panel shows what the clerk is about to ask for; this shows what
+ * the grid in front of them is actually answering. The two are not always the
+ * same thing, and when a search silently drops a filter — which is what went
+ * wrong on 2026-11-01 — the difference is the only way to see it.
+ */
+function appliedChips(q: UnbilledQuery): Chip[] {
+  const out: Chip[] = [];
+  const push = (key: keyof UnbilledQuery, label: string, chip: Partial<Chip>) =>
+    out.push({ key, label, clear: blankValue(key), ...chip });
+
+  for (const key of PARTY_FILTERS) {
+    if (q[key]) push(key, FILTER_LABELS[key], { partyCode: q[key] });
+  }
+  const plain = (key: keyof UnbilledQuery, label: string) => {
+    const v = String(q[key] ?? '').trim();
+    if (v) push(key, label, { text: v });
+  };
+  plain('carrierRef', 'Booking - B/L no.');
+  plain('bookingTypeCode', 'Booking type');
+  plain('orderTypeCode', 'Order type');
+  plain('movementCode', 'Movement');
+  if (q.paymentTermCode) {
+    push('paymentTermCode', 'Payment term', {
+      text: q.paymentTermCode === 'CASH' ? 'Cash'
+        : q.paymentTermCode === 'CREDIT' ? 'Credit' : q.paymentTermCode,
+    });
+  }
+  plain('vesselCode', 'Vessel');
+  plain('voyage', 'Voyage');
+  plain('chargeCode', 'Charge code');
+  if (q.progress !== 'ALL') push('progress', 'Filter by', { text: PROGRESS_LABELS[q.progress] });
+  // The sailing REPLACES the dates rather than narrowing them, so only the pair
+  // the query actually sends is chipped — see unbilledParams().
+  if (!q.vesselCode.trim() && !q.voyage.trim()) {
+    if (q.from) push('from', 'From', { text: formatDate(q.from) });
+    if (q.to) push('to', 'To', { text: formatDate(q.to) });
+  }
+  return out;
+}
+
+/** A company chip reads as a name, with the code behind it for the phone. */
+function PartyChip({ code }: { code: string }) {
+  const name = usePartyName(code)?.trim();
+  return <>{name && name.toUpperCase() !== code.toUpperCase() ? `${name} (${code})` : code}</>;
 }
 
 function Fact({ label, value, strong }: { label: string; value: string; strong?: boolean }) {

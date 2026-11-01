@@ -4,6 +4,10 @@ import Link from 'next/link';
 import { Icon } from '@/components/ui/Icon';
 import { useApiList } from '@/lib/api/use-api';
 import { useFacility } from '@/lib/api/facility';
+import { GATE_OVERRIDE, useYardSettings, type YardSuggestionQuery } from '@/lib/api/yard-map';
+import { SlotPicker } from '@/components/yard/SlotPicker';
+import { BoxesOnTop } from '@/components/yard/BoxesOnTop';
+import { useSession } from '@/lib/auth/session';
 import { useConditions } from '@/lib/api/lookups';
 import { formatContainerNo, type GateFinding } from '@/lib/api/tos';
 import { GateField } from '../../_components/GateField';
@@ -18,7 +22,7 @@ import {
 } from '@/lib/api/walk-in';
 import {
   beforeLastMoveIssue, boxLooksRight, mayMintNumber, needsDigitReason, needsLateReason,
-  editable, grossOf, isDamaged, locationLabel, normaliseBox, onBooking, overMaxWeight,
+  editable, grossOf, isDamaged, locationLabel, normaliseBox, needsSlotOverride, onBooking, overMaxWeight,
   pickupHasNoOrder, requiredFor, rowIssues,
   type MoveDraft, type SealRow,
 } from './visit-moves';
@@ -40,7 +44,7 @@ interface PartyRow { partyCode: string; nameEn: string }
 interface EquipmentTypeRow { equipmentTypeId: string; typeCode: string; descriptionEn: string; isActive: boolean }
 
 export function MoveCard({
-  move, index, open, branchId, takenBoxes, onToggle, onChange, onRemove, onLook, onRecord,
+  move, index, open, branchId, takenBoxes, takenSlots, onToggle, onChange, onRemove, onLook, onRecord,
   onPickBooking, onToggleVas, canRecord, walkInTypes, draftId, onPickWalkInBox, onMakeWalkIn,
   walkInOnTruck, transactionAt,
 }: {
@@ -55,6 +59,13 @@ export function MoveCard({
   branchId: string;
   /** Boxes already on this truck, so the picker cannot offer one twice. */
   takenBoxes: string[];
+  /**
+   * Slots the OTHER rows of this truck have picked. Two boxes cannot go in one
+   * slot, and the API refuses the whole Save for it ("the same slot as another
+   * row of this Save") — which would be found after the money, so the picker
+   * greys them out instead.
+   */
+  takenSlots: string[];
   /** The tenant's walk-in order types, read once by the page. */
   walkInTypes: WalkInOrderType[] | null;
   /** This screen's draft, so the yard picker does not offer a box we hold. */
@@ -85,6 +96,20 @@ export function MoveCard({
   const { data: equipmentRows, error: equipmentError } =
     useApiList<EquipmentTypeRow>('/api/master/equipment-types?pageSize=200');
   const { yards, yard } = useFacility();
+  /**
+   * HOW THIS DEPOT RECORDS WHERE A BOX STANDS (yard.location_mode).
+   *
+   * SLOT — the clerk picks a stack on the yard map and the server writes the
+   * position text from the slot's label. AREA — the clerk types an area code,
+   * exactly as KORAKIT always has. One read for the whole app (it is cached by
+   * path), and it decides the one field below, nothing else on this card.
+   */
+  const { locationMode } = useYardSettings();
+  const { canAt } = useSession();
+  /** A supervisor may take a slot that breaks the yard's rules, with a reason. */
+  const canOverrideYard = canAt(GATE_OVERRIDE, branchId);
+  /** Moving the boxes standing on one being collected is the yard's job. */
+  const canMoveYard = canAt('tos.yard.manage', branchId);
   const { conditions } = useConditions();
 
   // useApiList answers null until the first page lands; an empty list renders
@@ -111,7 +136,7 @@ export function MoveCard({
   // Held and priced — not committed. The Save is what writes it.
   const held = move.reserved;
   const done = !!move.result;
-  const required = requiredFor(move);
+  const required = requiredFor(move, locationMode);
   const needs = (f: string) => required.includes(f);
 
   /**
@@ -140,7 +165,65 @@ export function MoveCard({
     ?? move.error?.forField(`rows[${index}].move.${f}`);
   /** The truck-wide `rows` message, shown by the walk-in block that caused it. */
   const rowsErr = move.error?.forField('rows');
-  const issues = rowIssues(move);
+  /**
+   * A REFUSED SLOT MEANS THE YARD HAS MOVED ON, so the grid is re-read.
+   *
+   * "Slot A-B-03-2 already holds TTNU3535354" (409) and the 400s on
+   * `yardSlotId` all mean the same thing for the picker: what it is showing is
+   * a few seconds out of date. Bumping the key re-reads the block's stacks, so
+   * the box that took the slot appears and the clerk picks a free one.
+   *
+   * Adjusted during render rather than in an effect: the grid must not be
+   * clickable in its stale state, even for a frame.
+   * https://react.dev/learn/you-might-not-need-an-effect
+   */
+  const slotRefused = err('yardSlotId') ?? (move.error?.status === 409 ? move.error.message : null);
+  const [seenRefusal, setSeenRefusal] = React.useState<string | null>(null);
+  const [slotReload, setSlotReload] = React.useState(0);
+  if (slotRefused && slotRefused !== seenRefusal) {
+    setSeenRefusal(slotRefused);
+    setSlotReload(n => n + 1);
+  }
+  /**
+   * WHAT THE YARD NEEDS TO KNOW TO SUGGEST A SLOT.
+   *
+   * The booking is the authority on whose box it is and what it is; the step
+   * says full or empty. Null until all three are known, which is how the
+   * picker shows no chips rather than a 400 ("Which type of box?") to a clerk
+   * who has keyed nothing yet.
+   *
+   * DG AND OUT-OF-GAUGE ARE NOT SENT, because the gate does not know them: the
+   * preflight's booking carries neither flag. A dangerous box may therefore be
+   * suggested a slot outside the DG block — the API still refuses that pick
+   * (DG_BLOCK) with its own message, so the clerk is not misled into a bad
+   * stow, only into a second click.
+   */
+  const suggestFor: YardSuggestionQuery | null = React.useMemo(() => {
+    if (locationMode !== 'SLOT' || move.trip !== 'DROP_OFF_CONT' || !move.yardId) return null;
+    const type = move.known?.booking?.equipmentTypeCode ?? move.equipmentTypeCode;
+    const line = move.known?.booking?.lineCode ?? move.lineCode;
+    const load = move.known?.nextStep?.fullEmpty ?? move.fullEmpty;
+    if (!type || !line || !load) return null;
+    return {
+      yardId: move.yardId,
+      equipmentTypeCode: type,
+      lineCode: line,
+      customerCode: move.known?.booking?.customerCode ?? move.customerCode ?? null,
+      fullEmpty: load,
+      conditionCode: move.conditionCode || null,
+      // The booking PLACE, so the yard can work out when this box leaves (the
+      // vessel's ETD, the booking's last day) and not bury it under one that
+      // leaves later. The answer says what it took the date to be.
+      bookingContainerId: move.bookingContainerId || move.known?.booking?.bookingContainerId || null,
+      limit: 5,
+    };
+  }, [locationMode, move.trip, move.yardId, move.known, move.equipmentTypeCode, move.lineCode,
+      move.fullEmpty, move.customerCode, move.conditionCode, move.bookingContainerId]);
+
+  /** The yard refused this slot on a rule, and invited an override. */
+  const slotOverride = locationMode === 'SLOT' && needsSlotOverride(move, slotRefused);
+
+  const issues = rowIssues(move, locationMode);
   /**
    * TIME RUNS ONE WAY FOR A BOX. Separate from `issues` because it is not a
    * blank field to fill in — the clerk fixes it on the truck's clock, above,
@@ -355,6 +438,12 @@ export function MoveCard({
             </div>
           ))}
           {move.findings.map((f, i) => <FindingLine key={`${f.code}-${i}`} finding={f} />)}
+          {/* The BOXES_ON_TOP warning above says it in a sentence; this is the
+              list, in the order the yard has to lift them, with a Move each.
+              Re-reading the box afterwards is what clears the warning. */}
+          {move.findings.some(f => f.code === 'BOXES_ON_TOP') && (
+            <BoxesOnTop containerNo={normaliseBox(move.containerNo)} canMove={canMoveYard} onMoved={onLook} />
+          )}
           {overLimitNote && (
             <div className="gecko-eirin-finding gecko-eirin-finding-override">
               <Icon name="alertCircle" size={13} />
@@ -840,20 +929,52 @@ export function MoveCard({
             <Section title="Where it goes">
               <div className="gecko-gate-grid-4">
                 <GateField label="Yard" required={needs('yardId')} error={err('yardId')}>
+                  {/* A slot belongs to one yard: changing the yard drops the
+                      slot, rather than sending one from the yard they left. */}
                   <select className="gecko-input" value={move.yardId}
-                    onChange={e => onChange({ yardId: e.target.value })}>
+                    onChange={e => onChange({ yardId: e.target.value, yardSlotId: '', yardSlotLabel: '' })}>
                     <option value="">Not stated</option>
                     {yards.map(y => <option key={y.yardId} value={y.yardId}>{y.yardCode} - {y.nameEn}</option>)}
                   </select>
                 </GateField>
                 {/* Both are the ORDER TYPE's ticks now (owner 2026-10-27), not
                     this screen's. Until the server sends them, Position falls
-                    back to what it has demanded of every drop-off since 22 Oct. */}
-                <GateField label="Position" required={needs('positionText')} error={err('positionText')}>
-                  <input className="gecko-input gecko-text-mono" maxLength={40} value={move.positionText}
-                    placeholder="A-03-2-1"
-                    onChange={e => onChange({ positionText: e.target.value.toUpperCase() })} />
-                </GateField>
+                    back to what it has demanded of every drop-off since 22 Oct.
+
+                    WHERE IT GOES IS A SLOT OR AN AREA, and the depot decides
+                    which (yard.location_mode). KORAKIT types an area code and
+                    sees exactly this input, unchanged. GECKO picks a stack on
+                    its own yard map, and the server writes the position text
+                    from the slot — so there is no Position box to type into. */}
+                {locationMode === 'SLOT'
+                  ? (
+                    <GateField label="Slot" required={needs('yardSlotId')} error={err('yardSlotId')} span={3}
+                      hint="Click a stack: the box goes on the ground, or on the box already there.">
+                      <SlotPicker
+                        yardId={move.yardId || null}
+                        value={move.yardSlotId || null}
+                        valueLabel={move.yardSlotLabel || null}
+                        excludeSlotIds={takenSlots}
+                        disabled={done}
+                        reloadKey={slotReload}
+                        suggestFor={suggestFor}
+                        onChange={slot => onChange({
+                          yardSlotId: slot?.yardSlotId ?? '',
+                          yardSlotLabel: slot?.label ?? '',
+                          // The slot IS the position now; a leftover typed one
+                          // would be sent for a box that has a slot.
+                          positionText: '',
+                        })}
+                      />
+                    </GateField>
+                  )
+                  : (
+                    <GateField label="Position" required={needs('positionText')} error={err('positionText')}>
+                      <input className="gecko-input gecko-text-mono" maxLength={40} value={move.positionText}
+                        placeholder="A-03-2-1"
+                        onChange={e => onChange({ positionText: e.target.value.toUpperCase() })} />
+                    </GateField>
+                  )}
               </div>
             </Section>
           )}
@@ -880,7 +1001,7 @@ export function MoveCard({
           )}
 
           {/* Only when the server has actually asked for a reason. */}
-          {(needsDigitReason(move) || needsLateReason(move)) && (
+          {(needsDigitReason(move) || needsLateReason(move) || slotOverride) && (
             <Section title="Override">
               <div className="gecko-gate-grid-2">
                 {needsDigitReason(move) && (
@@ -895,6 +1016,30 @@ export function MoveCard({
                       onChange={e => onChange({ lateOverrideReason: e.target.value })} />
                   </GateField>
                 )}
+                {/* THE YARD'S RULES, OVERRIDDEN ON PURPOSE.
+                    The server has refused the slot and said a supervisor may
+                    override it. Whoever holds tos.gate.override types why, and
+                    it is kept on the box's gate-in history; everybody else is
+                    told what to do instead, rather than shown a box that
+                    answers 400. */}
+                {slotOverride && (canOverrideYard
+                  ? (
+                    <GateField label="Yard rules override reason" required span={2}
+                      error={err('slotOverrideReason')}
+                      hint={`The slot ${move.yardSlotLabel || 'picked'} breaks the yard's rules. Say why it is right anyway — it is kept on the box's history.`}>
+                      <input className="gecko-input" maxLength={300} value={move.slotOverrideReason}
+                        placeholder="e.g. Only free slot; line agreed by phone"
+                        onChange={e => onChange({ slotOverrideReason: e.target.value })} />
+                    </GateField>
+                  )
+                  : (
+                    <GateField label="Yard rules" span={2}>
+                      <div className="gecko-readonly-value">
+                        Ask a supervisor, or pick another slot — only someone with the gate override
+                        right can take a slot that breaks the yard&apos;s rules.
+                      </div>
+                    </GateField>
+                  ))}
               </div>
             </Section>
           )}

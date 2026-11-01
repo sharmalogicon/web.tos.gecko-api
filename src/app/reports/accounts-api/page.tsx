@@ -26,6 +26,7 @@ import {
 import { ReportKpi, ReportParams, ReportTable, type Depot } from '../_components/ReportParams';
 import { VoidReceiptModal } from '@/app/billing/_components/VoidReceiptModal';
 import { WINDOW_PERMISSIONS } from '@/lib/api/window';
+import { ErrorBanner } from '@/components/ui/ErrorBanner';
 
 const TOP = 15;
 const CHANNEL: Record<string, string> = { CASH: 'Cash', TRANSFER: 'Transfer', CHEQUE: 'Cheque', CARD: 'Card' };
@@ -102,15 +103,7 @@ export default function AccountsReportsPage() {
       <ReportParams depots={depots} branchId={branchId} onBranch={setPicked}
                     from={range.from} to={range.to} onRange={(from, to) => setRange({ from, to })} />
 
-      {error && (
-        <div className="gecko-alert gecko-alert-error">
-          <Icon name="alertCircle" size={18} />
-          <div>
-            <div style={{ fontWeight: 600 }}>{error.title}</div>
-            {error.explanation && <div>{error.explanation}</div>}
-          </div>
-        </div>
-      )}
+      <ErrorBanner error={error} />
       {r && r.currencies.length > 1 && (
         <div className="gecko-alert gecko-alert-warning">
           <Icon name="alertCircle" size={18} />

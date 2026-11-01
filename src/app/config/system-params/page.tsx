@@ -1,5 +1,6 @@
 "use client";
-import React, { useMemo, useState } from 'react';
+import React, { Suspense, useMemo, useState } from 'react';
+import { useSearchParams } from 'next/navigation';
 import { Icon } from '@/components/ui/Icon';
 import { useApi, useApiList } from '@/lib/api/use-api';
 import { useSession } from '@/lib/auth/session';
@@ -9,6 +10,7 @@ import {
 } from '@/lib/api/system-params';
 import { EditableTable } from '@/app/masters/lookups/_components/EditableTable';
 import { SettingsTable } from './_components/SettingsSection';
+import { ErrorBanner } from '@/components/ui/ErrorBanner';
 
 /**
  * LIVE against gecko_master — tenant settings (config.tenant_setting over the
@@ -28,8 +30,23 @@ const MODULE_LABEL: Record<string, string> = {
 
 type Section = { kind: 'module'; module: string } | { kind: 'series' };
 
+/**
+ * `?section=series` opens the number series straight away. The error banner
+ * links here when a receipt could not be numbered, and landing an administrator
+ * on the gate settings instead would make them hunt for the one tab that
+ * matters. useSearchParams needs a boundary of its own.
+ */
 export default function SystemParamsPage() {
+  return (
+    <Suspense fallback={<div className="gecko-card gecko-card-padded gecko-cell-meta">Loading…</div>}>
+      <SystemParams />
+    </Suspense>
+  );
+}
+
+function SystemParams() {
   const { can } = useSession();
+  const asked = useSearchParams().get('section');
   const canManage = can('mdm.config.manage');
   const { data: branches } = useApiList<Branch>('/api/branches?pageSize=100');
   const [branchId, setBranchId] = useState<string | null>(null);
@@ -40,7 +57,7 @@ export default function SystemParamsPage() {
   const series = useApi<NumberSeries[]>(`${NUMBER_SERIES_PATH}?includeInactive=true`);
 
   const modules = useMemo(() => [...new Set((settings.data ?? []).map(s => s.owningModule))], [settings.data]);
-  const [picked, setPicked] = useState<Section | null>(null);
+  const [picked, setPicked] = useState<Section | null>(asked === 'series' ? { kind: 'series' } : null);
   const section: Section = picked ?? (modules[0] ? { kind: 'module', module: modules[0] } : { kind: 'series' });
 
   const nav = [
@@ -69,11 +86,7 @@ export default function SystemParamsPage() {
         </div>
       </div>
 
-      {error && (
-        <div role="alert" className="gecko-alert gecko-alert-error gecko-row" style={{ gap: 10 }}>
-          <Icon name="alertCircle" size={16} /><span>{error.message}</span>
-        </div>
-      )}
+      <ErrorBanner error={error} />
 
       <div className="gecko-row gecko-row-start" style={{ gap: 20, alignItems: 'flex-start' }}>
         <nav className="gecko-card gecko-card-tight gecko-stack" style={{ width: 220, flexShrink: 0, gap: 2 }} aria-label="Sections">

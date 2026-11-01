@@ -7,6 +7,7 @@ import { EmptyState } from '@/components/ui/EmptyState';
 import { useSession } from '@/lib/auth/session';
 import { useServerList } from '@/lib/api/use-server-list';
 import { VESSELS_PATH, VESSEL_TYPES, type Vessel } from '@/lib/api/logistics';
+import { ErrorBanner } from '@/components/ui/ErrorBanner';
 
 /**
  * LIVE against gecko_master logistics.vessel. KORAKIT starts with none (its
@@ -51,11 +52,7 @@ export default function VesselsPage() {
         </label>
       </div>
 
-      {list.error && (
-        <div role="alert" className="gecko-alert gecko-alert-error gecko-row" style={{ gap: 10 }}>
-          <Icon name="alertCircle" size={16} /><span>{list.error.message}</span>
-        </div>
-      )}
+      <ErrorBanner error={list.error} />
 
       <div className="gecko-table-card">
         <table className="gecko-table gecko-table-comfortable">

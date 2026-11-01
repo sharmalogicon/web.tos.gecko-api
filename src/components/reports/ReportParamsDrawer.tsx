@@ -10,6 +10,7 @@ import { useFacility } from '@/lib/api/facility';
 import { useMovements } from '@/lib/api/lookups';
 import { yardsPath, type Yard } from '@/lib/api/yards';
 import { PARAM_LABELS, type ReportDef, type ReportParamKey } from '@/lib/reports-catalog';
+import { ErrorBanner } from '@/components/ui/ErrorBanner';
 
 /**
  * The parameters one report is run with.
@@ -181,12 +182,7 @@ export function ReportParamsDrawer({ report, onClose, onGenerate, busy, problem 
           </button>
         </div>
 
-        {problem && (
-          <div role="alert" className="gecko-alert gecko-alert-error gecko-report-drawer-problem">
-            <Icon name="alertCircle" size={16} />
-            <span>{problem.message}</span>
-          </div>
-        )}
+        <ErrorBanner error={problem} className="gecko-report-drawer-problem" />
 
         {/* What the report will and will not print, before the clerk waits for
             it. Three of them have no data in Gecko yet and print headings. */}

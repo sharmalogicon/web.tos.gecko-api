@@ -8,6 +8,7 @@ import { apiSend } from '@/lib/api/client';
 import { ApiError } from '@/lib/api/problem';
 import type { TruckVisit } from '@/lib/api/tos';
 import { visitAmendPath, type EirDetail, type VisitAmendRequest } from '@/lib/api/gate-eir';
+import { ErrorBanner } from '@/components/ui/ErrorBanner';
 
 /**
  * AMEND THE TRUCK ON A RECORDED VISIT.
@@ -117,15 +118,7 @@ export function AmendTruckModal({ eir, visit, onClose, onSaved }: {
           </div>
         )}
 
-        {general && (
-          <div className={`gecko-alert gecko-alert-${stale ? 'warning' : 'error'}`}>
-            <Icon name="alertCircle" size={18} />
-            <div>
-              <div className="gecko-alert-title">{general.title}</div>
-              {general.explanation && <div>{general.explanation}</div>}
-            </div>
-          </div>
-        )}
+        <ErrorBanner error={general} tone={stale ? 'warning' : 'error'} fallback="The truck could not be edited." />
 
         {/* Said before the edit, not after it. */}
         {others.length > 0 && (

@@ -35,6 +35,7 @@ import {
   type InvoiceSummary,
 } from '@/lib/api/invoices';
 import { REVENUE_LOOKUPS_PATH, type RevenueLookups } from '@/lib/api/revenue';
+import { ErrorBanner } from '@/components/ui/ErrorBanner';
 
 interface Page { items: InvoiceSummary[]; page: number; pageSize: number; totalCount: number; totalPages: number }
 
@@ -165,13 +166,7 @@ function Invoices() {
       </div>
 
       {error && (
-        <div role="alert" className="gecko-alert gecko-alert-error">
-          <Icon name="alertCircle" size={18} />
-          <div>
-            <strong>{error.title}</strong>
-            {error.explanation && <div>{error.explanation}</div>}
-          </div>
-        </div>
+        <ErrorBanner error={error} />
       )}
 
       <div className="gecko-table-card gecko-table-card-menus">

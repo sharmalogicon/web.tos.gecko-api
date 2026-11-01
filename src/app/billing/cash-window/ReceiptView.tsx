@@ -2,11 +2,12 @@
 import React, { useCallback, useState } from 'react';
 import { Icon } from '@/components/ui/Icon';
 import { apiDownload, saveBlob } from '@/lib/api/client';
-import { ProblemAlert, problemOf, type Problem } from './ProblemAlert';
+import { ApiError, problemOf } from '@/lib/api/problem';
 import { CHANNEL_LABEL, formatBaht, receiptPdfPath, taxBranchLabel, type Receipt } from '@/lib/api/window';
 import { cashInvoicePdfPath, couponPdfPath } from '@/lib/api/receipts';
 import { openPdf } from '@/lib/api/open-pdf';
 import { formatDateTime } from '@/lib/format';
+import { ErrorBanner } from '@/components/ui/ErrorBanner';
 
 /**
  * The receipt — the Thai tax invoice the driver carries to the gate.
@@ -61,7 +62,7 @@ export function ReceiptView({ receipt, depot, onPrint, onNext, onVoid, onSplit, 
   const [downloading, setDownloading] = useState(false);
   const [coupon, setCoupon] = useState(false);
   const [cashInvoice, setCashInvoice] = useState(false);
-  const [pdfError, setPdfError] = useState<Problem | null>(null);
+  const [pdfError, setPdfError] = useState<ApiError | null>(null);
   const seller = receipt.seller;
   const voided = receipt.status === 'VOIDED';
 
@@ -204,7 +205,7 @@ export function ReceiptView({ receipt, depot, onPrint, onNext, onVoid, onSplit, 
             This depot has no invoicing company in master data, so the seller block prints as {NOT_SET}.
           </div>
         )}
-        {pdfError && <ProblemAlert problem={pdfError} style={{ marginTop: 12 }} />}
+        {pdfError && <ErrorBanner error={pdfError} style={{ marginTop: 12 }} />}
       </div>
 
       {/* ── what reaches the paper ─────────────────────────────────────── */}

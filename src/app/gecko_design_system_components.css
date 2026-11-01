@@ -10330,30 +10330,7 @@ th.gecko-cell-tight {
   min-width: 0;
   margin: 0 12px;
 }
-.gecko-gatein-top-error {
-  display: flex;
-  align-items: flex-start;
-  gap: 5px;
-  padding: 4px 8px;
-  border-radius: 6px;
-  background: var(--gecko-error-50);
-  color: var(--gecko-error-700);
-  font-size: 11px;
-  line-height: 1.4;
-}
-.gecko-gatein-top-error strong { font-weight: 700; }
-.gecko-gatein-top-retry {
-  margin-left: 6px;
-  padding: 0;
-  border: 0;
-  background: none;
-  color: var(--gecko-error-700);
-  font: inherit;
-  font-weight: 700;
-  text-decoration: underline;
-  cursor: pointer;
-}
-.gecko-gatein-top-retry:disabled { opacity: 0.6; cursor: default; }
+/* The chip and its retry link are now .gecko-error-note (§5.51). */
 
 /* The statement's heading: the number the customer quotes, with Gecko's own
    order number in brackets behind it at the size of a footnote. */
@@ -11361,3 +11338,975 @@ th.gecko-cell-tight {
 .gecko-stmt-docs-head { padding: 10px 12px; font-weight: 700; font-size: 13px; }
 .gecko-stmt-docs-none { text-align: center; padding: 12px; }
 .gecko-stmt-docs-total { font-weight: 700; }
+
+
+/* ============================================================
+   SECTION 5.46 — THE YARD MAP
+   ------------------------------------------------------------
+   Two screens draw the same yard: the layout editor
+   (Configuration → Yard Zones & Blocks) moves the blocks, and
+   Yard at a Glance colours them by what is standing in them.
+   Everything here is chrome around an SVG — the block geometry
+   and colours are computed per block (a saved width, a block
+   type, a depot's chosen hex) and stay inline on the shapes,
+   which is what SVG attributes are for.
+
+   Both pages were written with their layout in inline styles.
+   Moving it here is what lets the two look like one screen.
+   ============================================================ */
+
+/* General helpers these pages needed and the catalogue lacked:
+   -secondary-btn and -secondary-icon existed, the plain one did not. */
+.gecko-text-secondary    { color: var(--gecko-text-secondary); }
+.gecko-btn-danger-text   { color: var(--gecko-error-600); }
+.gecko-cell-right        { text-align: right; }
+
+/* ── the page ── */
+.gecko-yard-page      { gap: 12px; }
+.gecko-yard-title-row { gap: 10px; }
+.gecko-yard-select    { width: 210px; }
+.gecko-yard-alert     { gap: 10px; }
+.gecko-yard-loading   { padding: 40px; }
+.gecko-yard-footnote  { text-align: center; padding-top: 6px; }
+
+/* Palette, canvas, properties. The canvas takes what is left. */
+.gecko-yard-workspace {
+  display: grid;
+  grid-template-columns: 200px minmax(0, 1fr) 330px;
+  gap: 12px;
+  align-items: start;
+}
+@media (max-width: 1280px) {
+  .gecko-yard-workspace { grid-template-columns: 180px minmax(0, 1fr); }
+  .gecko-yard-workspace > :last-child { grid-column: 1 / -1; }
+}
+
+.gecko-yard-side-card { padding: 14px; gap: 12px; }
+
+/* ── the presets ── */
+.gecko-yard-preset-list { gap: 6px; }
+.gecko-yard-preset {
+  display: grid;
+  grid-template-columns: 14px minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 10px;
+  border: 1px solid transparent;
+  border-radius: var(--gecko-radius-md);
+  cursor: pointer;
+  font-family: inherit;
+  text-align: left;
+}
+.gecko-yard-preset-dot  { width: 10px; height: 10px; border-radius: 2px; display: inline-block; }
+.gecko-yard-preset-text { gap: 0; min-width: 0; }
+.gecko-yard-preset-name { font-size: 12px; font-weight: 700; }
+.gecko-yard-preset-size { font-size: 10px; opacity: 0.75; font-family: var(--gecko-font-mono); }
+
+/* ── the legend, and the by-type summary that reads like it ── */
+.gecko-yard-legend      { margin-top: 8px; padding-top: 10px; border-top: 1px solid var(--gecko-border); }
+.gecko-yard-legend-head { margin-bottom: 8px; }
+.gecko-yard-legend-list { gap: 4px; }
+.gecko-yard-legend-row  { gap: 6px; font-size: 11px; }
+.gecko-yard-legend-name { gap: 5px; }
+.gecko-yard-legend-swatch {
+  width: 14px;
+  height: 10px;
+  border: 1px solid var(--gecko-border);
+  border-radius: 2px;
+  flex-shrink: 0;
+}
+.gecko-yard-legend-dot { width: 10px; height: 10px; border-radius: 3px; flex-shrink: 0; }
+
+/* ── blocks that exist but have never been placed ── */
+.gecko-yard-tray { gap: 6px; }
+.gecko-yard-tray-chip {
+  padding: 4px 9px;
+  border: 1px solid var(--gecko-border);
+  border-radius: var(--gecko-radius-md);
+  font-family: var(--gecko-font-mono);
+  font-size: 11px;
+  font-weight: 700;
+  cursor: grab;
+}
+.gecko-yard-tray-chip:active { cursor: grabbing; }
+
+/* ── zoom ── */
+.gecko-yard-zoom {
+  gap: 4px;
+  padding: 2px 4px;
+  background: var(--gecko-bg-subtle);
+  border: 1px solid var(--gecko-border);
+  border-radius: var(--gecko-radius-md);
+}
+.gecko-yard-zoom-btn   { height: 26px; width: 26px; font-size: 14px; }
+.gecko-yard-zoom-value {
+  font-size: 11px;
+  font-family: var(--gecko-font-mono);
+  font-weight: 600;
+  min-width: 36px;
+  text-align: center;
+  color: var(--gecko-text-primary);
+}
+
+/* ── the canvas ── */
+.gecko-yard-canvas-card   { padding: 0; overflow: hidden; }
+.gecko-yard-canvas-scroll { overflow: auto; max-height: 78vh; background: var(--gecko-bg-subtle); }
+.gecko-yard-canvas-svg    { display: block; user-select: none; background: #fafafa; }
+
+/* ── the properties panel ── */
+.gecko-yard-panel-head { gap: 8px; }
+.gecko-yard-panel-code {
+  gap: 6px;
+  font-size: 16px;
+  font-weight: 700;
+  font-family: var(--gecko-font-mono);
+  color: var(--gecko-text-primary);
+}
+.gecko-yard-fields   { gap: 8px; }
+.gecko-yard-position { padding-top: 10px; border-top: 1px solid var(--gecko-border); }
+.gecko-yard-flags    { gap: 14px; }
+.gecko-yard-flag     { gap: 6px; font-size: 12px; cursor: pointer; }
+.gecko-yard-slots {
+  gap: 6px;
+  padding: 10px;
+  background: var(--gecko-bg-subtle);
+  border-radius: var(--gecko-radius-md);
+  font-size: 12px;
+}
+.gecko-yard-slots-value { font-weight: 700; color: var(--gecko-text-primary); }
+.gecko-yard-warn        { color: var(--gecko-warning-700); font-weight: 600; }
+.gecko-yard-inactive-note {
+  gap: 8px;
+  padding: 8px 10px;
+  background: var(--gecko-warning-50);
+  color: var(--gecko-warning-700);
+  border-radius: var(--gecko-radius-md);
+}
+.gecko-yard-summary        { gap: 4px; }
+.gecko-yard-summary-row    { font-size: 11.5px; }
+.gecko-yard-summary-value  { font-weight: 600; color: var(--gecko-text-primary); }
+.gecko-yard-summary-types  { padding-top: 12px; border-top: 1px solid var(--gecko-border); }
+.gecko-yard-hint {
+  margin-top: 4px;
+  padding: 10px;
+  background: var(--gecko-bg-subtle);
+  border-radius: var(--gecko-radius-md);
+  line-height: 1.5;
+}
+
+/* ── Yard at a Glance ── */
+.gecko-yard-kpis { display: grid; grid-template-columns: repeat(6, minmax(0, 1fr)); gap: 12px; }
+@media (max-width: 1280px) { .gecko-yard-kpis { grid-template-columns: repeat(3, minmax(0, 1fr)); } }
+@media (max-width: 760px)  { .gecko-yard-kpis { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+
+.gecko-yard-live-dot {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: var(--gecko-success-500);
+  display: inline-block;
+}
+.gecko-yard-unplaced { gap: 12px; align-items: center; }
+
+.gecko-yard-glance-main {
+  display: grid;
+  grid-template-columns: 2fr minmax(0, 1fr);
+  gap: 16px;
+  align-items: start;
+}
+@media (max-width: 1100px) { .gecko-yard-glance-main { grid-template-columns: minmax(0, 1fr); } }
+
+.gecko-yard-glance-head   { padding: 14px 18px; border-bottom: 1px solid var(--gecko-border); gap: 12px; }
+.gecko-yard-glance-canvas { padding: 18px; background: var(--gecko-bg-subtle); }
+.gecko-yard-glance-svg {
+  width: 100%;
+  height: auto;
+  max-height: 420px;
+  display: block;
+  background: var(--gecko-bg-surface);
+  border: 1px solid var(--gecko-border);
+  border-radius: var(--gecko-radius-lg);
+}
+.gecko-yard-glance-block  { cursor: pointer; }
+.gecko-yard-glance-label  { pointer-events: none; user-select: none; }
+.gecko-yard-glance-legend { margin-top: 12px; gap: 12px; justify-content: center; }
+.gecko-yard-glance-table  { min-width: 1060px; }
+.gecko-yard-table-scroll  { width: 100%; overflow-x: auto; }
+
+/* The hovered block, spelled out under the map. */
+.gecko-yard-strip {
+  padding: 10px 18px;
+  border-top: 1px solid var(--gecko-border);
+  background: var(--gecko-bg-subtle);
+  gap: 16px;
+  font-size: 12px;
+}
+.gecko-yard-metric       { gap: 4px; }
+.gecko-yard-metric-value { font-family: var(--gecko-font-mono); font-weight: 700; color: var(--gecko-text-primary); }
+
+/* Hotspots: the five blocks worth looking at first. */
+.gecko-yard-hot            { padding: 12px 18px; border-bottom: 1px solid var(--gecko-border); cursor: pointer; transition: background 120ms; }
+.gecko-yard-hot:last-child { border-bottom: 0; }
+.gecko-yard-hot-on         { background: var(--gecko-bg-subtle); }
+.gecko-yard-hot-head       { margin-bottom: 4px; }
+.gecko-yard-hot-rank {
+  width: 24px;
+  height: 24px;
+  border-radius: var(--gecko-radius-md);
+  border: 1px solid var(--gecko-border);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: 800;
+  font-size: 10px;
+}
+.gecko-yard-hot-code   { font-family: var(--gecko-font-mono); font-size: 13px; font-weight: 800; }
+.gecko-yard-hot-strong { color: var(--gecko-text-primary); }
+.gecko-yard-hot-warn   { color: var(--gecko-warning-700); }
+.gecko-yard-hot-bad    { color: var(--gecko-error-700); }
+.gecko-yard-hot-icon   { color: var(--gecko-warning-600); }
+.gecko-yard-hot-count  { font-weight: 600; }
+
+.gecko-yard-type-pill { font-size: 10px; border: 1px solid var(--gecko-border); }
+
+/* Occupancy, in the block-by-block table. */
+.gecko-yard-bar-row   { gap: 6px; }
+.gecko-yard-bar       { flex: 1; min-width: 80px; background: var(--gecko-gray-100); }
+.gecko-yard-bar-fill  { height: 100%; }
+.gecko-yard-bar-value { font-size: 11px; min-width: 36px; }
+
+
+/* ============================================================
+   SECTION 5.47 — THE YARD MAP, PHASE 2
+   ------------------------------------------------------------
+   A slot at the gate, a block stack by stack, and moving a box.
+
+   Three controls, one language: a STACK is a cell, and a cell
+   says how high it is and whether anything can go in it. The
+   gate's picker is the compact version (one cell per stack);
+   the stack view draws every tier, bottom-up, because a clerk
+   reading it is looking for a particular box.
+
+   Colours here are STATES, not block types: full, empty, held,
+   blocked, not in use. The block's own colour stays on the map.
+   ============================================================ */
+
+/* ── the slot picker (gate, and Move box) ── */
+.gecko-slotpick        { gap: 8px; }
+.gecko-slotpick-head   { gap: 8px; flex-wrap: wrap; }
+.gecko-slotpick-block  { min-width: 220px; }
+.gecko-slotpick-picked {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 3px 4px 3px 10px;
+  border: 1px solid var(--gecko-primary-600);
+  border-radius: var(--gecko-radius-md);
+  background: var(--gecko-primary-50);
+  color: var(--gecko-primary-700);
+  font-family: var(--gecko-font-mono);
+  font-size: 14px;
+  font-weight: 800;
+  letter-spacing: 0.02em;
+}
+.gecko-slotpick-none { padding: 8px 0; }
+
+.gecko-slotpick-grid     { display: flex; flex-direction: column; gap: 4px; overflow-x: auto; padding-bottom: 4px; }
+.gecko-slotpick-row      { gap: 4px; align-items: stretch; }
+.gecko-slotpick-rowlabel {
+  width: 22px;
+  flex-shrink: 0;
+  font-family: var(--gecko-font-mono);
+  font-size: 11px;
+  font-weight: 800;
+  display: flex;
+  align-items: center;
+}
+.gecko-slotpick-cell {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 1px;
+  width: 44px;
+  min-height: 38px;
+  padding: 3px 2px;
+  border: 1px solid var(--gecko-border);
+  border-radius: var(--gecko-radius-sm);
+  background: var(--gecko-bg-surface);
+  cursor: pointer;
+  font-family: inherit;
+}
+.gecko-slotpick-cell:hover:not(:disabled) { border-color: var(--gecko-primary-600); }
+.gecko-slotpick-cell-picked {
+  border-color: var(--gecko-primary-600);
+  background: var(--gecko-primary-50);
+  box-shadow: inset 0 0 0 1px var(--gecko-primary-600);
+}
+.gecko-slotpick-cell-off {
+  background: repeating-linear-gradient(45deg, var(--gecko-bg-subtle), var(--gecko-bg-subtle) 4px, var(--gecko-gray-100) 4px, var(--gecko-gray-100) 8px);
+  color: var(--gecko-text-disabled);
+  cursor: not-allowed;
+}
+.gecko-slotpick-bay    { font-family: var(--gecko-font-mono); font-size: 11px; font-weight: 700; }
+.gecko-slotpick-height { display: inline-flex; align-items: center; gap: 2px; font-size: 10px; color: var(--gecko-text-secondary); }
+.gecko-slotpick-legend { gap: 14px; flex-wrap: wrap; padding-top: 2px; }
+.gecko-slotpick-key {
+  width: 14px;
+  height: 10px;
+  border: 1px solid var(--gecko-border);
+  border-radius: 2px;
+  display: inline-block;
+}
+
+/* ── one block, stack by stack ── */
+.gecko-stackview-head   { padding: 14px 18px; border-bottom: 1px solid var(--gecko-border); gap: 12px; }
+.gecko-stackview-title  { gap: 8px; align-items: center; }
+.gecko-stackview-alert  { gap: 10px; margin: 14px 18px; }
+.gecko-stackview-empty  { padding: 18px; }
+.gecko-stackview-body   { padding: 14px 18px 18px; overflow-x: auto; }
+
+.gecko-stackview-rowgroup { margin-bottom: 14px; }
+.gecko-stackview-rowlabel { margin-bottom: 6px; }
+.gecko-stackview-bays     { gap: 6px; align-items: flex-end; }
+.gecko-stackview-bay      { display: flex; flex-direction: column; gap: 2px; }
+.gecko-stackview-baylabel {
+  text-align: center;
+  font-family: var(--gecko-font-mono);
+  font-size: 10px;
+  font-weight: 700;
+  color: var(--gecko-text-secondary);
+  padding-top: 2px;
+  border-top: 1px solid var(--gecko-border);
+}
+
+.gecko-stackview-cell {
+  display: grid;
+  grid-template-columns: 12px minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 4px;
+  width: 128px;
+  min-height: 26px;
+  padding: 2px 4px;
+  border: 1px solid var(--gecko-border);
+  border-radius: var(--gecko-radius-sm);
+  background: var(--gecko-bg-surface);
+  font-size: 11px;
+}
+.gecko-stackview-cell-full    { background: var(--gecko-primary-50); border-color: var(--gecko-primary-600); }
+.gecko-stackview-cell-empty   { background: var(--gecko-bg-subtle); border-color: var(--gecko-text-secondary); }
+.gecko-stackview-cell-held    { background: var(--gecko-warning-50); border-color: var(--gecko-warning-600); }
+.gecko-stackview-cell-blocked {
+  background: repeating-linear-gradient(45deg, var(--gecko-error-50), var(--gecko-error-50) 4px, var(--gecko-gray-100) 4px, var(--gecko-gray-100) 8px);
+  border-color: var(--gecko-error-600);
+}
+.gecko-stackview-cell-off     { opacity: 0.5; }
+.gecko-stackview-cell-found   { box-shadow: 0 0 0 2px var(--gecko-primary-600); }
+
+.gecko-stackview-tier  { font-family: var(--gecko-font-mono); font-size: 9px; color: var(--gecko-text-secondary); text-align: center; }
+.gecko-stackview-box {
+  font-family: var(--gecko-font-mono);
+  font-size: 11px;
+  font-weight: 700;
+  color: var(--gecko-text-primary);
+  text-decoration: none;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.gecko-stackview-box:hover { text-decoration: underline; }
+.gecko-stackview-free  { display: inline-flex; align-items: center; gap: 3px; font-size: 10px; color: var(--gecko-text-disabled); }
+.gecko-stackview-marks { display: inline-flex; align-items: center; gap: 2px; color: var(--gecko-text-secondary); }
+.gecko-stackview-move {
+  border: 0;
+  background: none;
+  padding: 1px;
+  cursor: pointer;
+  color: var(--gecko-primary-600);
+  display: inline-flex;
+}
+.gecko-stackview-move:hover { color: var(--gecko-primary-700); }
+.gecko-stackview-legend { gap: 14px; padding-top: 4px; }
+.gecko-stackview-key {
+  width: 14px;
+  height: 10px;
+  border: 1px solid var(--gecko-border);
+  border-radius: 2px;
+  display: inline-block;
+}
+
+/* ── move a box ── */
+.gecko-movebox            { gap: 14px; }
+.gecko-movebox-dig        { gap: 10px; align-items: center; }
+.gecko-movebox-how        { gap: 18px; }
+.gecko-movebox-radio      { gap: 6px; font-size: 13px; cursor: pointer; }
+.gecko-movebox-yardrow    { gap: 8px; margin-bottom: 8px; }
+.gecko-movebox-fields     { gap: 12px; }
+.gecko-movebox-error      { gap: 10px; align-items: center; }
+.gecko-movebox-error-title { font-weight: 600; }
+.gecko-movebox-footer     { width: 100%; gap: 12px; }
+.gecko-movebox-actions    { gap: 8px; }
+
+/* ── find a box, on Yard at a Glance ── */
+.gecko-yard-find       { gap: 10px; align-items: center; }
+.gecko-yard-find-input { flex: 1 1 260px; max-width: 340px; }
+.gecko-yard-find-hit   { gap: 8px; align-items: center; }
+.gecko-yard-find-note  { flex-basis: 100%; }
+/* The block a search landed in, ringed until the search is cleared. */
+.gecko-yard-glance-found { animation: gecko-pulse 1.6s ease-in-out infinite; }
+
+
+/* ============================================================
+   SECTION 5.48 — THE YARD MAP, PHASE 3
+   ------------------------------------------------------------
+   The yard's own advice (suggested slots), the rule override,
+   and the dig — the boxes standing on one being collected.
+
+   A suggestion is drawn as an OPINION, not a command: a ring
+   and a chip, never a disabled alternative. Everything else in
+   the picker stays clickable.
+   ============================================================ */
+
+/* ── suggested slots ── */
+.gecko-slotpick-advice      { gap: 6px; align-items: center; }
+.gecko-slotpick-advice-head { margin-right: 2px; }
+.gecko-slotpick-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  max-width: 320px;
+  padding: 4px 9px;
+  border: 1px solid var(--gecko-primary-600);
+  border-radius: 999px;
+  background: var(--gecko-primary-50);
+  color: var(--gecko-primary-700);
+  cursor: pointer;
+  font-family: inherit;
+  font-size: 11px;
+  text-align: left;
+}
+.gecko-slotpick-chip:hover:not(:disabled) { background: var(--gecko-primary-100); }
+.gecko-slotpick-chip:disabled             { opacity: 0.5; cursor: not-allowed; }
+.gecko-slotpick-chip-picked               { box-shadow: inset 0 0 0 1px var(--gecko-primary-600); font-weight: 700; }
+.gecko-slotpick-chip-label {
+  font-family: var(--gecko-font-mono);
+  font-size: 12px;
+  font-weight: 800;
+  letter-spacing: 0.02em;
+}
+.gecko-slotpick-chip-score {
+  font-family: var(--gecko-font-mono);
+  font-size: 10px;
+  font-weight: 700;
+  padding: 0 4px;
+  border-radius: 999px;
+  background: var(--gecko-primary-600);
+  color: #fff;
+}
+.gecko-slotpick-chip-why {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  color: var(--gecko-text-secondary);
+}
+/* A stack holding a suggested slot: ringed, still an ordinary button. */
+.gecko-slotpick-cell-tip { box-shadow: inset 0 0 0 2px var(--gecko-primary-600); }
+.gecko-slotpick-nofit    { padding: 2px 0; }
+
+/* ── the override, in the Move box dialog ── */
+.gecko-movebox-override { margin-top: 8px; }
+
+/* ── the dig: what stands on the box being collected ── */
+.gecko-ontop {
+  margin-top: 6px;
+  padding: 8px 10px;
+  border: 1px solid var(--gecko-warning-600);
+  border-radius: var(--gecko-radius-md);
+  background: var(--gecko-warning-50);
+  color: var(--gecko-warning-700);
+  font-size: 12px;
+}
+.gecko-ontop-head { gap: 8px; align-items: flex-start; }
+.gecko-ontop-list { gap: 10px; margin-top: 8px; }
+.gecko-ontop-box  { gap: 6px; align-items: center; }
+.gecko-ontop-rank {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 18px;
+  height: 18px;
+  border-radius: 50%;
+  border: 1px solid var(--gecko-warning-600);
+  background: var(--gecko-bg-surface);
+  font-size: 10px;
+  font-weight: 800;
+}
+.gecko-ontop-no {
+  font-family: var(--gecko-font-mono);
+  font-weight: 700;
+  color: var(--gecko-text-primary);
+}
+
+/* A box in the stack view with others on it: the count, not just a tooltip. */
+.gecko-stackview-under {
+  font-family: var(--gecko-font-mono);
+  font-size: 9px;
+  font-weight: 700;
+  color: var(--gecko-warning-700);
+}
+
+/* Yard Zones: what the gate refuses because of each tick. */
+.gecko-yard-flagblock { gap: 6px; }
+.gecko-yard-flaghint  { line-height: 1.5; }
+
+
+/* ============================================================
+   SECTION 5.49 — THE YARD MAP, PHASE 4
+   ------------------------------------------------------------
+   The forklift's work list, the stock check and the yard's
+   figures.
+
+   YARD JOBS IS A HANDHELD SCREEN and is built as one: a single
+   column, cards instead of rows, 44px targets, the container
+   number the biggest thing on the card, and the actions at the
+   bottom where a thumb is. It does not become a table on a
+   desktop — the same driver uses both, and a layout that
+   changes shape is a layout they have to learn twice.
+   ============================================================ */
+
+/* ── the work list ── */
+.gecko-jobs       { gap: 12px; padding-bottom: 72px; }
+.gecko-jobs-tabs  { gap: 12px; align-items: center; }
+.gecko-jobs-mine  { gap: 6px; font-size: 13px; cursor: pointer; }
+.gecko-jobs-list  { gap: 10px; }
+
+/* One job. Wide enough to read at arm's length, never wider than a phone. */
+.gecko-job {
+  padding: 12px 14px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  max-width: 560px;
+}
+.gecko-job-done, .gecko-job-cancelled { opacity: 0.75; }
+.gecko-job-head { gap: 8px; align-items: center; }
+.gecko-job-box {
+  font-family: var(--gecko-font-mono);
+  font-size: 20px;
+  font-weight: 800;
+  letter-spacing: 0.01em;
+  color: var(--gecko-text-primary);
+  text-decoration: none;
+}
+.gecko-job-box:hover { text-decoration: underline; }
+.gecko-job-type            { font-size: 10px; font-weight: 800; border: 1px solid var(--gecko-border); }
+.gecko-job-type-put_away   { background: var(--gecko-primary-50); color: var(--gecko-primary-700); }
+.gecko-job-type-relocate   { background: var(--gecko-warning-50); color: var(--gecko-warning-700); }
+.gecko-job-type-pull       { background: var(--gecko-success-50); color: var(--gecko-success-700); }
+.gecko-job-pri             { font-family: var(--gecko-font-mono); font-size: 10px; }
+.gecko-job-age             { margin-left: auto; }
+
+.gecko-job-route { gap: 10px; align-items: center; font-size: 13px; }
+.gecko-job-where { display: inline-flex; flex-direction: column; gap: 1px; }
+.gecko-job-why   { line-height: 1.5; }
+
+.gecko-job-dig {
+  gap: 8px;
+  padding: 8px 10px;
+  border-radius: var(--gecko-radius-md);
+  background: var(--gecko-warning-50);
+  color: var(--gecko-warning-700);
+  font-size: 12px;
+  align-items: flex-start;
+}
+
+/* 44px: a gloved thumb on a 7-inch handheld. */
+.gecko-job-actions { gap: 8px; margin-top: 2px; }
+.gecko-job-btn     { min-height: 44px; min-width: 96px; font-size: 14px; }
+
+/* The planner's order button, pinned low right where a thumb rests. */
+.gecko-jobs-fab {
+  position: fixed;
+  right: 20px;
+  bottom: 20px;
+  z-index: 30;
+  min-height: 52px;
+  box-shadow: var(--gecko-shadow-lg);
+}
+
+/* ── the sheets (done, cancel, order) ── */
+.gecko-sheet             { gap: 16px; }
+.gecko-sheet-footer      { width: 100%; gap: 12px; }
+.gecko-sheet-actions     { gap: 8px; }
+.gecko-sheet-fields      { gap: 12px; }
+.gecko-sheet-where       { gap: 8px; }
+.gecko-sheet-radio       { gap: 8px; font-size: 13px; cursor: pointer; min-height: 32px; align-items: center; }
+.gecko-sheet-radio-row   { gap: 18px; }
+.gecko-sheet-note        { line-height: 1.6; }
+.gecko-sheet-ok          { gap: 6px; color: var(--gecko-success-700); font-weight: 700; }
+.gecko-sheet-error       { gap: 10px; align-items: flex-start; }
+.gecko-sheet-error-title { font-weight: 600; }
+
+/* ── the stock check ── */
+.gecko-checks      { gap: 14px; }
+.gecko-checks-back { align-self: flex-start; }
+.gecko-checks-none { padding: 18px; }
+.gecko-checks-ok   { color: var(--gecko-success-600); }
+.gecko-checks-no   { color: var(--gecko-error-600); }
+
+.gecko-checks-summary {
+  display: grid;
+  grid-template-columns: repeat(7, minmax(0, 1fr));
+  gap: 8px;
+}
+@media (max-width: 900px) { .gecko-checks-summary { grid-template-columns: repeat(4, minmax(0, 1fr)); } }
+@media (max-width: 560px) { .gecko-checks-summary { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+.gecko-checks-count {
+  padding: 10px 12px;
+  border: 1px solid var(--gecko-border);
+  border-radius: var(--gecko-radius-md);
+  background: var(--gecko-bg-surface);
+  text-align: center;
+}
+.gecko-checks-count-value { font-family: var(--gecko-font-mono); font-size: 20px; font-weight: 800; }
+.gecko-checks-count-success { border-color: var(--gecko-success-600); }
+.gecko-checks-count-warning { border-color: var(--gecko-warning-600); }
+.gecko-checks-count-danger  { border-color: var(--gecko-error-600); }
+
+/* The walk: where I am, then box after box. One column, big targets. */
+.gecko-scan           { gap: 12px; max-width: 640px; }
+.gecko-scan-head      { gap: 12px; align-items: center; }
+.gecko-scan-pickers   { gap: 8px; align-items: center; }
+.gecko-scan-tiers     { gap: 6px; align-items: center; }
+.gecko-scan-tier-box  { font-family: var(--gecko-font-mono); font-size: 9px; opacity: 0.8; margin-left: 4px; }
+.gecko-scan-last {
+  gap: 8px;
+  align-items: center;
+  margin-top: 8px;
+  padding: 8px 10px;
+  border: 1px solid var(--gecko-border);
+  border-radius: var(--gecko-radius-md);
+}
+.gecko-scan-last-success { border-color: var(--gecko-success-600); background: var(--gecko-success-50); }
+.gecko-scan-last-warning { border-color: var(--gecko-warning-600); background: var(--gecko-warning-50); }
+.gecko-scan-last-danger  { border-color: var(--gecko-error-600); background: var(--gecko-error-50); }
+.gecko-scan-last-neutral { background: var(--gecko-bg-subtle); }
+
+/* ── the figures ── */
+.gecko-kpis            { padding-bottom: 40px; }
+.gecko-kpis-dates      { gap: 12px; align-items: flex-end; }
+.gecko-kpis-dates-note { padding-bottom: 6px; }
+.gecko-kpis-split {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 16px;
+  align-items: start;
+}
+@media (max-width: 900px) { .gecko-kpis-split { grid-template-columns: minmax(0, 1fr); } }
+.gecko-kpis-blocks { min-width: 900px; }
+.gecko-kpis-sort {
+  border: 0;
+  background: none;
+  padding: 0;
+  font: inherit;
+  color: inherit;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+}
+
+
+/* ============================================================
+   SECTION 5.50 — THE YARD MAP, PHASE 5
+   ------------------------------------------------------------
+   The machines, the expected departure, pre-staging, and the
+   yard in three dimensions.
+
+   The 3D stage is the only piece here with real layout of its
+   own: a canvas that fills its card, and a tooltip that follows
+   the pointer in PAGE coordinates (it is a div over the canvas,
+   not anything in the scene, because text in WebGL is a font
+   atlas and a lot of trouble for one line).
+   ============================================================ */
+
+/* ── the machine a cab drives ── */
+.gecko-jobs-machine { gap: 6px; align-items: center; }
+
+/* ── expected departure ── */
+.gecko-strip-departure { border-top: 1px solid var(--gecko-border); }
+.gecko-departure       { gap: 8px; align-items: center; padding: 10px 18px; }
+.gecko-departure-when  { font-weight: 600; font-size: 13px; }
+.gecko-departure-note  { font-style: italic; }
+
+/* The date the yard scored a suggestion against. */
+.gecko-slotpick-leaves { padding: 2px 0; }
+
+/* ── pre-staging ── */
+.gecko-prestage             { gap: 14px; }
+.gecko-prestage-table       { min-width: 980px; }
+.gecko-prestage-due         { font-weight: 600; }
+.gecko-prestage-late        { font-weight: 700; color: var(--gecko-error-700); }
+.gecko-prestage-ontop       { gap: 6px; align-items: center; }
+.gecko-prestage-ontop-box   { font-size: 11px; color: var(--gecko-text-secondary); }
+
+/* ── the yard in 3D ── */
+.gecko-yard3d       { gap: 12px; }
+.gecko-yard3d-free  { gap: 6px; font-size: 13px; cursor: pointer; }
+.gecko-yard3d-stage { padding: 0; overflow: hidden; position: relative; }
+.gecko-yard3d-canvas {
+  width: 100%;
+  height: 68vh;
+  min-height: 360px;
+  display: block;
+  touch-action: none;          /* orbit with a finger, not the page scrolling */
+}
+.gecko-yard3d-canvas canvas { display: block; }
+/* Fixed, not absolute: the pointer position is in client pixels. */
+.gecko-yard3d-tip {
+  position: fixed;
+  z-index: 40;
+  pointer-events: none;
+  max-width: 280px;
+  padding: 8px 10px;
+  border: 1px solid var(--gecko-border);
+  border-radius: var(--gecko-radius-md);
+  background: var(--gecko-bg-surface);
+  box-shadow: var(--gecko-shadow-lg);
+  font-size: 12px;
+}
+.gecko-yard3d-tip-box { font-family: var(--gecko-font-mono); font-weight: 800; font-size: 13px; }
+
+/* ── the machines table ── */
+.gecko-machines { padding-bottom: 32px; }
+
+
+/* ============================================================
+   SECTION 5.51 — THE ERROR BANNER
+   ------------------------------------------------------------
+   One failed write, said once. The box itself is .gecko-alert
+   (§5.5); this section is what goes INSIDE it — the explanation,
+   the reference support needs, and the one or two things the
+   clerk can do next.
+
+   The compact variant exists for the gate's card header and a
+   form's action bar, where a full alert box would push the
+   buttons off the row. It is the same content at 11px, not a
+   different message.
+   ============================================================ */
+
+.gecko-error-banner-body {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  min-width: 0;
+}
+
+/* What the SCREEN knows that the server does not — whether money moved. */
+.gecko-error-banner-note { font-weight: 600; }
+
+/* ── the reference ── */
+.gecko-error-banner-ref {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin-top: 2px;
+  font-size: var(--gecko-text-xs);
+  opacity: 0.85;
+}
+.gecko-error-banner-ref-id {
+  font-family: var(--gecko-font-mono);
+  font-weight: 700;
+  /* One click selects the whole id where the clipboard is refused. */
+  user-select: all;
+}
+.gecko-error-banner-copy {
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+  padding: 1px 5px;
+  border: 1px solid currentColor;
+  border-radius: var(--gecko-radius-sm);
+  background: transparent;
+  color: inherit;
+  font: inherit;
+  opacity: 0.7;
+  cursor: pointer;
+  transition: opacity var(--gecko-transition-fast);
+}
+.gecko-error-banner-copy:hover { opacity: 1; }
+
+/* ── what to do next ── */
+.gecko-error-banner-actions {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-top: 4px;
+}
+.gecko-error-banner-link {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 0;
+  border: 0;
+  background: none;
+  color: inherit;
+  font: inherit;
+  font-weight: 700;
+  text-decoration: underline;
+  cursor: pointer;
+}
+.gecko-error-banner-link:disabled { opacity: 0.6; cursor: default; }
+
+/* ── the compact variant ── */
+.gecko-error-note {
+  display: flex;
+  align-items: flex-start;
+  gap: 5px;
+  padding: 4px 8px;
+  border-radius: 6px;
+  font-size: 11px;
+  line-height: 1.4;
+}
+.gecko-error-note-error   { background: var(--gecko-error-50);   color: var(--gecko-error-700); }
+.gecko-error-note-warning { background: var(--gecko-warning-50); color: var(--gecko-warning-800); }
+.gecko-error-note .gecko-alert-title { font-weight: 700; }
+
+[data-theme="dark"] .gecko-error-note-error   { background: rgba(239,68,68,0.12);  color: var(--gecko-error-300); }
+[data-theme="dark"] .gecko-error-note-warning { background: rgba(245,158,11,0.12); color: var(--gecko-warning-300); }
+
+/* Five field errors read as a list, not as one long sentence. */
+.gecko-error-banner-fields {
+  margin: 4px 0 0 18px;
+  padding: 0;
+  font-size: var(--gecko-text-xs);
+}
+
+
+/* ── §49  What a grid is filtered by, and who an invoice is for ───────────
+   Two things a GECKO clerk could not see on Unbilled Orders on 2026-11-01:
+   WHICH filters the grid in front of them was actually answering — a company
+   typed and never picked was dropped in silence — and, once several payers'
+   lines were ticked, any way to raise an invoice at all. Chips answer the
+   first; a payer chooser answers the second. */
+
+.gecko-filter-chips {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.gecko-filter-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  /* A Thai company name plus its code is long; the chip ellipsises rather than
+     pushing the row it is in off the card. */
+  max-width: 340px;
+  padding: 3px 4px 3px 9px;
+  border: 1px solid var(--gecko-primary-200);
+  border-radius: 999px;
+  background: var(--gecko-primary-50);
+  color: var(--gecko-primary-700);
+  font-size: var(--gecko-text-xs);
+  line-height: 1.6;
+}
+.gecko-filter-chip-label { opacity: 0.72; }
+.gecko-filter-chip-value {
+  font-weight: var(--gecko-font-weight-semibold);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.gecko-filter-chip-x {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex: 0 0 auto;
+  width: 18px;
+  height: 18px;
+  padding: 0;
+  border: 0;
+  border-radius: 50%;
+  background: none;
+  color: inherit;
+  cursor: pointer;
+}
+.gecko-filter-chip-x:hover { background: var(--gecko-primary-200); }
+.gecko-filter-chip-x:focus-visible {
+  outline: 2px solid var(--gecko-primary-400);
+  outline-offset: 1px;
+}
+
+[data-theme="dark"] .gecko-filter-chip {
+  background: rgba(59, 130, 246, 0.14);
+  border-color: rgba(59, 130, 246, 0.30);
+  color: var(--gecko-primary-200);
+}
+[data-theme="dark"] .gecko-filter-chip-x:hover { background: rgba(59, 130, 246, 0.28); }
+
+/* The filter panel has moved on from the grid. Beside Search, where the clerk
+   is already looking, and pushed left of the buttons by the auto margin. */
+.gecko-unbilled-unapplied {
+  margin-right: auto;
+  color: var(--gecko-warning-700);
+  font-weight: var(--gecko-font-weight-medium);
+}
+[data-theme="dark"] .gecko-unbilled-unapplied { color: var(--gecko-warning-300); }
+
+/* One invoice is one payer, so the modal asks which rather than refusing. */
+.gecko-payer-pick {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  padding: 12px;
+  border: 1px solid var(--gecko-border);
+  border-radius: var(--gecko-radius-md);
+  background: var(--gecko-bg-subtle);
+}
+.gecko-payer-pick-head {
+  font-size: var(--gecko-text-sm);
+  color: var(--gecko-text-secondary);
+}
+
+/* Carries .gecko-radio too, so the dot is the app's own radio (§5.x). */
+.gecko-payer-choice {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  width: 100%;
+  padding: 8px 10px;
+  border: 1px solid transparent;
+  border-radius: var(--gecko-radius-sm);
+  background: var(--gecko-bg-surface);
+}
+.gecko-payer-choice + .gecko-payer-choice { margin-top: 4px; }
+.gecko-payer-choice:hover { border-color: var(--gecko-border); }
+.gecko-payer-choice-on {
+  border-color: var(--gecko-primary-400);
+  background: var(--gecko-primary-50);
+}
+[data-theme="dark"] .gecko-payer-choice-on { background: rgba(59, 130, 246, 0.12); }
+
+.gecko-payer-choice-who {
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+  flex: 1 1 auto;
+  min-width: 0;
+}
+.gecko-payer-choice-name {
+  font-weight: var(--gecko-font-weight-semibold);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.gecko-payer-choice-sum {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 1px;
+  flex: 0 0 auto;
+  text-align: right;
+}

@@ -7,6 +7,7 @@ import { Icon } from '@/components/ui/Icon';
 import { useApiList } from '@/lib/api/use-api';
 import { apiSend } from '@/lib/api/client';
 import { ApiError } from '@/lib/api/problem';
+import { ErrorBanner } from '@/components/ui/ErrorBanner';
 
 /**
  * LIVE — POST /api/tos/vessel-calls (gecko_tos PLAN §4.1, batch A).
@@ -310,14 +311,12 @@ export default function NewVesselCallPage() {
         </div>
       </div>
 
-      {error && (
-        <div role="alert" className="gecko-alert gecko-alert-error gecko-row" style={{ gap: 10, alignItems: 'flex-start' }}>
-          <Icon name="alertCircle" size={16} />
-          <div>
-            <div style={{ fontWeight: 600 }}>{error.status === 409 ? error.message : errorCount > 1 ? `${errorCount} things to fix before this call can be saved.` : error.message}</div>
-          </div>
-        </div>
-      )}
+      <ErrorBanner
+        error={error}
+        heading={error?.status !== 409 && errorCount > 1
+          ? `${errorCount} things to fix before this call can be saved.`
+          : undefined}
+      />
 
       {/* ── 1: The call ─────────────────────────────────────────────────── */}
       <SectionCard title="1 · The call" sub="Which ship, where, and when — codes are checked against master data on save" accent="var(--gecko-primary-500)">

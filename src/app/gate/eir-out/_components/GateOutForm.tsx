@@ -18,12 +18,15 @@ import {
   cancelPickup, departVisit, isPlanned, saveTrip,
   type TripRefusalRow, type TripSaveResult, type VisitPickup,
 } from '@/lib/api/gate-trips';
+import { YARD_MANAGE } from '@/lib/api/yard-map';
+import { BoxesOnTop } from '@/components/yard/BoxesOnTop';
 import { GateField } from '../../_components/GateField';
 import { TruckInYardPicker, type OpenVisit } from '../../_components/TruckInYardPicker';
 import {
   blankGateOutTruck, isBlocked, releaseIssues, releaseToTripRow, rowFor, yardChooses,
   type GateOutTruck, type ReleaseRow,
 } from './gate-out-draft';
+import { ErrorBanner } from '@/components/ui/ErrorBanner';
 
 /**
  * GATE OUT — the truck in front of the clerk, and what it came to collect.
@@ -42,12 +45,14 @@ import {
  * that has gone.
  */
 export function GateOutForm() {
-  const { can } = useSession();
+  const { can, canAt } = useSession();
   const { branch } = useFacility();
   const toast = useToast();
   const branchId = branch?.branchId ?? '';
   const mayRecord = can(TOS_PERMISSIONS.gateCreate);
   const mayOverride = can(TOS_PERMISSIONS.gateOverride);
+  /** Digging a box out is the yard's job, not the gate's (yard map Phase 3). */
+  const canMoveYard = canAt(YARD_MANAGE, branchId);
   const { conditions } = useConditions();
 
   const [truck, setTruck] = useState<GateOutTruck>(blankGateOutTruck);
@@ -293,7 +298,7 @@ export function GateOutForm() {
         </div>
       </div>
 
-      {error && <div className="gecko-alert gecko-alert-error">{error.title ?? error.message}</div>}
+      <ErrorBanner error={error} fallback="The truck could not be gated out." />
 
       {/* ── 2 · what it came to collect ─────────────────────────────────── */}
       {picked && (
@@ -364,6 +369,14 @@ export function GateOutForm() {
                             <span>{f.message}</span>
                           </div>
                         ))}
+                        {/* THE DIG. The warning above says how many boxes stand
+                            on this one; this lists them in the order the yard
+                            must lift them, each with a Move for whoever may.
+                            Not a blocker: the truck is not turned away for it. */}
+                        {r.findings.some(f => f.code === 'BOXES_ON_TOP') && (
+                          <BoxesOnTop containerNo={r.containerNo.toUpperCase()} canMove={canMoveYard}
+                            onMoved={() => void look(r.key)} />
+                        )}
                       </div>
                     )}
 

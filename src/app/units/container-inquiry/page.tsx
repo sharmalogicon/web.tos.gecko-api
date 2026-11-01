@@ -35,6 +35,7 @@ import {
   blankInquiryQuery, dayEnd, dayStart, INQUIRY_PERMISSION, inquiryPath, SORTS,
   STATUS_LABEL, type InquiryQuery, type InquiryRow,
 } from '@/lib/api/container-inquiry';
+import { ErrorBanner } from '@/components/ui/ErrorBanner';
 
 /** A timestamp that fits a narrow column: the day, with the clock beneath. */
 function Stamp({ iso }: { iso: string }) {
@@ -171,15 +172,7 @@ export default function ContainerInquiryPage() {
         </div>
       )}
 
-      {error && (
-        <div role="alert" className="gecko-alert gecko-alert-error">
-          <Icon name="alertCircle" size={18} />
-          <div>
-            <strong>{error.status === 403 ? 'That depot is not one you cover' : error.title}</strong>
-            {error.explanation && <div>{error.explanation}</div>}
-          </div>
-        </div>
-      )}
+      <ErrorBanner error={error} heading={error?.status === 403 ? 'That depot is not one you cover' : undefined} />
 
       <section className="gecko-table-card gecko-table-card-menus">
         <div className="gecko-table-toolbar">

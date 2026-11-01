@@ -5,6 +5,7 @@ import { Icon } from '@/components/ui/Icon';
 import { ExportButton } from '@/components/ui/ExportButton';
 import { useApiList } from '@/lib/api/use-api';
 import { formatDateTime } from '@/lib/format';
+import { ErrorBanner } from '@/components/ui/ErrorBanner';
 
 /**
  * LIVE against gecko_tos (vessel.vessel_call + lines + cut-offs), batch A.
@@ -253,13 +254,11 @@ export default function VesselSchedulePage() {
         </div>
       </div>
 
-      {error && (
-        <div role="alert" className="gecko-alert gecko-alert-warning gecko-row" style={{ gap: 10 }}>
-          <Icon name="alertCircle" size={16} />
-          <span>{error.message}</span>
-          {error.status === 401 && <Link href="/login" className="gecko-link">Sign in</Link>}
-        </div>
-      )}
+      <ErrorBanner
+        error={error}
+        tone="warning"
+        action={error?.status === 401 ? <Link href="/login" className="gecko-link">Sign in</Link> : undefined}
+      />
 
       {/* KPIs for the visible month */}
       <div className="gecko-kpi-strip gecko-kpi-strip-5">

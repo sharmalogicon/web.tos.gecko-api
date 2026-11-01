@@ -415,6 +415,12 @@ export interface GateTransactionRequest {
   positionText?: string | null;
   checkDigitOverrideReason?: string | null;
   lateOverrideReason?: string | null;
+  /**
+   * WHY A SLOT THAT BREAKS THE YARD'S STACKING RULES IS BEING USED ANYWAY
+   * (yard map Phase 3). Needs `tos.gate.override` at the depot; from anyone
+   * else it is a 400 on this field. It is kept on the box's gate-in history.
+   */
+  slotOverrideReason?: string | null;
   remarks?: string | null;
   materialCode?: string | null;
   maxGrossWeightKg?: number | null;

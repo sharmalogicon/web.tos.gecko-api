@@ -21,6 +21,7 @@ import {
   GATE_API, attachmentsPath, eirPath, formatBytes, formatKg,
   type ContainerHolds, type EirDetail, type GateAttachment, type Survey,
 } from '@/lib/api/gate-eir';
+import { ErrorBanner } from '@/components/ui/ErrorBanner';
 
 /**
  * EIR DETAIL — one gate transaction, live against gecko_tos.
@@ -187,13 +188,10 @@ export function EirDetailView({ id }: { id: string }) {
   if (eir.error) {
     return (
       <div className="gecko-stack gecko-stack-xl" style={{ maxWidth: 'var(--gecko-container-max)', margin: '0 auto' }}>
-        <div className="gecko-alert gecko-alert-error">
-          <Icon name="alertCircle" size={18} />
-          <div>
-            <div style={{ fontWeight: 600 }}>{eir.error.status === 404 ? 'No such EIR at your depots' : eir.error.title}</div>
-            {eir.error.explanation && <div>{eir.error.explanation}</div>}
-          </div>
-        </div>
+        <ErrorBanner
+          error={eir.error}
+          heading={eir.error.status === 404 ? 'No such EIR at your depots' : undefined}
+        />
         <Link href="/gate/eir-in" className="gecko-btn gecko-btn-ghost gecko-btn-sm">Back to the register</Link>
       </div>
     );

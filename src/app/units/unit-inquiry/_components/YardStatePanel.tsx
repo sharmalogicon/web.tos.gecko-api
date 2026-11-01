@@ -8,6 +8,7 @@ import { ApiError } from '@/lib/api/problem';
 import {
   putsOnDamageHold, setEmrRemarks, setVisitCondition, type VisitStateResponse,
 } from '@/lib/api/container-master';
+import { ErrorBanner } from '@/components/ui/ErrorBanner';
 
 /**
  * THE BOX AS IT STANDS — Vector's "Container Status" and "Update EMR Remarks".
@@ -151,16 +152,11 @@ function YardState({ which, visitId, inYard, conditionCode, gradeCode, emrRemark
           {why && <span className="gecko-cm-readonly">{why}</span>}
         </div>
 
-        {stateError && stateError.status !== 400 && (
-          <div className="gecko-alert gecko-alert-error">
-            <Icon name="alertCircle" size={18} />
-            <div>
-              <strong>{stateError.title}</strong>
-              {stateError.status === 409
-                ? <div>The box gated out while this was open. Re-read the page.</div>
-                : stateError.explanation && <div>{stateError.explanation}</div>}
-            </div>
-          </div>
+        {stateError?.status !== 400 && (
+          <ErrorBanner
+            error={stateError}
+            detail={stateError?.status === 409 ? 'The box gated out while this was open. Re-read the page.' : undefined}
+          />
         )}
 
         <FormGrid columns={3}>
@@ -228,17 +224,12 @@ function YardState({ which, visitId, inYard, conditionCode, gradeCode, emrRemark
           <span className="gecko-cell-meta">Shown to the gate as a note when the box goes out.</span>
         </div>
 
-        {emrError && (
-          <div className="gecko-alert gecko-alert-error">
-            <Icon name="alertCircle" size={18} />
-            <div>
-              <strong>{emrError.title}</strong>
-              {emrError.status === 409
-                ? <div>The box gated out while this was open.</div>
-                : <div>{emrError.forField('remarks') ?? emrError.explanation}</div>}
-            </div>
-          </div>
-        )}
+        <ErrorBanner
+          error={emrError}
+          detail={emrError?.status === 409
+            ? 'The box gated out while this was open.'
+            : emrError?.forField('remarks')}
+        />
 
         <textarea className="gecko-textarea" rows={3} value={remarks} disabled={locked} maxLength={500}
           placeholder="Awaiting line approval for the door repair"

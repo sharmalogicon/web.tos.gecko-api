@@ -8,6 +8,7 @@ import { EmptyState } from '@/components/ui/EmptyState';
 import { ConfirmDialog } from '@/components/ui/ConfirmDialog';
 import { useToast } from '@/components/ui/Toast';
 import { ApiError } from '@/lib/api/problem';
+import { ErrorBanner } from '@/components/ui/ErrorBanner';
 
 /**
  * The one editable table every small master on the Lookups screen uses
@@ -57,6 +58,15 @@ interface Props<T> {
   cannotDelete?: (row: T) => string | null;
   deleteLabel?: (row: T) => string;
   deleteMessage?: (row: T) => string;
+  /**
+   * ONE MORE THING THIS ROW CAN DO, beside Edit and Delete.
+   *
+   * For an action that belongs to the row rather than to a field: generating a
+   * yard block's slots is the first. It is shown only to someone who may
+   * change the row (the actions column is theirs), and only while nothing is
+   * being edited — a half-typed row is not a row to act on.
+   */
+  rowActions?: (row: T) => React.ReactNode;
   /** Text the search box matches against. */
   searchText: (row: T) => string;
   noun: string;
@@ -152,7 +162,7 @@ function display<T>(col: Column<T>, value: unknown): React.ReactNode {
 
 export function EditableTable<T>({
   columns, rows, loading, error, rowKey, blank, canManage, onSave, onDelete, cannotDelete,
-  deleteLabel, deleteMessage, searchText, noun, toolbar, note, search: serverSearch, onSearchChange, footer,
+  deleteLabel, deleteMessage, rowActions, searchText, noun, toolbar, note, search: serverSearch, onSearchChange, footer,
 }: Props<T>) {
   const { toast } = useToast();
   const [localSearch, setLocalSearch] = useState('');
@@ -240,6 +250,7 @@ export function EditableTable<T>({
               </div>
             ) : (
               <div className="gecko-row" style={{ gap: 2, justifyContent: 'flex-end' }}>
+                {!isNew && editing === null && rowActions?.(row)}
                 <button className="gecko-btn gecko-btn-ghost gecko-btn-sm" onClick={() => start(row)} disabled={editing !== null} aria-label={`Edit ${key}`}>
                   <Icon name="edit" size={13} />
                 </button>
@@ -276,23 +287,15 @@ export function EditableTable<T>({
         )}
       </div>
 
-      {error && (
-        <div role="alert" className="gecko-alert gecko-alert-error gecko-row" style={{ gap: 10 }}>
-          <Icon name="alertCircle" size={16} /><span>{error.message}</span>
-        </div>
-      )}
-      {unplacedError && (
-        <div role="alert" className="gecko-alert gecko-alert-error gecko-row" style={{ gap: 10 }}>
-          <Icon name="alertCircle" size={16} /><span>{unplacedError.explanation ?? unplacedError.message}</span>
-        </div>
-      )}
+      <ErrorBanner error={error} />
+      <ErrorBanner error={unplacedError} />
 
       <div className="gecko-table-card">
         <table className="gecko-table gecko-table-compact">
           <thead>
             <tr>
               {columns.map(c => <th key={c.key} title={c.hint} style={c.width ? { width: c.width } : undefined}>{c.label}{c.required && editing !== null ? ' *' : ''}</th>)}
-              {canManage && <th style={{ width: 110 }} />}
+              {canManage && <th style={{ width: rowActions ? 190 : 110 }} />}
             </tr>
           </thead>
           <tbody>

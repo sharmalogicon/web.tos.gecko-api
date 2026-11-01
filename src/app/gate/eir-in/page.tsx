@@ -27,10 +27,11 @@ import {
 import { instantFromLocalInput, localInputValue } from '@/lib/format';
 import {
   DEFAULT_CONDITION, MODE_LABELS, backDateIssue, beforeLastMoveIssue, blankMove, boxLooksRight,
-  derivedMode, moveToTripRow,
+  canSaveAgain, chargeNote, derivedMode, moveToTripRow,
   normaliseBox,
   type MoveDraft, type QuoteLineLike, type SettledLike, type TruckDetails,
 } from './_components/visit-moves';
+import { ErrorBanner } from '@/components/ui/ErrorBanner';
 
 /**
  * GATE IN — one truck, every box on it, one Save.
@@ -485,7 +486,15 @@ export default function GateInPage() {
     setSaveError(null);
     setTypeAsk(null);
 
-    // Agreeing to a type change is a new attempt, so it takes a new key.
+    /**
+     * Agreeing to a type change is a new attempt, so it takes a new key.
+     *
+     * EVERY OTHER RETRY KEEPS THE KEY IT HAD — and that is what makes "Save
+     * again" safe to offer after a crash or a timeout, when nobody can know
+     * whether the money moved. The same key replays the first answer instead of
+     * charging again. Minting a fresh one here would turn one retry into a
+     * second payment, so this line does not get "simplified".
+     */
     const key = acceptTypeChange || !idempotencyKey ? crypto.randomUUID() : idempotencyKey;
 
     /**
@@ -724,26 +733,18 @@ export default function GateInPage() {
                   Small, because it sits in a header: the detail is one line. */}
               <div className="gecko-gatein-top-errors">
                 {overLimit && (
-                  <span className="gecko-gatein-top-error">
+                  <span className="gecko-error-note gecko-error-note-error">
                     <Icon name="alertCircle" size={12} />
                     A truck carries 1 × 40 ft or 2 × 20 ft each way. Take a box off.
                   </span>
                 )}
-                {saveError && (
-                  <span className="gecko-gatein-top-error">
-                    <Icon name="alertCircle" size={12} />
-                    <span>
-                      <strong>{saveError.title ?? saveError.message}</strong>
-                      {' '}{saveError.explanation ?? 'Nothing was charged.'}
-                      {saveError.status === 409 && (
-                        <button className="gecko-gatein-top-retry" disabled={saving}
-                          onClick={() => void save(false)}>
-                          {saving ? 'Saving…' : 'Save again'}
-                        </button>
-                      )}
-                    </span>
-                  </span>
-                )}
+                <ErrorBanner
+                  compact
+                  error={saveError}
+                  fallback="The truck could not be saved."
+                  note={chargeNote(saveError)}
+                  retry={canSaveAgain(saveError) ? { onClick: () => void save(false), busy: saving } : undefined}
+                />
               </div>
 
               <div className="gecko-row gecko-gap-2">
@@ -793,6 +794,7 @@ export default function GateInPage() {
                   open={openKey === m.key}
                   branchId={branchId}
                   takenBoxes={takenBoxes}
+                  takenSlots={moves.filter(r => r.key !== m.key && r.yardSlotId).map(r => r.yardSlotId)}
                   onPickBooking={box => void pickBooking(m.key, box)}
                   walkInTypes={walkInTypes}
                   draftId={draftId}

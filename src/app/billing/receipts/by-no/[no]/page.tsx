@@ -17,6 +17,7 @@ import { useParams, useRouter } from 'next/navigation';
 import { Icon } from '@/components/ui/Icon';
 import { ApiError } from '@/lib/api/problem';
 import { receiptByNo } from '@/lib/api/cash-bills';
+import { ErrorBanner } from '@/components/ui/ErrorBanner';
 
 export default function ReceiptByNoPage() {
   const params = useParams<{ no: string }>();
@@ -43,17 +44,13 @@ export default function ReceiptByNoPage() {
 
   return (
     <div className="gecko-stack gecko-stack-xl gecko-page-loading">
-      <div role="alert" className="gecko-alert gecko-alert-error">
-        <Icon name="alertCircle" size={18} />
-        <div>
-          <strong>{error.status === 404 ? 'No such receipt' : error.title}</strong>
-          <div>
-            {error.status === 404
-              ? <>Nothing in this depot is numbered <span className="gecko-mono">{no}</span>. It may belong to another branch.</>
-              : error.explanation ?? error.message}
-          </div>
-        </div>
-      </div>
+      <ErrorBanner
+        error={error}
+        heading={error.status === 404 ? 'No such receipt' : undefined}
+        detail={error.status === 404
+          ? <>Nothing in this depot is numbered <span className="gecko-mono">{no}</span>. It may belong to another branch.</>
+          : undefined}
+      />
       <div>
         <Link href="/billing/statement" className="gecko-btn gecko-btn-outline gecko-btn-sm">
           <Icon name="arrowLeft" size={13} /> Back to Billing

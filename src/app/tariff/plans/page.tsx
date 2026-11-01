@@ -12,6 +12,7 @@ import {
   customerOf, downloadBlankTariffTemplate, formatDate, STATUS_TONE, TYPE_TONE,
   type Schedule, type ScheduleLifecycle,
 } from '@/lib/api/revenue';
+import { ErrorBanner } from '@/components/ui/ErrorBanner';
 
 /**
  * LIVE against gecko_revenue (Gecko.Revenue).
@@ -153,13 +154,11 @@ export default function TariffPlansPage() {
         </div>
       </div>
 
-      {error && (
-        <div role="alert" className="gecko-alert gecko-alert-warning gecko-row" style={{ gap: 10 }}>
-          <Icon name="alertCircle" size={16} />
-          <span>{error.message}</span>
-          {error.status === 401 && <Link href="/login" className="gecko-link">Sign in</Link>}
-        </div>
-      )}
+      <ErrorBanner
+        error={error}
+        tone="warning"
+        action={error?.status === 401 ? <Link href="/login" className="gecko-link">Sign in</Link> : undefined}
+      />
 
       {/* Table */}
       <div className="gecko-table-card">

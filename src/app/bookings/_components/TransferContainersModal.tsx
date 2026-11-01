@@ -5,6 +5,7 @@ import { PartyName } from '@/components/ui/PartyName';
 import { Modal } from '@/components/ui/Modal';
 import { apiGet, apiSend } from '@/lib/api/client';
 import { ApiError } from '@/lib/api/problem';
+import { ErrorBanner } from '@/components/ui/ErrorBanner';
 
 /**
  * Move the ticked containers onto another order — Vector's
@@ -151,12 +152,7 @@ export function TransferContainersModal<TDetail>({
         </>
       }>
       <div className="gecko-stack">
-        {problem && (
-          <div role="alert" className="gecko-alert gecko-alert-error">
-            <Icon name="alertCircle" size={18} />
-            <div><strong>{problem.title}</strong><div>{problem.detail}</div></div>
-          </div>
-        )}
+        <ErrorBanner error={problem} />
         {blocked && (
           <div role="alert" className="gecko-alert gecko-alert-warning">
             <Icon name="alertCircle" size={16} /><span>{blocked}</span>

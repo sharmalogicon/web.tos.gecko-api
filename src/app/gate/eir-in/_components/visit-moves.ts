@@ -24,6 +24,7 @@ import type { TripDamage, TripRowResult, VasOption } from '@/lib/api/gate-trips'
 import { directionOfTrip, numberOrNull, requiredGateFields, textOrNull } from '@/lib/api/tos';
 import { formatDateTime } from '@/lib/format';
 import type { TripRow } from '@/lib/api/gate-trips';
+import type { YardLocationMode } from '@/lib/api/yard-map';
 import type { ApiError } from '@/lib/api/problem';
 
 export interface SealRow { sealNo: string; sealType: string; isIntact: boolean }
@@ -124,11 +125,41 @@ export interface MoveDraft {
 
   yardId: string;
   positionText: string;
+  /**
+   * THE SLOT THIS BOX WILL STAND IN, at a depot that records a place by slot
+   * (`yard.location_mode = SLOT`). Empty at an AREA depot, which keys
+   * `positionText` instead and knows nothing about slots.
+   *
+   * The API writes the box's position text itself from the slot's label, so
+   * `positionText` is NOT sent with a slot: two sources for one fact is how
+   * they come to disagree.
+   */
+  yardSlotId: string;
+  /**
+   * The slot's label ("A-B-03-2"), for the clerk's eye only — never sent.
+   * Kept on the draft rather than in the picker so a card that is collapsed
+   * and reopened still says which slot was picked.
+   */
+  yardSlotLabel: string;
   remarks: string;
 
   /** Revealed only when the server asks for them. */
   checkDigitOverrideReason: string;
   lateOverrideReason: string;
+  /**
+   * WHY THIS BOX MAY BREAK THE YARD'S STACKING RULES (Phase 3).
+   *
+   * The API refuses a slot that breaks a rule — a 20' box in a 40' block, a
+   * full reefer with no plug, another line's box in a reserved block — and
+   * takes it with a written reason from someone holding `tos.gate.override`.
+   * The reason is kept on the box's gate-in history, which is the point of it:
+   * next week somebody will ask why that box is standing there.
+   *
+   * Sent only with a slot, and only once it has been typed. A reason from
+   * someone without the permission is a 400 on `slotOverrideReason`, so the
+   * field is not even offered to them.
+   */
+  slotOverrideReason: string;
 
   /** Drop-off rows with a damaged condition carry a survey (§23.3). */
   damages: TripDamage[];
@@ -302,9 +333,12 @@ export function blankMove(trip: TripType, defaults: {
     nextLocationCode: '',
     yardId: '',
     positionText: '',
+    yardSlotId: '',
+    yardSlotLabel: '',
     remarks: '',
     checkDigitOverrideReason: '',
     lateOverrideReason: '',
+    slotOverrideReason: '',
     damages: [],
     vasMenu: [],
     vasTicked: [],
@@ -347,8 +381,8 @@ export const boxLooksRight = (value: string) => CONTAINER_PATTERN.test(normalise
  * before the POST rather than by a 400 after it. FULL/EMPTY comes from the
  * booking step the preflight returned, never from anything the clerk picked.
  */
-export function requiredFor(move: MoveDraft): string[] {
-  return requiredGateFields(
+export function requiredFor(move: MoveDraft, locationMode: YardLocationMode = 'AREA'): string[] {
+  const fields = requiredGateFields(
     move.trip,
     // Preflight is the authority once it has answered; before that the box the
     // clerk picked already said whether the move is full or empty.
@@ -358,6 +392,17 @@ export function requiredFor(move: MoveDraft): string[] {
     // and null means nothing is demanded — there is no rule to read yet.
     move.known?.nextStep ?? null,
   );
+  /**
+   * AT A SLOT DEPOT, THE POSITION IS THE SLOT.
+   *
+   * The order type's tick says a drop-off must say where the box goes; the
+   * depot's `yard.location_mode` says HOW. In SLOT mode there is no Position
+   * box on the card at all — the clerk picks a stack — so demanding
+   * `positionText` would hold up a Save that is complete, and the server would
+   * refuse the typed position anyway (it writes its own from the slot).
+   */
+  if (locationMode !== 'SLOT') return fields;
+  return fields.map(f => (f === 'positionText' ? 'yardSlotId' : f));
 }
 
 /**
@@ -387,7 +432,7 @@ export const onBooking = (m: MoveDraft): boolean =>
 export const mayMintNumber = (m: MoveDraft) => m.isWalkIn && m.trip === 'DROP_OFF_CONT';
 
 /** A row is ready when it has a plausible box and whatever the server demands. */
-export function rowIssues(move: MoveDraft): string[] {
+export function rowIssues(move: MoveDraft, locationMode: YardLocationMode = 'AREA'): string[] {
   const issues: string[] = [];
   if (!move.containerNo.trim()) {
     // Blank is allowed here, but then nothing can be read off a registry entry
@@ -408,7 +453,7 @@ export function rowIssues(move: MoveDraft): string[] {
    * that same hard-coded rule, so nothing changed for a depot that has not set
    * one.
    */
-  for (const field of requiredFor(move)) {
+  for (const field of requiredFor(move, locationMode)) {
     if (field === 'seals') {
       if (!move.seals.some(s => s.sealNo.trim())) issues.push('At least one seal');
       continue;
@@ -462,12 +507,27 @@ export function rowIssues(move: MoveDraft): string[] {
 const FIELD_LABELS: Record<string, string> = {
   yardId: 'Yard',
   positionText: 'Position',
+  yardSlotId: 'Slot',
   tareWeightKg: 'Tare weight',
   maxGrossWeightKg: 'Max gross weight',
   cargoWeightKg: 'Cargo weight',
   grossWeightKg: 'Gross weight',
   customsPermitNo: 'Customs permit no.',
 };
+
+/**
+ * THE YARD REFUSED THE SLOT ON A RULE, and said a supervisor may override it.
+ *
+ * It arrives two ways and means one thing. The big Save answers 409 with a
+ * YARD_RULE finding per broken rule on the row that broke it; the single
+ * gate-in answers 400 on `yardSlotId` with the same sentence. Both end "A
+ * supervisor may override", which is the server telling the screen to offer
+ * the reason box — so the screen asks the server rather than deciding for
+ * itself which refusals are overridable.
+ */
+export const needsSlotOverride = (m: MoveDraft, slotRefusal?: string | null): boolean =>
+  m.findings.some(f => f.code === 'YARD_RULE')
+  || /may override/i.test(slotRefusal ?? '');
 
 export const needsDigitReason = (m: MoveDraft) =>
   m.findings.some(f => f.code === 'CHECK_DIGIT' && f.severity === 'OVERRIDE');
@@ -691,13 +751,20 @@ export function moveToTripRow(move: MoveDraft, branchId: string, transactionAt: 
       paperlessCode: textOrNull(move.paperlessCode),
       nextLocationCode: textOrNull(move.nextLocationCode),
       yardId: move.yardId || null,
-      positionText: textOrNull(move.positionText),
+      yardSlotId: move.yardSlotId || null,
+      // With a slot the server writes the position text from its label. Sending
+      // a typed one as well would be a second answer to one question — and the
+      // API ignores it, so the screen must not pretend otherwise.
+      positionText: move.yardSlotId ? null : textOrNull(move.positionText),
       seals: move.seals
         .filter(s => s.sealNo.trim())
         .map(s => ({ sealNo: s.sealNo.trim().toUpperCase(), sealType: s.sealType, isIntact: s.isIntact })),
       remarks: textOrNull(move.remarks),
       checkDigitOverrideReason: textOrNull(move.checkDigitOverrideReason),
       lateOverrideReason: textOrNull(move.lateOverrideReason),
+      // Only with a slot: there are no stacking rules to override without one,
+      // and a reason sent by someone who may not override is a 400.
+      slotOverrideReason: move.yardSlotId ? textOrNull(move.slotOverrideReason) : null,
     },
   };
 
@@ -759,3 +826,39 @@ export const MODE_LABELS: Record<string, string> = {
   PICKUP: 'Pick-up',
   PICKUP_DROPOFF: 'Drop-off and pick-up',
 };
+
+/**
+ * WAS THE CUSTOMER CHARGED? Only the server knows, so only the server says.
+ *
+ * This screen used to append "Nothing was charged." to EVERY failure, which was
+ * a guess — and on a timeout or a crash mid-payment, a wrong one. Now:
+ *
+ *   - The API says so itself. A refusal it wrote carries `charged: false`,
+ *     because it took back whatever it had raised before answering.
+ *   - A 5xx, or no answer at all, leaves it UNKNOWN. The honest line is what to
+ *     do about it: pressing Save again cannot charge twice, because the screen
+ *     keeps the same Idempotency-Key for every retry of the same attempt — the
+ *     API replays the first answer rather than taking the money again.
+ *   - Anything else (a 400 on a field, a hold on a box) says nothing extra. The
+ *     server's own detail already tells the clerk what to fix.
+ */
+export function chargeNote(error: ApiError | null | undefined): string | null {
+  if (!error) return null;
+  if (error.extension<boolean>('charged') === false) return 'Nothing was charged.';
+  if (error.status === 0 || error.status >= 500)
+    return "If the truck's receipt did not print, Save again: the same Save is never charged twice.";
+  return null;
+}
+
+/**
+ * Offer the same Save again: a 409 the clerk may have resolved, and anything
+ * that never got a clean answer (5xx, no connection), where the attempt itself
+ * is what has to be repeated.
+ *
+ * NOT for missing numbering. Pressing Save again until an administrator sets up
+ * the series just fails again, and the banner already says whom to ask.
+ */
+export function canSaveAgain(error: ApiError | null | undefined): boolean {
+  if (!error || error.code === 'NUMBER_SERIES_MISSING') return false;
+  return error.status === 409 || error.status === 0 || error.status >= 500;
+}

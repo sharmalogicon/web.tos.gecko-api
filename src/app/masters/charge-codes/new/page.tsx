@@ -9,6 +9,7 @@ import { ApiError } from '@/lib/api/problem';
 import { createChargeCode, replaceVariants, useCommercialVocabulary } from '@/lib/api/charge-codes';
 import { ChargeCodeForm, EMPTY_CHARGE, chargeErrors, requestFromCharge, type ChargeFormValue } from '../_components/ChargeCodeForm';
 import { VariantsEditor, blankRow, requestFromRows, variantErrors, type VariantRow } from '../_components/VariantsEditor';
+import { ErrorBanner } from '@/components/ui/ErrorBanner';
 
 /**
  * New charge code: its fields and at least one billing row, saved in two calls
@@ -91,7 +92,7 @@ export default function NewChargeCodePage() {
       <div className="gecko-stack gecko-stack-xl" style={PAGE}>
         {header}
         {vocabularyError
-          ? <div role="alert" className="gecko-alert gecko-alert-error">{vocabularyError.message}</div>
+          ? <ErrorBanner error={vocabularyError} />
           : <div className="gecko-cell-meta">Loading…</div>}
       </div>
     );
@@ -118,16 +119,10 @@ export default function NewChargeCodePage() {
           </span>
         </div>
       )}
-      {apiError && (
-        <div role="alert" className="gecko-alert gecko-alert-error gecko-row">
-          <Icon name="alertCircle" size={16} />
-          <span>
-            {conflict
-              ? apiError.message
-              : Object.keys(apiError.fieldErrors).length > 0 ? 'Some values were refused — see the marked fields.' : apiError.message}
-          </span>
-        </div>
-      )}
+      <ErrorBanner
+        error={apiError}
+        detail={!conflict && apiError && Object.keys(apiError.fieldErrors).length > 0 ? 'Some values were refused — see the marked fields.' : undefined}
+      />
 
       <div className="gecko-card gecko-card-padded gecko-stack gecko-stack-md">
         <div className="gecko-form-section-title">Charge code</div>

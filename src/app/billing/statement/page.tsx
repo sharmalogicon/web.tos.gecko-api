@@ -52,6 +52,7 @@ import { SendToMenu, type InvoiceSendAction } from './_components/SendToMenu';
 import { StatementRegister } from './_components/StatementRegister';
 import { StatementSearchBox } from './_components/StatementSearchBox';
 import { candidateOf, ChargeAddModal, RegenerateModal, SendToInvoiceModal, WaiveSelectedModal } from './_components/StatementModals';
+import { ErrorBanner } from '@/components/ui/ErrorBanner';
 
 export default function BookingStatementPage() {
   return (
@@ -377,15 +378,7 @@ function Statement() {
       {/* VIEW A — the register */}
       {!orderNo && <StatementRegister onOpen={open} />}
 
-      {orderNo && statement.error && (
-        <div className="gecko-alert gecko-alert-error">
-          <Icon name="alertCircle" size={18} />
-          <div>
-            <strong>{statement.error.title}</strong>
-            {statement.error.explanation && <div>{statement.error.explanation}</div>}
-          </div>
-        </div>
-      )}
+      {orderNo && <ErrorBanner error={statement.error} />}
 
       {/* VIEW B — one booking */}
       {s && (
@@ -694,7 +687,11 @@ function Statement() {
       )}
       {dialog?.kind === 'send' && (
         <SendToInvoiceModal kind={dialog.action.kind} term={dialog.action.term}
-          selected={selected.map(candidateOf)} currency={cur} onClose={() => setDialog(null)} onDone={done} />
+          selected={selected.map(candidateOf)} currency={cur} onClose={() => setDialog(null)} onDone={done}
+          // A 409 means someone else invoiced these lines while the statement
+          // sat open: re-read it, keeping the ticks, so the modal narrows to
+          // what is genuinely left rather than arguing with a stale list.
+          onStale={() => statement.reload()} />
       )}
     </div>
   );

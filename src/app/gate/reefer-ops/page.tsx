@@ -33,6 +33,7 @@ import {
   toLocalInput, voidSession,
   type ReeferPower, type ReeferSession,
 } from '@/lib/api/reefer';
+import { ErrorBanner } from '@/components/ui/ErrorBanner';
 
 interface Branch { branchId: string; branchCode: string; displayName: string }
 
@@ -113,15 +114,7 @@ export default function ReeferPlugLogPage() {
         </div>
       </div>
 
-      {error && (
-        <div className="gecko-alert gecko-alert-error">
-          <Icon name="alertCircle" size={18} />
-          <div>
-            <div style={{ fontWeight: 600 }}>{error.title}</div>
-            {error.explanation && <div>{error.explanation}</div>}
-          </div>
-        </div>
-      )}
+      <ErrorBanner error={error} />
 
       {/* KPI strip — only what the log itself says */}
       <div className="gecko-reefer-kpi-strip">

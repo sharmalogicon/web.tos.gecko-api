@@ -6,6 +6,7 @@ import { Field } from '@/components/ui/FormGrid';
 import { useToast } from '@/components/ui/Toast';
 import { ApiError } from '@/lib/api/problem';
 import { PASSWORD_MAX_LENGTH, PASSWORD_MIN_LENGTH, changePassword } from '@/lib/api/client';
+import { ErrorBanner } from '@/components/ui/ErrorBanner';
 
 /**
  * CHANGING YOUR OWN PASSWORD.
@@ -72,15 +73,7 @@ export function ChangePasswordDialog({ onClose }: { onClose: () => void }) {
         </>
       }>
       <div className="gecko-stack gecko-stack-md">
-        {failure && (
-          <div className="gecko-alert gecko-alert-error">
-            <Icon name="alertCircle" size={16} />
-            <div>
-              <strong>{failure.title}</strong>
-              <div>{failure.forField('newPassword') ?? failure.explanation ?? failure.message}</div>
-            </div>
-          </div>
-        )}
+        <ErrorBanner error={failure} detail={failure?.forField('newPassword')} />
 
         <Field label="New password" required
           error={tooShort ? `At least ${PASSWORD_MIN_LENGTH} characters.` : undefined}

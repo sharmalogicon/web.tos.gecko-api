@@ -10,6 +10,7 @@ import {
   EDI_MESSAGES, createShippingLine, shippingLinesQueryPath, updateShippingLine,
   type LineRole, type SaveShippingLineRequest, type ShippingLine,
 } from '@/lib/api/shipping-lines';
+import { ErrorBanner } from '@/components/ui/ErrorBanner';
 
 interface LineForm extends Omit<SaveShippingLineRequest, 'rowVersion'> {
   nameEn: string;
@@ -147,11 +148,7 @@ export function LineModal({ line, readOnly, onClose, onSaved }: {
         </div>
 
         <div className="gecko-stack gecko-stack-xl gecko-flex-1" style={{ padding: '22px 24px', overflowY: 'auto' }}>
-          {error && (
-            <div role="alert" className="gecko-alert gecko-alert-error gecko-row" style={{ gap: 10 }}>
-              <Icon name="alertCircle" size={16} /><span>{error.message}</span>
-            </div>
-          )}
+          <ErrorBanner error={error} />
 
           {isNew && (
             <div>

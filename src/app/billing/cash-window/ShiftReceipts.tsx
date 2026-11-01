@@ -2,10 +2,11 @@
 import React, { useEffect, useState } from 'react';
 import { Icon } from '@/components/ui/Icon';
 import { apiGet } from '@/lib/api/client';
-import { ProblemAlert, problemOf, type Problem } from './ProblemAlert';
+import { ApiError, problemOf } from '@/lib/api/problem';
 import { formatBaht, type Receipt, type Shift, type ShiftReceipt } from '@/lib/api/window';
 import { VoidReceiptModal } from '../_components/VoidReceiptModal';
 import { statusLabel } from '@/lib/format';
+import { ErrorBanner } from '@/components/ui/ErrorBanner';
 
 const time = (iso: string) => new Date(iso).toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' });
 
@@ -23,7 +24,7 @@ export function ShiftReceipts({ shift, onReprint, mayVoid = false, onVoided }: {
   const [open, setOpen] = useState(false);
   const [voiding, setVoiding] = useState<ShiftReceipt | null>(null);
   const [rows, setRows] = useState<ShiftReceipt[] | null>(null);
-  const [error, setError] = useState<Problem | null>(null);
+  const [error, setError] = useState<ApiError | null>(null);
   const [opening, setOpening] = useState<string | null>(null);
 
   useEffect(() => {
@@ -55,7 +56,7 @@ export function ShiftReceipts({ shift, onReprint, mayVoid = false, onVoided }: {
       </button>
       {open && (
         <div style={{ marginTop: 8 }}>
-          {error && <ProblemAlert problem={error} style={{ marginBottom: 8 }} />}
+          {error && <ErrorBanner error={error} style={{ marginBottom: 8 }} />}
           {rows === null && !error && <div className="gecko-text-muted">Loading…</div>}
           {rows !== null && rows.length === 0 && <div className="gecko-text-muted">No receipts issued from this drawer yet.</div>}
           {rows !== null && rows.length > 0 && (

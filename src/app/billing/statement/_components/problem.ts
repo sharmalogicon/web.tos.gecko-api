@@ -1,4 +1,4 @@
-import { ApiError } from '@/lib/api/problem';
+import { ApiError, problemOf } from '@/lib/api/problem';
 
 /**
  * A failure in words a clerk can act on.
@@ -44,17 +44,19 @@ const MISSING: Record<string, { title: string; detail: string }> = {
   },
 };
 
-export function apiProblem(e: unknown, what: string): { title: string; detail: string } {
-  const err = e instanceof ApiError ? e : new ApiError(0, 'Could not reach the Gecko API.');
-  if ((err.status === 404 || err.status === 405) && MISSING[what]) return MISSING[what];
-  if (err.status === 409) {
-    return { title: 'Someone else changed this first', detail: `${err.title} Reload the statement and try again.` };
-  }
-  if (err.status === 403) {
-    return { title: 'Not your decision to make', detail: 'This needs the right that prices or waives a charge. Ask a supervisor.' };
-  }
-  if (err.status === 0) {
-    return { title: 'The Gecko API did not answer', detail: 'Nothing was changed. Check the connection and try again.' };
-  }
-  return { title: err.title || 'That did not work', detail: err.explanation ?? err.message };
+/**
+ * The wording above, and the failure it came from — so the shared banner can
+ * still show the reference support needs when the cause was a 5xx rather than
+ * one of the not-built-yet cases.
+ */
+export interface StatementProblem { title: string; detail: string; error: ApiError }
+
+export function apiProblem(e: unknown, what: string): StatementProblem {
+  const err = problemOf(e, 'Could not reach the Gecko API.');
+  const said = (title: string, detail: string): StatementProblem => ({ title, detail, error: err });
+  if ((err.status === 404 || err.status === 405) && MISSING[what]) return { ...MISSING[what], error: err };
+  if (err.status === 409) return said('Someone else changed this first', `${err.title} Reload the statement and try again.`);
+  if (err.status === 403) return said('Not your decision to make', 'This needs the right that prices or waives a charge. Ask a supervisor.');
+  if (err.status === 0) return said('The Gecko API did not answer', 'Nothing was changed. Check the connection and try again.');
+  return said(err.title || 'That did not work', err.explanation ?? err.message);
 }

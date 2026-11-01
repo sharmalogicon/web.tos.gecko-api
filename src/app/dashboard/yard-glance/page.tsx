@@ -1,354 +1,397 @@
 "use client";
-import React, { useEffect, useMemo, useState } from 'react';
+import React, { Suspense, useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import Link from 'next/link';
+import { usePathname, useRouter, useSearchParams } from 'next/navigation';
 import { Icon } from '@/components/ui/Icon';
 import { EmptyState } from '@/components/ui/EmptyState';
+import { PartyName } from '@/components/ui/PartyName';
+import { useFacility } from '@/lib/api/facility';
+import { useSession } from '@/lib/auth/session';
+import { ApiError } from '@/lib/api/problem';
+import { formatContainerNo } from '@/lib/api/tos';
+import { isWellFormedContainerNo, normaliseContainerNo } from '@/lib/api/container-story';
+import {
+  YARD_MANAGE, locateContainer, useYardMap, useYardSettings,
+  type YardLocation, type YardMapBlock, type YardMapTally,
+} from '@/lib/api/yard-map';
+import { StackView } from '@/components/yard/StackView';
+import { MoveBoxDialog } from '@/components/yard/MoveBoxDialog';
+import { OrderJobDialog } from '@/components/yard/OrderJobDialog';
+import {
+  CANVAS_H, CANVAS_W, GRID_PX, TYPE_STYLE, UNTYPED_STYLE,
+  blockBox, blockStyle, isPlaced, typeLabel,
+} from '@/components/yard/block-style';
+import { YardMapOff } from '@/components/yard/YardMapOff';
+import { ErrorBanner } from '@/components/ui/ErrorBanner';
 
-/* ──────────────────────────────────────────────────────────────────────────
-   Shared yard schema — mirrors /config/yard-zones + /gate/yard-view.
-   Reads the same localStorage template so the dashboard stays in sync with
-   what ops actually configured.
-   ────────────────────────────────────────────────────────────────────────── */
-
-type BlockType  = 'IMPORT' | 'EXPORT' | 'EMPTY' | 'REEFER' | 'DAMAGE' | 'HAZ' | 'OOG' | 'TRANSHIPMENT';
-type Allocation = 'OPEN' | 'LINE_RESERVED' | 'AGENT_RESERVED' | 'CUSTOMER_RESERVED';
-
-interface YardBlock {
-  id: string; code: string; type: BlockType;
-  bays: number; rows: number; tiers: number;
-  x: number; y: number;
-  allocation: Allocation; reservedParty: string;
-  isoAccepted: string[]; reeferPlugCount: number;
-}
-
-interface YardTemplate {
-  version: 1; yardId: string; name: string; savedAt: string;
-  canvas: { width: number; height: number; gridPx: number };
-  blocks: YardBlock[];
-}
-
-const STORAGE_KEY = 'gecko.yardTemplate.lcb.import-yard';
-const GRID_PX = 20;
-
-const BLOCK_TYPES: Record<BlockType, { label: string; fill: string; stroke: string; text: string }> = {
-  IMPORT:       { label: 'Import',  fill: '#dbeafe', stroke: '#2563eb', text: '#1e3a8a' },
-  EXPORT:       { label: 'Export',  fill: '#d1fae5', stroke: '#059669', text: '#064e3b' },
-  EMPTY:        { label: 'Empty',   fill: '#f3f4f6', stroke: '#6b7280', text: '#374151' },
-  REEFER:       { label: 'Reefer',  fill: '#cffafe', stroke: '#0891b2', text: '#155e75' },
-  DAMAGE:       { label: 'Damage',  fill: '#fee2e2', stroke: '#dc2626', text: '#7f1d1d' },
-  HAZ:          { label: 'HAZ',     fill: '#ffedd5', stroke: '#ea580c', text: '#7c2d12' },
-  OOG:          { label: 'OOG',     fill: '#ede9fe', stroke: '#7c3aed', text: '#4c1d95' },
-  TRANSHIPMENT: { label: 'T/S',     fill: '#fef3c7', stroke: '#d97706', text: '#78350f' },
-};
-
-/* ──────────────────────────────────────────────────────────────────────────
-   Mock data — deterministic from the block hash so the dashboard is stable
-   across reloads. In production these come from the live yard inventory API.
-   ────────────────────────────────────────────────────────────────────────── */
-
-function hashKey(key: string): number {
-  let h = 0;
-  for (let i = 0; i < key.length; i++) h = (h * 31 + key.charCodeAt(i)) >>> 0;
-  return h;
-}
-
-interface BlockMetrics {
-  capacityTeu: number;
-  occupiedTeu: number;
-  occupancyPct: number;
-  containerCount: number;
-  avgDwellDays: number;
-  longestDwellDays: number;
-  holdCount: number;
-  damagedCount: number;
-  reeferActive: number;
-  reeferCapacity: number;
-}
-
-function blockMetrics(b: YardBlock): BlockMetrics {
-  const h = hashKey(b.id);
-  const cap = b.bays * b.rows * b.tiers;
-  // Occupancy — type-biased so reefer/empty trend higher
-  let occRatio: number;
-  switch (b.type) {
-    case 'IMPORT':       occRatio = 0.55 + ((h % 35) / 100); break;
-    case 'EXPORT':       occRatio = 0.42 + ((h % 30) / 100); break;
-    case 'EMPTY':        occRatio = 0.70 + ((h % 28) / 100); break;
-    case 'REEFER':       occRatio = 0.60 + ((h % 35) / 100); break;
-    case 'DAMAGE':       occRatio = 0.20 + ((h % 25) / 100); break;
-    case 'HAZ':          occRatio = 0.35 + ((h % 20) / 100); break;
-    case 'OOG':          occRatio = 0.25 + ((h % 25) / 100); break;
-    case 'TRANSHIPMENT': occRatio = 0.50 + ((h % 30) / 100); break;
-  }
-  occRatio = Math.min(0.98, occRatio);
-  const occupiedTeu = Math.round(cap * occRatio);
-  const containerCount = Math.round(occupiedTeu / 1.4); // mix of 20s + 40s
-
-  const avgDwell =
-    b.type === 'IMPORT' ? 4 + ((h >>> 4) % 8) :
-    b.type === 'EXPORT' ? 2 + ((h >>> 4) % 5) :
-    b.type === 'EMPTY'  ? 10 + ((h >>> 4) % 14) :
-    b.type === 'REEFER' ? 3 + ((h >>> 4) % 5) :
-    b.type === 'DAMAGE' ? 12 + ((h >>> 4) % 20) :
-                          5 + ((h >>> 4) % 10);
-  const longestDwell = avgDwell + 5 + ((h >>> 8) % 12);
-
-  // Holds = customs/finance/legal — only IMPORT and TRANSHIPMENT realistically
-  const holdCount =
-    b.type === 'IMPORT' || b.type === 'TRANSHIPMENT'
-      ? Math.round(containerCount * (0.04 + ((h >>> 12) % 6) / 100))
-      : b.type === 'HAZ' ? Math.round(containerCount * 0.15) : 0;
-
-  // Damaged — every block has a few, more in DAMAGE block obviously
-  const damagedCount =
-    b.type === 'DAMAGE' ? containerCount :
-    Math.round(containerCount * 0.02);
-
-  // Reefer plug status
-  const reeferCapacity = b.reeferPlugCount;
-  const reeferActive =
-    b.type === 'REEFER'
-      ? Math.min(reeferCapacity, Math.round(containerCount * 0.85))
-      : Math.min(reeferCapacity, Math.round(containerCount * 0.05));
-
-  return {
-    capacityTeu: cap,
-    occupiedTeu,
-    occupancyPct: cap > 0 ? occupiedTeu / cap : 0,
-    containerCount,
-    avgDwellDays: avgDwell,
-    longestDwellDays: longestDwell,
-    holdCount,
-    damagedCount,
-    reeferActive,
-    reeferCapacity,
-  };
-}
-
-/* ──────────────────────────────────────────────────────────────────────────
-   Color lenses
-   ────────────────────────────────────────────────────────────────────────── */
+/**
+ * YARD AT A GLANCE — the yard as it stands, counted by the server.
+ *
+ * Every number on this screen used to be INVENTED. The blocks came from the
+ * browser's own localStorage copy of the layout, and the occupancy, dwell,
+ * holds, reefer and damage figures came from `hashKey(block.id)` — a hash of
+ * the block's id, biased per block type so it looked plausible. It looked
+ * exactly like a working dashboard, which is the worst thing a screen full of
+ * made-up numbers can look like.
+ *
+ * It is one read now: `GET /api/tos/yard/map?yardId=`, which answers the
+ * depot's blocks where the layout editor put them, each with the boxes standing
+ * in it — boxes, TEU, full / empty, reefers, holds, damaged, average and
+ * longest dwell — plus the yard's totals and `unplaced`.
+ *
+ * UNPLACED IS NOT A GAP, IT IS THE NORMAL CASE TODAY. A box counts in a block
+ * only when its visit names one of that block's slots. A depot that records an
+ * area code at the gate has every box unplaced, and the API never guesses one
+ * into a block. The card says so, with the number, rather than quietly leaving
+ * those boxes out of the map.
+ *
+ * Nothing on the map is editable, and nothing is drawn differently from the
+ * editor: both read the same rules from components/yard/block-style.
+ *
+ * PHASE 2 added the three things a clerk does with a map once they have one:
+ * open a block and see it stack by stack, FIND a box (`/yard/locate`), and
+ * MOVE one (`/yard/moves`, which needs `tos.yard.manage` $d a clerk without it
+ * is shown no Move at all). The yard, the open block and a search all travel in
+ * the URL, so "show me where TTNU3535354 is" is a link somebody can send.
+ */
 
 type Lens = 'occupancy' | 'dwell' | 'holds' | 'reefer' | 'type';
 
-function occupancyColor(pct: number) {
-  if (pct >= 0.85) return { fill: '#fee2e2', stroke: '#dc2626', label: 'Critical (>85%)' };
-  if (pct >= 0.60) return { fill: '#fef3c7', stroke: '#d97706', label: 'High (60–85%)' };
-  if (pct >= 0.30) return { fill: '#d1fae5', stroke: '#059669', label: 'Moderate (30–60%)' };
-  if (pct >  0)    return { fill: '#e0f2fe', stroke: '#0284c7', label: 'Low (<30%)' };
-                   return { fill: '#f9fafb', stroke: '#9ca3af', label: 'Empty' };
+interface Band { fill: string; stroke: string; label: string }
+
+/**
+ * How full a block is: the BOXES in it against the slots it can use.
+ *
+ * One slot holds one box of any length (a stack is one length, Phase 3), so
+ * occupancy is boxes over usable slots — not TEU over slots, which counted a
+ * 40' box as two and read over 100% in a yard that was merely full.
+ */
+function occupancyBand(pct: number | null): Band {
+  if (pct === null) return { fill: '#f9fafb', stroke: '#9ca3af', label: 'No slots' };
+  if (pct >= 85) return { fill: '#fee2e2', stroke: '#dc2626', label: 'Critical (>85%)' };
+  if (pct >= 60) return { fill: '#fef3c7', stroke: '#d97706', label: 'High (60–85%)' };
+  if (pct >= 30) return { fill: '#d1fae5', stroke: '#059669', label: 'Moderate (30–60%)' };
+  if (pct > 0)   return { fill: '#e0f2fe', stroke: '#0284c7', label: 'Low (<30%)' };
+  return { fill: '#f9fafb', stroke: '#9ca3af', label: 'Empty' };
 }
 
-function dwellColor(days: number) {
+function dwellBand(days: number): Band {
   if (days >= 14) return { fill: '#fee2e2', stroke: '#dc2626', label: '14+ days' };
   if (days >= 7)  return { fill: '#fef3c7', stroke: '#d97706', label: '7–13 days' };
   if (days >= 4)  return { fill: '#d1fae5', stroke: '#059669', label: '4–6 days' };
-  if (days >  0)  return { fill: '#e0f2fe', stroke: '#0284c7', label: '1–3 days' };
-                  return { fill: '#f9fafb', stroke: '#9ca3af', label: 'No containers' };
+  if (days > 0)   return { fill: '#e0f2fe', stroke: '#0284c7', label: '1–3 days' };
+  return { fill: '#f9fafb', stroke: '#9ca3af', label: 'No boxes' };
 }
 
-function holdsColor(count: number) {
-  if (count >= 10) return { fill: '#fee2e2', stroke: '#dc2626', label: '10+ holds' };
-  if (count >= 3)  return { fill: '#fef3c7', stroke: '#d97706', label: '3–9 holds' };
-  if (count >  0)  return { fill: '#fed7aa', stroke: '#ea580c', label: '1–2 holds' };
-                   return { fill: '#d1fae5', stroke: '#059669', label: 'No holds' };
+function holdsBand(held: number): Band {
+  if (held >= 10) return { fill: '#fee2e2', stroke: '#dc2626', label: '10+ holds' };
+  if (held >= 3)  return { fill: '#fef3c7', stroke: '#d97706', label: '3–9 holds' };
+  if (held > 0)   return { fill: '#fed7aa', stroke: '#ea580c', label: '1–2 holds' };
+  return { fill: '#d1fae5', stroke: '#059669', label: 'No holds' };
 }
 
-function reeferColor(active: number, cap: number, type: BlockType) {
-  if (type !== 'REEFER' && cap === 0) return { fill: '#f9fafb', stroke: '#9ca3af', label: 'Not reefer' };
-  const pct = cap > 0 ? active / cap : 0;
+/** Reefers standing against the plugs the block's slots have. */
+function reeferBand(reefer: number, plugs: number): Band {
+  if (plugs === 0) return { fill: '#f9fafb', stroke: '#9ca3af', label: 'Not reefer' };
+  const pct = reefer / plugs;
   if (pct >= 0.85) return { fill: '#fee2e2', stroke: '#dc2626', label: 'Plugs critical (>85%)' };
   if (pct >= 0.60) return { fill: '#fef3c7', stroke: '#d97706', label: 'Plugs high (60–85%)' };
   if (pct >= 0.30) return { fill: '#cffafe', stroke: '#0891b2', label: 'Plugs moderate' };
-  if (pct >  0)    return { fill: '#e0f2fe', stroke: '#0284c7', label: 'Plugs low' };
-                   return { fill: '#f9fafb', stroke: '#9ca3af', label: 'No plugs active' };
+  if (pct > 0)     return { fill: '#e0f2fe', stroke: '#0284c7', label: 'Plugs low' };
+  return { fill: '#f9fafb', stroke: '#9ca3af', label: 'No reefers plugged' };
 }
 
-function blockColor(b: YardBlock, m: BlockMetrics, lens: Lens) {
+function bandOf(b: YardMapBlock, lens: Lens): Band {
   switch (lens) {
-    case 'occupancy': return occupancyColor(m.occupancyPct);
-    case 'dwell':     return dwellColor(m.avgDwellDays);
-    case 'holds':     return holdsColor(m.holdCount);
-    case 'reefer':    return reeferColor(m.reeferActive, m.reeferCapacity, b.type);
-    case 'type':      return { fill: BLOCK_TYPES[b.type].fill, stroke: BLOCK_TYPES[b.type].stroke, label: BLOCK_TYPES[b.type].label };
+    case 'occupancy': return occupancyBand(b.occupancyPct);
+    case 'dwell':     return dwellBand(b.tally.averageDays);
+    case 'holds':     return holdsBand(b.tally.held);
+    case 'reefer':    return reeferBand(b.tally.reefer, b.reeferPlugCount);
+    case 'type':      { const s = blockStyle(b); return { fill: s.fill, stroke: s.stroke, label: s.label }; }
   }
 }
 
-const LENS_LEGENDS: Record<Lens, { label: string; bands: { fill: string; stroke: string; label: string }[] }> = {
+function lensLabel(b: YardMapBlock, lens: Lens): string {
+  switch (lens) {
+    case 'occupancy': return b.occupancyPct === null ? '—' : `${Math.round(b.occupancyPct)}%`;
+    case 'dwell':     return b.tally.boxes === 0 ? '—' : `${b.tally.averageDays}d`;
+    case 'holds':     return b.tally.held > 0 ? `${b.tally.held} hold${b.tally.held === 1 ? '' : 's'}` : 'clear';
+    case 'reefer':    return b.reeferPlugCount > 0 ? `${b.tally.reefer}/${b.reeferPlugCount}` : '—';
+    case 'type':      return typeLabel(b.blockType);
+  }
+}
+
+/** What a block's colour means, for the legend under the map. */
+const LENS_LEGEND: Record<Lens, { label: string; bands: Band[] }> = {
   occupancy: {
-    label: 'Block occupancy %',
-    bands: [
-      { fill: '#fee2e2', stroke: '#dc2626', label: 'Critical (>85%)' },
-      { fill: '#fef3c7', stroke: '#d97706', label: 'High (60–85%)' },
-      { fill: '#d1fae5', stroke: '#059669', label: 'Moderate (30–60%)' },
-      { fill: '#e0f2fe', stroke: '#0284c7', label: 'Low (<30%)' },
-      { fill: '#f9fafb', stroke: '#9ca3af', label: 'Empty' },
-    ],
+    label: 'Block occupancy — boxes against usable slots',
+    bands: [occupancyBand(90), occupancyBand(70), occupancyBand(40), occupancyBand(10), occupancyBand(0), occupancyBand(null)],
   },
-  dwell: {
-    label: 'Average dwell days',
-    bands: [
-      { fill: '#fee2e2', stroke: '#dc2626', label: '14+ days' },
-      { fill: '#fef3c7', stroke: '#d97706', label: '7–13 days' },
-      { fill: '#d1fae5', stroke: '#059669', label: '4–6 days' },
-      { fill: '#e0f2fe', stroke: '#0284c7', label: '1–3 days' },
-    ],
-  },
-  holds: {
-    label: 'Holds per block',
-    bands: [
-      { fill: '#fee2e2', stroke: '#dc2626', label: '10+ holds' },
-      { fill: '#fef3c7', stroke: '#d97706', label: '3–9 holds' },
-      { fill: '#fed7aa', stroke: '#ea580c', label: '1–2 holds' },
-      { fill: '#d1fae5', stroke: '#059669', label: 'No holds' },
-    ],
-  },
+  dwell: { label: 'Average dwell', bands: [dwellBand(20), dwellBand(10), dwellBand(5), dwellBand(2), dwellBand(0)] },
+  holds: { label: 'Holds in the block', bands: [holdsBand(12), holdsBand(5), holdsBand(1), holdsBand(0)] },
   reefer: {
-    label: 'Reefer plug utilization',
-    bands: [
-      { fill: '#fee2e2', stroke: '#dc2626', label: 'Plugs critical (>85%)' },
-      { fill: '#fef3c7', stroke: '#d97706', label: 'Plugs high (60–85%)' },
-      { fill: '#cffafe', stroke: '#0891b2', label: 'Plugs moderate' },
-      { fill: '#e0f2fe', stroke: '#0284c7', label: 'Plugs low' },
-      { fill: '#f9fafb', stroke: '#9ca3af', label: 'Not reefer' },
-    ],
+    label: 'Reefers against reefer plugs',
+    bands: [reeferBand(9, 10), reeferBand(7, 10), reeferBand(4, 10), reeferBand(1, 10), reeferBand(0, 10), reeferBand(0, 0)],
   },
   type: {
     label: 'Block type',
-    bands: (Object.entries(BLOCK_TYPES) as [BlockType, typeof BLOCK_TYPES[BlockType]][]).map(
-      ([_k, v]) => ({ fill: v.fill, stroke: v.stroke, label: v.label })
-    ),
+    bands: [
+      ...Object.values(TYPE_STYLE).map(s => ({ fill: s.fill, stroke: s.stroke, label: s.label })),
+      { fill: UNTYPED_STYLE.fill, stroke: UNTYPED_STYLE.stroke, label: UNTYPED_STYLE.label },
+    ],
   },
 };
 
-/* ──────────────────────────────────────────────────────────────────────────
-   Page
-   ────────────────────────────────────────────────────────────────────────── */
+const LENS_OPTIONS: { value: Lens; label: string; icon: string }[] = [
+  { value: 'occupancy', label: 'Occupancy', icon: 'layers' },
+  { value: 'dwell',     label: 'Dwell time', icon: 'clock' },
+  { value: 'holds',     label: 'Holds',     icon: 'warning' },
+  { value: 'reefer',    label: 'Reefer plugs', icon: 'activity' },
+  { value: 'type',      label: 'Block type', icon: 'tag' },
+];
+
+/** TEU comes back as a decimal: 1.5 for a 20' + a 40', and 12 flat for twelve 20s. */
+const teu = (n: number) => (Number.isInteger(n) ? String(n) : n.toFixed(1));
+
+const clock = (iso: string) => new Date(iso).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
 
 export default function YardGlancePage() {
-  const [template, setTemplate] = useState<YardTemplate | null>(null);
-  const [loaded, setLoaded] = useState(false);
+  // useSearchParams needs a boundary: the yard, the block and a search are all
+  // in the URL so a clerk can send one.
+  return (
+    <Suspense fallback={<div className="gecko-empty-card gecko-yard-loading">Loading…</div>}>
+      <YardGlance />
+    </Suspense>
+  );
+}
+
+function YardGlance() {
+  const router = useRouter();
+  const pathname = usePathname();
+  const params = useSearchParams();
+  const { canAt } = useSession();
+  const { branch, yards, yard: headerYard } = useFacility();
+  const { mapEnabled, loading: settingsLoading, denied } = useYardSettings();
+
+  // A yard belongs to one depot: switching depot drops the pick (during render,
+  // so the map is never drawn for the depot the user just left). The URL's yard
+  // is where it starts, so a link opens on the yard it names.
+  const [picked, setPicked] = useState<string | null>(params.get('yard'));
+  const [pickedOwner, setPickedOwner] = useState<string | null>(branch?.branchId ?? null);
+  const branchId = branch?.branchId ?? null;
+  if (branchId !== pickedOwner) { setPickedOwner(branchId); setPicked(null); }
+  const yardId = (picked && yards.some(y => y.yardId === picked) ? picked : null)
+    ?? headerYard?.yardId ?? yards[0]?.yardId ?? null;
+
+  const map = useYardMap(mapEnabled ? yardId : null);
   const [lens, setLens] = useState<Lens>('occupancy');
-  const [now, setNow] = useState(new Date());
-  const [hoveredBlockId, setHoveredBlockId] = useState<string | null>(null);
+  const [hovered, setHovered] = useState<string | null>(null);
 
-  useEffect(() => {
-    try {
-      const raw = localStorage.getItem(STORAGE_KEY);
-      if (raw) setTemplate(JSON.parse(raw));
-    } catch { /* ignore */ }
-    setLoaded(true);
-  }, []);
+  // ── the block that is open, the box that was found, the box being moved ──
+  const [openBlockId, setOpenBlockId] = useState<string | null>(params.get('block'));
+  const [found, setFound] = useState<YardLocation | null>(null);
+  const [findText, setFindText] = useState(params.get('find') ?? '');
+  const [finding, setFinding] = useState(false);
+  const [findNote, setFindNote] = useState<string | null>(null);
+  const [moving, setMoving] = useState<YardLocation | null>(null);
+  /** A planner ordering work on a box they are looking at (Phase 4). */
+  const [ordering, setOrdering] = useState<{ containerNo: string; kind: 'RELOCATE' | 'PULL' } | null>(null);
+  /** Bumped to re-read the open block: the 30-second tick, and after a move. */
+  const [tick, setTick] = useState(0);
+  const canMove = canAt(YARD_MANAGE, branchId);
 
-  // Auto-refresh tick every 30s — production would re-fetch live inventory
-  useEffect(() => {
-    const t = setInterval(() => setNow(new Date()), 30_000);
-    return () => clearInterval(t);
-  }, []);
+  // The yard, the open block and a search live in the URL, so this screen is
+  // linkable — the container master's "Show on map" is exactly such a link.
+  const remember = useCallback((next: { yard?: string | null; block?: string | null; find?: string | null }) => {
+    const q = new URLSearchParams();
+    // The yard SHOWN, not the one explicitly picked: a link has to open on the
+    // yard the sender was looking at, even if they never touched the select.
+    const yard = next.yard === undefined ? yardId : next.yard;
+    const block = next.block === undefined ? openBlockId : next.block;
+    const find = next.find === undefined ? null : next.find;
+    if (yard) q.set('yard', yard);
+    if (block) q.set('block', block);
+    if (find) q.set('find', find);
+    const qs = q.toString();
+    router.replace(qs ? `${pathname}?${qs}` : pathname, { scroll: false });
+  }, [router, pathname, yardId, openBlockId]);
 
-  const blocks = template?.blocks ?? [];
-
-  const metrics = useMemo(() => {
-    const map = new Map<string, BlockMetrics>();
-    for (const b of blocks) map.set(b.id, blockMetrics(b));
-    return map;
-  }, [blocks]);
-
-  const totals = useMemo(() => {
-    let cap = 0, occ = 0, containers = 0, holds = 0, damaged = 0, reeferActive = 0, reeferCap = 0;
-    let dwellSum = 0, dwellCount = 0;
-    for (const b of blocks) {
-      const m = metrics.get(b.id);
-      if (!m) continue;
-      cap += m.capacityTeu;
-      occ += m.occupiedTeu;
-      containers += m.containerCount;
-      holds += m.holdCount;
-      damaged += m.damagedCount;
-      reeferActive += m.reeferActive;
-      reeferCap += m.reeferCapacity;
-      if (m.containerCount > 0) {
-        dwellSum += m.avgDwellDays * m.containerCount;
-        dwellCount += m.containerCount;
-      }
+  /**
+   * WHERE IS THIS BOX? `/yard/locate` answers, and a 404 is an ANSWER — the
+   * box is not in a yard this user covers — not a failure to report as one.
+   *
+   * A box standing in a slot switches the map to its yard, opens its block and
+   * rings its cell. A box located by an area code has no cell to ring, so it is
+   * said in words instead of pretending the map knows.
+   */
+  const find = useCallback(async (raw: string) => {
+    const no = normaliseContainerNo(raw);
+    if (!no) { setFound(null); setFindNote(null); return; }
+    if (!isWellFormedContainerNo(no)) {
+      setFound(null);
+      setFindNote(`${no} is not a container number (4 to 11 letters or digits).`);
+      return;
     }
-    return {
-      cap, occ, containers, holds, damaged, reeferActive, reeferCap,
-      utilPct: cap > 0 ? occ / cap : 0,
-      avgDwell: dwellCount > 0 ? dwellSum / dwellCount : 0,
-      blockCount: blocks.length,
-    };
-  }, [blocks, metrics]);
+    setFinding(true);
+    setFindNote(null);
+    try {
+      const here = (await locateContainer(no))[0];
+      if (!here) { setFound(null); setFindNote(`${no} is not in the yard.`); return; }
+      setFound(here);
+      if (here.yardId && here.yardId !== yardId) setPicked(here.yardId);
+      if (here.yardBlockId) {
+        setOpenBlockId(here.yardBlockId);
+        setFindNote(null);
+      } else {
+        setOpenBlockId(null);
+        setFindNote(`${formatContainerNo(no)} is in ${here.yardCode ?? 'this depot'} at ${here.positionText ?? 'no recorded position'} (no slot).`);
+      }
+      remember({ yard: here.yardId ?? null, block: here.yardBlockId ?? null, find: no });
+    } catch (e) {
+      const err = e instanceof ApiError ? e : new ApiError(0, 'Could not reach the Gecko API.');
+      setFound(null);
+      setFindNote(err.status === 404 ? `${formatContainerNo(no)} is not in the yard.` : err.explanation ?? err.message);
+    } finally {
+      setFinding(false);
+    }
+  }, [yardId, remember]);
 
-  const hotspots = useMemo(() => {
-    return blocks
-      .map(b => {
-        const m = metrics.get(b.id)!;
-        // Priority score blends utilization, holds, and long dwell
-        const score = m.occupancyPct * 100 + m.holdCount * 4 + (m.longestDwellDays / 2);
-        return { b, m, score };
-      })
-      .sort((a, b) => b.score - a.score)
-      .slice(0, 5);
-  }, [blocks, metrics]);
+  // A ?find= in the URL is searched once, on arrival. The number already
+  // searched is a ref, not state: nothing renders it, and setting state in an
+  // effect only to stop the effect running again is a re-render for nothing.
+  const searched = useRef<string | null>(null);
+  const urlFind = params.get('find');
+  useEffect(() => {
+    if (!urlFind || searched.current === urlFind) return;
+    searched.current = urlFind;
+    void find(urlFind);
+  }, [urlFind, find]);
 
-  const canvasW = template?.canvas.width ?? 1400;
-  const canvasH = template?.canvas.height ?? 900;
+  // The yard changes while the clerk watches it, so it is re-read every 30
+  // seconds. `reload()` keeps the figures on screen until the new ones land,
+  // and the tick re-reads the open block with them.
+  useEffect(() => {
+    const t = setInterval(() => { map.reload(); setTick(n => n + 1); }, 30_000);
+    return () => clearInterval(t);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [map.reload]);
 
-  if (!loaded) {
-    return (
-      <div className="gecko-empty-card" style={{ padding: 40 }}>
-        Loading yard layout…
-      </div>
-    );
+  const openBlock = (blockId: string | null) => {
+    setOpenBlockId(blockId);
+    remember({ block: blockId, find: found?.containerNo ?? null });
+  };
+
+  /** A box has moved: the map, the open block and the found box are all stale. */
+  const moved = async (to: YardLocation) => {
+    map.reload();
+    setTick(n => n + 1);
+    if (to.yardId && to.yardId !== yardId) setPicked(to.yardId);
+    setFound(to);
+    if (to.yardBlockId) setOpenBlockId(to.yardBlockId);
+    remember({ yard: to.yardId ?? null, block: to.yardBlockId ?? null, find: to.containerNo });
+  };
+
+  /**
+   * Open Move on a box. The dig (`boxesOnTop`) only comes with a locate, so it
+   * is read here rather than guessed from the stack on screen — which may be a
+   * few seconds old, and a box that cannot be lifted must say so before the
+   * clerk fills the form in.
+   */
+  const askToMove = async (containerNo: string) => {
+    try {
+      const here = (await locateContainer(containerNo))[0];
+      if (here) setMoving(here);
+      else setFindNote(`${formatContainerNo(containerNo)} is not in the yard any more.`);
+    } catch (e) {
+      const err = e instanceof ApiError ? e : new ApiError(0, 'Could not reach the Gecko API.');
+      setFindNote(err.explanation ?? err.message);
+    }
+  };
+
+  const data = map.data && map.data.yardId === yardId ? map.data : null;
+  const blocks = useMemo(() => (data?.blocks ?? []).filter(isPlaced), [data]);
+
+  /** Worth a look first: full, held, and standing a long time. */
+  const hotspots = useMemo(() => [...blocks]
+    .map(b => ({ b, score: (b.occupancyPct ?? 0) + b.tally.held * 4 + b.tally.maxDays / 2 }))
+    .sort((x, y) => y.score - x.score)
+    .slice(0, 5), [blocks]);
+
+  if (settingsLoading) {
+    return <div className="gecko-empty-card gecko-yard-loading">Checking what this depot records…</div>;
+  }
+  if (!mapEnabled) return <YardMapOff where={branch?.displayName} denied={denied} />;
+
+  if (yards.length === 0) {
+    return <EmptyState icon="layers" title="This depot has no yards yet"
+      description="A block belongs to a yard. Master Data → Yards lists the depot’s yards." />;
   }
 
-  if (blocks.length === 0) {
+  if (map.error) {
+    return <ErrorBanner error={map.error} className="gecko-yard-alert" />;
+  }
+
+  if (!data) {
+    return <div className="gecko-empty-card gecko-yard-loading">Reading the yard…</div>;
+  }
+
+  if (data.blocks.length === 0) {
     return (
       <EmptyState
         icon="layers"
-        title="No yard configured yet"
-        description="Build the yard layout in Configuration first. Drop blocks on the canvas and they'll show up here with live metrics."
+        title={`${data.yardName} has no blocks yet`}
+        description="Lay the yard out first: drop blocks on the canvas, give each its bays, rows and tiers, then generate its slots. The map fills itself from the boxes standing in them."
         action={
           <Link href="/config/yard-zones" className="gecko-btn gecko-btn-primary gecko-btn-sm">
-            <Icon name="settings" size={14} /> Open yard editor
+            <Icon name="settings" size={14} /> Open Yard Zones &amp; Blocks
           </Link>
         }
       />
     );
   }
 
-  const LENS_OPTIONS: { value: Lens; label: string; icon: string }[] = [
-    { value: 'occupancy', label: 'Occupancy', icon: 'layers' },
-    { value: 'dwell',     label: 'Dwell time', icon: 'clock' },
-    { value: 'holds',     label: 'Holds',     icon: 'alertTriangle' },
-    { value: 'reefer',    label: 'Reefer plugs', icon: 'activity' },
-    { value: 'type',      label: 'Block type', icon: 'package' },
-  ];
+  const total = data.total;
+  // Boxes over usable slots, the same sum the API does per block.
+  const occupancy = data.usableSlotCount > 0 ? (total.boxes / data.usableSlotCount) * 100 : null;
+  const hoveredBlock = blocks.find(b => b.yardBlockId === hovered) ?? null;
 
   return (
-    <div className="gecko-stack gecko-stack-lg" style={{ paddingBottom: 40 }}>
+    <div className="gecko-stack gecko-stack-lg gecko-yard-glance">
 
-      {/* Page header */}
       <div className="gecko-page-actions">
         <div className="gecko-page-actions-left">
-          <div className="gecko-row" style={{ gap: 10, marginBottom: 4 }}>
+          <div className="gecko-row gecko-yard-title-row">
             <h1 className="gecko-page-title">Yard at a Glance</h1>
-            <span className="gecko-pill gecko-pill-success" style={{ display: 'inline-flex', alignItems: 'center', gap: 4 }}>
-              <span className="gecko-pulse-dot" style={{ width: 6, height: 6, borderRadius: '50%', background: 'var(--gecko-success-500)' }} />
+            <span className="gecko-pill gecko-pill-success gecko-inline-row">
+              <span className="gecko-pulse-dot gecko-yard-live-dot" />
               Live
             </span>
+            {data.locationMode === 'AREA' && (
+              <span className="gecko-pill gecko-pill-neutral" title="Boxes are located by an area code, so none of them stands in a slot yet">
+                located by area
+              </span>
+            )}
           </div>
           <p className="gecko-page-subtitle">
-            {template?.name ?? 'Yard'} — {blocks.length} blocks · refreshed {now.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' })}
+            {data.yardCode} · {data.yardName} — {data.blocks.length} blocks · read {clock(data.asAt)}
           </p>
         </div>
         <div className="gecko-toolbar">
-          <button className="gecko-btn gecko-btn-outline gecko-btn-sm" onClick={() => setNow(new Date())}>
+          {yards.length > 1 && (
+            <select className="gecko-input gecko-input-sm gecko-yard-select" value={yardId ?? ''} aria-label="Yard"
+              onChange={e => {
+                // A block belongs to one yard, so the open one closes with it.
+                setPicked(e.target.value); setHovered(null); setOpenBlockId(null); setFound(null);
+                remember({ yard: e.target.value, block: null, find: null });
+              }}>
+              {yards.map(y => <option key={y.yardId} value={y.yardId}>{y.yardCode} · {y.nameEn}</option>)}
+            </select>
+          )}
+          <button className="gecko-btn gecko-btn-outline gecko-btn-sm" onClick={() => map.reload()}>
             <Icon name="refresh" size={14} /> Refresh
           </button>
-          <Link href="/gate/yard-view" className="gecko-btn gecko-btn-outline gecko-btn-sm">
-            <Icon name="maximize" size={14} /> Full yard view
+          <Link href="/gate/stock" className="gecko-btn gecko-btn-outline gecko-btn-sm">
+            <Icon name="grid" size={14} /> Yard stock
           </Link>
           <Link href="/config/yard-zones" className="gecko-btn gecko-btn-ghost gecko-btn-sm">
             <Icon name="settings" size={14} /> Configure
@@ -356,204 +399,216 @@ export default function YardGlancePage() {
         </div>
       </div>
 
-      {/* KPI strip — 6 columns, no catalog gecko-grid-6 */}
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(6, 1fr)', gap: 12 }}>
-        <KpiTile
-          icon="layers" tone="primary"
-          label="Yard utilization"
-          value={`${(totals.utilPct * 100).toFixed(1)}%`}
-          sub={`${totals.occ.toLocaleString()} / ${totals.cap.toLocaleString()} TEU`}
+      {/* FIND A BOX. The number is all a clerk has when the radio asks where
+          something is, and the answer has to be a place on this map. */}
+      <div className="gecko-card gecko-card-padded gecko-row gecko-row-wrap gecko-yard-find">
+        <Icon name="search" size={16} className="gecko-text-secondary" />
+        <input
+          className="gecko-input gecko-text-mono gecko-yard-find-input"
+          value={findText}
+          placeholder="Find a box in the yard · container number + Enter"
+          aria-label="Find a container in the yard"
+          onChange={e => setFindText(e.target.value.toUpperCase())}
+          onKeyDown={e => { if (e.key === 'Enter') void find(findText); }}
         />
-        <KpiTile
-          icon="package" tone="info"
-          label="Containers in yard"
-          value={totals.containers.toLocaleString()}
-          sub={`across ${totals.blockCount} blocks`}
-        />
-        <KpiTile
-          icon="clock" tone={totals.avgDwell >= 7 ? 'warning' : 'success'}
-          label="Average dwell"
-          value={`${totals.avgDwell.toFixed(1)}`}
-          sub="days (weighted)"
-        />
-        <KpiTile
-          icon="alertTriangle" tone={totals.holds > 50 ? 'danger' : totals.holds > 10 ? 'warning' : 'success'}
-          label="Holds"
-          value={totals.holds.toLocaleString()}
-          sub="customs · finance · legal"
-        />
-        <KpiTile
-          icon="activity" tone="info"
-          label="Reefer plugs"
-          value={`${totals.reeferActive} / ${totals.reeferCap}`}
-          sub={totals.reeferCap > 0 ? `${((totals.reeferActive / totals.reeferCap) * 100).toFixed(0)}% utilized` : 'no plugs installed'}
-        />
-        <KpiTile
-          icon="x" tone={totals.damaged > 30 ? 'danger' : 'neutral'}
-          label="Damaged units"
-          value={totals.damaged.toLocaleString()}
-          sub="awaiting M&R disposition"
-        />
+        <button className="gecko-btn gecko-btn-primary gecko-btn-sm" disabled={finding} onClick={() => void find(findText)}>
+          {finding ? 'Looking…' : 'Find'}
+        </button>
+        {(found || findNote) && (
+          <button className="gecko-btn gecko-btn-ghost gecko-btn-sm"
+            onClick={() => { setFindText(''); setFound(null); setFindNote(null); remember({ find: null }); }}>
+            <Icon name="x" size={13} /> Clear
+          </button>
+        )}
+        {found && (
+          <span className="gecko-row gecko-row-wrap gecko-yard-find-hit">
+            <strong className="gecko-text-mono">{formatContainerNo(found.containerNo)}</strong>
+            <span>
+              {found.yardCode}
+              {found.positionText ? <> · <span className="gecko-text-mono">{found.positionText}</span></> : null}
+              {` · ${found.daysInYard} days`}
+            </span>
+            {found.isHeld && <span className="gecko-pill gecko-pill-warning">held</span>}
+            {found.boxesOnTop.length > 0 && (
+              <span className="gecko-pill gecko-pill-neutral" title="These have to be moved before it can be lifted">
+                {found.boxesOnTop.length} on top
+              </span>
+            )}
+            <Link href={`/units/unit-inquiry?no=${encodeURIComponent(found.containerNo)}`}
+              className="gecko-btn gecko-btn-outline gecko-btn-sm">Open box</Link>
+            {canMove && (
+              <button className="gecko-btn gecko-btn-outline gecko-btn-sm" onClick={() => void askToMove(found.containerNo)}>
+                <Icon name="transferH" size={13} /> Move
+              </button>
+            )}
+          </span>
+        )}
+        {findNote && <span className="gecko-cell-meta gecko-yard-find-note">{findNote}</span>}
       </div>
 
-      {/* Mini yard + Hotspots */}
-      <div style={{ display: 'grid', gridTemplateColumns: '2fr 1fr', gap: 16, alignItems: 'flex-start' }}>
+      {/* KPI strip — every figure is the server's count */}
+      <div className="gecko-yard-kpis">
+        <KpiTile icon="layers" tone="primary" label="Yard occupancy"
+          value={occupancy === null ? '—' : `${occupancy.toFixed(1)}%`}
+          sub={data.usableSlotCount > 0
+            ? `${total.boxes.toLocaleString()} boxes in ${data.usableSlotCount.toLocaleString()} slots`
+            : 'no usable slots yet'} />
+        <KpiTile icon="box" tone="info" label="Boxes in yard"
+          value={total.boxes.toLocaleString()} sub={`${teu(total.teu)} TEU`} />
+        <KpiTile icon="packageOpen" tone="neutral" label="Full / empty"
+          value={`${total.full} / ${total.empty}`} sub="as the gate recorded them" />
+        <KpiTile icon="clock" tone={total.averageDays >= 7 ? 'warning' : 'success'} label="Average dwell"
+          value={`${total.averageDays}`} sub={`days · longest ${total.maxDays}`} />
+        <KpiTile icon="warning" tone={total.held > 10 ? 'danger' : total.held > 0 ? 'warning' : 'success'}
+          label="Holds" value={total.held.toLocaleString()} sub="boxes that may not leave" />
+        <KpiTile icon="tool" tone={total.damaged > 0 ? 'danger' : 'neutral'} label="Damaged"
+          value={total.damaged.toLocaleString()} sub={`${total.reefer} reefers in yard`} />
+      </div>
 
-        {/* Mini yard map */}
+      {data.unplaced.boxes > 0 && (
+        <div className="gecko-alert gecko-alert-info gecko-row gecko-yard-unplaced">
+          <Icon name="info" size={16} />
+          <div className="gecko-flex-1">
+            <strong>{data.unplaced.boxes.toLocaleString()} boxes in {data.yardName} have no slot</strong>
+            {' — located by area code. '}
+            They are counted in the totals above and in no block below.
+          </div>
+          <Link href="/gate/stock" className="gecko-btn gecko-btn-outline gecko-btn-sm">See the list</Link>
+        </div>
+      )}
+
+      <div className="gecko-yard-glance-main">
+
         <div className="gecko-table-card">
-          <div className="gecko-row gecko-row-wrap" style={{ padding: '14px 18px', borderBottom: '1px solid var(--gecko-border)', gap: 12 }}>
+          <div className="gecko-row gecko-row-wrap gecko-yard-glance-head">
             <div className="gecko-flex-1">
-              <div className="gecko-section-header-title">Yard map · {LENS_LEGENDS[lens].label}</div>
-              <div className="gecko-section-header-subtitle">Hover a block for details · click <strong>Full yard view</strong> for cell-level inspection</div>
+              <div className="gecko-section-header-title">Yard map · {LENS_LEGEND[lens].label}</div>
+              <div className="gecko-section-header-subtitle">
+                Hover a block for what stands in it, click it to see it stack by stack · the layout is drawn exactly
+                as Yard Zones &amp; Blocks saved it
+              </div>
             </div>
             <div className="gecko-segctrl">
               {LENS_OPTIONS.map(o => (
-                <button
-                  key={o.value}
-                  className={`gecko-segctrl-btn ${lens === o.value ? 'gecko-segctrl-btn-active' : ''}`}
-                  onClick={() => setLens(o.value)}
-                  style={{ display: 'inline-flex', alignItems: 'center', gap: 4 }}
-                >
+                <button key={o.value}
+                  className={`gecko-segctrl-btn ${lens === o.value ? 'gecko-segctrl-btn-active' : ''} gecko-inline-row`}
+                  onClick={() => setLens(o.value)}>
                   <Icon name={o.icon} size={11} /> {o.label}
                 </button>
               ))}
             </div>
           </div>
 
-          {/* SVG aerial view */}
-          <div style={{ padding: 18, background: '#f8fafc' }}>
-            <svg
-              viewBox={`0 0 ${canvasW} ${canvasH}`}
-              style={{ width: '100%', height: 'auto', maxHeight: 420, display: 'block', background: '#ffffff', borderRadius: 8, border: '1px solid var(--gecko-border)' }}
-              preserveAspectRatio="xMidYMid meet"
-            >
-              {/* Grid backdrop */}
+          <div className="gecko-yard-glance-canvas">
+            <svg viewBox={`0 0 ${CANVAS_W} ${CANVAS_H}`} className="gecko-yard-glance-svg" preserveAspectRatio="xMidYMid meet">
               <defs>
                 <pattern id="yardGrid" width={GRID_PX * 5} height={GRID_PX * 5} patternUnits="userSpaceOnUse">
                   <path d={`M ${GRID_PX * 5} 0 L 0 0 0 ${GRID_PX * 5}`} fill="none" stroke="#e5e7eb" strokeWidth="0.5" />
                 </pattern>
               </defs>
-              <rect width={canvasW} height={canvasH} fill="url(#yardGrid)" />
+              <rect width={CANVAS_W} height={CANVAS_H} fill="url(#yardGrid)" />
 
               {blocks.map(b => {
-                const m = metrics.get(b.id)!;
-                const col = blockColor(b, m, lens);
-                const w = b.bays * GRID_PX;
-                const h = b.rows * GRID_PX;
-                const isHovered = hoveredBlockId === b.id;
+                const band = bandOf(b, lens);
+                const { x, y, w, h } = blockBox(b);
+                const on = hovered === b.yardBlockId;
+                const isOpen = openBlockId === b.yardBlockId;
+                const hasFound = found?.yardBlockId === b.yardBlockId;
                 return (
-                  <g
-                    key={b.id}
-                    onMouseEnter={() => setHoveredBlockId(b.id)}
-                    onMouseLeave={() => setHoveredBlockId(null)}
-                    style={{ cursor: 'pointer' }}
-                  >
-                    <rect
-                      x={b.x} y={b.y} width={w} height={h}
-                      fill={col.fill}
-                      stroke={isHovered ? '#0f172a' : col.stroke}
-                      strokeWidth={isHovered ? 3 : 1.5}
-                      rx={3}
-                    />
-                    {/* Block code label */}
-                    <text
-                      x={b.x + w / 2} y={b.y + h / 2 - 2}
-                      textAnchor="middle" dominantBaseline="middle"
-                      fontSize={Math.min(28, Math.max(14, Math.min(w, h) / 6))}
-                      fontWeight="700"
-                      fill={col.stroke}
-                      fontFamily="ui-monospace, SF Mono, Menlo, monospace"
-                      style={{ pointerEvents: 'none', userSelect: 'none' }}
-                    >
-                      {b.code}
+                  <g key={b.yardBlockId}
+                    onMouseEnter={() => setHovered(b.yardBlockId)}
+                    onMouseLeave={() => setHovered(null)}
+                    onClick={() => openBlock(isOpen ? null : b.yardBlockId)}
+                    className="gecko-yard-glance-block">
+                    {/* The hover strip under the map says everything; this is
+                        the one line a mouse gets without moving to read it. */}
+                    <title>
+                      {`${b.blockCode} · ${typeLabel(b.blockType)} · ${b.tally.boxes} boxes, ${teu(b.tally.teu)} TEU`}
+                      {b.occupancyPct === null
+                        ? ` · no slots — generate them in Yard Zones & Blocks`
+                        : ` · ${Math.round(b.occupancyPct)}% full`}
+                      {` · ${b.tally.averageDays}d average, ${b.tally.maxDays}d longest`}
+                      {b.tally.held > 0 ? ` · ${b.tally.held} held` : ''}
+                    </title>
+                    <rect x={x} y={y} width={w} height={h} fill={band.fill}
+                      stroke={on || isOpen ? '#0f172a' : band.stroke} strokeWidth={on || isOpen ? 3 : 1.5} rx={3} />
+                    {/* The block a search landed in, ringed until it is cleared. */}
+                    {hasFound && (
+                      <rect x={x - 4} y={y - 4} width={w + 8} height={h + 8} rx={5} fill="none"
+                        stroke="#0ea5e9" strokeWidth={2.5} className="gecko-yard-glance-found" />
+                    )}
+                    <text x={x + w / 2} y={y + h / 2 - 2} textAnchor="middle" dominantBaseline="middle"
+                      fontSize={Math.min(28, Math.max(14, Math.min(w, h) / 6))} fontWeight="700" fill={band.stroke}
+                      fontFamily="ui-monospace, SF Mono, Menlo, monospace" className="gecko-yard-glance-label">
+                      {b.blockCode}
                     </text>
-                    {/* Metric value below */}
-                    <text
-                      x={b.x + w / 2} y={b.y + h / 2 + 22}
-                      textAnchor="middle" dominantBaseline="middle"
-                      fontSize={Math.min(18, Math.max(10, Math.min(w, h) / 10))}
-                      fontWeight="600"
-                      fill={col.stroke}
-                      opacity={0.85}
-                      style={{ pointerEvents: 'none', userSelect: 'none' }}
-                    >
-                      {lensMetricLabel(lens, m, b.type)}
+                    <text x={x + w / 2} y={y + h / 2 + 22} textAnchor="middle" dominantBaseline="middle"
+                      fontSize={Math.min(18, Math.max(10, Math.min(w, h) / 10))} fontWeight="600" fill={band.stroke}
+                      opacity={0.85} className="gecko-yard-glance-label">
+                      {lensLabel(b, lens)}
                     </text>
                   </g>
                 );
               })}
+
+              {/* The yard HAS blocks (the table below lists them) but nobody
+                  has put them on the map. Drawing nothing without saying so
+                  reads as a broken screen. */}
+              {blocks.length === 0 && (
+                <g transform={`translate(${CANVAS_W / 2}, ${CANVAS_H / 2})`}>
+                  <text textAnchor="middle" y={-8} fill="#9ca3af" fontSize={20} fontWeight={700}>
+                    No block is on the map yet
+                  </text>
+                  <text textAnchor="middle" y={18} fill="#9ca3af" fontSize={13}>
+                    {data.blocks.length} blocks exist — place them in Yard Zones &amp; Blocks
+                  </text>
+                </g>
+              )}
             </svg>
 
-            {/* Legend */}
-            <div className="gecko-row gecko-row-wrap" style={{ marginTop: 12, gap: 12, justifyContent: 'center' }}>
-              {LENS_LEGENDS[lens].bands.map(band => (
+            <div className="gecko-row gecko-row-wrap gecko-yard-glance-legend">
+              {LENS_LEGEND[lens].bands.map(band => (
                 <span key={band.label} className="gecko-inline-row gecko-cell-meta">
-                  <span style={{ width: 14, height: 14, borderRadius: 3, background: band.fill, border: `1.5px solid ${band.stroke}` }} />
+                  <span className="gecko-yard-legend-swatch" style={{ background: band.fill, borderColor: band.stroke }} />
                   {band.label}
                 </span>
               ))}
             </div>
           </div>
 
-          {/* Hover detail strip */}
-          {hoveredBlockId && (() => {
-            const b = blocks.find(x => x.id === hoveredBlockId);
-            const m = b ? metrics.get(b.id) : undefined;
-            if (!b || !m) return null;
-            return (
-              <div className="gecko-row gecko-row-wrap" style={{ padding: '10px 18px', borderTop: '1px solid var(--gecko-border)', background: 'var(--gecko-bg-subtle)', gap: 16, fontSize: 12 }}>
-                <span style={{ fontFamily: 'var(--gecko-font-mono)', fontWeight: 800, color: BLOCK_TYPES[b.type].stroke }}>{b.code}</span>
-                <span className="gecko-pill" style={{ background: BLOCK_TYPES[b.type].fill, color: BLOCK_TYPES[b.type].stroke, border: `1px solid ${BLOCK_TYPES[b.type].stroke}40`, fontSize: 10 }}>
-                  {BLOCK_TYPES[b.type].label}
-                </span>
-                <Metric label="Util"   value={`${(m.occupancyPct * 100).toFixed(0)}%`} />
-                <Metric label="TEU"    value={`${m.occupiedTeu}/${m.capacityTeu}`} />
-                <Metric label="Cntrs"  value={m.containerCount} />
-                <Metric label="Dwell"  value={`${m.avgDwellDays}d avg · ${m.longestDwellDays}d longest`} />
-                <Metric label="Holds"  value={m.holdCount} tone={m.holdCount > 0 ? 'warning' : 'neutral'} />
-                {b.reeferPlugCount > 0 && (
-                  <Metric label="Reefer plugs" value={`${m.reeferActive}/${m.reeferCapacity}`} />
-                )}
-              </div>
-            );
-          })()}
+          {hoveredBlock && <BlockStrip block={hoveredBlock} />}
         </div>
 
-        {/* Hotspots */}
         <div className="gecko-table-card">
-          <div className="gecko-row" style={{ padding: '14px 18px', borderBottom: '1px solid var(--gecko-border)' }}>
-            <Icon name="alertTriangle" size={14} style={{ color: 'var(--gecko-warning-600)' }} />
+          <div className="gecko-row gecko-yard-glance-head">
+            <Icon name="warning" size={14} className="gecko-yard-hot-icon" />
             <div className="gecko-section-header-title gecko-flex-1">Hotspots</div>
-            <span className="gecko-cell-meta" style={{ fontWeight: 600 }}>top 5</span>
+            <span className="gecko-cell-meta gecko-yard-hot-count">top 5</span>
           </div>
-          <div style={{ padding: '4px 0' }}>
-            {hotspots.map(({ b, m }, idx) => {
-              const t = BLOCK_TYPES[b.type];
+          <div>
+            {hotspots.map(({ b }, idx) => {
+              const style = blockStyle(b);
               return (
-                <div
-                  key={b.id}
-                  onMouseEnter={() => setHoveredBlockId(b.id)}
-                  onMouseLeave={() => setHoveredBlockId(null)}
-                  style={{
-                    padding: '12px 18px',
-                    borderBottom: idx < hotspots.length - 1 ? '1px solid var(--gecko-border)' : 'none',
-                    background: hoveredBlockId === b.id ? 'var(--gecko-bg-subtle)' : 'transparent',
-                    cursor: 'pointer', transition: 'background 120ms',
-                  }}
-                >
-                  <div className="gecko-row" style={{ marginBottom: 4 }}>
-                    <div style={{ width: 24, height: 24, borderRadius: 6, background: t.fill, color: t.stroke, display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 800, fontSize: 10, border: `1px solid ${t.stroke}40` }}>
+                <div key={b.yardBlockId}
+                  onMouseEnter={() => setHovered(b.yardBlockId)}
+                  onMouseLeave={() => setHovered(null)}
+                  className={`gecko-yard-hot${hovered === b.yardBlockId ? ' gecko-yard-hot-on' : ''}`}>
+                  <div className="gecko-row gecko-yard-hot-head">
+                    <div className="gecko-yard-hot-rank"
+                      style={{ background: style.fill, color: style.stroke, borderColor: `${style.stroke}40` }}>
                       {idx + 1}
                     </div>
-                    <span style={{ fontFamily: 'var(--gecko-font-mono)', fontSize: 13, fontWeight: 800, color: t.stroke }}>{b.code}</span>
-                    <span className="gecko-eyebrow">{t.label}</span>
+                    <span className="gecko-yard-hot-code" style={{ color: style.stroke }}>{b.blockCode}</span>
+                    <span className="gecko-eyebrow">{typeLabel(b.blockType)}</span>
                   </div>
                   <div className="gecko-row gecko-row-wrap gecko-cell-meta">
-                    <span><strong style={{ color: 'var(--gecko-text-primary)' }}>{(m.occupancyPct * 100).toFixed(0)}%</strong> util</span>
+                    <span><strong className="gecko-yard-hot-strong">{b.occupancyPct === null ? '—' : `${Math.round(b.occupancyPct)}%`}</strong> full</span>
                     <span>·</span>
-                    <span><strong style={{ color: 'var(--gecko-text-primary)' }}>{m.avgDwellDays}d</strong> dwell</span>
-                    {m.holdCount > 0 && (<><span>·</span><span style={{ color: 'var(--gecko-warning-700)' }}><strong>{m.holdCount}</strong> holds</span></>)}
-                    {m.damagedCount > 0 && b.type !== 'DAMAGE' && (<><span>·</span><span style={{ color: 'var(--gecko-error-700)' }}><strong>{m.damagedCount}</strong> DM</span></>)}
+                    <span><strong className="gecko-yard-hot-strong">{b.tally.boxes}</strong> boxes</span>
+                    <span>·</span>
+                    <span><strong className="gecko-yard-hot-strong">{b.tally.averageDays}d</strong> dwell</span>
+                    {b.tally.held > 0 && <><span>·</span><span className="gecko-yard-hot-warn"><strong>{b.tally.held}</strong> holds</span></>}
+                    {b.tally.damaged > 0 && <><span>·</span><span className="gecko-yard-hot-bad"><strong>{b.tally.damaged}</strong> DM</span></>}
                   </div>
                 </div>
               );
@@ -562,97 +617,159 @@ export default function YardGlancePage() {
         </div>
       </div>
 
-      {/* Block-by-block table */}
+      {/* ONE BLOCK, STACK BY STACK. The map says which block is full; this says
+          which box is where in it — and it is where a move starts. */}
+      {openBlockId && (
+        <StackView
+          blockId={openBlockId}
+          highlightSlotId={found?.yardSlotId ?? null}
+          tick={tick}
+          onClose={() => openBlock(null)}
+          onMove={canMove ? box => void askToMove(box.containerNo) : undefined}
+          onOrder={canMove ? (containerNo, kind) => setOrdering({ containerNo, kind }) : undefined}
+        />
+      )}
+
+      {/* Block by block */}
       <div className="gecko-table-card">
-        <div className="gecko-row" style={{ padding: '14px 18px', borderBottom: '1px solid var(--gecko-border)' }}>
+        <div className="gecko-row gecko-yard-glance-head">
           <div className="gecko-flex-1">
-            <div className="gecko-section-header-title">Block-by-block breakdown</div>
-            <div className="gecko-section-header-subtitle">{blocks.length} blocks · sorted by criticality (utilization × dwell × holds)</div>
+            <div className="gecko-section-header-title">Block by block</div>
+            <div className="gecko-section-header-subtitle">
+              {data.blocks.length} blocks · {data.slotCount.toLocaleString()} slots, {data.usableSlotCount.toLocaleString()} usable
+            </div>
           </div>
         </div>
-        <div style={{ overflowX: 'auto' }}>
-          <table className="gecko-table gecko-table-compact" style={{ minWidth: 920 }}>
+        <div className="gecko-yard-table-scroll">
+          <table className="gecko-table gecko-table-compact gecko-yard-glance-table">
             <thead>
               <tr>
                 <th>Block</th>
                 <th>Type</th>
-                <th>Alloc</th>
-                <th style={{ textAlign: 'right' }}>Capacity (TEU)</th>
-                <th style={{ textAlign: 'right' }}>Occupied</th>
-                <th>Utilization</th>
-                <th style={{ textAlign: 'right' }}>Containers</th>
-                <th style={{ textAlign: 'right' }}>Avg dwell</th>
-                <th style={{ textAlign: 'right' }}>Longest</th>
-                <th style={{ textAlign: 'right' }}>Holds</th>
-                <th style={{ textAlign: 'right' }}>Reefer plugs</th>
+                <th>Reserved for</th>
+                <th className="gecko-cell-right">Slots</th>
+                <th className="gecko-cell-right">Boxes</th>
+                <th className="gecko-cell-right">TEU</th>
+                <th>Occupancy</th>
+                <th className="gecko-cell-right">Full / empty</th>
+                <th className="gecko-cell-right">Avg dwell</th>
+                <th className="gecko-cell-right">Longest</th>
+                <th className="gecko-cell-right">Holds</th>
+                <th className="gecko-cell-right">Reefer plugs</th>
               </tr>
             </thead>
             <tbody>
-              {hotspots /* sorted by criticality */
-                .concat(
-                  blocks
-                    .filter(b => !hotspots.some(h => h.b.id === b.id))
-                    .map(b => ({ b, m: metrics.get(b.id)!, score: 0 }))
-                )
-                .map(({ b, m }) => {
-                  const t = BLOCK_TYPES[b.type];
-                  return (
-                    <tr key={b.id} onMouseEnter={() => setHoveredBlockId(b.id)} onMouseLeave={() => setHoveredBlockId(null)} className="gecko-row-clickable">
-                      <td className="gecko-text-mono" style={{ fontWeight: 700, color: t.stroke }}>{b.code}</td>
-                      <td>
-                        <span className="gecko-pill" style={{ background: t.fill, color: t.stroke, border: `1px solid ${t.stroke}40`, fontSize: 10 }}>{t.label}</span>
-                      </td>
-                      <td className="gecko-cell-meta">
-                        {b.allocation === 'OPEN' ? 'Open' : b.reservedParty || '—'}
-                      </td>
-                      <td style={{ textAlign: 'right', fontFamily: 'var(--gecko-font-mono)' }}>{m.capacityTeu}</td>
-                      <td className="gecko-money">{m.occupiedTeu}</td>
-                      <td>
-                        <div className="gecko-row" style={{ gap: 6 }}>
-                          <div className="gecko-progress gecko-progress-sm" style={{ flex: 1, minWidth: 80, background: 'var(--gecko-gray-100)' }}>
-                            <div
-                              className="gecko-progress-bar"
-                              style={{
-                                width: `${m.occupancyPct * 100}%`,
-                                background:
-                                  m.occupancyPct >= 0.85 ? 'var(--gecko-error-500)' :
-                                  m.occupancyPct >= 0.60 ? 'var(--gecko-warning-500)' :
-                                                            'var(--gecko-success-500)',
-                              }}
-                            />
-                          </div>
-                          <span className="gecko-money" style={{ fontSize: 11, minWidth: 36 }}>
-                            {(m.occupancyPct * 100).toFixed(0)}%
-                          </span>
-                        </div>
-                      </td>
-                      <td style={{ textAlign: 'right', fontFamily: 'var(--gecko-font-mono)' }}>{m.containerCount}</td>
-                      <td style={{ textAlign: 'right', fontFamily: 'var(--gecko-font-mono)', color: m.avgDwellDays >= 7 ? 'var(--gecko-warning-700)' : 'var(--gecko-text-primary)' }}>{m.avgDwellDays}d</td>
-                      <td style={{ textAlign: 'right', fontFamily: 'var(--gecko-font-mono)', color: m.longestDwellDays >= 14 ? 'var(--gecko-error-700)' : 'var(--gecko-text-secondary)' }}>{m.longestDwellDays}d</td>
-                      <td style={{ textAlign: 'right' }}>
-                        {m.holdCount > 0
-                          ? <span className="gecko-pill gecko-pill-warning" style={{ fontSize: 10 }}>{m.holdCount}</span>
-                          : <span style={{ fontSize: 10, color: 'var(--gecko-text-disabled)' }}>—</span>}
-                      </td>
-                      <td style={{ textAlign: 'right', fontFamily: 'var(--gecko-font-mono)' }}>
-                        {b.reeferPlugCount > 0
-                          ? `${m.reeferActive}/${m.reeferCapacity}`
-                          : <span style={{ color: 'var(--gecko-text-disabled)' }}>—</span>}
-                      </td>
-                    </tr>
-                  );
-                })}
+              {data.blocks.map(b => {
+                const style = blockStyle(b);
+                const pct = b.occupancyPct;
+                return (
+                  <tr key={b.yardBlockId} className="gecko-row-clickable"
+                    onMouseEnter={() => setHovered(b.yardBlockId)} onMouseLeave={() => setHovered(null)}
+                    onClick={() => openBlock(openBlockId === b.yardBlockId ? null : b.yardBlockId)}>
+                    <td className="gecko-text-mono gecko-yard-hot-code" style={{ color: style.stroke }}>{b.blockCode}</td>
+                    <td>
+                      <span className="gecko-pill gecko-yard-type-pill"
+                        style={{ background: style.fill, color: style.stroke, borderColor: `${style.stroke}40` }}>
+                        {typeLabel(b.blockType)}
+                      </span>
+                    </td>
+                    <td>
+                      {b.allocatedToPartyCode
+                        ? <PartyName code={b.allocatedToPartyCode} resolve />
+                        : <span className="gecko-cell-meta">Open to all</span>}
+                      {b.allocatedSizeFt && <div className="gecko-cell-meta">{b.allocatedSizeFt}&apos; only</div>}
+                    </td>
+                    <td className="gecko-num-tabular">
+                      {b.slotCount === 0
+                        ? <span className="gecko-cell-meta">none</span>
+                        : <>{b.slotCount - b.blockedSlotCount}<span className="gecko-cell-meta"> / {b.slotCount}</span></>}
+                    </td>
+                    <td className="gecko-num-tabular">{b.tally.boxes}</td>
+                    <td className="gecko-num-tabular">{teu(b.tally.teu)}</td>
+                    <td>
+                      {pct === null
+                        ? <span className="gecko-cell-meta" title="No usable slots — generate them in Yard Zones &amp; Blocks">no slots</span>
+                        : <div className="gecko-row gecko-yard-bar-row">
+                            <div className="gecko-progress gecko-progress-sm gecko-yard-bar">
+                              <div className="gecko-progress-bar gecko-yard-bar-fill"
+                                style={{ width: `${Math.min(100, pct)}%`, background: occupancyBand(pct).stroke }} />
+                            </div>
+                            <span className="gecko-num-tabular gecko-yard-bar-value">{Math.round(pct)}%</span>
+                          </div>}
+                    </td>
+                    <td className="gecko-num-tabular">{b.tally.full} / {b.tally.empty}</td>
+                    <td className="gecko-num-tabular">{b.tally.averageDays}d</td>
+                    <td className="gecko-num-tabular">{b.tally.maxDays}d</td>
+                    <td className="gecko-cell-right">
+                      {b.tally.held > 0
+                        ? <span className="gecko-pill gecko-pill-warning gecko-yard-type-pill">{b.tally.held}</span>
+                        : <span className="gecko-cell-meta">—</span>}
+                    </td>
+                    <td className="gecko-num-tabular">
+                      {b.reeferPlugCount > 0
+                        ? `${b.tally.reefer}/${b.reeferPlugCount}`
+                        : <span className="gecko-cell-meta">—</span>}
+                    </td>
+                  </tr>
+                );
+              })}
             </tbody>
           </table>
         </div>
       </div>
+
+      {ordering && branchId && (
+        <OrderJobDialog
+          branchId={branchId}
+          containerNo={ordering.containerNo}
+          kind={ordering.kind}
+          onClose={() => setOrdering(null)}
+        />
+      )}
+
+      {moving && (
+        <MoveBoxDialog
+          location={moving}
+          onClose={() => setMoving(null)}
+          onMoved={to => void moved(to)}
+          onMoveInstead={no => void askToMove(no)}
+        />
+      )}
     </div>
   );
 }
 
-/* ──────────────────────────────────────────────────────────────────────────
-   Helper components
-   ────────────────────────────────────────────────────────────────────────── */
+/** The hovered block, spelled out: everything the map could only colour. */
+function BlockStrip({ block }: { block: YardMapBlock }) {
+  const style = blockStyle(block);
+  const t: YardMapTally = block.tally;
+  return (
+    <div className="gecko-row gecko-row-wrap gecko-yard-strip">
+      <span className="gecko-yard-hot-code" style={{ color: style.stroke }}>{block.blockCode}</span>
+      <span className="gecko-pill gecko-yard-type-pill"
+        style={{ background: style.fill, color: style.stroke, borderColor: `${style.stroke}40` }}>
+        {typeLabel(block.blockType)}
+      </span>
+      <Metric label="Boxes" value={t.boxes} />
+      <Metric label="TEU" value={teu(t.teu)} />
+      <Metric label="Full / empty" value={`${t.full} / ${t.empty}`} />
+      <Metric label="Reefers" value={block.reeferPlugCount > 0 ? `${t.reefer} of ${block.reeferPlugCount} plugs` : String(t.reefer)} />
+      <Metric label="Holds" value={t.held} tone={t.held > 0 ? 'warning' : 'neutral'} />
+      <Metric label="Damaged" value={t.damaged} tone={t.damaged > 0 ? 'warning' : 'neutral'} />
+      <Metric label="Dwell" value={`${t.averageDays}d avg · ${t.maxDays}d longest`} />
+      <Metric label="Slots" value={block.slotCount === 0 ? 'none yet' : `${block.slotCount - block.blockedSlotCount} usable of ${block.slotCount}`} />
+      {block.allocatedToPartyCode && (
+        <span className="gecko-inline-row gecko-yard-metric">
+          <span className="gecko-eyebrow">Reserved</span>
+          <span className="gecko-yard-metric-value">
+            <PartyName code={block.allocatedToPartyCode} resolve inline />
+            {block.allocatedSizeFt ? ` · ${block.allocatedSizeFt}'` : ''}
+          </span>
+        </span>
+      )}
+    </div>
+  );
+}
 
 function KpiTile({ icon, tone, label, value, sub }: {
   icon: string; tone: 'primary' | 'success' | 'warning' | 'danger' | 'info' | 'neutral';
@@ -670,24 +787,9 @@ function KpiTile({ icon, tone, label, value, sub }: {
 
 function Metric({ label, value, tone = 'neutral' }: { label: string; value: React.ReactNode; tone?: 'neutral' | 'warning' }) {
   return (
-    <span className="gecko-inline-row" style={{ gap: 4 }}>
+    <span className="gecko-inline-row gecko-yard-metric">
       <span className="gecko-eyebrow">{label}</span>
-      <span style={{
-        fontFamily: 'var(--gecko-font-mono)', fontWeight: 700, color:
-          tone === 'warning' ? 'var(--gecko-warning-700)' : 'var(--gecko-text-primary)',
-      }}>
-        {value}
-      </span>
+      <span className={`gecko-yard-metric-value${tone === 'warning' ? ' gecko-yard-hot-warn' : ''}`}>{value}</span>
     </span>
   );
-}
-
-function lensMetricLabel(lens: Lens, m: BlockMetrics, type: BlockType): string {
-  switch (lens) {
-    case 'occupancy': return `${(m.occupancyPct * 100).toFixed(0)}%`;
-    case 'dwell':     return `${m.avgDwellDays}d`;
-    case 'holds':     return m.holdCount > 0 ? `${m.holdCount} hold${m.holdCount === 1 ? '' : 's'}` : 'clear';
-    case 'reefer':    return m.reeferCapacity > 0 ? `${m.reeferActive}/${m.reeferCapacity}` : '—';
-    case 'type':      return BLOCK_TYPES[type].label;
-  }
 }

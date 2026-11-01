@@ -14,6 +14,7 @@ import {
   type GateDirection, type GateTransactionSummary,
 } from '@/lib/api/tos';
 import { GATE_API, dayRange, eirPath } from '@/lib/api/gate-eir';
+import { ErrorBanner } from '@/components/ui/ErrorBanner';
 
 /**
  * EIR REGISTER — live against gecko_tos `gate.gate_transaction`, one direction.
@@ -84,15 +85,7 @@ export function EirRegister({ direction }: { direction: GateDirection }) {
         </div>
       </div>
 
-      {list.error && (
-        <div className="gecko-alert gecko-alert-error">
-          <Icon name="alertCircle" size={18} />
-          <div>
-            <div style={{ fontWeight: 600 }}>{list.error.title}</div>
-            {list.error.explanation && <div>{list.error.explanation}</div>}
-          </div>
-        </div>
-      )}
+      <ErrorBanner error={list.error} />
 
       <div className="gecko-card" style={{ padding: 14 }}>
         <div className="gecko-row gecko-stack-md" style={{ gap: 12, flexWrap: 'wrap', alignItems: 'flex-end' }}>

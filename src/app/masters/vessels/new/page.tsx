@@ -8,6 +8,7 @@ import { ApiError } from '@/lib/api/problem';
 import { apiSend } from '@/lib/api/client';
 import { VESSELS_PATH, type Vessel } from '@/lib/api/logistics';
 import { EMPTY_VESSEL, VesselForm, localErrors } from '../_components/VesselForm';
+import { ErrorBanner } from '@/components/ui/ErrorBanner';
 
 export default function NewVesselPage() {
   const router = useRouter();
@@ -47,11 +48,7 @@ export default function NewVesselPage() {
         </div>
       </div>
 
-      {error && (
-        <div role="alert" className="gecko-alert gecko-alert-error gecko-row" style={{ gap: 10 }}>
-          <Icon name="alertCircle" size={16} /><span>{error.message}</span>
-        </div>
-      )}
+      <ErrorBanner error={error} />
 
       <div className="gecko-card" style={{ padding: 24 }}>
         <VesselForm value={form} onChange={setForm} isNew readOnly={false} errors={errors} apiError={error} />
