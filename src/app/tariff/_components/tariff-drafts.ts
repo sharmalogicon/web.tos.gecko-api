@@ -8,8 +8,7 @@
  */
 import { FLAG_AXES, NUMERIC_AXES, parseTiers } from '@/lib/api/revenue';
 import type {
-  ConditionItem, FreeTimeKind, PricingMethod, RateItem, TierBasis,
-} from '@/lib/api/revenue';
+  ConditionItem, FreeTimeKind, PricingMethod, RateItem, TierBasis, FreeTimeItem,} from '@/lib/api/revenue';
 
 export interface ConditionDraft {
   key: string;
@@ -61,6 +60,25 @@ export const newRate = (): RateDraft => ({
   key: newKey(), chargeCode: '', billTo: 'CUSTOMER', paymentTermCode: 'CASH', creditTermDays: '',
   orderTypeCode: '', movementCode: '', equipmentTypeCode: '', equipmentSize: '', cargoCategoryCode: '', truckCategoryCode: '',
   billingUnitCode: '', pricingMethod: 'FLAT', tierBasis: '', rate: '', tiersText: '', conditions: [], open: false,
+});
+
+/**
+ * A STORAGE ROW, ALREADY SHAPED LIKE ONE.
+ *
+ * Storage is an ordinary rate priced by the day in tiers — the provision was
+ * always there, and a clerk had to know to add a blank row and switch it to
+ * tiered-by-DAY themselves. This is that knowledge written down: per day,
+ * tiered from the first chargeable day, billed to the customer.
+ */
+export const storageRate = (chargeCode = ''): RateDraft => ({
+  ...newRate(),
+  chargeCode,
+  pricingMethod: 'TIERED_INCREMENTAL',
+  tierBasis: 'DAY',
+  billingUnitCode: 'PER_DAY',
+  billTo: 'CUSTOMER',
+  paymentTermCode: 'CASH',
+  open: true,
 });
 
 export const newCondition = (): ConditionDraft => ({
@@ -176,6 +194,24 @@ export function rateDraftsOf(rates: readonly {
 /** '' is absent, not zero: a blank credit-days field means 'follow the term'. */
 const num = (v: string) => (v.trim() === '' ? null : Number(v.replace(/,/g, '')));
 const blank = (v: string) => (v.trim() === '' ? null : v.trim());
+
+/**
+ * A free-time rule as the API takes it. Lives here, beside `toRateItem`,
+ * because two screens save free time now: the quotation editor and the
+ * tariff's own Storage & time tab.
+ */
+export function toFreeTimeItem(f: FreeTimeDraft): FreeTimeItem {
+  const num = (v: string) => (v.trim() === '' ? null : Number(v.replace(/,/g, '')));
+  const blank = (v: string) => (v.trim() === '' ? null : v.trim());
+  return {
+    freeTimeKind: f.freeTimeKind,
+    freeUnits: num(f.freeUnits) ?? 0,
+    fullEmpty: (blank(f.fullEmpty) as FreeTimeItem['fullEmpty']) ?? null,
+    direction: (blank(f.direction) as FreeTimeItem['direction']) ?? null,
+    cargoGroup: (blank(f.cargoGroup) as FreeTimeItem['cargoGroup']) ?? null,
+    equipmentSize: blank(f.equipmentSize),
+  };
+}
 
 export function toConditionItem(c: ConditionDraft): ConditionItem {
   const isFlag = FLAG_AXES.includes(c.axis);

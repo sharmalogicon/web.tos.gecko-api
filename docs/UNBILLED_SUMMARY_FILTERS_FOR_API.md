@@ -4,6 +4,26 @@
 **Endpoints:** `GET /api/revenue/charges/unbilled` (the card) and
 `GET /api/revenue/charges/unbilled/orders` (the grid).
 
+## 0. ANSWERED — the filters shipped, 2026-11-01
+
+`GET /api/revenue/charges/unbilled` takes the whole query now, and the same
+code selects the lines for it and for `/orders`, so the card totals exactly
+what the grid lists. Verified against the running API's own OpenAPI document:
+every parameter the screen sends is published on both calls.
+
+The answers to the questions below: it **ignored** them silently before (1);
+`Progress` means the same on both (2); it is one read, capped at 20,000 lines,
+so no Totals button is needed (3).
+
+**One difference worth knowing**: with a search, the card counts what the grid
+counts, so a credit line already priced on a booking (QUOTED) is included. The
+depot-wide card — no search — still counts only UNBILLED lines, as before.
+
+The screen reads it with the applied query as of this commit, so nothing below
+is outstanding. It is kept for the reasoning.
+
+---
+
 ## What a clerk saw
 
 Searched for one billing customer. The grid said **0 orders — "Nothing

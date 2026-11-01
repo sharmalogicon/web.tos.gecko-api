@@ -19,10 +19,11 @@ import { useSession } from '@/lib/auth/session';
 import { useMovements } from '@/lib/api/lookups';
 import { useOrderTypeVocabulary } from '@/lib/api/order-types';
 import { formatDate } from '@/lib/format';
-import { CHARGE_PERMISSIONS, unbilledPath, type Unbilled } from '@/lib/api/charges';
+import { CHARGE_PERMISSIONS, type Unbilled } from '@/lib/api/charges';
 import {
   PROGRESS_LABELS, UNBILLED_ORDERS_PATH, UNBILLED_PROGRESS, blankUnbilledQuery, money,
   selectionTotals, unbilledChargesReportPath, unbilledExportPath, unbilledLinesPath, unbilledParams,
+  unbilledSummaryPath,
   type UnbilledLine, type UnbilledOrder, type UnbilledOrdersPage, type UnbilledProgress,
   type UnbilledQuery,
 } from '@/lib/api/unbilled-orders';
@@ -93,8 +94,14 @@ export default function UnbilledOrdersPage_() {
   const page = orders.data as unknown as UnbilledOrdersPage | null;
   const rows = useMemo(() => orders.rows ?? [], [orders.rows]);
 
-  // The payer summary keeps its place: a different question, worth a glance.
-  const summary = useApi<Unbilled>(branchId && mayView ? unbilledPath(branchId) : null);
+  /**
+   * The payer summary keeps its place, and now answers the SAME question as
+   * the grid: `applied`, not the whole depot. The path carries the filters, so
+   * it re-reads itself on Search, on Reset and on a chip's ✕ with nothing to
+   * remember to reload.
+   */
+  const summary = useApi<Unbilled>(
+    branchId && mayView ? unbilledSummaryPath(applied, branchId) : null);
 
   // The three party filters SEARCH the server (PartyPicker). They were
   // pageSize=200 dropdowns, which stopped partway through the alphabet and left

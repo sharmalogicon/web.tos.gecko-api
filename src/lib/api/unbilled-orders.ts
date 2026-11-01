@@ -168,6 +168,18 @@ export function unbilledParams(q: UnbilledQuery, branchId: string): Record<strin
 }
 
 export const UNBILLED_ORDERS_PATH = '/api/revenue/charges/unbilled/orders';
+
+/**
+ * THE OUTSTANDING CARD, ANSWERING THE SAME QUESTION AS THE GRID.
+ *
+ * It used to take the branch and nothing else, so a search for one customer
+ * left the card showing the whole depot — ฿1,419.84 across three payers above
+ * a grid that said "nothing unbilled" (GECKO, 2026-11-01). The API takes the
+ * full query now and totals exactly the lines the grid selects, so both halves
+ * of the screen answer one question. No filters is still the whole depot.
+ */
+export const unbilledSummaryPath = (q: UnbilledQuery, branchId: string) =>
+  `/api/revenue/charges/unbilled?${new URLSearchParams(unbilledParams(q, branchId))}`;
 export const UNBILLED_LINES_PATH = '/api/revenue/charges/unbilled/lines';
 
 export const unbilledExportPath = (q: UnbilledQuery, branchId: string) =>

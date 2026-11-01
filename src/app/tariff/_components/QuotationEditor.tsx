@@ -16,12 +16,12 @@ import { PartyPicker } from '@/components/ui/PartyPicker';
 import { RateDialog } from './RateDialog';
 import { Labelled } from './TariffFields';
 import {
-  copyRate, newRate, scopeOf, toRateItem,
+  copyRate, newRate, scopeOf, toFreeTimeItem, toRateItem,
   type ConditionDraft, type FreeTimeDraft, type RateDraft,
 } from './tariff-drafts';
 import {
   FLAG_AXES, NUMERIC_AXES, SCOPE_RANK_LABEL, TYPE_TONE, formatDate, parseTiers, rowErrors,
-  type ConditionItem, type FreeTimeItem, type FreeTimeSet,
+  type ConditionItem, type FreeTimeSet,
   type RateItem, type RateSet, type SaveScheduleRequest, type Schedule, type ScheduleType,
 } from '@/lib/api/revenue';
 import { useTariffCatalogs } from '@/lib/api/tariff-catalogs';
@@ -50,19 +50,6 @@ const MODULE_CODE = 'TOS';
 
 const today = () => new Date().toISOString().slice(0, 10);
 const blank = (v: string) => (v.trim() === '' ? null : v.trim());
-const num = (v: string) => (v.trim() === '' ? null : Number(v.replace(/,/g, '')));
-
-/** Local problems the server would also refuse, caught before a round trip. */
-function toFreeTimeItem(f: FreeTimeDraft): FreeTimeItem {
-  return {
-    freeTimeKind: f.freeTimeKind,
-    freeUnits: num(f.freeUnits) ?? 0,
-    fullEmpty: (blank(f.fullEmpty) as FreeTimeItem['fullEmpty']) ?? null,
-    direction: (blank(f.direction) as FreeTimeItem['direction']) ?? null,
-    cargoGroup: (blank(f.cargoGroup) as FreeTimeItem['cargoGroup']) ?? null,
-    equipmentSize: blank(f.equipmentSize),
-  };
-}
 
 interface Branch { branchId: string; branchCode: string; displayName: string; isActive: boolean }
 

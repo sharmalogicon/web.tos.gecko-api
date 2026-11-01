@@ -9,7 +9,8 @@ import { EmptyState } from '@/components/ui/EmptyState';
 import { Fact } from '@/components/ui/Fact';
 import { FreeTimeMatrix } from '../../_components/FreeTimeMatrix';
 import {
-  freeTimeDraftsOf, rateDraftsOf, toRateItem, type RateDraft,
+  freeTimeDraftsOf, rateDraftsOf, storageRate, toFreeTimeItem, toRateItem,
+  type FreeTimeDraft, type RateDraft,
 } from '../../_components/tariff-drafts';
 import { FilterPopover, type FilterField } from '@/components/ui/FilterPopover';
 import { RateDialog } from '../../_components/RateDialog';
@@ -96,6 +97,20 @@ export default function TariffScheduleDetailPage({ params }: { params: Promise<{
   const [editingId, setEditingId] = useState<string | null>(null);
   /** The revision dialog: three fields, so it is its own component, not an Ask. */
   const [askRevise, setAskRevise] = useState(false);
+  /**
+   * ADDING STORAGE, from the tab that shows it.
+   *
+   * The charge picker narrows to the depot's storage codes — S-110 empty,
+   * S-111 full and their credit twins — because a list of every charge in the
+   * tariff is how "add storage" became a thing people asked how to do. If the
+   * depot types its charge types differently, the full list is shown rather
+   * than an empty one: a narrowed list that narrows to nothing is a dead end.
+   */
+  const [pickingStorage, setPickingStorage] = useState(false);
+  /** The free days, edited here rather than only inside Edit charges. */
+  const [freeEdit, setFreeEdit] = useState<FreeTimeDraft[] | null>(null);
+  const [freeBusy, setFreeBusy] = useState(false);
+  const [freeError, setFreeError] = useState<string | null>(null);
 
   const putRates = useCallback(async (next: RateDraft[], undo: () => void) => {
     const converted = next.map(toRateItem);
@@ -136,6 +151,50 @@ export default function TariffScheduleDetailPage({ params }: { params: Promise<{
     const ok = await putRates(next, () => {});
     setRateBusy(null);
     if (ok) { setEditing(null); setEditingId(null); }
+  }
+
+  /**
+   * The charge picker, narrowed to storage. Falling back to every charge when
+   * the depot names its types differently keeps a narrowed list from narrowing
+   * to nothing — which would be a worse dead end than the one being fixed.
+   */
+  const storageCatalogs = useMemo(() => {
+    const only = catalogs.charges.filter(c => (c.chargeType ?? '').toUpperCase().includes('STORAGE'));
+    return only.length > 0 ? { ...catalogs, charges: only } : catalogs;
+  }, [catalogs]);
+
+  /** Add a storage row: the dialog opens already shaped like one. */
+  const addStorage = () => {
+    setEditingId(null);
+    setRateErrors(undefined);
+    setPickingStorage(true);
+    setEditing(storageRate());
+  };
+
+  /**
+   * THE FREE DAYS, SAVED FROM THIS TAB.
+   *
+   * Storage is days in the yard MINUS the free days, so pricing one without
+   * the other is half an answer — and the free days used to be reachable only
+   * from inside Edit charges, two screens from the tiers they govern.
+   */
+  async function saveFreeTime(rules: FreeTimeDraft[]) {
+    setFreeBusy(true);
+    setFreeError(null);
+    try {
+      await apiSend('PUT', `/api/revenue/tariffs/${id}/free-time`, {
+        rowVersion: freeTime.data?.rowVersion ?? s?.rowVersion,
+        // An empty cell is not a rule: it means "take STANDARD's free days".
+        rules: rules.filter(f => f.freeUnits.trim() !== '').map(toFreeTimeItem),
+      });
+      setFreeEdit(null);
+      reloadAll();
+    } catch (e) {
+      const error = e instanceof ApiError ? e : new ApiError(0, 'Could not reach the Gecko API.');
+      setFreeError(error.forField('rules') ?? error.message);
+    } finally {
+      setFreeBusy(false);
+    }
   }
 
   async function deleteRate(r: Rate) {
@@ -274,6 +333,8 @@ export default function TariffScheduleDetailPage({ params }: { params: Promise<{
 
   const tone = TYPE_TONE[s.scheduleType];
   const canManage = can('revenue.tariff.manage');
+  /** This version may still be changed, and this user may change it. */
+  const editableHere = !!s?.isEditable && canManage;
   const canApprove = can('revenue.tariff.approve');
   const isOpen = s.status === 'DRAFT' || s.status === 'PENDING';
 
@@ -516,9 +577,64 @@ export default function TariffScheduleDetailPage({ params }: { params: Promise<{
             })} />
         )}
         {tab === 'storage' && (
-          <RateTable rates={timeCharges} currency={s.currencyCode} describe={describe}
-            emptyNote="No storage or time-based charges priced here."
-            editable={!!s.isEditable && canManage} busyKey={rateBusy}
+          <div className="gecko-stack">
+            {/* WHAT THIS TAB IS FOR, in the words a clerk would use for it.
+                Storage was always priceable here — an ordinary rate, by the
+                day, in tiers — and nothing on the screen said so, so people
+                asked how to add it. */}
+            <div className="gecko-cell-meta">
+              Storage is charged when the box goes out: days in the yard − free days, priced by these
+              tiers. A customer with no storage row here is charged at STANDARD.
+            </div>
+
+            <Card title="Storage free days" icon="calendar"
+              subtitle="Days free before storage starts to price. Free days come off before the tiers are counted."
+              right={editableHere && (freeEdit
+                ? (
+                  <div className="gecko-row gecko-gap-1">
+                    <button className="gecko-btn gecko-btn-ghost gecko-btn-sm" disabled={freeBusy}
+                      onClick={() => { setFreeEdit(null); setFreeError(null); }}>Cancel</button>
+                    <button className="gecko-btn gecko-btn-primary gecko-btn-sm" disabled={freeBusy}
+                      onClick={() => void saveFreeTime(freeEdit)}>
+                      <Icon name="check" size={13} /> {freeBusy ? 'Saving…' : 'Save free days'}
+                    </button>
+                  </div>
+                )
+                : (
+                  <button className="gecko-btn gecko-btn-outline gecko-btn-sm"
+                    onClick={() => setFreeEdit(freeTimeDrafts)}>
+                    <Icon name="edit" size={13} /> Edit free days
+                  </button>
+                ))}>
+              <FreeTimeMatrix
+                rules={freeEdit ?? freeTimeDrafts}
+                readOnly={!freeEdit}
+                onChange={freeEdit ? setFreeEdit : undefined}
+                error={freeError} />
+              {freeEdit && (
+                <div className="gecko-cell-meta gecko-mt-1">
+                  Leave a cell empty to use STANDARD&rsquo;s free days (7).
+                </div>
+              )}
+            </Card>
+
+            {editableHere && (
+              <div className="gecko-row gecko-row-end">
+                <button className="gecko-btn gecko-btn-primary gecko-btn-sm" onClick={addStorage}>
+                  <Icon name="plus" size={13} /> Add storage charge
+                </button>
+              </div>
+            )}
+
+            <RateTable rates={timeCharges} currency={s.currencyCode} describe={describe}
+              emptyNote={editableHere
+                ? <>No storage priced yet —{' '}
+                  <button type="button" className="gecko-link gecko-link-button" onClick={addStorage}>
+                    Add storage charge
+                  </button>
+                </>
+                : 'No storage or time-based charges priced here.'}
+              editable={!!s.isEditable && canManage} busyKey={rateBusy}
             onEdit={r => { setEditingId(r.tosRateId); setEditing(rateDraftsOf([r])[0]); setRateErrors(undefined); }}
             onDelete={r => setAsk({
               kind: 'confirm', danger: true,
@@ -527,6 +643,7 @@ export default function TariffScheduleDetailPage({ params }: { params: Promise<{
               confirmLabel: 'Remove the row',
               onConfirm: () => deleteRate(r),
             })} />
+          </div>
         )}
 
         {tab === 'activity' && (
@@ -567,10 +684,12 @@ export default function TariffScheduleDetailPage({ params }: { params: Promise<{
         key={editing?.key ?? 'none'}
         open={editing !== null}
         row={editing}
-        catalogs={catalogs}
+        catalogs={pickingStorage ? storageCatalogs : catalogs}
         errors={rateErrors}
         currency={s.currencyCode}
-        onClose={() => { setEditing(null); setEditingId(null); setRateErrors(undefined); }}
+        onClose={() => {
+          setEditing(null); setEditingId(null); setRateErrors(undefined); setPickingStorage(false);
+        }}
         onSave={saveRate} />
 
       <AskDialog ask={ask} onClose={() => setAsk(null)} />
@@ -672,7 +791,8 @@ const RATE_FILTERS: { key: keyof Rate & string; label: string }[] = [
 function RateTable({ rates, currency, emptyNote, describe, editable, onEdit, onDelete, busyKey }: {
   rates: Rate[];
   currency: string;
-  emptyNote: string;
+  /** A sentence — or one with a way out of the empty state inside it. */
+  emptyNote: React.ReactNode;
   /** A charge code is an identifier, not a label — the description makes it readable. */
   describe: (code: string) => string;
   /** Only a version that is still open may be changed. An approved price is frozen. */
