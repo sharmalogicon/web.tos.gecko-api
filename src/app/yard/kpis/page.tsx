@@ -370,12 +370,23 @@ function Tile({ icon, tone, label, value, sub }: {
   icon: string; tone: 'primary' | 'success' | 'warning' | 'danger' | 'info' | 'neutral';
   label: string; value: string | number; sub: string;
 }) {
+  /**
+   * STACKED, the same way Yard at a glance does it (owner, 2026-11-02).
+   *
+   * Six tiles across the page leave each one about 180px, and a row of icon,
+   * figure, name and note inside that width tore the note into a column two
+   * words wide: "15 boxe / in 1042 / slot". The name is the tile's heading
+   * now, the figure sits under it with its icon, and the note runs along the
+   * bottom with the whole width to say itself in.
+   */
   return (
-    <div className="gecko-kpi-tile">
-      <div className={`gecko-kpi-tile-icon gecko-kpi-tile-icon-${tone}`}><Icon name={icon} size={16} /></div>
-      <div className="gecko-kpi-tile-value">{value}</div>
-      <div className="gecko-kpi-tile-label">{label}</div>
-      <div className="gecko-cell-sub">{sub}</div>
+    <div className="gecko-kpi-tile gecko-kpi-tile-stacked">
+      <div className="gecko-eyebrow gecko-kpi-tile-head">{label}</div>
+      <div className="gecko-kpi-tile-main">
+        <div className={`gecko-kpi-tile-icon gecko-kpi-tile-icon-${tone}`}><Icon name={icon} size={16} /></div>
+        <div className="gecko-kpi-tile-value">{value}</div>
+      </div>
+      <div className="gecko-cell-sub gecko-kpi-tile-foot">{sub}</div>
     </div>
   );
 }
