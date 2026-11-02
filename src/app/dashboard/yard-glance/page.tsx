@@ -354,6 +354,14 @@ function YardGlance() {
   // Boxes over usable slots, the same sum the API does per block.
   const occupancy = data.usableSlotCount > 0 ? (total.boxes / data.usableSlotCount) * 100 : null;
   const hoveredBlock = blocks.find(b => b.yardBlockId === hovered) ?? null;
+  /**
+   * Where the hover card points. Above the block normally; below it when the
+   * block sits near the top of the canvas and the card would be drawn off it.
+   *
+   * Plain arithmetic, not a useMemo: this line sits after an early return, and
+   * a hook here would be called on some renders and not others.
+   */
+  const hoverTip = hoverTipAt(hoveredBlock);
 
   return (
     <div className="gecko-stack gecko-stack-lg gecko-yard-glance">
@@ -500,6 +508,35 @@ function YardGlance() {
           </div>
 
           <div className="gecko-yard-glance-canvas">
+            {/* WHAT IS IN THE BLOCK UNDER THE POINTER.
+                Positioned from the block's own place on the canvas: the SVG
+                keeps its aspect ratio and fills the width, so a percentage of
+                the viewBox is a percentage of the drawing. Those two numbers
+                are the only thing this passes inline — everything it looks
+                like is §56 of the design system. */}
+            {hoveredBlock && hoverTip && (
+              <div
+                className={`gecko-yard-tip${hoverTip.below ? ' gecko-yard-tip-below' : ''}`}
+                style={{ '--gecko-tip-x': `${hoverTip.x}%`, '--gecko-tip-y': `${hoverTip.y}%` } as React.CSSProperties}>
+                <div className="gecko-yard-tip-head">
+                  <span className="gecko-yard-tip-code">{hoveredBlock.blockCode}</span>
+                  <span className="gecko-yard-tip-type">{typeLabel(hoveredBlock.blockType)}</span>
+                </div>
+                <dl className="gecko-yard-tip-facts">
+                  <TipFact label="Boxes" value={`${hoveredBlock.tally.boxes} · ${teu(hoveredBlock.tally.teu)} TEU`} />
+                  <TipFact label="Occupied" value={hoveredBlock.occupancyPct === null
+                    ? 'no slots yet'
+                    : `${Math.round(hoveredBlock.occupancyPct)}%`} />
+                  <TipFact label="Dwell" value={hoveredBlock.tally.boxes === 0
+                    ? '—'
+                    : `${hoveredBlock.tally.averageDays}d avg · ${hoveredBlock.tally.maxDays}d longest`} />
+                  {hoveredBlock.tally.held > 0 && (
+                    <TipFact label="Held" value={`${hoveredBlock.tally.held} may not leave`} warn />
+                  )}
+                </dl>
+                <div className="gecko-yard-tip-foot">Click to see it stack by stack</div>
+              </div>
+            )}
             <svg viewBox={`0 0 ${CANVAS_W} ${CANVAS_H}`} className="gecko-yard-glance-svg" preserveAspectRatio="xMidYMid meet">
               <defs>
                 <pattern id="yardGrid" width={GRID_PX * 5} height={GRID_PX * 5} patternUnits="userSpaceOnUse">
@@ -519,17 +556,13 @@ function YardGlance() {
                     onMouseEnter={() => setHovered(b.yardBlockId)}
                     onMouseLeave={() => setHovered(null)}
                     onClick={() => openBlock(isOpen ? null : b.yardBlockId)}
-                    className="gecko-yard-glance-block">
-                    {/* The hover strip under the map says everything; this is
-                        the one line a mouse gets without moving to read it. */}
-                    <title>
-                      {`${b.blockCode} · ${typeLabel(b.blockType)} · ${b.tally.boxes} boxes, ${teu(b.tally.teu)} TEU`}
-                      {b.occupancyPct === null
-                        ? ` · no slots — generate them in Yard Zones & Blocks`
-                        : ` · ${Math.round(b.occupancyPct)}% full`}
-                      {` · ${b.tally.averageDays}d average, ${b.tally.maxDays}d longest`}
-                      {b.tally.held > 0 ? ` · ${b.tally.held} held` : ''}
-                    </title>
+                    className="gecko-yard-glance-block"
+                    /* The name a screen reader announces. It used to be a
+                       <title>, which also made the browser draw its own grey
+                       tooltip — unstyleable, and nothing like the rest of the
+                       app. The card below replaces the drawing; this keeps
+                       what the title was actually for. */
+                    aria-label={blockSummary(b)}>
                     <rect x={x} y={y} width={w} height={h} fill={band.fill}
                       stroke={on || isOpen ? '#0f172a' : band.stroke} strokeWidth={on || isOpen ? 3 : 1.5} rx={3} />
                     {/* The block a search landed in, ringed until it is cleared. */}
@@ -775,14 +808,66 @@ function KpiTile({ icon, tone, label, value, sub }: {
   icon: string; tone: 'primary' | 'success' | 'warning' | 'danger' | 'info' | 'neutral';
   label: string; value: string | number; sub: string;
 }) {
+  /**
+   * STACKED, not strung out in a line (owner, 2026-11-02).
+   *
+   * Six tiles across a dashboard leave each one about 180px, and a row of
+   * icon + figure + name + note inside that width broke the note into columns
+   * two words wide: "35 boxe / in 858 / slot". The name is the tile's heading
+   * now, the figure sits under it with its icon, and the note runs along the
+   * bottom with the full width to do it in.
+   */
   return (
-    <div className="gecko-kpi-tile">
-      <div className={`gecko-kpi-tile-icon gecko-kpi-tile-icon-${tone}`}><Icon name={icon} size={16} /></div>
-      <div className="gecko-kpi-tile-value">{value}</div>
-      <div className="gecko-kpi-tile-label">{label}</div>
-      <div className="gecko-cell-sub">{sub}</div>
+    <div className="gecko-kpi-tile gecko-kpi-tile-stacked">
+      <div className="gecko-eyebrow gecko-kpi-tile-head">{label}</div>
+      <div className="gecko-kpi-tile-main">
+        <div className={`gecko-kpi-tile-icon gecko-kpi-tile-icon-${tone}`}><Icon name={icon} size={16} /></div>
+        <div className="gecko-kpi-tile-value">{value}</div>
+      </div>
+      <div className="gecko-cell-sub gecko-kpi-tile-foot">{sub}</div>
     </div>
   );
+}
+
+/** The hover card's place on the canvas, as a share of the drawing. */
+function hoverTipAt(block: YardMapBlock | null): { x: number; y: number; below: boolean } | null {
+  if (!block) return null;
+  const { x, y, w, h } = blockBox(block);
+  const topPct = (y / CANVAS_H) * 100;
+  // No room above a block near the top: the card goes under it instead.
+  const below = topPct < 22;
+  return {
+    x: ((x + w / 2) / CANVAS_W) * 100,
+    y: below ? ((y + h) / CANVAS_H) * 100 : topPct,
+    below,
+  };
+}
+
+/** One line of the hover card: what it is, and what it says. */
+function TipFact({ label, value, warn }: { label: string; value: string; warn?: boolean }) {
+  return (
+    <>
+      <dt className="gecko-yard-tip-key">{label}</dt>
+      <dd className={`gecko-yard-tip-val${warn ? ' gecko-yard-tip-val-warn' : ''}`}>{value}</dd>
+    </>
+  );
+}
+
+/**
+ * The block in one sentence, for a screen reader — the same facts the hover
+ * card shows, which is what the old <title> element used to carry.
+ */
+function blockSummary(b: YardMapBlock): string {
+  const full = b.occupancyPct === null
+    ? 'no slots yet — generate them in Yard Zones & Blocks'
+    : `${Math.round(b.occupancyPct)}% full`;
+  return [
+    `${b.blockCode} · ${typeLabel(b.blockType)}`,
+    `${b.tally.boxes} boxes, ${teu(b.tally.teu)} TEU`,
+    full,
+    `${b.tally.averageDays}d average, ${b.tally.maxDays}d longest`,
+    b.tally.held > 0 ? `${b.tally.held} held` : '',
+  ].filter(Boolean).join(' · ');
 }
 
 function Metric({ label, value, tone = 'neutral' }: { label: string; value: React.ReactNode; tone?: 'neutral' | 'warning' }) {

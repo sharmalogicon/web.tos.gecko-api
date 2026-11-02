@@ -11508,16 +11508,22 @@ th.gecko-cell-tight {
 }
 .gecko-yard-unplaced { gap: 12px; align-items: center; }
 
+/* THE MAP IS THE SCREEN; HOTSPOTS IS A MARGIN NOTE (owner, 2026-11-02).
+   Five ranked blocks need a column, not a third of the page — the map was
+   drawing a yard into two thirds of the width while the list beside it ran
+   out of things to say. The note is capped so a wide monitor spends its extra
+   pixels on the yard. */
 .gecko-yard-glance-main {
   display: grid;
-  grid-template-columns: 2fr minmax(0, 1fr);
+  grid-template-columns: minmax(0, 1fr) clamp(240px, 22%, 320px);
   gap: 16px;
   align-items: start;
 }
 @media (max-width: 1100px) { .gecko-yard-glance-main { grid-template-columns: minmax(0, 1fr); } }
 
 .gecko-yard-glance-head   { padding: 14px 18px; border-bottom: 1px solid var(--gecko-border); gap: 12px; }
-.gecko-yard-glance-canvas { padding: 18px; background: var(--gecko-bg-subtle); }
+/* The hover card is placed against this box, so it has to be the origin. */
+.gecko-yard-glance-canvas { padding: 18px; background: var(--gecko-bg-subtle); position: relative; }
 .gecko-yard-glance-svg {
   width: 100%;
   height: auto;
@@ -12444,3 +12450,133 @@ th.gecko-cell-tight {
 /* Two of them on one entry: recorded by one clerk, deleted by another. */
 .gecko-cm-log-who + .gecko-cm-log-who { margin-left: 10px; }
 .gecko-cm-log-who-system { opacity: 0.85; }
+
+/* ── §55  A KPI tile that stacks ────────────────────────────────────────────
+   The flat tile (§ KPI tile, above) reads left to right: icon, figure, name,
+   note. That needs room, and six of them across a dashboard do not have it —
+   on Yard at a Glance the note broke into a column two words wide. This
+   variant stacks them instead: the name heads the tile, the figure sits under
+   it with its icon, and the note runs along the bottom with the whole width.
+   The flat tile is untouched; nine other screens use it. */
+
+.gecko-kpi-tile-stacked {
+  flex-direction: column;
+  align-items: stretch;
+  justify-content: flex-start;
+  gap: 8px;
+}
+.gecko-kpi-tile-head {
+  /* The tile's own heading, so it reads like every other card's. */
+  color: var(--gecko-text-secondary);
+}
+.gecko-kpi-tile-main {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+.gecko-kpi-tile-stacked .gecko-kpi-tile-value { font-size: 20px; }
+/* Pushed to the floor so the notes line up across tiles of unequal height. */
+.gecko-kpi-tile-foot { margin-top: auto; }
+
+/* ── §56  What is in the block under the pointer ────────────────────────────
+   The yard map said it in an SVG <title>, which is the BROWSER's tooltip: a
+   grey system box, a short pause before it appears, one unbroken line of
+   facts, and nothing about it stylable. This is a card instead — the block's
+   code and type at the top, the figures as a small table under it, and a line
+   saying what a click would do.
+
+   It floats over the canvas at the block's own position: the page passes only
+   --gecko-tip-x and --gecko-tip-y, which are where the block is, and every
+   other thing about how it looks is here. It never takes the pointer, so
+   hovering it cannot make it flicker away. */
+
+.gecko-yard-tip {
+  position: absolute;
+  /**
+   * IT NEVER LEAVES THE CANVAS. The card is centred on the block, so a block
+   * against the left edge used to hang half of itself off the drawing and out
+   * of the page — the first row of facts was cut in two. Its width is fixed
+   * so the clamp can be exact: the CENTRE is held half a card away from each
+   * edge, which keeps the whole of it inside whatever the block is doing.
+   */
+  width: 240px;
+  left: clamp(120px, var(--gecko-tip-x, 50%), calc(100% - 120px));
+  top: var(--gecko-tip-y, 50%);
+  /* Above the block, clear of its edge. */
+  transform: translate(-50%, calc(-100% - 12px));
+  /**
+   * Above the drawing and above the cards beside it, below the app's header
+   * and sidebar (§ z-index ladder: dropdown 20, header 30, sidebar 40). It
+   * takes no pointer events either, so it can neither be hovered nor hide the
+   * block it describes.
+   */
+  z-index: var(--gecko-z-dropdown);
+  padding: 10px 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  pointer-events: none;
+  border: 1px solid var(--gecko-border);
+  border-radius: var(--gecko-radius-md);
+  background: var(--gecko-bg-surface);
+  box-shadow: var(--gecko-shadow-lg);
+  animation: gecko-yard-tip-in 120ms ease-out;
+}
+
+/* A block at the top of the canvas has no room above it. */
+.gecko-yard-tip-below { transform: translate(-50%, 12px); }
+
+@keyframes gecko-yard-tip-in {
+  from { opacity: 0; transform: translate(-50%, calc(-100% - 4px)); }
+  to   { opacity: 1; }
+}
+.gecko-yard-tip-below { animation-name: gecko-yard-tip-in-below; }
+@keyframes gecko-yard-tip-in-below {
+  from { opacity: 0; transform: translate(-50%, 4px); }
+  to   { opacity: 1; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .gecko-yard-tip { animation: none; }
+}
+
+.gecko-yard-tip-head {
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+  padding-bottom: 8px;
+  border-bottom: 1px solid var(--gecko-border);
+}
+.gecko-yard-tip-code {
+  font-family: var(--gecko-font-mono);
+  font-size: var(--gecko-text-sm);
+  font-weight: var(--gecko-font-weight-bold);
+  color: var(--gecko-text-primary);
+}
+.gecko-yard-tip-type {
+  font-size: var(--gecko-text-xs);
+  color: var(--gecko-text-secondary);
+}
+
+/* Label left, figure right, on one baseline — a table, not a run-on line. */
+.gecko-yard-tip-facts {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr);
+  gap: 3px 12px;
+  margin: 0;
+  font-size: var(--gecko-text-xs);
+}
+.gecko-yard-tip-key { color: var(--gecko-text-secondary); }
+.gecko-yard-tip-val {
+  margin: 0;
+  text-align: right;
+  font-weight: var(--gecko-font-weight-medium);
+  color: var(--gecko-text-primary);
+}
+.gecko-yard-tip-val-warn { color: var(--gecko-warning-700); }
+[data-theme="dark"] .gecko-yard-tip-val-warn { color: var(--gecko-warning-300); }
+
+.gecko-yard-tip-foot {
+  font-size: var(--gecko-text-xs);
+  color: var(--gecko-text-secondary);
+  opacity: 0.85;
+}
