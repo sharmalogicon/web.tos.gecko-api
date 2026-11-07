@@ -1,936 +1,234 @@
 "use client";
-import React, { useState, useMemo } from 'react';
+import React, { useState } from 'react';
+import Link from 'next/link';
 import { Icon } from '@/components/ui/Icon';
+import { EmptyState } from '@/components/ui/EmptyState';
+import { ErrorBanner } from '@/components/ui/ErrorBanner';
+import { TableSkeleton } from '@/components/ui/TableSkeleton';
+import { useServerList } from '@/lib/api/use-server-list';
 import { useFacility } from '@/lib/api/facility';
-import { PASSWORD_MAX_LENGTH, PASSWORD_MIN_LENGTH } from '@/lib/api/client';
+import {
+  USERS_PATH, roleLabel, statusLabel, statusTone, useAdminRights, useRoles,
+  type UserSummary,
+} from '@/lib/api/admin-users';
+import { UserDrawer } from './_components/UserDrawer';
+import { InviteUserDialog } from './_components/InviteUserDialog';
+import { ResetPasswordDialog } from './_components/ResetPasswordDialog';
 
-// ── Role definitions ───────────────────────────────────────────────────────────
-
-type RoleName =
-  | 'Super Admin'
-  | 'Terminal Manager'
-  | 'Gate Supervisor'
-  | 'Gate Operator'
-  | 'Billing Clerk'
-  | 'Yard Planner'
-  | 'Viewer';
-
-const ROLES: Record<RoleName, { bg: string; color: string; abbr: string }> = {
-  'Super Admin':       { bg: 'var(--gecko-error-600)',   color: '#fff',                          abbr: 'Super'    },
-  'Terminal Manager':  { bg: 'var(--gecko-primary-700)', color: '#fff',                          abbr: 'T.Mgr'    },
-  'Gate Supervisor':   { bg: 'var(--gecko-primary-500)', color: '#fff',                          abbr: 'G.Sup'    },
-  'Gate Operator':     { bg: '#3b82f6',                  color: '#fff',                          abbr: 'G.Oper'   },
-  'Billing Clerk':     { bg: 'var(--gecko-success-600)', color: '#fff',                          abbr: 'Billing'  },
-  'Yard Planner':      { bg: 'var(--gecko-warning-600)', color: '#fff',                          abbr: 'Planner'  },
-  'Viewer':            { bg: 'var(--gecko-gray-500)',    color: '#fff',                          abbr: 'Viewer'   },
-};
-
-const ROLE_NAMES = Object.keys(ROLES) as RoleName[];
-
-// ── Status definitions ─────────────────────────────────────────────────────────
-
-type UserStatus = 'Active' | 'Inactive' | 'Suspended';
-
-const STATUS_CFG: Record<UserStatus, { dot: string; text: string }> = {
-  Active:    { dot: 'var(--gecko-success-500)', text: 'var(--gecko-success-700)' },
-  Inactive:  { dot: 'var(--gecko-gray-400)',    text: 'var(--gecko-text-secondary)' },
-  Suspended: { dot: 'var(--gecko-error-500)',   text: 'var(--gecko-error-700)' },
-};
-
-// ── Sample users ───────────────────────────────────────────────────────────────
-
-interface User {
-  id: number;
-  name: string;
-  email: string;
-  role: RoleName;
-  yards: string;
-  lastLogin: string;
-  status: UserStatus;
+/**
+ * WHO MAY SIGN IN TO THIS TENANT.
+ *
+ * Every row here is a real account read from `GET /api/users`. Until 7 Nov
+ * 2026 this screen showed twelve invented people with invented roles, which is
+ * worse than showing nothing: an administrator who believes it has no idea who
+ * can actually open the gate.
+ *
+ * The screen is behind `admin.user.manage`, which is a right the API itself
+ * enforces — a user without it is answered 403 by `/api/users`, so the page
+ * says so plainly rather than painting an empty table.
+ */
+export default function UsersPage() {
+  const rights = useAdminRights();
+  if (!rights.users) return <NotYours />;
+  return <Users />;
 }
 
-const USERS: User[] = [
-  { id: 1,  name: 'Somchai Krungthep',   email: 's.krungthep@logicon.th',  role: 'Super Admin',      yards: 'All Yards',           lastLogin: '2026-05-03 08:14', status: 'Active'    },
-  { id: 2,  name: 'Nattaya Siriporn',    email: 'n.siriporn@logicon.th',   role: 'Terminal Manager', yards: 'All Yards',           lastLogin: '2026-05-04 07:22', status: 'Active'    },
-  { id: 3,  name: 'Wichai Boontham',     email: 'w.boontham@logicon.th',   role: 'Gate Supervisor',  yards: 'Import, Export',      lastLogin: '2026-05-04 06:01', status: 'Active'    },
-  { id: 4,  name: 'Kanokwan Rattana',    email: 'k.rattana@logicon.th',    role: 'Gate Operator',    yards: 'Import Yard',         lastLogin: '2026-05-03 18:45', status: 'Active'    },
-  { id: 5,  name: 'Prasit Duangdao',     email: 'p.duangdao@logicon.th',   role: 'Gate Operator',    yards: 'Export Yard',         lastLogin: '2026-05-04 06:30', status: 'Active'    },
-  { id: 6,  name: 'Malee Phakawan',      email: 'm.phakawan@logicon.th',   role: 'Billing Clerk',    yards: 'All Yards',           lastLogin: '2026-05-02 14:12', status: 'Active'    },
-  { id: 7,  name: 'Anon Khamkaew',       email: 'a.khamkaew@logicon.th',   role: 'Billing Clerk',    yards: 'All Yards',           lastLogin: '2026-04-29 09:00', status: 'Inactive'  },
-  { id: 8,  name: 'Surachat Yodrak',     email: 's.yodrak@logicon.th',     role: 'Yard Planner',     yards: 'Import, Bonded',      lastLogin: '2026-05-04 07:55', status: 'Active'    },
-  { id: 9,  name: 'Boriphat Lertchai',   email: 'b.lertchai@logicon.th',   role: 'Yard Planner',     yards: 'Export, Empty',       lastLogin: '2026-05-03 16:20', status: 'Active'    },
-  { id: 10, name: 'Chalermchai Sriwan',  email: 'c.sriwan@logicon.th',     role: 'Gate Supervisor',  yards: 'All Yards',           lastLogin: '2026-04-15 11:30', status: 'Suspended' },
-  { id: 11, name: 'James Thornton',      email: 'j.thornton@logicon.th',   role: 'Viewer',           yards: 'All Yards',           lastLogin: '2026-05-01 10:00', status: 'Active'    },
-  { id: 12, name: 'Priya Nair',          email: 'p.nair@logicon.th',       role: 'Terminal Manager', yards: 'All Yards',           lastLogin: '2026-05-04 08:05', status: 'Active'    },
-];
-
-// ── Permission matrix ──────────────────────────────────────────────────────────
-
-const PERMISSION_MODULES = [
-  'Gate — EIR-In',
-  'Gate — EIR-Out',
-  'Gate — Appointments',
-  'Yard — Plan & Moves',
-  'CFS — Stuffing/Stripping',
-  'Billing — View',
-  'Billing — Create/Edit',
-  'Billing — Approve',
-  'Master Data — View',
-  'Master Data — Edit',
-  'Reports — View',
-  'Reports — Export',
-  'Configuration — View',
-  'Configuration — Edit',
-  'Users — Manage',
-];
-
-type PermMatrix = Record<RoleName, boolean[]>;
-
-// true = allowed for [Super, T.Mgr, G.Sup, G.Oper, Billing, Planner, Viewer]
-const PERMISSIONS: PermMatrix = {
-  'Super Admin':      [true,  true,  true,  true,  true,  true,  true,  true,  true,  true,  true,  true,  true,  true,  true ],
-  'Terminal Manager': [true,  true,  true,  true,  true,  true,  true,  true,  true,  true,  true,  true,  true,  false, false],
-  'Gate Supervisor':  [true,  true,  true,  false, false, false, false, false, true,  false, true,  false, true,  false, false],
-  'Gate Operator':    [true,  true,  false, false, false, false, false, false, true,  false, false, false, false, false, false],
-  'Billing Clerk':    [false, false, false, false, false, true,  true,  false, true,  false, true,  true,  false, false, false],
-  'Yard Planner':     [false, false, false, true,  false, false, false, false, true,  false, true,  false, false, false, false],
-  'Viewer':           [false, false, false, false, false, true,  false, false, true,  false, true,  false, true,  false, false],
-};
-
-// ── Avatar helper ──────────────────────────────────────────────────────────────
-
-function getInitials(name: string): string {
-  const parts = name.trim().split(' ');
-  if (parts.length === 1) return parts[0].substring(0, 2).toUpperCase();
-  return (parts[0][0] + parts[1][0]).toUpperCase();
-}
-
-// ── Sub-components ─────────────────────────────────────────────────────────────
-
-function KpiCard({ label, value, sub, icon, accent }: {
-  label: string; value: string | number; sub?: string; icon: string; accent: string;
-}) {
+/** The API refuses the read; saying why beats an empty table. */
+function NotYours() {
   return (
-    <div
-      className="gecko-card gecko-card-accent-top"
-      style={{
-        flex: 1, minWidth: 160, padding: '16px 20px',
-        ['--gecko-accent-color' as string]: accent,
-      }}
-    >
-      <div className="gecko-row gecko-row-between gecko-mb-3">
-        <div className="gecko-eyebrow">
-          {label}
+    <div className="gecko-stack gecko-stack-lg">
+      <div className="gecko-page-header">
+        <div className="gecko-page-header-left">
+          <h1 className="gecko-page-title">Users &amp; Roles</h1>
+          <p className="gecko-page-subtitle">Who may sign in, and what they may do</p>
         </div>
-        <span style={{ color: accent, opacity: 0.8 }}>
-          <Icon name={icon} size={16} />
-        </span>
       </div>
-      <div className="gecko-stat-num gecko-stat-num-lg">{value}</div>
-      {sub && <div className="gecko-cell-meta gecko-mt-1">{sub}</div>}
-    </div>
-  );
-}
-
-function RoleBadge({ role }: { role: RoleName }) {
-  const cfg = ROLES[role];
-  return (
-    <span style={{
-      display: 'inline-flex', alignItems: 'center',
-      padding: '2px 8px', borderRadius: 4,
-      fontSize: 11, fontWeight: 700,
-      background: cfg.bg, color: cfg.color,
-      letterSpacing: '0.01em',
-    }}>
-      {role}
-    </span>
-  );
-}
-
-function StatusBadge({ status }: { status: UserStatus }) {
-  const cfg = STATUS_CFG[status];
-  return (
-    <span className="gecko-inline-row" style={{ gap: 5 }}>
-      <span className="gecko-status-dot-mini" style={{ background: cfg.dot, marginRight: 0 }} />
-      <span className="gecko-cell-primary" style={{ color: cfg.text }}>{status}</span>
-    </span>
-  );
-}
-
-function Avatar({ name, role }: { name: string; role: RoleName }) {
-  const cfg = ROLES[role];
-  return (
-    <div style={{
-      width: 34, height: 34, borderRadius: '50%',
-      background: cfg.bg, color: cfg.color,
-      display: 'flex', alignItems: 'center', justifyContent: 'center',
-      fontSize: 12, fontWeight: 800, flexShrink: 0,
-      letterSpacing: '0.02em',
-    }}>
-      {getInitials(name)}
-    </div>
-  );
-}
-
-// ── New User Panel ─────────────────────────────────────────────────────────────
-
-const YARD_OPTIONS = ['Import Yard', 'Export Yard', 'Bonded Yard', 'Empty Depot'];
-
-interface NewUserForm {
-  fullName: string;
-  email: string;
-  role: RoleName | '';
-  yards: string[];
-  password: string;
-  mustChange: boolean;
-}
-
-const EMPTY_FORM: NewUserForm = {
-  fullName: '', email: '', role: '', yards: [], password: '', mustChange: true,
-};
-
-function NewUserPanel({
-  onClose,
-  onSave,
-}: {
-  onClose: () => void;
-  onSave: (form: NewUserForm) => void;
-}) {
-  const [form, setForm] = useState<NewUserForm>({ ...EMPTY_FORM });
-  const [showPw, setShowPw] = useState(false);
-
-  const toggleYard = (yard: string) => {
-    setForm(f => ({
-      ...f,
-      yards: f.yards.includes(yard) ? f.yards.filter(y => y !== yard) : [...f.yards, yard],
-    }));
-  };
-
-  // The same rule the API applies, read from the one place it is written.
-  const valid = form.fullName.trim() && form.email.trim() && form.role
-    && form.password.length >= PASSWORD_MIN_LENGTH && form.password.length <= PASSWORD_MAX_LENGTH;
-
-  return (
-    <>
-      {/* Backdrop */}
-      <div
-        onClick={onClose}
-        style={{
-          position: 'fixed', inset: 0, zIndex: 99,
-          background: 'rgba(0,0,0,0.35)',
-        }}
+      <EmptyState
+        icon="lock"
+        title="This is not yours to open"
+        description="Managing users needs the “Invite, edit and remove users” right. Ask a tenant administrator for it."
       />
-      {/* Panel */}
-      <div style={{
-        position: 'fixed', top: 0, right: 0, bottom: 0, zIndex: 100,
-        width: 380,
-        background: 'var(--gecko-bg-surface)',
-        borderLeft: '1px solid var(--gecko-border)',
-        boxShadow: '-6px 0 32px rgba(0,0,0,0.16)',
-        display: 'flex', flexDirection: 'column',
-        overflowY: 'auto',
-      }}>
-        {/* Header */}
-        <div style={{
-          padding: '16px 20px',
-          borderBottom: '1px solid var(--gecko-border)',
-          background: 'var(--gecko-primary-600)',
-          display: 'flex', alignItems: 'center', justifyContent: 'space-between',
-          flexShrink: 0,
-        }}>
-          <div>
-            <div style={{ fontSize: 14, fontWeight: 700, color: '#fff', display: 'flex', alignItems: 'center', gap: 8 }}>
-              <Icon name="user" size={16} /> New User
-            </div>
-            <div className="gecko-cell-meta" style={{ color: 'rgba(255,255,255,0.72)' }}>
-              Add a system account and assign a role
-            </div>
-          </div>
-          <button
-            onClick={onClose}
-            style={{
-              background: 'rgba(255,255,255,0.12)', border: 'none', borderRadius: 6,
-              color: '#fff', cursor: 'pointer', padding: 6, display: 'flex', alignItems: 'center',
-            }}
-          >
-            <Icon name="x" size={16} />
-          </button>
-        </div>
-
-        {/* Body */}
-        <div className="gecko-stack gecko-flex-1" style={{ padding: '20px', gap: 18 }}>
-          {/* Full Name */}
-          <label className="gecko-stack gecko-stack-xs">
-            <span className="gecko-eyebrow">
-              Full Name
-            </span>
-            <input
-              type="text"
-              value={form.fullName}
-              onChange={e => setForm(f => ({ ...f, fullName: e.target.value }))}
-              placeholder="e.g. Somchai Krungthep"
-              className="gecko-input"
-              style={{ fontSize: 13 }}
-            />
-          </label>
-
-          {/* Email */}
-          <label className="gecko-stack gecko-stack-xs">
-            <span className="gecko-eyebrow">
-              Email Address
-            </span>
-            <div style={{ position: 'relative' }}>
-              <span style={{ position: 'absolute', left: 10, top: '50%', transform: 'translateY(-50%)', color: 'var(--gecko-text-secondary)' }}>
-                <Icon name="mail" size={14} />
-              </span>
-              <input
-                type="email"
-                value={form.email}
-                onChange={e => setForm(f => ({ ...f, email: e.target.value }))}
-                placeholder="user@logicon.th"
-                className="gecko-input"
-                style={{ fontSize: 13, paddingLeft: 32 }}
-              />
-            </div>
-          </label>
-
-          {/* Role */}
-          <label className="gecko-stack gecko-stack-xs">
-            <span className="gecko-eyebrow">
-              Role
-            </span>
-            <select
-              value={form.role}
-              onChange={e => setForm(f => ({ ...f, role: e.target.value as RoleName }))}
-              className="gecko-input"
-              style={{ fontSize: 13 }}
-            >
-              <option value="">— Select a role —</option>
-              {ROLE_NAMES.map(r => (
-                <option key={r} value={r}>{r}</option>
-              ))}
-            </select>
-          </label>
-
-          {/* Assigned Yards */}
-          <div className="gecko-stack gecko-stack-sm">
-            <span className="gecko-eyebrow">
-              Assigned Yards
-            </span>
-            <div className="gecko-stack gecko-stack-sm" style={{ gap: 6 }}>
-              {YARD_OPTIONS.map(yard => (
-                <label key={yard} style={{
-                  display: 'flex', alignItems: 'center', gap: 10, cursor: 'pointer',
-                  padding: '8px 12px', borderRadius: 7,
-                  background: form.yards.includes(yard) ? 'var(--gecko-primary-50)' : 'var(--gecko-bg-subtle)',
-                  border: `1px solid ${form.yards.includes(yard) ? 'var(--gecko-primary-200)' : 'var(--gecko-border)'}`,
-                  transition: 'all 0.12s',
-                }}>
-                  <input
-                    type="checkbox"
-                    checked={form.yards.includes(yard)}
-                    onChange={() => toggleYard(yard)}
-                    style={{ accentColor: 'var(--gecko-primary-600)', width: 15, height: 15 }}
-                  />
-                  <span style={{ fontSize: 13, fontWeight: form.yards.includes(yard) ? 600 : 400, color: 'var(--gecko-text-primary)' }}>
-                    {yard}
-                  </span>
-                </label>
-              ))}
-            </div>
-          </div>
-
-          {/* Temporary Password */}
-          <label className="gecko-stack gecko-stack-xs">
-            <span className="gecko-eyebrow">
-              Temporary Password
-            </span>
-            <div style={{ position: 'relative' }}>
-              <span style={{ position: 'absolute', left: 10, top: '50%', transform: 'translateY(-50%)', color: 'var(--gecko-text-secondary)' }}>
-                <Icon name="lock" size={14} />
-              </span>
-              <input
-                type={showPw ? 'text' : 'password'}
-                value={form.password}
-                onChange={e => setForm(f => ({ ...f, password: e.target.value }))}
-                maxLength={PASSWORD_MAX_LENGTH}
-                placeholder={`${PASSWORD_MIN_LENGTH} to ${PASSWORD_MAX_LENGTH} characters`}
-                className="gecko-input"
-                style={{ fontSize: 13, paddingLeft: 32, paddingRight: 38 }}
-              />
-              <button
-                type="button"
-                onClick={() => setShowPw(v => !v)}
-                style={{
-                  position: 'absolute', right: 10, top: '50%', transform: 'translateY(-50%)',
-                  background: 'none', border: 'none', cursor: 'pointer',
-                  color: 'var(--gecko-text-secondary)', padding: 0, display: 'flex',
-                }}
-              >
-                <Icon name={showPw ? 'eyeOff' : 'eye'} size={15} />
-              </button>
-            </div>
-          </label>
-
-          {/* Must change on first login */}
-          <label style={{
-            display: 'flex', alignItems: 'center', gap: 10, cursor: 'pointer',
-            padding: '10px 12px', borderRadius: 7,
-            background: form.mustChange ? 'var(--gecko-warning-50)' : 'var(--gecko-bg-subtle)',
-            border: `1px solid ${form.mustChange ? 'var(--gecko-warning-200)' : 'var(--gecko-border)'}`,
-          }}>
-            <input
-              type="checkbox"
-              checked={form.mustChange}
-              onChange={e => setForm(f => ({ ...f, mustChange: e.target.checked }))}
-              style={{ accentColor: 'var(--gecko-warning-600)', width: 15, height: 15 }}
-            />
-            <div>
-              <div style={{ fontSize: 13, fontWeight: 600, color: 'var(--gecko-text-primary)' }}>
-                Must change on first login
-              </div>
-              <div className="gecko-cell-meta">
-                User will be prompted to set a new password
-              </div>
-            </div>
-          </label>
-        </div>
-
-        {/* Footer */}
-        <div style={{
-          padding: '14px 20px',
-          borderTop: '1px solid var(--gecko-border)',
-          background: 'var(--gecko-bg-subtle)',
-          display: 'flex', gap: 10, justifyContent: 'flex-end',
-          flexShrink: 0,
-        }}>
-          <button className="gecko-btn gecko-btn-ghost gecko-btn-sm" onClick={onClose}>
-            Cancel
-          </button>
-          <button
-            className="gecko-btn gecko-btn-primary gecko-btn-sm"
-            disabled={!valid}
-            onClick={() => valid && onSave(form)}
-            style={{
-              display: 'flex', alignItems: 'center', gap: 7,
-              opacity: valid ? 1 : 0.5, cursor: valid ? 'pointer' : 'not-allowed',
-            }}
-          >
-            <Icon name="save" size={14} /> Create User
-          </button>
-        </div>
-      </div>
-    </>
+    </div>
   );
 }
 
-// ── Permission Matrix Tab ──────────────────────────────────────────────────────
+const STATUS_FILTERS = [
+  { value: '', label: 'Any status' },
+  { value: 'ACTIVE', label: 'Active' },
+  { value: 'DISABLED', label: 'Disabled' },
+];
 
-function PermissionsTab() {
-  const columns: RoleName[] = [
-    'Super Admin', 'Terminal Manager', 'Gate Supervisor',
-    'Gate Operator', 'Billing Clerk', 'Yard Planner', 'Viewer',
-  ];
+function Users() {
+  const facility = useFacility();
+  const { roles } = useRoles();
+  const [status, setStatus] = useState('');
+  const [open, setOpen] = useState<UserSummary | null>(null);
+  const [resetting, setResetting] = useState<UserSummary | null>(null);
+  const [inviting, setInviting] = useState(false);
+
+  const list = useServerList<UserSummary>(USERS_PATH, { status }, 'users');
+  const rows = list.rows ?? [];
+
+  const where = facility.branch?.displayName ?? 'this tenant';
+  const active = rows.filter(u => statusTone(u.status) === 'success').length;
+  const locked = rows.filter(u => u.isLocked).length;
 
   return (
     <div className="gecko-stack gecko-stack-lg">
-      <div className="gecko-row gecko-row-between gecko-row-wrap gecko-stack-md">
-        <div>
-          <div className="gecko-card-title">
-            Module Access Matrix
-          </div>
-          <div className="gecko-card-subtitle">
-            Cross-reference each role against available system modules. Read-only — edit via role configuration.
-          </div>
+      <div className="gecko-page-header">
+        <div className="gecko-page-header-left">
+          <h1 className="gecko-page-title">Users &amp; Roles</h1>
+          <p className="gecko-page-subtitle">Who may sign in at {where}, and what they may do</p>
         </div>
-        <button className="gecko-btn gecko-btn-primary gecko-btn-sm gecko-row" style={{ gap: 7 }}>
-          <Icon name="plus" size={14} /> Add Custom Role
-        </button>
+        <div className="gecko-row gecko-page-header-actions">
+          <Link href="/config/roles" className="gecko-btn gecko-btn-outline gecko-btn-sm">
+            <Icon name="shieldCheck" size={14} /> Roles &amp; rights
+          </Link>
+          <button className="gecko-btn gecko-btn-primary gecko-btn-sm" onClick={() => setInviting(true)}>
+            <Icon name="plus" size={14} /> Invite user
+          </button>
+        </div>
       </div>
 
-      <div className="gecko-table-card">
-        <div style={{ overflowX: 'auto' }}>
-          <table style={{ width: '100%', borderCollapse: 'collapse', minWidth: 700 }}>
+      {/* The counts describe THE PAGE ON SCREEN, not the tenant — the read is
+          paged, so a tenant-wide "12 active" would be a number this screen
+          cannot stand behind. The total comes from the API's own count. */}
+      <div className="gecko-yard-kpis">
+        <Kpi label="Users" value={list.total || rows.length} sub={`${rows.length} on this page`} icon="users" tone="primary" />
+        <Kpi label="Active here" value={active} sub="can sign in" icon="checkCircle" tone="success" />
+        <Kpi label="Locked out" value={locked} sub={locked ? 'need unlocking' : 'nobody is locked'} icon="lock"
+          tone={locked ? 'warning' : 'neutral'} />
+        <Kpi label="Roles" value={roles.length} sub="defined for this tenant" icon="shieldCheck" tone="info" />
+      </div>
+
+      <ErrorBanner error={list.error} heading="The users could not be read" />
+
+      <div className="gecko-table-card gecko-table-card-menus">
+        <div className="gecko-table-toolbar">
+          <Icon name="search" size={13} />
+          <input className="gecko-input gecko-input-sm gecko-admin-search" value={list.search}
+            onChange={e => list.setSearch(e.target.value)}
+            placeholder="Search by name, user name or e-mail…" />
+          <select className="gecko-select gecko-input-sm" value={status} onChange={e => setStatus(e.target.value)}
+            aria-label="Status">
+            {STATUS_FILTERS.map(s => <option key={s.value} value={s.value}>{s.label}</option>)}
+          </select>
+          {(list.search || status) && (
+            <button className="gecko-btn gecko-btn-ghost gecko-btn-sm"
+              onClick={() => { list.setSearch(''); setStatus(''); }}>
+              <Icon name="x" size={13} /> Clear
+            </button>
+          )}
+          <div className="gecko-table-toolbar-spacer" />
+        </div>
+        <div className="gecko-table-clip">
+          <table className="gecko-table gecko-table-compact">
             <thead>
-              <tr style={{ borderBottom: '2px solid var(--gecko-border)' }}>
-                <th className="gecko-eyebrow" style={{
-                  padding: '12px 16px', textAlign: 'left',
-                  background: 'var(--gecko-bg-subtle)',
-                  minWidth: 200, position: 'sticky', left: 0, zIndex: 2,
-                  borderRight: '1px solid var(--gecko-border)',
-                }}>
-                  Module / Permission
-                </th>
-                {columns.map(role => {
-                  const cfg = ROLES[role];
-                  return (
-                    <th key={role} style={{
-                      padding: '10px 8px', textAlign: 'center',
-                      background: cfg.bg, color: cfg.color,
-                      fontSize: 11, fontWeight: 700,
-                      borderRight: '1px solid rgba(255,255,255,0.15)',
-                      minWidth: 80,
-                    }}>
-                      {cfg.abbr}
-                    </th>
-                  );
-                })}
+              <tr>
+                <th>Name</th>
+                <th>User name</th>
+                <th>E-mail</th>
+                <th>Roles</th>
+                <th className="gecko-num-tabular">Depots</th>
+                <th>Last login</th>
+                <th>Status</th>
+                <th aria-label="Actions"> </th>
               </tr>
             </thead>
             <tbody>
-              {PERMISSION_MODULES.map((mod, mi) => {
-                const isSection = mod.startsWith('Gate —') && mi === 0;
-                const isNewSection = mi === 0 || mod.split(' — ')[0] !== PERMISSION_MODULES[mi - 1]?.split(' — ')[0];
-                const sectionLabel = mod.split(' — ')[0];
-                const prevSection = PERMISSION_MODULES[mi - 1]?.split(' — ')[0];
-
-                return (
-                  <React.Fragment key={mod}>
-                    {isNewSection && (
-                      <tr>
-                        <td
-                          colSpan={columns.length + 1}
-                          style={{
-                            padding: '8px 16px 4px',
-                            fontSize: 10, fontWeight: 800, letterSpacing: '0.1em',
-                            textTransform: 'uppercase',
-                            color: 'var(--gecko-text-secondary)',
-                            background: 'var(--gecko-bg-subtle)',
-                            borderTop: mi > 0 ? '1px solid var(--gecko-border)' : 'none',
-                            borderBottom: '1px solid var(--gecko-border)',
-                          }}
-                        >
-                          {sectionLabel}
-                        </td>
-                      </tr>
-                    )}
-                    <tr style={{
-                      borderBottom: '1px solid var(--gecko-bg-subtle)',
-                      background: mi % 2 === 0 ? '#fff' : 'var(--gecko-bg-subtle)',
-                    }}>
-                      <td style={{
-                        padding: '10px 16px', fontSize: 13,
-                        color: 'var(--gecko-text-primary)', fontWeight: 500,
-                        position: 'sticky', left: 0, zIndex: 1,
-                        background: mi % 2 === 0 ? '#fff' : 'var(--gecko-bg-subtle)',
-                        borderRight: '1px solid var(--gecko-border)',
-                      }}>
-                        {mod.split(' — ')[1] ?? mod}
-                      </td>
-                      {columns.map(role => {
-                        const allowed = PERMISSIONS[role][mi];
-                        return (
-                          <td key={role} style={{
-                            textAlign: 'center', padding: '10px 8px',
-                            borderRight: '1px solid var(--gecko-border)',
-                          }}>
-                            {allowed ? (
-                              <span style={{ color: 'var(--gecko-success-600)', display: 'flex', justifyContent: 'center' }}>
-                                <Icon name="checkCircle" size={16} />
-                              </span>
-                            ) : (
-                              <span style={{ color: 'var(--gecko-text-disabled)', display: 'flex', justifyContent: 'center', fontSize: 16, lineHeight: 1 }}>
-                                —
-                              </span>
-                            )}
-                          </td>
-                        );
-                      })}
-                    </tr>
-                  </React.Fragment>
-                );
-              })}
+              {list.loading && !list.rows ? (
+                <TableSkeleton rows={6} columns={8} />
+              ) : rows.length === 0 ? (
+                <tr>
+                  <td colSpan={8}>
+                    <EmptyState icon="users" title="Nobody matches"
+                      description={list.search || status
+                        ? 'Try a different search, or clear the filters.'
+                        : 'This tenant has no users yet.'} />
+                  </td>
+                </tr>
+              ) : rows.map(u => (
+                <tr key={u.userId} className="gecko-row-clickable" onClick={() => setOpen(u)}>
+                  <td>
+                    <div className="gecko-cell-primary">{u.fullName || '—'}</div>
+                    {u.jobTitle && <div className="gecko-cell-meta">{u.jobTitle}</div>}
+                  </td>
+                  <td className="gecko-text-mono">{u.userName || <span className="gecko-cell-meta">—</span>}</td>
+                  <td className="gecko-cell-meta">{u.email}</td>
+                  <td>
+                    {u.roles.length === 0
+                      ? <span className="gecko-cell-meta">No role</span>
+                      : (
+                        <div className="gecko-row gecko-row-wrap gecko-role-chips">
+                          {u.roles.map(code => (
+                            <span key={code} className="gecko-pill gecko-pill-info">{roleLabel(code, roles)}</span>
+                          ))}
+                        </div>
+                      )}
+                  </td>
+                  <td className="gecko-num-tabular">{u.branchCount}</td>
+                  <td className="gecko-cell-meta">
+                    {u.lastLoginAt ? new Date(u.lastLoginAt).toLocaleDateString() : 'Never'}
+                  </td>
+                  <td>
+                    <span className={`gecko-pill gecko-pill-${statusTone(u.status)}`}>{statusLabel(u.status)}</span>
+                    {u.isLocked && <span className="gecko-pill gecko-pill-warning gecko-locked-chip">Locked</span>}
+                  </td>
+                  <td>
+                    {/* The row opens the drawer; these must not, or the dialog
+                        opens behind it. */}
+                    <div className="gecko-row gecko-row-right" onClick={e => e.stopPropagation()}>
+                      <button className="gecko-btn gecko-btn-ghost gecko-btn-sm gecko-btn-icon"
+                        title="Reset password" onClick={() => setResetting(u)}>
+                        <Icon name="key" size={14} />
+                      </button>
+                      <button className="gecko-btn gecko-btn-ghost gecko-btn-sm gecko-btn-icon"
+                        title="Edit user" onClick={() => setOpen(u)}>
+                        <Icon name="edit" size={14} />
+                      </button>
+                    </div>
+                  </td>
+                </tr>
+              ))}
             </tbody>
           </table>
         </div>
+        {list.footer}
+      </div>
 
-        <div className="gecko-row" style={{
-          padding: '10px 16px', borderTop: '1px solid var(--gecko-border)',
-          gap: 20, fontSize: 12, color: 'var(--gecko-text-secondary)',
-          background: 'var(--gecko-bg-subtle)',
-        }}>
-          <span className="gecko-inline-row">
-            <Icon name="checkCircle" size={13} style={{ color: 'var(--gecko-success-600)' }} />
-            Permission granted
-          </span>
-          <span className="gecko-inline-row">
-            <span style={{ fontSize: 15, lineHeight: 1, color: 'var(--gecko-text-disabled)' }}>—</span>
-            Not permitted
-          </span>
-          <span className="gecko-ml-auto gecko-cell-meta">
-            {columns.length} roles · {PERMISSION_MODULES.length} modules
-          </span>
+      <div className="gecko-banner gecko-banner-info">
+        <Icon name="info" size={15} className="gecko-banner-icon" />
+        <div>
+          <strong>A role is what a person may do; a depot is where they may do it.</strong> A role given with no
+          depot applies everywhere. Removing a user keeps the work they already did — their name stays on it.
         </div>
       </div>
+
+      {open && (
+        <UserDrawer user={open} roles={roles} onClose={() => setOpen(null)} onChanged={list.reload} />
+      )}
+      {resetting && (
+        <ResetPasswordDialog user={resetting} onClose={() => setResetting(null)} />
+      )}
+      {inviting && (
+        <InviteUserDialog roles={roles} onClose={() => setInviting(false)} onInvited={list.reload} />
+      )}
     </div>
   );
 }
 
-// ── Main Page ──────────────────────────────────────────────────────────────────
-
-export default function UsersRolesPage() {
-  // Depot and yard from the signed-in tenant's own data — never a typed
-  // place name: two tenants share this build.
-  const facility = useFacility();
-  const where = [facility.branch?.displayName ?? 'this depot', facility.yard?.nameEn]
-    .filter(Boolean).join(' · ');
-  const [tab, setTab] = useState<'users' | 'roles'>('users');
-  const [search, setSearch] = useState('');
-  const [roleFilter, setRoleFilter] = useState('');
-  const [statusFilter, setStatusFilter] = useState('');
-  const [panelOpen, setPanelOpen] = useState(false);
-  const [users, setUsers] = useState<User[]>(USERS);
-  const [savedMsg, setSavedMsg] = useState('');
-
-  // KPI values
-  const totalUsers = users.length;
-  const activeUsers = users.filter(u => u.status === 'Active').length;
-  const rolesCount = ROLE_NAMES.length;
-  const lastAdded = users[users.length - 1]?.name ?? '—';
-
-  // Filtered users
-  const filtered = useMemo(() => {
-    return users.filter(u => {
-      if (search) {
-        const q = search.toLowerCase();
-        if (!u.name.toLowerCase().includes(q) && !u.email.toLowerCase().includes(q)) return false;
-      }
-      if (roleFilter && u.role !== roleFilter) return false;
-      if (statusFilter && u.status !== statusFilter) return false;
-      return true;
-    });
-  }, [users, search, roleFilter, statusFilter]);
-
-  const handleNewUser = (form: NewUserForm) => {
-    const newUser: User = {
-      id: users.length + 1,
-      name: form.fullName,
-      email: form.email,
-      role: form.role as RoleName,
-      yards: form.yards.length === 4 ? 'All Yards' : form.yards.join(', ') || '—',
-      lastLogin: '—',
-      status: 'Active',
-    };
-    setUsers(prev => [...prev, newUser]);
-    setPanelOpen(false);
-    setSavedMsg(`User "${form.fullName}" created`);
-    setTimeout(() => setSavedMsg(''), 3000);
-  };
-
+function Kpi({ label, value, sub, icon, tone }: {
+  label: string; value: number; sub: string; icon: string;
+  tone: 'primary' | 'success' | 'warning' | 'info' | 'neutral';
+}) {
   return (
-    <div className="gecko-stack gecko-stack-lg">
-
-      {/* ── Page Header ── */}
-      <div className="gecko-page-header">
-        <div className="gecko-page-header-left">
-          <div className="gecko-row gecko-mb-1" style={{ gap: 10 }}>
-            <h1 className="gecko-page-title">
-              Users &amp; Roles
-            </h1>
-            <span className="gecko-eyebrow" style={{
-              padding: '2px 8px', borderRadius: 4,
-              background: 'var(--gecko-primary-50)', color: 'var(--gecko-primary-700)',
-              border: '1px solid var(--gecko-primary-200)',
-            }}>
-              Super Admin
-            </span>
-          </div>
-          <p className="gecko-page-subtitle">
-            Manage system users, assign roles, and control module-level access
-          </p>
-        </div>
-        {savedMsg && (
-          <span className="gecko-row" style={{
-            fontSize: 12, color: 'var(--gecko-success-700)', fontWeight: 600,
-            gap: 6, padding: '6px 12px', borderRadius: 6,
-            background: 'var(--gecko-success-50)', border: '1px solid var(--gecko-success-200)',
-          }}>
-            <Icon name="checkCircle" size={14} /> {savedMsg}
-          </span>
-        )}
+    <div className="gecko-kpi-tile gecko-kpi-tile-stacked">
+      <div className="gecko-eyebrow gecko-kpi-tile-head">{label}</div>
+      <div className="gecko-kpi-tile-main">
+        <div className={`gecko-kpi-tile-icon gecko-kpi-tile-icon-${tone}`}><Icon name={icon} size={16} /></div>
+        <div className="gecko-kpi-tile-value">{value}</div>
       </div>
-
-      {/* ── KPI Strip ── */}
-      <div className="gecko-row gecko-row-wrap gecko-stack-md">
-        <KpiCard
-          label="Total Users"
-          value={totalUsers}
-          sub={`Across all roles`}
-          icon="users"
-          accent="var(--gecko-primary-500)"
-        />
-        <KpiCard
-          label="Active Users"
-          value={activeUsers}
-          sub={`${Math.round(activeUsers / totalUsers * 100)}% of total`}
-          icon="checkCircle"
-          accent="var(--gecko-success-600)"
-        />
-        <KpiCard
-          label="Roles Defined"
-          value={rolesCount}
-          sub="Built-in role library"
-          icon="shieldCheck"
-          accent="var(--gecko-warning-500)"
-        />
-        <KpiCard
-          label="Last User Added"
-          value="Priya Nair"
-          sub="2026-05-04"
-          icon="user"
-          accent="var(--gecko-info-500, #3b82f6)"
-        />
-      </div>
-
-      {/* ── Tab Bar ── */}
-      <div className="gecko-tab-bar">
-        {([
-          { key: 'users', label: 'Users', icon: 'users' },
-          { key: 'roles', label: 'Roles & Permissions', icon: 'shieldCheck' },
-        ] as { key: 'users' | 'roles'; label: string; icon: string }[]).map(t => (
-          <button
-            key={t.key}
-            onClick={() => setTab(t.key)}
-            className={`gecko-tab-item${tab === t.key ? ' gecko-tab-item-active' : ''}`}
-          >
-            <Icon name={t.icon} size={15} />
-            {t.label}
-            {t.key === 'users' && (
-              <span style={{
-                fontSize: 10, fontWeight: 700, padding: '1px 6px', borderRadius: 10,
-                background: tab === 'users' ? 'var(--gecko-primary-100)' : 'var(--gecko-bg-subtle)',
-                color: tab === 'users' ? 'var(--gecko-primary-700)' : 'var(--gecko-text-secondary)',
-              }}>
-                {totalUsers}
-              </span>
-            )}
-          </button>
-        ))}
-      </div>
-
-      {/* ── Tab Content ── */}
-      {tab === 'users' && (
-        <div className="gecko-stack gecko-stack-md" style={{ gap: 14 }}>
-
-          {/* Toolbar */}
-          <div className="gecko-row gecko-row-wrap" style={{ gap: 10 }}>
-            {/* Search */}
-            <div style={{ position: 'relative', flex: 1, minWidth: 220, maxWidth: 340 }}>
-              <span style={{
-                position: 'absolute', left: 10, top: '50%', transform: 'translateY(-50%)',
-                color: 'var(--gecko-text-secondary)', pointerEvents: 'none',
-              }}>
-                <Icon name="search" size={15} />
-              </span>
-              <input
-                type="text"
-                value={search}
-                onChange={e => setSearch(e.target.value)}
-                placeholder="Search by name or email…"
-                className="gecko-input gecko-input-sm"
-                style={{ paddingLeft: 34, width: '100%' }}
-              />
-            </div>
-
-            {/* Role filter */}
-            <select
-              value={roleFilter}
-              onChange={e => setRoleFilter(e.target.value)}
-              className="gecko-input gecko-input-sm"
-              style={{ minWidth: 170 }}
-            >
-              <option value="">All Roles</option>
-              {ROLE_NAMES.map(r => <option key={r} value={r}>{r}</option>)}
-            </select>
-
-            {/* Status filter */}
-            <select
-              value={statusFilter}
-              onChange={e => setStatusFilter(e.target.value)}
-              className="gecko-input gecko-input-sm"
-              style={{ minWidth: 140 }}
-            >
-              <option value="">All Statuses</option>
-              <option value="Active">Active</option>
-              <option value="Inactive">Inactive</option>
-              <option value="Suspended">Suspended</option>
-            </select>
-
-            {(search || roleFilter || statusFilter) && (
-              <button
-                className="gecko-btn gecko-btn-ghost gecko-btn-sm"
-                onClick={() => { setSearch(''); setRoleFilter(''); setStatusFilter(''); }}
-                style={{ display: 'flex', alignItems: 'center', gap: 5, color: 'var(--gecko-text-secondary)' }}
-              >
-                <Icon name="x" size={13} /> Clear
-              </button>
-            )}
-
-            <div style={{ flex: 1 }} />
-
-            {/* New User */}
-            <button
-              className="gecko-btn gecko-btn-primary gecko-btn-sm gecko-row"
-              onClick={() => setPanelOpen(true)}
-              style={{ gap: 7 }}
-            >
-              <Icon name="plus" size={15} /> New User
-            </button>
-          </div>
-
-          {/* Result count */}
-          {(search || roleFilter || statusFilter) && (
-            <div className="gecko-page-subtitle">
-              Showing {filtered.length} of {totalUsers} users
-            </div>
-          )}
-
-          {/* Data Table */}
-          <div className="gecko-table-card">
-            <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 13 }}>
-              <thead>
-                <tr style={{ background: 'var(--gecko-bg-subtle)', borderBottom: '1px solid var(--gecko-border)' }}>
-                  {['User', 'Role', 'Assigned Yards', 'Last Login', 'Status', ''].map((h, i) => (
-                    <th key={i} style={{
-                      padding: '10px 14px', textAlign: i === 5 ? 'right' : 'left',
-                      fontSize: 11, fontWeight: 700, letterSpacing: '0.06em',
-                      textTransform: 'uppercase', color: 'var(--gecko-text-secondary)',
-                      whiteSpace: 'nowrap',
-                    }}>
-                      {h}
-                    </th>
-                  ))}
-                </tr>
-              </thead>
-              <tbody>
-                {filtered.length === 0 ? (
-                  <tr>
-                    <td colSpan={6} style={{ padding: '40px 16px', textAlign: 'center', color: 'var(--gecko-text-secondary)' }}>
-                      <div className="gecko-stack gecko-stack-sm" style={{ alignItems: 'center' }}>
-                        <Icon name="users" size={28} style={{ opacity: 0.3 }} />
-                        <div className="gecko-card-title">No users match your filters</div>
-                        <div style={{ fontSize: 12 }}>Try adjusting the search or filters</div>
-                      </div>
-                    </td>
-                  </tr>
-                ) : filtered.map((user, idx) => (
-                  <tr
-                    key={user.id}
-                    style={{
-                      borderBottom: '1px solid var(--gecko-bg-subtle)',
-                      background: idx % 2 === 0 ? '#fff' : 'var(--gecko-bg-subtle)',
-                      transition: 'background 0.1s',
-                    }}
-                    onMouseEnter={e => (e.currentTarget.style.background = 'var(--gecko-primary-50)')}
-                    onMouseLeave={e => (e.currentTarget.style.background = idx % 2 === 0 ? '#fff' : 'var(--gecko-bg-subtle)')}
-                  >
-                    {/* Avatar + Name + Email */}
-                    <td style={{ padding: '11px 14px' }}>
-                      <div className="gecko-row" style={{ gap: 10 }}>
-                        <Avatar name={user.name} role={user.role} />
-                        <div>
-                          <div className="gecko-cell-primary">{user.name}</div>
-                          <div className="gecko-row gecko-cell-meta" style={{ marginTop: 1, gap: 4 }}>
-                            <Icon name="mail" size={11} />
-                            {user.email}
-                          </div>
-                        </div>
-                      </div>
-                    </td>
-
-                    {/* Role */}
-                    <td style={{ padding: '11px 14px' }}>
-                      <RoleBadge role={user.role} />
-                    </td>
-
-                    {/* Yards */}
-                    <td style={{ padding: '11px 14px', color: 'var(--gecko-text-secondary)', fontSize: 12 }}>
-                      <div className="gecko-row" style={{ gap: 5 }}>
-                        <Icon name="globe" size={13} />
-                        {user.yards}
-                      </div>
-                    </td>
-
-                    {/* Last Login */}
-                    <td style={{ padding: '11px 14px', color: 'var(--gecko-text-secondary)', fontSize: 12, whiteSpace: 'nowrap' }}>
-                      {user.lastLogin === '—' ? (
-                        <span style={{ color: 'var(--gecko-text-disabled)' }}>Never</span>
-                      ) : (
-                        <div className="gecko-row" style={{ gap: 5 }}>
-                          <Icon name="clock" size={13} />
-                          {user.lastLogin}
-                        </div>
-                      )}
-                    </td>
-
-                    {/* Status */}
-                    <td style={{ padding: '11px 14px' }}>
-                      <StatusBadge status={user.status} />
-                    </td>
-
-                    {/* Actions */}
-                    <td style={{ padding: '11px 14px', textAlign: 'right' }}>
-                      <div className="gecko-row gecko-row-right" style={{ gap: 4 }}>
-                        <button className="gecko-icon-btn-ghost" title="Edit user">
-                          <Icon name="edit" size={14} />
-                        </button>
-                        <button className="gecko-icon-btn-ghost" title="More actions">
-                          <Icon name="moreH" size={14} />
-                        </button>
-                      </div>
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-
-            {/* Table footer */}
-            <div className="gecko-row gecko-row-between gecko-row-wrap gecko-stack-md" style={{
-              padding: '10px 16px', borderTop: '1px solid var(--gecko-border)',
-              background: 'var(--gecko-bg-subtle)',
-              fontSize: 12, color: 'var(--gecko-text-secondary)',
-            }}>
-              <span>
-                {filtered.length} user{filtered.length !== 1 ? 's' : ''} shown
-                {(search || roleFilter || statusFilter) && ` · filtered from ${totalUsers}`}
-              </span>
-              <div className="gecko-row gecko-stack-md">
-                <span className="gecko-inline-row" style={{ gap: 5 }}>
-                  <span className="gecko-status-dot-mini gecko-tone-success-bg" style={{ marginRight: 0 }} />
-                  {activeUsers} active
-                </span>
-                <span className="gecko-inline-row" style={{ gap: 5 }}>
-                  <span className="gecko-status-dot-mini gecko-tone-gray-bg" style={{ marginRight: 0 }} />
-                  {users.filter(u => u.status === 'Inactive').length} inactive
-                </span>
-                <span className="gecko-inline-row" style={{ gap: 5 }}>
-                  <span className="gecko-status-dot-mini gecko-tone-error-bg" style={{ marginRight: 0 }} />
-                  {users.filter(u => u.status === 'Suspended').length} suspended
-                </span>
-              </div>
-            </div>
-          </div>
-
-          {/* Info banner */}
-          <div className="gecko-banner gecko-banner-info">
-            <Icon name="info" size={15} className="gecko-banner-icon" />
-            <div style={{ lineHeight: 1.6 }}>
-              <strong>Who may do what, at {where}.</strong> Role assignments control gate lane access, billing authority, and yard plan visibility.
-              Suspended accounts cannot log in but audit history is preserved. Use the <em>Roles &amp; Permissions</em> tab to review module-level access before assigning roles.
-            </div>
-          </div>
-        </div>
-      )}
-
-      {tab === 'roles' && <PermissionsTab />}
-
-      {/* ── New User Slide-in Panel ── */}
-      {panelOpen && (
-        <NewUserPanel
-          onClose={() => setPanelOpen(false)}
-          onSave={handleNewUser}
-        />
-      )}
+      <div className="gecko-cell-sub gecko-kpi-tile-foot">{sub}</div>
     </div>
   );
 }

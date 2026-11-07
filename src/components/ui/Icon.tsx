@@ -60,6 +60,15 @@ const IconPaths: Record<string, React.ReactNode> = {
   copy: <><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></>,
   save: <><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2Z"/><path d="M17 21v-8H7v8"/><path d="M7 3v5h8"/></>,
   alertCircle: <><circle cx="12" cy="12" r="9"/><path d="M12 8v4"/><circle cx="12" cy="16" r=".5" fill="currentColor"/></>,
+  /**
+   * An unknown name renders NOTHING — silently. Nineteen call sites asked for
+   * `alertTriangle`, so every danger confirmation, every warning toast and
+   * seven screens have been drawing their warning with no glyph beside it.
+   * Adding the name is the whole fix; the call sites were always right.
+   */
+  alertTriangle: <><path d="M10.3 3.9 1.8 18a2 2 0 0 0 1.7 3h17a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0Z"/><path d="M12 9v4"/><circle cx="12" cy="17" r=".5" fill="currentColor"/></>,
+  /** The administrator's password reset — a key, not a padlock: it is given away. */
+  key: <><circle cx="7.5" cy="15.5" r="4.5"/><path d="m10.7 12.3 8.3-8.3"/><path d="m16 7 3 3"/><path d="m19 4 2 2"/></>,
   upload: <><path d="M12 14V3"/><path d="m7 8 5-5 5 5"/><path d="M3 21h18"/></>,
   refreshCcw: <><path d="M21 12a9 9 0 0 0-15-6.7L3 8"/><path d="M3 3v5h5"/><path d="M3 12a9 9 0 0 0 15 6.7L21 16"/><path d="M21 21v-5h-5"/></>,
   moreHorizontal: <><circle cx="5" cy="12" r="1.5"/><circle cx="12" cy="12" r="1.5"/><circle cx="19" cy="12" r="1.5"/></>,

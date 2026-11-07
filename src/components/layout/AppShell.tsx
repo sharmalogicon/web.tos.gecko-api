@@ -12,6 +12,7 @@ import { UserMenu } from './UserMenu';
 import { ToastProvider } from '../ui/Toast';
 import { AskGeckoProvider } from '../ai/AskGeckoWidget';
 import { isPathAvailable } from '@/lib/edition';
+import { MANAGE_ROLES, MANAGE_USERS } from '@/lib/api/admin-users';
 
 // Page-title / breadcrumb derivation from the NAV tree. Single source of truth:
 // browser tab title and in-app header both come from here. Future pages added
@@ -155,6 +156,23 @@ interface NavChild {
    * depot in the header re-reads it.
    */
   needsYardMap?: boolean;
+  /**
+   * A RIGHT THE API ITSELF ENFORCES — the narrow exception to the rule below.
+   *
+   * The note on `visibleNav` rules out permission-gating the menu, and it is
+   * right about almost every entry: there is no permission for "the dashboard",
+   * so inventing one would claim an enforcement that does not exist.
+   *
+   * These two entries are the case it does not cover. `/api/users` and
+   * `/api/roles` answer **403** to anyone without `admin.user.manage` /
+   * `admin.role.manage` — verified against the running API — so the right is
+   * real, published by `GET /api/permissions`, and already decides whether the
+   * screen can show anything at all. Left in the menu, it offers a gate clerk
+   * a link to a page that can only tell them no.
+   *
+   * So: only ever a code the API refuses on, never one invented to tidy a menu.
+   */
+  needsPermission?: string;
 }
 
 interface NavModule {
@@ -259,8 +277,8 @@ const NAV: NavModule[] = [
       // What each machine can lift and how high: the reason a job can be
       // refused to a driver, so it belongs beside the depot's other rules.
       { id: 'yard-equipment', label: 'Yard Machines',        path: '/yard/equipment', needsYardMap: true },
-      { id: 'roles',          label: 'Roles & Rights',       path: '/config/roles' },
-      { id: 'users',          label: 'Users & Roles',        path: '/config/users' },
+      { id: 'roles',          label: 'Roles & Rights',       path: '/config/roles', needsPermission: MANAGE_ROLES },
+      { id: 'users',          label: 'Users & Roles',        path: '/config/users', needsPermission: MANAGE_USERS },
       { id: 'system-params',  label: 'System Parameters',    path: '/config/system-params' },
     ]
   },
@@ -327,9 +345,15 @@ const NAV: NavModule[] = [
 // marked `needsYardMap` is offered only where `yard.map_enabled` is on. That is
 // read per depot, so this cannot be a module constant any more — the menu is
 // built inside the sidebar, which sits inside the FacilityProvider.
-function visibleNav(yardMapEnabled: boolean): NavModule[] {
+function visibleNav(yardMapEnabled: boolean, holds: (permission: string) => boolean): NavModule[] {
   return NAV
-    .map(m => ({ ...m, children: m.children.filter(c => isPathAvailable(c.path) && (!c.needsYardMap || yardMapEnabled)) }))
+    .map(m => ({
+      ...m,
+      children: m.children.filter(c =>
+        isPathAvailable(c.path)
+        && (!c.needsYardMap || yardMapEnabled)
+        && (!c.needsPermission || holds(c.needsPermission))),
+    }))
     .filter(m => m.children.length > 0);
 }
 
@@ -341,7 +365,10 @@ function Sidebar({ collapsed, onToggle }: { collapsed: boolean, onToggle: () => 
   // setting has been read it is off, so the entry arrives a moment late rather
   // than appearing and then vanishing.
   const { mapEnabled } = useYardSettings();
-  const nav = useMemo(() => visibleNav(mapEnabled), [mapEnabled]);
+  // The two administration screens are offered only to accounts the API would
+  // actually let in — see `needsPermission` on NavChild.
+  const { can } = useSession();
+  const nav = useMemo(() => visibleNav(mapEnabled, can), [mapEnabled, can]);
   // Who is signed in, and signing out, both belong to the account menu at the
   // foot of this sidebar now — the row that showed them is that menu's trigger.
   // The group to highlight and open: the one that links this page (see

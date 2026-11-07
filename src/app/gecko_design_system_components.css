@@ -12580,3 +12580,142 @@ th.gecko-cell-tight {
   color: var(--gecko-text-secondary);
   opacity: 0.85;
 }
+
+/* ── §57  Users, roles and rights ───────────────────────────────────────────
+   The administration screens: who may sign in, what each role carries, and
+   the dialog that hands somebody a new password.
+
+   Three shapes do nearly all of it — a list of tickable rights, a row of
+   choices in a dialog, and the one-time reveal of a generated password — so
+   they are named for what they are rather than for the screen they first
+   appeared on, and the roles matrix and the user drawer share them. */
+
+/* A long list of tickable things: depots on a user, rights on a role. Each
+   row is a whole label so the hit area is the row, not the 15px box. */
+.gecko-check-list {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+.gecko-check-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 6px 10px;
+  border: 1px solid transparent;
+  border-radius: var(--gecko-radius-sm);
+  cursor: pointer;
+  font-size: var(--gecko-text-sm);
+  color: var(--gecko-text-primary);
+}
+.gecko-check-row:hover { background: var(--gecko-bg-subtle); }
+.gecko-check-row input { accent-color: var(--gecko-primary-600); width: 15px; height: 15px; flex-shrink: 0; }
+.gecko-check-row-on {
+  background: var(--gecko-primary-50);
+  border-color: var(--gecko-primary-200);
+}
+.gecko-check-row-on:hover { background: var(--gecko-primary-50); }
+/* A system role's rights are shown, not offered: still readable, plainly not
+   yours to change. */
+.gecko-check-row-locked { cursor: default; opacity: 0.75; }
+.gecko-check-row-locked:hover { background: transparent; }
+.gecko-check-row-on.gecko-check-row-locked:hover { background: var(--gecko-primary-50); }
+.gecko-check-label { flex: 1 1 auto; min-width: 0; }
+
+/* One module's worth of rights, boxed so 99 checkboxes read as eight groups. */
+.gecko-rights-group {
+  border: 1px solid var(--gecko-border);
+  border-radius: var(--gecko-radius-md);
+  padding: 8px 10px 10px;
+  background: var(--gecko-bg-surface);
+}
+.gecko-rights-group-head {
+  gap: 8px;
+  padding-bottom: 6px;
+  margin-bottom: 4px;
+  border-bottom: 1px solid var(--gecko-border);
+}
+/* In the new-role dialog the whole catalogue is on screen at once; the modal
+   must not grow taller than the window, so the rights scroll inside it. */
+.gecko-rights-scroll {
+  max-height: 44vh;
+  overflow-y: auto;
+  padding-right: 4px;
+}
+
+/* Pick one of two ways to do a thing, inside a dialog. Buttons rather than
+   radios: the whole card is the target and the note is part of the choice. */
+.gecko-choice-row { display: flex; gap: 10px; flex-wrap: wrap; }
+.gecko-choice {
+  flex: 1 1 160px;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 2px;
+  padding: 10px 12px;
+  border: 1px solid var(--gecko-border);
+  border-radius: var(--gecko-radius-md);
+  background: var(--gecko-bg-surface);
+  cursor: pointer;
+  text-align: left;
+  color: var(--gecko-text-primary);
+}
+.gecko-choice:hover:not(:disabled) { border-color: var(--gecko-primary-200); background: var(--gecko-bg-subtle); }
+.gecko-choice:disabled { cursor: not-allowed; opacity: 0.6; }
+.gecko-choice-on,
+.gecko-choice-on:hover:not(:disabled) {
+  border-color: var(--gecko-primary-600);
+  background: var(--gecko-primary-50);
+}
+.gecko-choice-label { font-size: var(--gecko-text-sm); font-weight: 600; }
+.gecko-choice-note { font-size: var(--gecko-text-xs); color: var(--gecko-text-secondary); }
+
+/* THE PASSWORD, THE ONE TIME IT EXISTS. Monospace because it will be read
+   aloud or copied by hand, and wide enough that nothing wraps mid-password. */
+.gecko-pw-reveal {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 12px;
+  border: 1px solid var(--gecko-primary-200);
+  border-radius: var(--gecko-radius-md);
+  background: var(--gecko-primary-50);
+}
+.gecko-pw-reveal-value {
+  flex: 1 1 auto;
+  min-width: 0;
+  font-family: var(--gecko-font-mono);
+  font-size: 16px;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  color: var(--gecko-text-primary);
+  word-break: break-all;
+  user-select: all;
+}
+
+/* One role a person holds, with the depot it applies at and a way to take it
+   back. */
+.gecko-grant-row {
+  gap: 8px;
+  padding: 5px 8px;
+  border: 1px solid var(--gecko-border);
+  border-radius: var(--gecko-radius-sm);
+  background: var(--gecko-bg-surface);
+}
+.gecko-add-role { gap: 8px; align-items: center; flex-wrap: wrap; }
+.gecko-add-role .gecko-select { min-width: 130px; }
+
+/* The strip under a user's name: status, lockout, last sign-in. */
+.gecko-admin-state { gap: 8px; align-items: center; }
+/* Several role badges on one table row wrap instead of stretching the row. */
+.gecko-role-chips { gap: 4px; }
+/* A second pill beside a status one. */
+.gecko-locked-chip { margin-left: 6px; }
+/* The search box carries the toolbar, so it takes the room the filters leave. */
+.gecko-admin-search { flex: 1 1 220px; min-width: 180px; max-width: 360px; }
+
+/* The role's own page: its name and badges on one line, and the two cards
+   that hold its details and its rights. */
+.gecko-role-title-row { gap: 10px; flex-wrap: wrap; align-items: center; }
+.gecko-role-card { padding: 16px 18px; }
+.gecko-back-link { gap: 6px; font-size: var(--gecko-text-sm); align-items: center; }
