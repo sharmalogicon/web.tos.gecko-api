@@ -107,6 +107,14 @@ export const LIVE_PATHS: readonly string[] = [
   '/masters/countries',
   '/masters/public-holidays',
   '/config/gate-hours',          // weekly windows, one-off dates, holidays read-only
+  // WHO MAY SIGN IN, AND WHAT THEY MAY DO — bound 7 Nov 2026 to gecko_identity
+  // (/api/users, /api/roles, /api/permissions). These two were rewritten off
+  // their fixture data in the same commit but never added here, so the guard
+  // answered "Not available" and the menu dropped them: built, bound, and
+  // unreachable. Being served is necessary, not sufficient — both are also
+  // behind admin.user.manage / admin.role.manage (needsPermission, AppShell).
+  '/config/users',               // the register, the drawer, the password reset
+  '/config/roles',               // the role list, and /config/roles/[id]
 ];
 
 /**
