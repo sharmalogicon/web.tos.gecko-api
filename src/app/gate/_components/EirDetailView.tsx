@@ -14,7 +14,7 @@ import { WINDOW_PERMISSIONS, formatBaht, visitQuotePath, type VisitQuote } from 
 import { codeLabel, useCodeList } from '@/lib/api/lookups';
 import { statusLabel } from '@/lib/format';
 import { EIR_PRINT_NOTE, openPdf } from '@/lib/api/open-pdf';
-import { couponPdfPath } from '@/lib/api/receipts';
+import { couponPdfPath, receiptPdfPath } from '@/lib/api/receipts';
 import { receiptByNo } from '@/lib/api/cash-bills';
 import { AmendTruckModal } from './AmendTruckModal';
 import {
@@ -56,8 +56,8 @@ export function EirDetailView({ id }: { id: string }) {
   const mayAmend = !!e && e.status !== 'VOIDED' && !!visit.data
     && canAt(TOS_PERMISSIONS.gateOverride, e.branchId);
   const [printing, setPrinting] = useState(false);
-  /** Which of the other two documents is being fetched, if either. */
-  const [printingDoc, setPrintingDoc] = useState<'truck-in' | 'coupon' | null>(null);
+  /** Which of the other documents is being fetched, if any. */
+  const [printingDoc, setPrintingDoc] = useState<'truck-in' | 'coupon' | 'receipt' | null>(null);
 
   const register = e?.direction === 'OUT' ? '/gate/eir-out' : '/gate/eir-in';
   const mayVoid = !!e && e.status !== 'VOIDED' && canAt(TOS_PERMISSIONS.gateOverride, e.branchId);
@@ -99,6 +99,33 @@ export function EirDetailView({ id }: { id: string }) {
       .filter((n): n is string => Boolean(n)),
   )];
 
+  /**
+   * THE RECEIPTS OF THIS GATE TRANSACTION, not of the whole truck.
+   *
+   * The coupon above is deliberately visit-wide — it is what the driver spends
+   * at the barrier, and a truck leaves once. A RECEIPT is a tax invoice for a
+   * move, and this screen is one move: printing the receipt for the box in the
+   * next bay, from this box's page, would hand the driver the wrong paper.
+   * `VisitQuoteBox.gateTransactionId` says which box is which, so it is used.
+   *
+   * THE FALLBACK IS NOT DECORATION. That field is typed `string | null`, and if
+   * the quote ever stops filling it, a strict filter would match nothing and
+   * the button would quietly never appear again — a screen that silently loses
+   * a feature is the bug that is hardest to notice. So: scope to this
+   * transaction when the quote says which transaction its boxes belong to, and
+   * fall back to the visit when it says nothing at all.
+   */
+  const quoteBoxes = charges.data?.boxes ?? [];
+  const boxesHere = quoteBoxes.some(b => b.gateTransactionId)
+    ? quoteBoxes.filter(b => b.gateTransactionId === e?.gateTransactionId)
+    : quoteBoxes;
+  const receiptNosHere = [...new Set(
+    boxesHere
+      .flatMap(b => b.lines ?? [])
+      .map(l => l.receiptNo)
+      .filter((n): n is string => Boolean(n)),
+  )];
+
   const printTruckIn = async () => {
     if (!e) return;
     setPrintingDoc('truck-in');
@@ -128,23 +155,33 @@ export function EirDetailView({ id }: { id: string }) {
    * That is its own deliberate fallback and nothing here second-guesses it:
    * the clerk ends up with the document either way.
    */
-  const printCoupons = async (nos: string[]) => {
+  /**
+   * ONE FUNCTION FOR BOTH PAPERS. The coupon and the receipt are the same
+   * errand — resolve each receipt number to its id, fetch that id's PDF with
+   * the token — and differ only in which document and what to call it. Written
+   * twice they would drift, and the half that drifts is the half nobody tests.
+   */
+  const printDocs = async (nos: string[], kind: 'receipt' | 'coupon') => {
     if (nos.length === 0) return;
-    setPrintingDoc('coupon');
+    setPrintingDoc(kind);
+    const pathOf = kind === 'coupon' ? couponPdfPath : receiptPdfPath;
+    const suffix = kind === 'coupon' ? '-coupon.pdf' : '.pdf';
+    const noun = kind === 'coupon' ? 'coupon' : 'receipt';
+    const Noun = kind === 'coupon' ? 'Coupon' : 'Receipt';
     const printed: string[] = [];
-    const noCoupon: string[] = [];
+    const missing: string[] = [];
     let refused: string | null = null;
     try {
       for (const no of nos) {
         try {
           const receipt = await receiptByNo(no);
-          await openPdf(couponPdfPath(receipt.receiptId), `${no}-coupon.pdf`);
+          await openPdf(pathOf(receipt.receiptId), `${no}${suffix}`);
           printed.push(no);
         } catch (err: unknown) {
           const api = err instanceof ApiError ? err : null;
-          if (api?.status === 404) { noCoupon.push(no); continue; }
+          if (api?.status === 404) { missing.push(no); continue; }
           refused = api?.status === 403
-            ? 'Printing a cash bill needs the cash-collect permission.'
+            ? `Printing a ${noun} needs the cash-collect permission.`
             : api?.title ?? 'Could not reach the Gecko API.';
           break;
         }
@@ -155,18 +192,18 @@ export function EirDetailView({ id }: { id: string }) {
 
     const list = (xs: string[]) => xs.join(', ');
     if (refused) {
-      toast.toast({ variant: 'danger', title: 'Coupons not printed', message: refused });
+      toast.toast({ variant: 'danger', title: `${Noun}s not printed`, message: refused });
     } else if (printed.length === 0) {
-      toast.toast({ variant: 'danger', title: 'No coupon printed',
-        message: `No coupon was issued on ${list(noCoupon)}.` });
-    } else if (noCoupon.length > 0) {
-      toast.toast({ variant: 'warning', title: 'Some coupons printed',
-        message: `Printed ${list(printed)}; no coupon on ${list(noCoupon)}.` });
+      toast.toast({ variant: 'danger', title: `No ${noun} printed`,
+        message: `No ${noun} was issued on ${list(missing)}.` });
+    } else if (missing.length > 0) {
+      toast.toast({ variant: 'warning', title: `Some ${noun}s printed`,
+        message: `Printed ${list(printed)}; no ${noun} on ${list(missing)}.` });
     } else if (printed.length > 1) {
-      // Silent for a single coupon, as it always was — the tab opening IS the
+      // Silent for a single document, as it always was — the tab opening IS the
       // feedback. Several is worth saying out loud, because a blocked tab
       // turns into a saved file the clerk has to go and find.
-      toast.toast({ variant: 'success', title: `${printed.length} coupons sent to print`,
+      toast.toast({ variant: 'success', title: `${printed.length} ${noun}s sent to print`,
         message: list(printed) });
     }
   };
@@ -255,9 +292,29 @@ export function EirDetailView({ id }: { id: string }) {
               THE COUNT IS ON THE BUTTON when the receipt was split, because
               "Coupon" on a button that produces two documents is how the
               second one goes unnoticed. */}
+          {/* THE RECEIPT — the tax invoice for this move's money, the same
+              document the gate-in screen offers the moment the cash is taken.
+              Shown only where this gate transaction actually has one: a free
+              move, or one billed to an account, has no receipt to print, and a
+              button that always answers "nothing to print" teaches a clerk to
+              stop believing the toolbar. */}
+          {receiptNosHere.length > 0 && mayCollect && (
+            <button className="gecko-btn gecko-btn-outline gecko-btn-sm"
+              onClick={() => void printDocs(receiptNosHere, 'receipt')} disabled={printingDoc !== null}
+              title={receiptNosHere.length === 1
+                ? `Tax invoice ${receiptNosHere[0]}`
+                : `One receipt per part: ${receiptNosHere.join(', ')}`}>
+              <Icon name="print" size={14} />
+              {printingDoc === 'receipt'
+                ? 'Preparing…'
+                : receiptNosHere.length > 1
+                  ? `Print receipt ×${receiptNosHere.length}`
+                  : 'Print receipt'}
+            </button>
+          )}
           {receiptNos.length > 0 && mayCollect && (
             <button className="gecko-btn gecko-btn-outline gecko-btn-sm"
-              onClick={() => void printCoupons(receiptNos)} disabled={printingDoc !== null}
+              onClick={() => void printDocs(receiptNos, 'coupon')} disabled={printingDoc !== null}
               title={receiptNos.length === 1
                 ? `The cash bill for receipt ${receiptNos[0]}`
                 : `One cash bill per receipt: ${receiptNos.join(', ')}`}>
@@ -286,10 +343,17 @@ export function EirDetailView({ id }: { id: string }) {
               there is more than one; a single receipt has the button. */}
           {receiptNos.length > 1 && mayCollect && (
             <div className="gecko-print-note gecko-print-note-left">
-              {receiptNos.map(no => (
-                <button key={no} className="gecko-link gecko-link-button gecko-coupon-reprint"
+              {receiptNosHere.map(no => (
+                <button key={`r-${no}`} className="gecko-link gecko-link-button gecko-coupon-reprint"
                   disabled={printingDoc !== null}
-                  onClick={() => void printCoupons([no])}>
+                  onClick={() => void printDocs([no], 'receipt')}>
+                  Receipt {no}
+                </button>
+              ))}
+              {receiptNos.map(no => (
+                <button key={`c-${no}`} className="gecko-link gecko-link-button gecko-coupon-reprint"
+                  disabled={printingDoc !== null}
+                  onClick={() => void printDocs([no], 'coupon')}>
                   Coupon {no}
                 </button>
               ))}
