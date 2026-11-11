@@ -14,6 +14,7 @@ import {
   type OrderType, type OrderTypeDetail, type OrderTypeRules, type OrderTypeStep,
 } from '@/lib/api/order-types';
 import { isPathAvailable } from '@/lib/edition';
+import { formatDate, formatDateTime } from '@/lib/format';
 import { OrderTypeForm, formFromOrderType, orderTypeErrors, requestFromOrderType, type OrderTypeFormValue } from './_components/OrderTypeForm';
 import { StepsEditor, requestFromSteps, rowsFromSteps, stepErrors, type StepRow } from './_components/StepsEditor';
 import { ChargesTables } from './_components/ChargesTables';
@@ -235,6 +236,12 @@ export default function OrderTypeMasterPage() {
 
   const directions = useMemo(() => [...new Set((all ?? []).map(o => o.directionCode))].sort(), [all]);
 
+  // The chip counts what the depot HAS, not what the list happens to be
+  // showing: a deleted order type is history, and counting 39 of them among
+  // "types" would make a depot with 8 look like a depot with 47.
+  const liveCount = (all ?? []).filter(o => !o.isDeleted).length;
+  const goneCount = (all ?? []).length - liveCount;
+
   const filtered = useMemo(() => {
     const q = search.trim().toLowerCase();
     return (all ?? []).filter(o =>
@@ -271,7 +278,16 @@ export default function OrderTypeMasterPage() {
   const [busy, setBusy] = useState(false);
   const [actionError, setActionError] = useState<ApiError | null>(null);
   const [confirmDelete, setConfirmDelete] = useState(false);
-  const canEdit = canManage && mode === 'view' && !!vocabulary && !!commercial;
+  /**
+   * A DELETED ORDER TYPE IS READ ONLY, and this one flag is the whole of it.
+   *
+   * Every edit on this screen — the header's Edit / Deactivate / Delete, "Edit
+   * rules", "Edit steps & gate rules" — is already behind `canEdit`, so adding
+   * the deleted test here closes all five at once rather than five times over.
+   * The API answers 404 to each of those writes, so a button that survived
+   * would do nothing but produce a puzzling failure.
+   */
+  const canEdit = canManage && mode === 'view' && !!vocabulary && !!commercial && !ot?.isDeleted;
 
   const begin = (next: 'header' | 'steps' | 'rules') => {
     if (!current) return;
@@ -391,7 +407,14 @@ export default function OrderTypeMasterPage() {
         <div className="gecko-page-actions-left">
           <div className="gecko-row gecko-row-baseline gecko-stack-md">
             <h1 className="gecko-page-title">Order Types</h1>
-            <span className="gecko-count-badge">{loading && !all ? '…' : `${(all ?? []).length} types`}</span>
+            <span className="gecko-count-badge">
+              {loading && !all ? '…' : (
+                <>
+                  {liveCount} types
+                  {goneCount > 0 && <span className="gecko-count-gone"> · {goneCount} deleted</span>}
+                </>
+              )}
+            </span>
           </div>
           <div className="gecko-page-subtitle gecko-mt-1">
             What the depot is asked to do. Each order type expands into gate steps, and each step carries the checks the gate enforces.
@@ -446,7 +469,7 @@ export default function OrderTypeMasterPage() {
             </div>
             <label className="gecko-row gecko-cell-meta" style={{ gap: 6, cursor: 'pointer' }}>
               <input type="checkbox" className="gecko-checkbox" checked={includeInactive} onChange={e => setIncludeInactive(e.target.checked)} />
-              Show inactive
+              Show inactive &amp; deleted
             </label>
           </div>
           <div style={{ maxHeight: 600, overflowY: 'auto' }}>
@@ -459,30 +482,34 @@ export default function OrderTypeMasterPage() {
             ) : filtered.map(o => {
               const b = directionOf(o.directionCode);
               const active = o.orderTypeCode === activeCode;
+              // Deleted outranks inactive: a deleted order type is nearly
+              // always inactive too, and it has to read as deleted rather than
+              // fade to the 0.55 opacity that only means "switched off".
+              const gone = !!o.isDeleted;
               return (
                 <button
                   key={o.orderTypeId}
                   type="button"
                   onClick={() => select(o.orderTypeCode)}
-                  style={{
-                    width: '100%', textAlign: 'left', padding: '10px 14px', opacity: o.isActive ? 1 : 0.55,
-                    background: active ? 'var(--gecko-primary-50)' : 'transparent',
-                    border: 'none', fontFamily: 'inherit', cursor: 'pointer',
-                    borderLeft: `3px solid ${active ? 'var(--gecko-primary-600)' : 'transparent'}`,
-                  }}
+                  className={`gecko-ot-item${active ? ' gecko-ot-item-on' : ''}`
+                    + (gone ? ' gecko-ot-item-gone' : (o.isActive ? '' : ' gecko-ot-item-off'))}
                 >
-                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 6 }}>
-                    <span style={{ fontFamily: 'var(--gecko-font-mono)', fontSize: 12, fontWeight: 700, color: active ? 'var(--gecko-primary-700)' : 'var(--gecko-text-primary)' }}>
+                  <div className="gecko-ot-item-head">
+                    <span className={`gecko-ot-item-code${gone ? ' gecko-ot-item-code-gone' : (active ? ' gecko-ot-item-code-on' : '')}`}>
                       {o.orderTypeCode}
                     </span>
-                    <span style={{ fontSize: 9, fontWeight: 700, padding: '1.5px 5px', borderRadius: 3, background: b.bg, color: b.text, flexShrink: 0 }}>{b.label}</span>
+                    {/* The direction's two colours are computed per direction,
+                        which is the one case the house rule leaves inline. */}
+                    <span className="gecko-ot-item-dir" style={{ background: b.bg, color: b.text }}>{b.label}</span>
                   </div>
-                  <div className="gecko-cell-meta" style={{ lineHeight: 1.3 }}>{o.descriptionEn}</div>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginTop: 4, fontSize: 9, color: 'var(--gecko-text-disabled)' }}>
+                  <div className={`gecko-cell-meta gecko-ot-item-desc${gone ? ' gecko-ot-item-desc-gone' : ''}`}>{o.descriptionEn}</div>
+                  <div className="gecko-ot-item-meta">
                     <span>{o.serviceCode ?? '—'}</span>
                     <span>·</span>
                     <span>{humanize(o.cargoClassCode)}</span>
-                    {!o.isActive && <span style={{ marginLeft: 'auto' }}>inactive</span>}
+                    {gone
+                      ? <span className="gecko-ot-item-tag gecko-ot-item-tag-gone">deleted {formatDate(o.deletedAt)}</span>
+                      : !o.isActive && <span className="gecko-ot-item-tag">inactive</span>}
                   </div>
                 </button>
               );
@@ -509,11 +536,17 @@ export default function OrderTypeMasterPage() {
               {/* Order type header */}
               <div className="gecko-card" style={{ borderRadius: 14, padding: '20px 24px' }}>
                 <div className="gecko-row gecko-mb-3" style={{ gap: 12 }}>
-                  <h2 style={{ margin: 0, fontFamily: 'var(--gecko-font-mono)', fontSize: 20, fontWeight: 800, color: 'var(--gecko-text-primary)' }}>{ot.orderTypeCode}</h2>
+                  <h2 className={ot.isDeleted ? 'gecko-ot-title-gone' : undefined}
+                    style={{ margin: 0, fontFamily: 'var(--gecko-font-mono)', fontSize: 20, fontWeight: 800, color: ot.isDeleted ? undefined : 'var(--gecko-text-primary)' }}>{ot.orderTypeCode}</h2>
                   {dir && <span style={{ fontSize: 10, fontWeight: 700, padding: '3px 8px', borderRadius: 4, background: dir.bg, color: dir.text }}>{humanize(ot.directionCode)}</span>}
                   {ot.serviceCode && <span className="gecko-badge gecko-badge-xs gecko-badge-gray">{ot.serviceCode}</span>}
                   <div className="gecko-row gecko-ml-auto">
-                    <span className={`gecko-status-dot gecko-status-dot-${ot.isActive ? 'active' : 'neutral'}`}>{ot.isActive ? 'Active' : 'Inactive'}</span>
+                    {/* Deleted replaces Active/Inactive rather than joining it:
+                        a deleted order type's isActive is whatever it was on
+                        the day it went, and is no longer anything a depot acts on. */}
+                    {ot.isDeleted
+                      ? <span className="gecko-badge gecko-badge-error">Deleted {formatDateTime(ot.deletedAt)}</span>
+                      : <span className={`gecko-status-dot gecko-status-dot-${ot.isActive ? 'active' : 'neutral'}`}>{ot.isActive ? 'Active' : 'Inactive'}</span>}
                     {canEdit && (
                       <>
                         <button className="gecko-btn gecko-btn-outline gecko-btn-sm" onClick={() => begin('header')} disabled={busy}>
@@ -529,6 +562,19 @@ export default function OrderTypeMasterPage() {
                     )}
                   </div>
                 </div>
+                {/* Said where the buttons would have been, so the absence is
+                    explained rather than merely noticed. The last sentence is
+                    the one a depot actually worries about: deleting an order
+                    type does not reach back into the bookings made on it. */}
+                {ot.isDeleted && (
+                  <div role="status" className="gecko-ot-gone-note">
+                    <Icon name="alertTriangle" size={16} />
+                    <span>
+                      This order type was deleted on {formatDateTime(ot.deletedAt)}. It is shown for reference only
+                      and cannot be edited. Bookings made before keep their own steps.
+                    </span>
+                  </div>
+                )}
                 {mode === 'header' && form && vocabulary ? (
                   <div className="gecko-stack gecko-stack-md gecko-mt-4">
                     <OrderTypeForm value={form} onChange={setForm} vocabulary={vocabulary} localErrors={headerErrors} apiError={actionError} mode="edit" />

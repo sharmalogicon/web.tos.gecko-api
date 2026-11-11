@@ -122,6 +122,21 @@ export interface OrderType {
   rowVersion: string;
   /** Always present on a read; the API projects every field, defaults and all. */
   rules?: OrderTypeRules;
+  /**
+   * SOFT-DELETED, AND READ ONLY (OrderTypeEndpoints, owner 2026-11-10).
+   *
+   * Only ever true on a list read with `includeInactive=true`, and on a detail
+   * read of a code whose only row is deleted — a live order type of the same
+   * code wins. The API answers 404 to PUT (header, /movements, /charges) and
+   * to DELETE on one of these, and there is no undelete endpoint, so the
+   * screen must offer no edit rather than offer one that cannot work.
+   *
+   * Optional because every other order-type read predates these two fields;
+   * absent means "not deleted", which is what every such read returns.
+   */
+  isDeleted?: boolean;
+  /** When it was deleted, ISO UTC. Null on a live one. */
+  deletedAt?: string | null;
 }
 
 export interface OrderTypeStep {

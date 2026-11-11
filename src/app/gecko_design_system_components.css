@@ -12719,3 +12719,104 @@ th.gecko-cell-tight {
 .gecko-role-title-row { gap: 10px; flex-wrap: wrap; align-items: center; }
 .gecko-role-card { padding: 16px 18px; }
 .gecko-back-link { gap: 6px; font-size: var(--gecko-text-sm); align-items: center; }
+
+
+/* ── §58  A DELETED ORDER TYPE, SHOWN FOR REFERENCE ─────────────────────────
+   "Show inactive & deleted" on Master Data → Work Order Types lists the
+   soft-deleted order types too (API: ?includeInactive=true, owner 2026-11-10).
+   A deleted one is READ ONLY — the API answers 404 to every write on it and
+   there is no undelete — so the row has to read as gone plainly enough that
+   nobody reaches for Edit and then wonders why it failed.
+
+   RED IS NOT A TOKEN THAT FOLLOWS THE THEME. --gecko-error-50 is #fef2f2 in
+   BOTH themes, so a row painted with it glares near-white against the dark
+   surface. Every rule below therefore carries its own [data-theme="dark"]
+   answer in the house form — a translucent red over the real background,
+   lightened text — exactly as .gecko-alert-error and .gecko-toast-error do.
+
+   DELETED OUTRANKS INACTIVE. A deleted order type is nearly always inactive
+   as well, and it must read as deleted: -gone never takes the 0.55 opacity
+   that marks a merely deactivated one, or the red would fade to pink.
+   ───────────────────────────────────────────────────────────────────────── */
+
+/* The row in the left-hand list. */
+.gecko-ot-item {
+  width: 100%;
+  text-align: left;
+  padding: 10px 14px;
+  background: transparent;
+  border: none;
+  border-left: 3px solid transparent;
+  font-family: inherit;
+  cursor: pointer;
+}
+.gecko-ot-item-on   { background: var(--gecko-primary-50); border-left-color: var(--gecko-primary-600); }
+/* Deactivated, not deleted — unchanged from before §58. */
+.gecko-ot-item-off  { opacity: 0.55; }
+.gecko-ot-item-gone { background: var(--gecko-error-50); opacity: 1; }
+.gecko-ot-item-gone.gecko-ot-item-on {
+  background: var(--gecko-error-100);
+  border-left-color: var(--gecko-error-600);
+}
+[data-theme="dark"] .gecko-ot-item-on   { background: rgba(37, 99, 235, 0.14); }
+[data-theme="dark"] .gecko-ot-item-gone { background: rgba(239, 68, 68, 0.10); }
+[data-theme="dark"] .gecko-ot-item-gone.gecko-ot-item-on { background: rgba(239, 68, 68, 0.18); }
+
+.gecko-ot-item-head { display: flex; align-items: center; justify-content: space-between; gap: 6px; }
+.gecko-ot-item-code {
+  font-family: var(--gecko-font-mono);
+  font-size: 12px;
+  font-weight: 700;
+  color: var(--gecko-text-primary);
+}
+.gecko-ot-item-code-on   { color: var(--gecko-primary-700); }
+.gecko-ot-item-code-gone { color: var(--gecko-error-600); text-decoration: line-through; }
+[data-theme="dark"] .gecko-ot-item-code-gone { color: var(--gecko-error-300); }
+
+/* The direction badge keeps its colours inline — they are computed per
+   direction, which is the one case the house rule leaves to the element. */
+.gecko-ot-item-dir { font-size: 9px; font-weight: 700; padding: 1.5px 5px; border-radius: 3px; flex-shrink: 0; }
+
+.gecko-ot-item-desc { line-height: 1.3; }
+.gecko-ot-item-desc-gone { color: var(--gecko-error-500); }
+[data-theme="dark"] .gecko-ot-item-desc-gone { color: var(--gecko-error-400); }
+
+.gecko-ot-item-meta {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin-top: 4px;
+  font-size: 9px;
+  color: var(--gecko-text-disabled);
+}
+.gecko-ot-item-tag { margin-left: auto; }
+.gecko-ot-item-tag-gone { color: var(--gecko-error-600); font-weight: 700; }
+[data-theme="dark"] .gecko-ot-item-tag-gone { color: var(--gecko-error-300); }
+
+/* The detail header: the code reads struck through, like its row. */
+.gecko-ot-title-gone { color: var(--gecko-error-600); text-decoration: line-through; }
+[data-theme="dark"] .gecko-ot-title-gone { color: var(--gecko-error-300); }
+
+/* Why every edit button has gone, said once, under the header. */
+.gecko-ot-gone-note {
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+  margin-top: 14px;
+  padding: 10px 12px;
+  border: 1px solid var(--gecko-error-200);
+  border-radius: var(--gecko-radius-md, 8px);
+  background: var(--gecko-error-50);
+  color: var(--gecko-error-700);
+  font-size: var(--gecko-text-sm);
+  line-height: 1.45;
+}
+[data-theme="dark"] .gecko-ot-gone-note {
+  background: rgba(239, 68, 68, 0.12);
+  border-color: rgba(239, 68, 68, 0.30);
+  color: var(--gecko-error-300);
+}
+
+/* The count chip beside the page title: "8 types · 39 deleted". */
+.gecko-count-gone { color: var(--gecko-error-600); }
+[data-theme="dark"] .gecko-count-gone { color: var(--gecko-error-300); }
