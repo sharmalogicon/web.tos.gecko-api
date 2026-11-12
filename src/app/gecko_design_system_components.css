@@ -12860,3 +12860,161 @@ th.gecko-cell-tight {
 /* No dark-mode block: --gecko-text-secondary is one of the tokens the dark
    theme redefines, so these rows follow it on their own. */
 
+/* ── §60  MULTI-CUSTOMER TARIFF UPLOAD ──────────────────────────────────────
+   Three steps with the file leaving the building between 1 and 2, so each step
+   is its own card with a numbered head rather than a wizard: a clerk comes back
+   days later and has to see where they are without clicking.
+
+   Colour carries meaning here and is not decoration. Amber is "look at this",
+   red is "this takes money away" — the removed-prices count and its note — and
+   both must survive the dark theme, where the 50-level surfaces are far too
+   bright. Those get an explicit rule; everything built from bg/border/text
+   tokens follows the theme on its own.
+   ────────────────────────────────────────────────────────────────────────── */
+.gecko-mc-page {
+  padding: 24px;
+  width: 100%;
+  max-width: var(--gecko-container-max);
+  margin: 0 auto;
+}
+.gecko-mc-pad { padding: 18px; }
+.gecko-mc-empty { text-align: center; padding: 16px; }
+.gecko-mc-detail { font-size: var(--gecko-text-sm); line-height: 1.45; }
+
+/* The numbered head of a step. */
+.gecko-mc-step-head {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+  padding: 14px 18px;
+  border-bottom: 1px solid var(--gecko-border);
+}
+.gecko-mc-step-no {
+  flex: none;
+  display: grid;
+  place-items: center;
+  width: 24px;
+  height: 24px;
+  border-radius: 50%;
+  background: var(--gecko-primary-600);
+  color: #fff;
+  font-size: var(--gecko-text-xs);
+  font-weight: 700;
+}
+
+/* Depot / date fields, side by side until the screen is too narrow. */
+.gecko-mc-fields {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+  gap: 14px;
+}
+.gecko-mc-count {
+  margin-left: 8px;
+  color: var(--gecko-text-secondary);
+  font-weight: 400;
+}
+
+/* The customers picked so far. */
+.gecko-mc-chips { display: flex; flex-wrap: wrap; gap: 6px; align-items: center; }
+.gecko-mc-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 3px 4px 3px 9px;
+  border: 1px solid var(--gecko-border);
+  border-radius: 999px;
+  background: var(--gecko-bg-subtle);
+  font-size: var(--gecko-text-xs);
+}
+.gecko-mc-chip-name {
+  max-width: 190px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  color: var(--gecko-text-secondary);
+}
+.gecko-mc-chip-x {
+  display: grid;
+  place-items: center;
+  width: 18px;
+  height: 18px;
+  border: 0;
+  border-radius: 50%;
+  background: transparent;
+  color: var(--gecko-text-secondary);
+  cursor: pointer;
+}
+.gecko-mc-chip-x:hover { background: var(--gecko-error-100); color: var(--gecko-error-700); }
+[data-theme="dark"] .gecko-mc-chip-x:hover {
+  background: rgba(239, 68, 68, 0.22);
+  color: var(--gecko-error-300);
+}
+
+/* The summary bar: the shape of the batch before a single row is read. */
+.gecko-mc-summary {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(130px, 1fr));
+  gap: 10px;
+}
+.gecko-mc-tally {
+  padding: 10px 12px;
+  border: 1px solid var(--gecko-border);
+  border-radius: var(--gecko-radius-md);
+  background: var(--gecko-bg-subtle);
+}
+.gecko-mc-tally-value {
+  font-size: var(--gecko-text-lg);
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+  line-height: 1.1;
+}
+.gecko-mc-tally-label { margin-top: 6px; }
+
+/* A sheet line that can be opened. */
+.gecko-mc-row { cursor: pointer; }
+.gecko-mc-row:hover { background: var(--gecko-bg-subtle); }
+.gecko-mc-link {
+  display: inline-flex;
+  align-items: center;
+  gap: 2px;
+  margin-left: 8px;
+  font-size: var(--gecko-text-xs);
+  color: var(--gecko-text-link);
+}
+
+/* MONEY TAKEN AWAY. The one number on the screen that removes something. */
+.gecko-mc-dropped-count {
+  color: var(--gecko-error-600);
+  font-weight: 700;
+}
+[data-theme="dark"] .gecko-mc-dropped-count { color: var(--gecko-error-300); }
+
+.gecko-mc-warn-row > td { border-top: 0; padding-top: 0; }
+.gecko-mc-dropped-note {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 4px 0 8px;
+  color: var(--gecko-error-700);
+  font-size: var(--gecko-text-xs);
+}
+[data-theme="dark"] .gecko-mc-dropped-note { color: var(--gecko-error-300); }
+
+/* The opened half of a sheet line. */
+.gecko-mc-detail-row > td { background: var(--gecko-bg-subtle); border-top: 0; }
+.gecko-mc-detail-pad { padding: 10px 0 14px; }
+.gecko-mc-detail-head {
+  font-size: var(--gecko-text-xs);
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: var(--gecko-text-secondary);
+}
+.gecko-mc-issues {
+  margin: 0;
+  padding-left: 16px;
+  font-size: var(--gecko-text-sm);
+  line-height: 1.5;
+}
+.gecko-mc-issue-error { color: var(--gecko-error-600); }
+[data-theme="dark"] .gecko-mc-issue-error { color: var(--gecko-error-300); }

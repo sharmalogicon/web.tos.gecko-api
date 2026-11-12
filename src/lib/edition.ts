@@ -73,6 +73,15 @@ export const LIVE_PATHS: readonly string[] = [
   '/reports/operational-api',    // the two reports that have real queries behind them
   '/reports/accounts-api',
   '/tariff/plans',               // schedules, /tariff/plans/new, /tariff/plans/[id]
+  // MANY CUSTOMERS' SPECIAL PRICES FROM ONE WORKBOOK — bound 12 Nov 2026 to
+  // /api/revenue/tariffs/multi-customer/*. Listed here the same day it was
+  // built: the guard answers 200 with a "Not available" page, so a screen left
+  // out of this list is not broken in any way a status check would show — it is
+  // simply gone, and the menu drops it too (visibleNav asks isPathAvailable
+  // BEFORE needsPermission). That is exactly how /config/users shipped
+  // unreachable. Also behind revenue.import.manage, and Confirm additionally
+  // behind revenue.tariff.approve.
+  '/tariff/multi-customer',
   '/masters/customers',
   '/masters/vessels',            // list, /new, /[code], and the schedule
   '/masters/container-types',

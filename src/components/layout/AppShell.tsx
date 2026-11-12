@@ -258,6 +258,11 @@ const NAV: NavModule[] = [
   { id: 'tariff', icon: 'tag', label: 'Tariffs',
     children: [
       { id: 'plans', label: 'Tariff Schedules', path: '/tariff/plans' },
+      // Pricing many customers at once is its own job, not a mode of the
+      // schedule editor: the file leaves the building between downloading it
+      // and uploading it back, so it needs somewhere to return to.
+      { id: 'multi-customer', label: 'Multi-Customer Upload', path: '/tariff/multi-customer',
+        needsPermission: 'revenue.import.manage' },
       // Rate Cards and Free Time pages folded into Tariff Schedule editor tabs.
       // NAV entries hidden; routes preserved for deep-links and future admin views.
       // { id: 'rate-cards', label: 'Rate Cards', path: '/tariff/rate-cards' },
