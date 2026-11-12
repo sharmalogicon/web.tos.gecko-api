@@ -230,7 +230,8 @@ export default function CashBillPage() {
                   </td></tr>
                 )}
                 {r.lines.map(l => (
-                  <tr key={l.lineNo}>
+                  <React.Fragment key={l.lineNo}>
+                  <tr>
                     <td className="gecko-cell-meta">{l.lineNo}</td>
                     <td className="gecko-mono-strong">{l.chargeCode}</td>
                     <td>
@@ -249,6 +250,31 @@ export default function CashBillPage() {
                     <td className="gecko-num gecko-mono">{m(l.taxAmount)}</td>
                     <td className="gecko-num gecko-mono" style={{ fontWeight: 700 }}>{m(l.amount + l.taxAmount)}</td>
                   </tr>
+                  {/* THE BANDS BEHIND THE LINE, as the printed bill shows them.
+                      Reefer power at 10 hours then 471 hours is two prices, and
+                      the line above averages them into one rate that matches no
+                      row of the tariff. These rows are what the customer checks.
+                      Absent on a flat price, and on every line until the API
+                      that fills `slabs` reaches Azure — so this renders nothing
+                      rather than an empty frame. Tax stays on the line: it is
+                      charged on the whole, not per band. */}
+                  {(l.slabs ?? []).map((s, i) => (
+                    <tr key={`${l.lineNo}-slab-${i}`} className="gecko-slab-row">
+                      <td />
+                      <td />
+                      <td className="gecko-slab-band">
+                        <Icon name="chevronRight" size={12} />
+                        <span>{s.fromQty}–{s.toQty}{l.billingUnitCode ? ` ${l.billingUnitCode.toLowerCase()}` : ''}</span>
+                      </td>
+                      <td />
+                      <td />
+                      <td className="gecko-num gecko-mono gecko-slab-cell">{s.quantity}</td>
+                      <td className="gecko-num gecko-mono gecko-slab-cell">{m(s.rate)}</td>
+                      <td />
+                      <td className="gecko-num gecko-mono gecko-slab-cell">{m(s.amount)}</td>
+                    </tr>
+                  ))}
+                  </React.Fragment>
                 ))}
               </tbody>
             </table>

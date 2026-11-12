@@ -12820,3 +12820,43 @@ th.gecko-cell-tight {
 /* The count chip beside the page title: "8 types · 39 deleted". */
 .gecko-count-gone { color: var(--gecko-error-600); }
 [data-theme="dark"] .gecko-count-gone { color: var(--gecko-error-300); }
+
+/* ── §59  THE BANDS BEHIND A SLAB-PRICED CHARGE ─────────────────────────────
+   Reefer power by the hour and storage by the day are priced in bands. The
+   printed bill shows one row per band; these are those rows on the screen,
+   tucked under the charge line they explain.
+
+   They are subordinate, not separate: no border above, a quieter weight, and
+   the figures still sit in the Qty / Sell rate / Amount columns so the eye
+   checks them against the line without moving. Tax is not repeated — it is
+   charged on the whole line, not per band.
+   ────────────────────────────────────────────────────────────────────────── */
+.gecko-slab-row > td {
+  border-top: 0;
+  padding-top: 2px;
+  padding-bottom: 2px;
+}
+.gecko-slab-row:last-child > td { padding-bottom: 8px; }
+
+/* The band itself, indented under the description it belongs to. */
+.gecko-slab-band {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  padding-left: 14px;
+  color: var(--gecko-text-secondary);
+  font-size: var(--gecko-text-xs);
+  font-variant-numeric: tabular-nums;
+}
+.gecko-slab-band svg { opacity: 0.55; flex: none; }
+
+/* Figures: same column, one step quieter than the line's own. */
+.gecko-slab-cell {
+  color: var(--gecko-text-secondary);
+  font-size: var(--gecko-text-xs);
+  font-weight: 400;
+}
+
+/* No dark-mode block: --gecko-text-secondary is one of the tokens the dark
+   theme redefines, so these rows follow it on their own. */
+

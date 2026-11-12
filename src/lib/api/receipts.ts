@@ -13,6 +13,27 @@ import { apiDownload, apiGet, apiSend, saveBlob } from './client';
 import { openPdf } from './open-pdf';
 import { ApiError } from './problem';
 
+/**
+ * ONE BAND OF A SLAB-PRICED CHARGE (owner 2026-11-12).
+ *
+ * Reefer power by the hour and storage by the day are priced in bands, and the
+ * printed bill has always shown one row per band — `10 × 84.11` then
+ * `471 × 51.40`, not `481 × 52.08`. The averaged single line was arithmetic
+ * nobody could check against the tariff; these are the numbers the customer
+ * argues with.
+ *
+ * Null on a flat-priced line, and null on every line until the API that fills
+ * it reaches Azure — so every reader must treat absent as "not banded" rather
+ * than as an error.
+ */
+export interface ReceiptSlab {
+  fromQty: number;
+  toQty: number;
+  quantity: number;
+  rate: number;
+  amount: number;
+}
+
 export interface ReceiptLine {
   lineNo: number;
   chargeCode: string;
@@ -27,6 +48,8 @@ export interface ReceiptLine {
   taxAmount: number;
   serviceFrom: string | null;
   serviceTo: string | null;
+  /** The bands behind `quantity × unitRate`, or null when the price is flat. */
+  slabs?: ReceiptSlab[] | null;
 }
 
 /** How the money arrived. One receipt can be settled in several ways. */
