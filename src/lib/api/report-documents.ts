@@ -61,7 +61,13 @@ export function reportQuery(report: ReportDef, branchId: string, values: ReportP
  * fallback when it sends none.
  */
 export const reportFileName = (report: ReportDef, format: ReportFormat, from: string, to: string) => {
-  const slug = report.title.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)/g, '');
+  /**
+   * A Thai title slugs to nothing — every character is stripped — and the file
+   * saved as `-2025-10-01-2026-09-30.pdf`, or just `.pdf` on a report with no
+   * range. The report id is ASCII by construction, so it is the fallback.
+   */
+  const slug = report.title.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)/g, '')
+    || report.id;
   const range = from && to ? `-${from}-${to}` : from ? `-${from}` : '';
   return `${slug}${range}.${format}`;
 };
@@ -95,11 +101,21 @@ export function missingRequired(report: ReportDef, values: ReportParamBag): stri
   return need.filter(k => !String(values[k] ?? '').trim());
 }
 
-/** The API caps Gate In/Out at 366 days; saying so beats a 400 after the wait. */
+/**
+ * What most reports cap the range at; saying so beats a 400 after the wait.
+ *
+ * A report that takes a different range says so itself, in `maxRangeDays` —
+ * the monthly drop-off/release sheet takes two years, and checking every report
+ * against 366 refused a range the API would have accepted.
+ */
 export const RANGE_LIMIT_DAYS = 366;
 
-export function rangeTooLong(from: string, to: string): boolean {
+/** The cap that applies to one report, in days. */
+export const rangeLimitOf = (report: ReportDef): number =>
+  report.maxRangeDays ?? RANGE_LIMIT_DAYS;
+
+export function rangeTooLong(report: ReportDef, from: string, to: string): boolean {
   if (!from || !to) return false;
   const days = (new Date(to).getTime() - new Date(from).getTime()) / 86_400_000;
-  return days > RANGE_LIMIT_DAYS;
+  return days > rangeLimitOf(report);
 }

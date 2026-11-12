@@ -12,7 +12,7 @@ import {
 import type { ParamValues } from '@/components/reports/ReportParamsDrawer';
 import { useFacility } from '@/lib/api/facility';
 import { ApiError } from '@/lib/api/problem';
-import { downloadReport, missingRequired, rangeTooLong, RANGE_LIMIT_DAYS } from '@/lib/api/report-documents';
+import { downloadReport, missingRequired, rangeTooLong, rangeLimitOf } from '@/lib/api/report-documents';
 
 export default function OperationalReportsPage() {
   const { toast } = useToast();
@@ -50,8 +50,8 @@ export default function OperationalReportsPage() {
         setProblem({ message: 'This report needs a date range.', field: missing[0] });
         return;
       }
-      if (rangeTooLong(vals.dateFrom, vals.dateTo)) {
-        setProblem({ message: `The range is longer than ${RANGE_LIMIT_DAYS} days, which the API refuses.`, field: 'dateTo' });
+      if (rangeTooLong(r, vals.dateFrom, vals.dateTo)) {
+        setProblem({ message: `The range is longer than ${rangeLimitOf(r)} days, which the API refuses.`, field: 'dateTo' });
         return;
       }
       setBusy(true);

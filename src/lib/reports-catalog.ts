@@ -96,6 +96,17 @@ export interface ReportDef {
    * both; the API refuses the pair.
    */
   datesUnless?: ReportParamKey;
+  /**
+   * The longest range THIS report accepts, in days. Omitted means the module
+   * default (RANGE_LIMIT_DAYS, 366).
+   *
+   * It was one constant for every report while every report agreed. The monthly
+   * drop-off/release sheet takes two years, and a cap of 366 would have refused
+   * a valid range in the browser — before the API ever saw it — on the exact
+   * question that report exists to answer. A limit the server sets per endpoint
+   * belongs on the report, not on the module.
+   */
+  maxRangeDays?: number;
 }
 
 export interface ReportDocument {
@@ -245,6 +256,31 @@ export const OPERATIONAL_REPORTS: ReportDef[] = [
     category: 'operational', group: 'In-Bound Reports', icon: 'package',
     params: ['year', 'bookingType', 'movementCode'],
     document: { path: '/api/tos/reports/monthly-incoming-container', params: { year: 'year', bookingType: 'bookingType', movementCode: 'movementCode' } }, noDates: true },
+
+  /**
+   * KORAKIT'S OWN TWO SHEETS, rebuilt over Gecko's completed gate moves
+   * (owner 2026-11-12). Voided moves are left out by the API.
+   *
+   * The Thai name leads because it is what the depot's staff ask for by name;
+   * the English gloss follows so the catalogue search finds it either way.
+   */
+  { id: 'op-monthly-gate-in-out', title: 'ยอดตู้ดรอป(ขาเข้า)และปล่อยตู้(ขาออก) รายเดือน — Monthly Drop-off / Release', description: 'Gate-ins, gate-outs and both, a row per month of the date range (up to 2 years).',
+    category: 'operational', group: 'In-Bound Reports', icon: 'package',
+    params: ['customer', 'agent', 'orderType', 'bookingType'],
+    document: {
+      path: '/api/tos/reports/monthly-gate-in-out',
+      params: { customer: 'customerCode', agent: 'agentCode', orderType: 'orderType', bookingType: 'bookingType', dateFrom: 'dateFrom', dateTo: 'dateTo' },
+      required: ['dateFrom', 'dateTo'],
+    }, dateLabel: 'Gate date from / to', maxRangeDays: 731 },
+
+  { id: 'op-daily-gate-in-out-by-type', title: 'Daily Gate-In / Gate-Out by Size-Type (หนัก/เปล่า)', description: 'A row per day, full and empty per size-type, gate-in and gate-out blocks with totals.',
+    category: 'operational', group: 'In-Bound Reports', icon: 'truck',
+    params: ['customer', 'agent', 'orderType', 'bookingType'],
+    document: {
+      path: '/api/tos/reports/daily-gate-in-out-by-type',
+      params: { customer: 'customerCode', agent: 'agentCode', orderType: 'orderType', bookingType: 'bookingType', dateFrom: 'dateFrom', dateTo: 'dateTo' },
+      required: ['dateFrom', 'dateTo'],
+    }, dateLabel: 'Gate date from / to' },
 
   { id: 'op-gate-in-out', title: 'Gate-In / Gate-Out', description: 'All gate movements (both directions) in the date range.',
     category: 'operational', group: 'In-Bound Reports', icon: 'truck',
