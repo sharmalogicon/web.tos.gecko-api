@@ -11359,6 +11359,10 @@ th.gecko-cell-tight {
    -secondary-btn and -secondary-icon existed, the plain one did not. */
 .gecko-text-secondary    { color: var(--gecko-text-secondary); }
 .gecko-btn-danger-text   { color: var(--gecko-error-600); }
+/* error-600 is the same colour in both themes — the dark theme redefines
+   bg/border/text tokens, not the scales — and it is near-unreadable on a
+   dark surface. 300 is what every other dark red in this sheet uses. */
+[data-theme="dark"] .gecko-btn-danger-text { color: var(--gecko-error-300); }
 .gecko-cell-right        { text-align: right; }
 
 /* ── the page ── */

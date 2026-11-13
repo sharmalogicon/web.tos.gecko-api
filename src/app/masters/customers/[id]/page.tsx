@@ -1,14 +1,16 @@
 "use client";
 import React, { useState } from 'react';
 import Link from 'next/link';
-import { useParams } from 'next/navigation';
+import { useParams, useRouter } from 'next/navigation';
 import { Icon } from '@/components/ui/Icon';
 import { useToast } from '@/components/ui/Toast';
 import { EmptyState } from '@/components/ui/EmptyState';
+import { ConfirmDialog } from '@/components/ui/ConfirmDialog';
+import { Modal } from '@/components/ui/Modal';
 import { useApi } from '@/lib/api/use-api';
 import { useSession } from '@/lib/auth/session';
 import { ApiError } from '@/lib/api/problem';
-import { partyPath, updateParty, type PartyDetail } from '@/lib/api/parties';
+import { deleteParty, partyPath, updateParty, type PartyDetail } from '@/lib/api/parties';
 import { PartyForm, formFromParty, localErrors, requestFromForm, type PartyFormValue } from '../_components/PartyForm';
 import { RoleBadge } from '../_components/RoleBadge';
 import { ContactsSection } from '../_components/ContactsSection';
@@ -37,6 +39,7 @@ export default function CustomerDetailPage() {
   const { data: party, error, loading, reload } = useApi<PartyDetail>(partyPath(code));
   const { user } = useSession();
   const { toast } = useToast();
+  const router = useRouter();
 
   // PUT needs the tenant-wide mdm.party.manage (prm); a branch grant is not enough.
   const canEdit = user?.permissions.includes('mdm.party.manage') ?? false;
@@ -47,9 +50,26 @@ export default function CustomerDetailPage() {
   const [saving, setSaving] = useState(false);
   const [saveError, setSaveError] = useState<ApiError | null>(null);
 
-  const startEdit = () => {
+  const [confirmDelete, setConfirmDelete] = useState(false);
+  const [deleting, setDeleting] = useState(false);
+  /**
+   * THE SERVER'S REFUSAL, shown in its own words.
+   *
+   * A 409 means the delete did not happen and the customer still has business
+   * open. Only the API knows what — "1 open booking (BK...); 2 active
+   * quotations" — so this holds the ApiError and the dialog renders its title
+   * and detail verbatim. Anything this screen invented here would be a guess
+   * about somebody's money.
+   */
+  const [refusal, setRefusal] = useState<ApiError | null>(null);
+  /** A delete that failed for any other reason: 412, 403, a network drop. */
+  const [deleteError, setDeleteError] = useState<ApiError | null>(null);
+
+  /** `isActive` overrides the stored value — how "Set inactive instead" opens Edit. */
+  const startEdit = (isActive?: boolean) => {
     if (!party) return;
-    setForm(formFromParty(party));
+    const base = formFromParty(party);
+    setForm(isActive === undefined ? base : { ...base, isActive });
     setSubmitted(false);
     setSaveError(null);
     setEditing(true);
@@ -73,8 +93,31 @@ export default function CustomerDetailPage() {
     }
   };
 
+  const remove = async () => {
+    if (!party) return;
+    setConfirmDelete(false);
+    setDeleting(true);
+    setRefusal(null);
+    setDeleteError(null);
+    try {
+      await deleteParty(party.partyCode, party.rowVersion);
+      toast({ variant: 'success', title: 'Customer deleted', message: `${party.partyCode} · ${party.nameEn}` });
+      router.push('/masters/customers');
+    } catch (e) {
+      const err = e instanceof ApiError ? e : new ApiError(0, 'Could not reach the Gecko API.');
+      // 409 is the refusal: nothing was deleted and the customer stays on
+      // screen, so the clerk can act on what it names without navigating back.
+      if (err.status === 409) setRefusal(err);
+      else setDeleteError(err);
+    } finally {
+      setDeleting(false);
+    }
+  };
+
   /** 409 on edit is either a stale rowVersion or a tax id + branch that another party holds. */
   const isStale = saveError?.status === 409 && !/already exists/.test(saveError.message);
+  /** A delete loses the race the same way an edit does: reload and try again. */
+  const deleteStale = deleteError?.status === 412;
 
   if (error) {
     return (
@@ -120,9 +163,31 @@ export default function CustomerDetailPage() {
           </div>
         </div>
         {!editing && canEdit && (
-          <button className="gecko-btn gecko-btn-outline" onClick={startEdit}><Icon name="edit" size={16} /> Edit</button>
+          <div className="gecko-row gecko-gap-2">
+            <button className="gecko-btn gecko-btn-outline" onClick={() => startEdit()} disabled={deleting}>
+              <Icon name="edit" size={16} /> Edit
+            </button>
+            <button className="gecko-btn gecko-btn-outline gecko-btn-danger-text" onClick={() => setConfirmDelete(true)} disabled={deleting}>
+              <Icon name="trash" size={16} /> {deleting ? 'Deleting…' : 'Delete'}
+            </button>
+          </div>
         )}
       </div>
+
+      {deleteError && (
+        <ErrorBanner
+          error={deleteError}
+          heading={deleteStale ? 'This customer changed while you were looking at it' : undefined}
+          detail={deleteStale
+            ? 'Someone else saved it since this page loaded, so the delete was refused. Reload to see their changes, then decide again.'
+            : undefined}
+          action={deleteStale ? (
+            <button type="button" className="gecko-error-banner-link" onClick={() => { setDeleteError(null); reload(); }}>
+              <Icon name="refresh" size={14} /> Reload
+            </button>
+          ) : undefined}
+        />
+      )}
 
       {(party.duplicates?.length ?? 0) > 0 && (
         <div role="note" className="gecko-alert gecko-alert-info gecko-row gecko-row-wrap">
@@ -202,6 +267,37 @@ export default function CustomerDetailPage() {
           </div>
         </>
       )}
+
+      <ConfirmDialog
+        isOpen={confirmDelete}
+        onClose={() => setConfirmDelete(false)}
+        onConfirm={remove}
+        variant="danger"
+        title={`Delete customer ${party.partyCode}?`}
+        message={`${party.partyCode} – ${party.nameEn}. It will be hidden from lists and pickers. Its bookings, invoices and receipts are kept.`}
+        confirmLabel="Delete customer"
+      />
+
+      {/* THE REFUSAL. The heading and the body are the server's own words:
+          it is the only party that knows what is still open, and it names it
+          by number. The customer is untouched, so OK simply closes. */}
+      <Modal
+        isOpen={!!refusal}
+        onClose={() => setRefusal(null)}
+        title={refusal?.title ?? 'The customer cannot be deleted.'}
+        size="md"
+        footer={
+          <>
+            <button type="button" className="gecko-btn gecko-btn-outline gecko-btn-sm"
+              onClick={() => { setRefusal(null); startEdit(false); }}>
+              <Icon name="eyeOff" size={14} /> Set inactive instead
+            </button>
+            <button type="button" className="gecko-btn gecko-btn-primary gecko-btn-sm" onClick={() => setRefusal(null)}>OK</button>
+          </>
+        }
+      >
+        <div>{refusal?.detail ?? 'It still has business open. Close or end that first, or set the customer inactive.'}</div>
+      </Modal>
     </div>
   );
 }

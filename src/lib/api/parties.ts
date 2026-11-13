@@ -178,6 +178,22 @@ export const createParty = (body: SavePartyRequest) => apiSend<PartyDetail>('POS
 export const updateParty = (partyCode: string, body: SavePartyRequest) =>
   apiSend<PartyDetail>('PUT', partyPath(partyCode), body);
 
+/**
+ * SOFT-DELETE ONE PARTY (needs mdm.party.manage).
+ *
+ * Nothing is erased: the row is hidden from lists and pickers and kept, because
+ * a depot's records stand for seven years. Its bookings, invoices and receipts
+ * are untouched and still name it.
+ *
+ * It answers 409 and deletes NOTHING when the customer still has business
+ * open — an unclosed booking, a live quotation, a charge not yet billed. The
+ * ProblemDetails says which, by number, so the screen must show the server's
+ * own `title` and `detail` rather than a sentence of its own: only the server
+ * knows what is open.
+ */
+export const deleteParty = (partyCode: string, rowVersion: string) =>
+  apiSend<void>('DELETE', `${partyPath(partyCode)}?rowVersion=${encodeURIComponent(rowVersion)}`);
+
 /** Client-side mirror of the API rule, for instant feedback. */
 export const isThaiTaxId = (value: string) => /^\d{13}$/.test(value);
 
