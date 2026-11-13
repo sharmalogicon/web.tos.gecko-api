@@ -32,6 +32,7 @@ import {
   type OrderTypeVAS as OrderTypeVASDef,
 } from '@/lib/order-types-catalog';
 import { ErrorBanner } from '@/components/ui/ErrorBanner';
+import { SameRefNote, useSameRefBookings, type SameRefBooking } from './SameRefNote';
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -227,6 +228,8 @@ interface ApiBookingDetail {
   booking: SavedBooking;
   requirements: ApiRequirement[];
   containers: ApiContainerLine[];
+  /** Information only: other live bookings at this depot with the same booking / B/L no. */
+  sameRefBookings?: SameRefBooking[] | null;
 }
 
 interface BatchItem {
@@ -415,6 +418,7 @@ const EMPTY_HEADER: HeaderForm = {
 interface SavedBooking {
   bookingId: string;
   orderNo: string;
+  branchId?: string | null;
   status: string;
   rowVersion: string;
   directionCode: string | null;
@@ -931,8 +935,12 @@ function Derived({ label, value, mono }: { label: string; value: React.ReactNode
  * Save button lives up in the sticky bar and because step 1 is ONE call —
  * POST /api/tos/bookings with requirements: [] — not a save per panel.
  */
-function TabVoyage({ form, patch, created, dirty, readOnly, direction, canOverride, needsVessel, portsRequired, onSave, saving, missing, saveError }: {
+function TabVoyage({ form, patch, created, dirty, readOnly, direction, canOverride, needsVessel, portsRequired, onSave, saving, missing, saveError, branchId, sameRefSaved }: {
   form: HeaderForm;
+  /** The depot the booking is (or will be) at — the same-ref lookup is per depot. */
+  branchId: string | null;
+  /** From the booking detail: other bookings with the saved booking / B/L no. */
+  sameRefSaved: SameRefBooking[];
   patch: (p: Partial<HeaderForm>) => void;
   created: SavedBooking | null;
   /** Something has been typed since the last save. */
@@ -955,6 +963,11 @@ function TabVoyage({ form, patch, created, dirty, readOnly, direction, canOverri
   // CANCELLED one never is, whatever the toggle was last left on.
   const [editing, setEditing] = useState(true);
   const editMode = !readOnly && (created === null || editing);
+
+  // While typing: ask the API as the number changes. Read-only: the detail
+  // already carries the answer for the saved number.
+  const sameRefLive = useSameRefBookings(editMode ? branchId : null, form.carrierRef, created?.bookingId);
+  const sameRef = editMode ? sameRefLive : sameRefSaved;
 
   const { data: calls } = useApiList<CallSummary>(CALLS_PATH);
   const call = (calls ?? []).find(c => c.vesselCallId === form.vesselCallId) ?? null;
@@ -984,6 +997,7 @@ function TabVoyage({ form, patch, created, dirty, readOnly, direction, canOverri
                   placeholder="The line&apos;s booking or B/L number"
                   onChange={e => patch({ carrierRef: e.target.value.toUpperCase() })} />
               : <div className="gecko-readonly-value">{form.carrierRef || '—'}</div>}
+            <SameRefNote bookings={sameRef} />
           </div>
           <div>
             <div className="gecko-eyebrow gecko-mb-1">Sub Booking / B&#47;L No</div>
@@ -1144,9 +1158,6 @@ function TabVoyage({ form, patch, created, dirty, readOnly, direction, canOverri
             className="gecko-flex-1"
             error={saveError}
             fallback="The booking was not saved."
-            detail={saveError.status === 409 && saveError.extension<string>('existingOrderNo')
-              ? `That booking already exists: ${saveError.extension<string>('existingOrderNo')}.`
-              : undefined}
           />
         )}
         {!saveError && (
@@ -1761,6 +1772,7 @@ export function BookingWorkspace({ bookingId }: { bookingId?: string }) {
    */
   const [containers, setContainers] = useState<Container[]>([]);
   const [requirements, setRequirements] = useState<ApiRequirement[]>([]);
+  const [sameRefSaved, setSameRefSaved] = useState<SameRefBooking[]>([]);
 
   /** Re-read the booking whole: header, lines and boxes in one call. */
   async function reloadBooking(id: string, seedForm = false) {
@@ -1769,6 +1781,7 @@ export function BookingWorkspace({ bookingId }: { bookingId?: string }) {
       setCreated(d.booking);
       setRequirements(d.requirements ?? []);
       setContainers(boxesOfBooking(d.containers, d.requirements ?? []));
+      setSameRefSaved(d.sameRefBookings ?? []);
       // Only on the first load: later reloads must not overwrite what the clerk
       // is in the middle of typing.
       if (seedForm) {
@@ -2601,7 +2614,8 @@ export function BookingWorkspace({ bookingId }: { bookingId?: string }) {
               <TabVoyage form={form} patch={patch} created={created} dirty={dirty} readOnly={readOnly} direction={direction}
                 canOverride={canOverride} saving={saving}
                 onSave={() => void (created ? putHeader() : saveHeader())}
-                missing={missing} saveError={saveError} needsVessel={needsVessel} portsRequired={portsRequired} />
+                missing={missing} saveError={saveError} needsVessel={needsVessel} portsRequired={portsRequired}
+                branchId={created?.branchId ?? branch?.branchId ?? null} sameRefSaved={sameRefSaved} />
             )}
             {activeTab === 'containers' && (
               <TabContainers

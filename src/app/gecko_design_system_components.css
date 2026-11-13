@@ -4040,6 +4040,28 @@ button.gecko-toggle .gecko-toggle-thumb {
   margin-top: 3px;
 }
 
+/* Information under a field — NOT a warning: neutral text, an info-blue "i".
+   First use: other bookings carrying the same booking / B/L no. */
+.gecko-same-ref-note {
+  display: flex;
+  align-items: flex-start;
+  gap: 5px;
+  margin-top: 5px;
+  font-size: 11.5px;
+  line-height: 1.45;
+  color: var(--gecko-text-secondary);
+}
+.gecko-same-ref-note-icon { flex-shrink: 0; margin-top: 2px; color: var(--gecko-info-600); }
+.gecko-same-ref-note-link {
+  font-family: var(--gecko-font-mono);
+  font-weight: 600;
+  color: var(--gecko-info-700);
+  text-decoration: none;
+}
+.gecko-same-ref-note-link:hover { text-decoration: underline; }
+[data-theme="dark"] .gecko-same-ref-note-link { color: var(--gecko-info-300); }
+[data-theme="dark"] .gecko-same-ref-note-icon { color: var(--gecko-info-400); }
+
 
 /* ============================================================
    SECTION 5.25 — CTA CARD
