@@ -25,12 +25,20 @@ export interface OrderTypeFormValue {
    * "Require vessel/voyage" when this is on — the API answers 400 otherwise.
    */
   requiresVesselSchedule: boolean;
+  /**
+   * Do this order type's boxes count as the depot's stock?
+   *
+   * Off for SWAP order types: their boxes stay out of the yard inventory, the
+   * yard map, the in-yard reports and the drop-off/release counts, while the
+   * gate goes on seeing them exactly as before.
+   */
+  showInInventory: boolean;
   isActive: boolean;
 }
 
 export const EMPTY_ORDER_TYPE: OrderTypeFormValue = {
   orderTypeCode: '', descriptionEn: '', descriptionLocal: '', directionCode: '', cargoClassCode: '',
-  serviceCode: '', bookingTypeCode: '', requiresVesselSchedule: false, isActive: true,
+  serviceCode: '', bookingTypeCode: '', requiresVesselSchedule: false, showInInventory: true, isActive: true,
 };
 
 export const formFromOrderType = (o: OrderType): OrderTypeFormValue => ({
@@ -42,6 +50,9 @@ export const formFromOrderType = (o: OrderType): OrderTypeFormValue => ({
   serviceCode: o.serviceCode ?? '',
   bookingTypeCode: o.bookingTypeCode ?? '',
   requiresVesselSchedule: o.requiresVesselSchedule ?? false,
+  // ?? true, not ?? false: an order type read back from an API that predates
+  // the field is one that counts, which is what every order type did before it.
+  showInInventory: o.showInInventory ?? true,
   isActive: o.isActive,
 });
 
@@ -55,6 +66,9 @@ export const requestFromOrderType = (f: OrderTypeFormValue, rowVersion?: string)
   serviceCode: f.serviceCode || null,
   bookingTypeCode: f.bookingTypeCode || null,
   requiresVesselSchedule: f.requiresVesselSchedule,
+  // Always sent. The field is optional on SaveOrderType so a caller that never
+  // showed it can keep the stored value; this form shows it, so it owns it.
+  showInInventory: f.showInInventory,
   isActive: f.isActive,
   rowVersion,
 });
@@ -128,6 +142,15 @@ export function OrderTypeForm({ value, onChange, vocabulary, localErrors, apiErr
           <input type="checkbox" className="gecko-checkbox" checked={value.requiresVesselSchedule}
             onChange={e => set({ requiresVesselSchedule: e.target.checked })} />
           <span>Requires vessel schedule</span>
+        </label>
+      </Field>
+
+      <Field label="Yard inventory" full error={err('showInInventory')}
+        helper="Untick for SWAP order types: their boxes are left out of the yard inventory, yard map, in-yard reports and drop-off/release counts. The gate still sees them.">
+        <label className="gecko-row gecko-gap-2">
+          <input type="checkbox" className="gecko-checkbox" checked={value.showInInventory}
+            onChange={e => set({ showInInventory: e.target.checked })} />
+          <span>Show in yard inventory <span lang="th" className="gecko-cell-meta">(แสดงในสต็อกลาน)</span></span>
         </label>
       </Field>
     </FormGrid>

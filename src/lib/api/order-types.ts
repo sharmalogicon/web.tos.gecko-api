@@ -118,6 +118,22 @@ export interface OrderType {
    * sailing, and asking for one is asking a clerk to invent it.
    */
   requiresVesselSchedule: boolean;
+  /**
+   * IS THIS ORDER TYPE'S STOCK THE DEPOT'S STOCK? (gecko_master 45, platform 19a854d)
+   *
+   * Off, the boxes that came in on this order type are left out of the yard
+   * inventory list, the yard map, the yard KPI, the Empty/Full in-yard reports
+   * and the monthly/daily drop-off and release counts. It is meant for SWAP
+   * order types, whose boxes stand in the yard but are somebody else's to
+   * count.
+   *
+   * THE GATE STILL SEES THEM. This hides a box from the figures the depot
+   * reports, never from the clerk at the barrier, who has to find it.
+   *
+   * Defaults true on the API, which is how every order type behaved before
+   * the field existed.
+   */
+  showInInventory: boolean;
   isActive: boolean;
   rowVersion: string;
   /** Always present on a read; the API projects every field, defaults and all. */
@@ -192,6 +208,16 @@ export interface SaveOrderType {
   serviceCode: string | null;
   bookingTypeCode: string | null;
   requiresVesselSchedule: boolean;
+  /**
+   * Optional, and that is the contract: LEFT OUT KEEPS THE CURRENT VALUE.
+   *
+   * The order-type form always sends it, because the form shows it. Any other
+   * caller that saves a header it did not show this on — saveRules() spreads
+   * the header it was handed — must leave it out rather than guess, or a Rules
+   * save from a screen that never loaded the tick would quietly put a SWAP
+   * order type's boxes back into the depot's figures.
+   */
+  showInInventory?: boolean;
   isActive: boolean;
   rowVersion?: string;
   /**

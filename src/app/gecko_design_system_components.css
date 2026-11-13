@@ -12793,6 +12793,21 @@ th.gecko-cell-tight {
 .gecko-ot-item-tag-gone { color: var(--gecko-error-600); font-weight: 700; }
 [data-theme="dark"] .gecko-ot-item-tag-gone { color: var(--gecko-error-300); }
 
+/* "Not in inventory": a SWAP order type, whose boxes the depot does not count.
+   Boxed rather than plain, so it reads as a fact about the order type and not
+   as one more word in the service/cargo-class run beside it. No dark rule —
+   both tokens are redefined by the dark theme already. It takes NO
+   margin-left:auto: the deleted/inactive tag owns the right-hand end, and this
+   has to be able to sit beside it. */
+.gecko-ot-item-noinv {
+  padding: 0 4px;
+  border: 1px solid var(--gecko-border);
+  border-radius: 3px;
+  font-weight: 700;
+  color: var(--gecko-text-secondary);
+  flex-shrink: 0;
+}
+
 /* The detail header: the code reads struck through, like its row. */
 .gecko-ot-title-gone { color: var(--gecko-error-600); text-decoration: line-through; }
 [data-theme="dark"] .gecko-ot-title-gone { color: var(--gecko-error-300); }

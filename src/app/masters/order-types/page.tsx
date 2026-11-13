@@ -507,6 +507,11 @@ export default function OrderTypeMasterPage() {
                     <span>{o.serviceCode ?? '—'}</span>
                     <span>·</span>
                     <span>{humanize(o.cargoClassCode)}</span>
+                    {/* A SWAP order type: its boxes stand in the yard but are
+                        left out of the inventory, the map and the counts. Worth
+                        saying in the list, because nothing else on the row
+                        explains why those boxes are missing from the figures. */}
+                    {o.showInInventory === false && <span className="gecko-ot-item-noinv">Not in inventory</span>}
                     {gone
                       ? <span className="gecko-ot-item-tag gecko-ot-item-tag-gone">deleted {formatDate(o.deletedAt)}</span>
                       : !o.isActive && <span className="gecko-ot-item-tag">inactive</span>}
