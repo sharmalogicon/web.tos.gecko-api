@@ -18,7 +18,7 @@ import { formatDate, formatDateTime } from '@/lib/format';
 import { OrderTypeForm, formFromOrderType, orderTypeErrors, requestFromOrderType, type OrderTypeFormValue } from './_components/OrderTypeForm';
 import { StepsEditor, requestFromSteps, rowsFromSteps, stepErrors, type StepRow } from './_components/StepsEditor';
 import { ChargesTables } from './_components/ChargesTables';
-import { RulesEditor, RulesSummary, rulesDiffer, rulesFrom, walkInShape } from './_components/RulesPanel';
+import { RulesEditor, RulesSummary, activeRuleCount, rulesDiffer, rulesFrom, walkInShape } from './_components/RulesPanel';
 import { chargeRowErrors, requestFromCharges, rowsFromCharges, type ChargeRow } from './_components/charge-rows';
 import { ErrorBanner } from '@/components/ui/ErrorBanner';
 
@@ -320,6 +320,7 @@ export default function OrderTypeMasterPage() {
   // Memoised because the charge rows and their errors are derived from it.
   const savedStepCodes = useMemo(() => [...steps].sort((a, b) => a.sequenceNo - b.sequenceNo).map(m => m.movementCode), [steps]);
   const savedRules = useMemo(() => rulesFrom(ot?.rules), [ot?.rules]);
+  const ruleCount = activeRuleCount(savedRules);
   const walkIn = useMemo(() => walkInShape(steps, vocabulary), [steps, vocabulary]);
   const headerErrors = submitted && form ? orderTypeErrors(form) : {};
   const stepRowErrors = submitted ? stepErrors(stepRows, savedRules.isWalkIn) : {};
@@ -599,6 +600,14 @@ export default function OrderTypeMasterPage() {
                       <div><span className="gecko-eyebrow">Booking type</span><div>{humanize(ot.bookingTypeCode)}</div></div>
                       <div><span className="gecko-eyebrow">Steps</span><div>{steps.length}</div></div>
                       <div><span className="gecko-eyebrow">Charges</span><div>{charges.length}</div></div>
+                      <div>
+                        <span className="gecko-eyebrow">Rules</span>
+                        <div>
+                          {ruleCount > 0
+                            ? <span className="gecko-badge gecko-badge-primary gecko-badge-xs">{ruleCount} active</span>
+                            : 0}
+                        </div>
+                      </div>
                     </div>
                   </>
                 )}

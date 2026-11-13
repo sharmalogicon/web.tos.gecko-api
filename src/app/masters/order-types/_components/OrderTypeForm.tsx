@@ -136,12 +136,25 @@ export function OrderTypeForm({ value, onChange, vocabulary, localErrors, apiErr
         {select('serviceCode', vocabulary.serviceTypes.map(s => ({ code: s.code, name: `${s.code} — ${s.name}` })), 'None')}
       </Field>
 
+      {/* These two are NOT gate rules, and the Rules card says it is about what
+          the gate does with a truck — so they stay here, under a heading that
+          says what they have in common: each changes a screen somewhere else
+          because of this order type. Without it they read as two loose ticks
+          at the foot of the form. */}
+      <div className="gecko-form-subhead">
+        <div className="gecko-form-section-title">Booking &amp; inventory</div>
+        <div className="gecko-form-section-desc">
+          What this order type changes on the booking screen and in the depot&rsquo;s figures. What the gate
+          itself does with a truck is the Rules card, further down.
+        </div>
+      </div>
+
       <Field label="Vessel schedule" full error={err('requiresVesselSchedule')}
         helper="Leave it off for depot work — storage, repair, a swap. A booking of that kind has no sailing, and the booking screen will stop asking for one.">
-        <label className="gecko-row" style={{ gap: 8 }}>
+        <label className="gecko-row gecko-gap-2">
           <input type="checkbox" className="gecko-checkbox" checked={value.requiresVesselSchedule}
             onChange={e => set({ requiresVesselSchedule: e.target.checked })} />
-          <span>Requires vessel schedule</span>
+          <span className="gecko-ot-capture-name">Requires vessel schedule</span>
         </label>
       </Field>
 
@@ -150,7 +163,7 @@ export function OrderTypeForm({ value, onChange, vocabulary, localErrors, apiErr
         <label className="gecko-row gecko-gap-2">
           <input type="checkbox" className="gecko-checkbox" checked={value.showInInventory}
             onChange={e => set({ showInInventory: e.target.checked })} />
-          <span>Show in yard inventory <span lang="th" className="gecko-cell-meta">(แสดงในสต็อกลาน)</span></span>
+          <span className="gecko-ot-capture-name">Show in yard inventory <span lang="th" className="gecko-cell-meta">(แสดงในสต็อกลาน)</span></span>
         </label>
       </Field>
     </FormGrid>

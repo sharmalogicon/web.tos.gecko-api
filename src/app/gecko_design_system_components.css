@@ -1731,6 +1731,15 @@
 
 /* A field can opt to span the full row in any grid */
 .gecko-form-group-full   { grid-column: 1 / -1; }
+/* A heading BETWEEN fields of one grid, where a form has two kinds of field in
+   it and the second kind needs saying out loud. Takes the full row and rules
+   off from what is above. Pair it with .gecko-form-section-title / -desc, the
+   same two classes a card-level section heading uses. */
+.gecko-form-subhead {
+  grid-column: 1 / -1;
+  padding-top: 14px;
+  border-top: 1px solid var(--gecko-border);
+}
 .gecko-form-group-span-2 { grid-column: span 2; }
 
 @media (max-width: 900px) {

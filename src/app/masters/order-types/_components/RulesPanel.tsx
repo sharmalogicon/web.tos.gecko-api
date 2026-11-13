@@ -40,6 +40,19 @@ export const rulesDiffer = (a: OrderTypeRules, b: OrderTypeRules): boolean =>
   || [...a.releaseGradeCodes].sort().join(',') !== [...b.releaseGradeCodes].sort().join(',');
 
 /**
+ * How many of the order type's rules are set away from their default — the
+ * header's "Rules" count. Each capture tick counts on its own; the release
+ * grades count once however many grades are picked.
+ */
+export const activeRuleCount = (r: OrderTypeRules): number =>
+  (r.isWalkIn ? 1 : 0)
+  + (r.paymentRule ? 1 : 0)
+  + (r.ownerMatch ? 1 : 0)
+  + (r.maxBoxesPerTruck !== null ? 1 : 0)
+  + (r.releaseGradeCodes.length > 0 ? 1 : 0)
+  + CAPTURE_RULES.filter(c => r[c.key]).length;
+
+/**
  * Whether the order type's single step could carry a walk-in truck, and how to
  * describe it. Mirrors WalkInStepProblemAsync: the movement must go IN or OUT
  * and be FULL or EMPTY.
