@@ -31,6 +31,7 @@ import { EmptyState } from '@/components/ui/EmptyState';
 import { FilterPopover, type FilterField } from '@/components/ui/FilterPopover';
 import { useToast } from '@/components/ui/Toast';
 import { useApi, useApiList, type Paged } from '@/lib/api/use-api';
+import { AuditLogSection } from '@/components/audit/AuditLogSection';
 import { INVOICES_PATH, type InvoiceSummary } from '@/lib/api/invoices';
 import { formatDateTime } from '@/lib/format';
 import { useSession } from '@/lib/auth/session';
@@ -293,10 +294,14 @@ function Statement() {
   const click = (key: SortKey) =>
     setSort(prev => ({ key, dir: prev.key === key && prev.dir === 'asc' ? 'desc' : 'asc' }));
 
+  /** Bumped after every write on the statement, so an open audit log re-reads. */
+  const [auditKey, setAuditKey] = useState(0);
+
   const done = (message: string) => {
     toast({ variant: 'success', title: 'Statement updated', message });
     setTicked(new Set());
     statement.reload();
+    setAuditKey(k => k + 1);
   };
 
   const exportCsv = () => {
@@ -663,6 +668,11 @@ function Statement() {
               </tbody>
             </table>
           </section>
+
+          {/* The booking's money trail: charge lines priced, locked, waived,
+              invoiced, across every record on the statement — so with a Ref. */}
+          <AuditLogSection path={`/api/revenue/charges/statement/audit?orderNo=${encodeURIComponent(orderNo)}`}
+            refreshKey={auditKey} showRef />
 
           <div className="gecko-row gecko-row-wrap" style={{ gap: 8 }}>
             <Link href="/billing/cash-window" className="gecko-btn gecko-btn-ghost gecko-btn-sm"><Icon name="arrowRight" size={13} /> Cash window</Link>

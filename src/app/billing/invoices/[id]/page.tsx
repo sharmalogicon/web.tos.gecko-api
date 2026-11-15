@@ -34,6 +34,7 @@ import { useFacility } from '@/lib/api/facility';
 import { amount } from '@/lib/api/charges';
 import { INVOICE_STATUS, invoicePath, lineView, type InvoiceDetail } from '@/lib/api/invoices';
 import { ErrorBanner } from '@/components/ui/ErrorBanner';
+import { AuditLogSection } from '@/components/audit/AuditLogSection';
 
 export default function InvoiceDetailPage() {
   const params = useParams<{ id: string }>();
@@ -44,6 +45,8 @@ export default function InvoiceDetailPage() {
   const { branch, company } = useFacility();
   const { data, error, loading } = useApi<InvoiceDetail>(invoiceId ? invoicePath(invoiceId) : null);
   const [busy, setBusy] = useState<'credit' | 'cash' | null>(null);
+  /** Bumped after a print, which records a "printed" line, so an open audit log re-reads. */
+  const [auditKey, setAuditKey] = useState(0);
   const { toast } = useToast();
 
   /**
@@ -56,6 +59,7 @@ export default function InvoiceDetailPage() {
     try {
       const q = which === 'cash' ? '?format=cash' : '';
       await openPdf(`${invoicePath(invoiceId)}/invoice.pdf${q}`, name);
+      setAuditKey(k => k + 1);
     } catch (e) {
       const err = e instanceof ApiError ? e : null;
       toast({ variant: 'danger', title: 'Invoice not printed',
@@ -231,6 +235,8 @@ export default function InvoiceDetailPage() {
           )}
         </div>
       )}
+
+      {inv && <AuditLogSection path={`${invoicePath(inv.invoiceId)}/audit`} refreshKey={auditKey} />}
     </div>
   );
 }

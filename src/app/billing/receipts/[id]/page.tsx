@@ -33,6 +33,7 @@ import {
   printReceiptParts, printedPartsToast, receiptPath, voidReceipt, type Receipt,
 } from '@/lib/api/receipts';
 import { SplitReceiptModal } from '../../_components/SplitReceiptModal';
+import { AuditLogSection } from '@/components/audit/AuditLogSection';
 import { openPdf } from '@/lib/api/open-pdf';
 import { ErrorBanner } from '@/components/ui/ErrorBanner';
 
@@ -46,6 +47,13 @@ export default function CashBillPage() {
   const [voiding, setVoiding] = useState(false);
   const [splitting, setSplitting] = useState(false);
   const [cashInvoice, setCashInvoice] = useState(false);
+  /**
+   * Bumped after anything on this page that writes an audit line — a void, a
+   * payer change or split, and a print (each PDF records a "printed" line) —
+   * so an open audit log reads itself again.
+   */
+  const [auditKey, setAuditKey] = useState(0);
+  const touchedAudit = () => setAuditKey(k => k + 1);
 
   const mayVoid = (user?.permissions ?? []).includes('revenue.receipt.void');
   const mayCollect = (user?.permissions ?? []).includes('revenue.cash.collect');
@@ -55,6 +63,7 @@ export default function CashBillPage() {
     setCashInvoice(true);
     try {
       await openPdf(cashInvoicePdfPath(r.receiptId), `${r.receiptNo}-cash-invoice.pdf`);
+      touchedAudit();
     } catch (e) {
       const err = e instanceof ApiError ? e : null;
       toast({ variant: 'danger', title: 'Cash invoice not printed',
@@ -97,7 +106,7 @@ export default function CashBillPage() {
         <div className="gecko-toolbar gecko-no-print">
           {r && (
             <button className="gecko-btn gecko-btn-outline gecko-btn-sm"
-              onClick={() => void downloadReceiptPdf(r.receiptId, r.receiptNo)}>
+              onClick={() => void downloadReceiptPdf(r.receiptId, r.receiptNo).then(touchedAudit, () => undefined)}>
               <Icon name="print" size={14} /> Receipt PDF
             </button>
           )}
@@ -339,6 +348,8 @@ export default function CashBillPage() {
         </>
       )}
 
+      {r && <AuditLogSection path={`${receiptPath(r.receiptId)}/audit`} refreshKey={auditKey} />}
+
       {r && splitting && (
         <SplitReceiptModal receiptId={r.receiptId}
           onClose={() => setSplitting(false)}
@@ -370,12 +381,14 @@ export default function CashBillPage() {
                     void (async () => {
                       const say = printedPartsToast(await printReceiptParts(made, 'receipt'), 'receipt');
                       if (say) toast(say);
+                      touchedAudit();
                     })();
                   },
                 },
               });
             }
             reload();
+            touchedAudit();
           }} />
       )}
 
@@ -388,6 +401,7 @@ export default function CashBillPage() {
             setVoiding(false);
             toast({ variant: 'success', title: 'Receipt deleted', message: r.receiptNo });
             reload();
+            touchedAudit();
           }}
           receiptId={r.receiptId}
         />

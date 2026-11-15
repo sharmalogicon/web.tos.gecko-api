@@ -261,8 +261,15 @@ export interface SplitPart {
 
 export interface SplitReceiptRequest {
   parts: SplitPart[];
-  remarks: string | null;
+  /** Kept out: the why is `reason` now. */
+  remarks: null;
+  /** Required, 5–300 characters, for a payer change and a split alike — it goes in the audit trail. */
+  reason: string;
 }
+
+/** The API's bounds on a split / payer-change reason. */
+export const SPLIT_REASON_MIN = 5;
+export const SPLIT_REASON_MAX = 300;
 
 export const splitReceiptPath = (id: string) => `${receiptPath(id)}/split`;
 

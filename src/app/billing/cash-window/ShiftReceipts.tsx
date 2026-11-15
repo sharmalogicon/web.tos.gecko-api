@@ -7,6 +7,8 @@ import { formatBaht, type Receipt, type Shift, type ShiftReceipt } from '@/lib/a
 import { VoidReceiptModal } from '../_components/VoidReceiptModal';
 import { statusLabel } from '@/lib/format';
 import { ErrorBanner } from '@/components/ui/ErrorBanner';
+import { Modal } from '@/components/ui/Modal';
+import { AuditLog } from '@/components/audit/AuditLog';
 
 const time = (iso: string) => new Date(iso).toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' });
 
@@ -26,6 +28,7 @@ export function ShiftReceipts({ shift, onReprint, mayVoid = false, onVoided }: {
   const [rows, setRows] = useState<ShiftReceipt[] | null>(null);
   const [error, setError] = useState<ApiError | null>(null);
   const [opening, setOpening] = useState<string | null>(null);
+  const [history, setHistory] = useState(false);
 
   useEffect(() => {
     if (!open) return;
@@ -51,9 +54,18 @@ export function ShiftReceipts({ shift, onReprint, mayVoid = false, onVoided }: {
 
   return (
     <div className="gecko-card no-print" style={{ padding: '10px 16px' }}>
-      <button type="button" className="gecko-btn gecko-btn-ghost gecko-btn-sm" onClick={() => setOpen(o => !o)} aria-expanded={open}>
-        <Icon name={open ? 'chevronDown' : 'chevronRight'} size={14} /> Receipts this shift ({shift.receipts})
-      </button>
+      <div className="gecko-row gecko-row-between">
+        <button type="button" className="gecko-btn gecko-btn-ghost gecko-btn-sm" onClick={() => setOpen(o => !o)} aria-expanded={open}>
+          <Icon name={open ? 'chevronDown' : 'chevronRight'} size={14} /> Receipts this shift ({shift.receipts})
+        </button>
+        {/* The drawer's own trail: its open and close, and every receipt
+            issued, re-addressed, split or voided in it. The API decides who
+            may read it — a cashier their own drawer, accounts any of their
+            branches'. */}
+        <button type="button" className="gecko-btn gecko-btn-ghost gecko-btn-sm" onClick={() => setHistory(true)}>
+          <Icon name="clock" size={14} /> Drawer history
+        </button>
+      </div>
       {open && (
         <div style={{ marginTop: 8 }}>
           {error && <ErrorBanner error={error} style={{ marginBottom: 8 }} />}
@@ -93,6 +105,12 @@ export function ShiftReceipts({ shift, onReprint, mayVoid = false, onVoided }: {
             </table>
           )}
         </div>
+      )}
+      {history && (
+        <Modal isOpen onClose={() => setHistory(false)} size="xl" title="Drawer history"
+          subtitle="Newest first — the drawer's open and close, and every receipt issued, re-addressed, split or voided in it">
+          <AuditLog path={`/api/revenue/window/shifts/${shift.shiftId}/audit`} showRef notFoundText="Not available." />
+        </Modal>
       )}
       {voiding && (
         <VoidReceiptModal receipt={voiding} onClose={() => setVoiding(null)}

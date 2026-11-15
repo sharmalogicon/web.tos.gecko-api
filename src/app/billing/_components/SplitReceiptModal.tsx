@@ -9,6 +9,7 @@ import { formatContainerNo } from '@/lib/api/tos';
 import { CHANNEL_LABEL, PAYMENT_CHANNELS, type PaymentChannel } from '@/lib/api/window';
 import {
   canChangePayer, canDivide, channelLabel, receiptPath, splitReceipt, WITHHOLDING_FLOOR,
+  SPLIT_REASON_MAX, SPLIT_REASON_MIN,
   type Receipt, type ReceiptLine, type SplitPart,
 } from '@/lib/api/receipts';
 import { CustomerPicker, type PickedCustomer } from './PartyPicker';
@@ -89,7 +90,7 @@ export function SplitReceiptModal({ receiptId, onClose, onDone }: {
   const [stays, setStays] = useState<PartDraft>(() => ({ ...newPart(), key: STAYS, payer: { kind: 'original' } }));
   /** lineNo → part key. Absent means it stays. */
   const [assign, setAssign] = useState<Record<number, string>>({});
-  const [remarks, setRemarks] = useState('');
+  const [reason, setReason] = useState('');
   const [busy, setBusy] = useState(false);
   const [problem, setProblem] = useState<ApiError | null>(null);
 
@@ -262,10 +263,15 @@ export function SplitReceiptModal({ receiptId, onClose, onDone }: {
    * clerk tick the single line, fill in a payer, and then block at the footer
    * on a rule that was never satisfiable.
    */
+  // Required by the API for a payer change and a split alike: it is the line
+  // the audit trail keeps for why the money was re-addressed.
+  const reasonOk = reason.trim().length >= SPLIT_REASON_MIN;
+  const reasonError = problem?.forField('reason');
+
   const ready = Boolean(
     receipt && splittable && (reissue || moved > 0)
     && empty.length === 0 && noPayer.length === 0 && !missingRef
-    && unbalanced.length === 0 && check.balanced && !busy,
+    && unbalanced.length === 0 && check.balanced && reasonOk && !busy,
   );
 
   const why = !receipt ? ''
@@ -278,6 +284,7 @@ export function SplitReceiptModal({ receiptId, onClose, onDone }: {
             : unbalanced.length > 0 ? 'A payment does not come to its nett.'
               : missingRef ? 'A transfer, cheque or card needs its reference.'
                 : !check.balanced ? 'The parts together must come to what was taken.'
+                  : !reasonOk ? `Say why — at least ${SPLIT_REASON_MIN} characters.`
                   : '';
 
   const patch = (key: string, p: Partial<PartDraft>) =>
@@ -322,7 +329,7 @@ export function SplitReceiptModal({ receiptId, onClose, onDone }: {
           })),
         };
       });
-      onDone(await splitReceipt(receipt.receiptId, { parts: body, remarks: remarks.trim() || null }));
+      onDone(await splitReceipt(receipt.receiptId, { parts: body, remarks: null, reason: reason.trim() }));
     } catch (e) {
       setProblem(e instanceof ApiError ? e : new ApiError(0, 'The receipt could not be split.'));
     } finally {
@@ -576,10 +583,15 @@ export function SplitReceiptModal({ receiptId, onClose, onDone }: {
             </section>
 
             <div className="gecko-form-group">
-              <label className="gecko-form-label" htmlFor="splitRemarks">Remarks</label>
-              <input id="splitRemarks" className="gecko-input" maxLength={300} disabled={busy}
-                placeholder="Why it was split — printed on the new receipts"
-                value={remarks} onChange={e => setRemarks(e.target.value)} />
+              <label className="gecko-form-label gecko-form-label-required" htmlFor="splitReason">
+                {reissue ? 'Why is it made out to someone else?' : 'Why is it split?'}
+              </label>
+              <input id="splitReason" className={`gecko-input${reasonError ? ' gecko-input-error' : ''}`}
+                maxLength={SPLIT_REASON_MAX} disabled={busy} required aria-required="true"
+                aria-invalid={reasonError ? true : undefined}
+                placeholder="Kept in the receipt's audit trail"
+                value={reason} onChange={e => setReason(e.target.value)} />
+              {reasonError && <div className="gecko-field-error">{reasonError}</div>}
             </div>
           </>
         )}
