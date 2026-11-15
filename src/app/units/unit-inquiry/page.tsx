@@ -27,6 +27,7 @@ import { MasterDataTab } from './_components/MasterDataTab';
 import { FixedPortsTab } from './_components/FixedPortsTab';
 import { YardStatePanel } from './_components/YardStatePanel';
 import { ActivityLogTab } from './_components/ActivityLogTab';
+import { AuditLog } from '@/components/audit/AuditLog';
 import { ErrorBanner } from '@/components/ui/ErrorBanner';
 
 /**
@@ -58,7 +59,7 @@ export default function UnitInquiryPage() {
   );
 }
 
-type Tab = 'now' | 'master' | 'ports' | 'status' | 'emr' | 'log'
+type Tab = 'now' | 'master' | 'ports' | 'status' | 'emr' | 'log' | 'audit'
   | 'moves' | 'holds' | 'bookings' | 'reefer';
 
 function UnitInquiry() {
@@ -68,6 +69,8 @@ function UnitInquiry() {
   const { can, canAt } = useSession();
   const { branch } = useFacility();
   const [tab, setTab] = useState<Tab>('now');
+  /** Bumped after a yard move or a condition / EMR change, so an open audit log re-reads. */
+  const [auditKey, setAuditKey] = useState(0);
   /** The box being moved, from `/yard/locate` · null when no dialog is open. */
   const [moving, setMoving] = useState<YardLocation | null>(null);
 
@@ -304,6 +307,9 @@ function UnitInquiry() {
               ['status', 'Status', 'shieldCheck'],
               ['emr', 'EMR remarks', 'tool'],
               ['log', 'Activity log', 'activity'],
+              /* Who changed what, old → new, from the API's audit trail —
+                 every stay at the depots this user covers. */
+              ['audit', 'Audit log', 'clock'],
               /* Stays and EIRs are one tab, two cards (owner 2026-10-12). Both
                  are read-only lists of the same history told two ways \u2014 the
                  stay, and the paperwork that opened and closed it \u2014 and a tab
@@ -368,8 +374,12 @@ function UnitInquiry() {
                 gradeCode={current?.gradeCode ?? null}
                 emrRemarks={current?.emrRemarks ?? null}
                 canManage={canAt(MASTER_PERMISSIONS.yardManage, current?.branchId)}
-                onChanged={() => { story.reload(); activeHolds.reload(); }}
+                onChanged={() => { story.reload(); activeHolds.reload(); setAuditKey(k => k + 1); }}
               />
+            )}
+            {tab === 'audit' && asked && (
+              <AuditLog path={`/api/tos/containers/${encodeURIComponent(asked)}/audit`} refreshKey={auditKey}
+                showRef notFoundText="Not available." />
             )}
             {tab === 'log' && (
               <ActivityLogTab story={s} moves={moveRows} holdsNow={holdsNow} holdsReleased={holdsGone} registry={reg}
@@ -403,6 +413,7 @@ function UnitInquiry() {
             story.reload();
             located.reload();
             setMoving(null);
+            setAuditKey(k => k + 1);
           }}
         />
       )}

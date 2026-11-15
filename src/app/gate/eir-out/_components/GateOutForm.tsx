@@ -27,6 +27,7 @@ import {
   type GateOutTruck, type ReleaseRow,
 } from './gate-out-draft';
 import { ErrorBanner } from '@/components/ui/ErrorBanner';
+import { AuditLogSection } from '@/components/audit/AuditLogSection';
 
 /**
  * GATE OUT — the truck in front of the clerk, and what it came to collect.
@@ -57,6 +58,8 @@ export function GateOutForm() {
 
   const [truck, setTruck] = useState<GateOutTruck>(blankGateOutTruck);
   const [rows, setRows] = useState<ReleaseRow[]>([]);
+  /** Bumped after a release or a pick-up cancel, so an open visit log re-reads. */
+  const [auditKey, setAuditKey] = useState(0);
   const [loadingVisit, setLoadingVisit] = useState(false);
   const [saving, setSaving] = useState(false);
   /** Which released EIR is being fetched — the pressed link spins, not all of them. */
@@ -165,6 +168,7 @@ export function GateOutForm() {
       }, key);
 
       setResult(answer);
+      setAuditKey(k => k + 1);
       setRows(cur => cur.map(r => {
         const i = ready.findIndex(x => x.key === r.key);
         if (i < 0) return r;
@@ -218,6 +222,7 @@ export function GateOutForm() {
     try {
       await cancelPickup(truck.truckVisitId, row.pickup.visitPickupId, reason);
       setRows(cur => cur.filter(r => r.key !== row.key));
+      setAuditKey(k => k + 1);
       toast.toast({ variant: 'success', title: 'Pick-up cancelled', message: 'The box is free again.' });
     } catch (e) {
       setError(e instanceof ApiError ? e : new ApiError(0, 'The pick-up could not be cancelled.'));
@@ -448,6 +453,13 @@ export function GateOutForm() {
             </div>
           </div>
         </div>
+      )}
+
+      {/* The truck's visit trail: arrived, each EIR, pick-ups planned and
+          cancelled, amended, left. Departing clears the form, and with it this. */}
+      {truck.truckVisitId && (
+        <AuditLogSection title="Truck visit log" path={`/api/tos/gate/visits/${truck.truckVisitId}/audit`}
+          refreshKey={auditKey} showRef />
       )}
 
       {result?.truckLeftAt && (

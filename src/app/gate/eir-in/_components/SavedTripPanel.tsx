@@ -8,6 +8,7 @@ import { EIR_PRINT_NOTE, openPdf } from '@/lib/api/open-pdf';
 import { SplitReceiptModal } from '@/app/billing/_components/SplitReceiptModal';
 import { printReceiptParts, printedPartsToast, type Receipt } from '@/lib/api/receipts';
 import type { TripSaveResult } from '@/lib/api/gate-trips';
+import { AuditLogSection } from '@/components/audit/AuditLogSection';
 
 /**
  * What the Save made of the truck.
@@ -241,6 +242,12 @@ export function SavedTripPanel({ result }: { result: TripSaveResult }) {
               });
             }
           }} />
+      )}
+
+      {/* The truck's visit trail, from the moment it was saved: arrived, each
+          EIR, pick-ups planned. Read when opened. */}
+      {result.truckVisitId && (
+        <AuditLogSection title="Truck visit log" path={`/api/tos/gate/visits/${result.truckVisitId}/audit`} showRef />
       )}
     </div>
   );

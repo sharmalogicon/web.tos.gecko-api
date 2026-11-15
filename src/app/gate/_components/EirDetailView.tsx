@@ -22,6 +22,7 @@ import {
   type ContainerHolds, type EirDetail, type GateAttachment, type Survey,
 } from '@/lib/api/gate-eir';
 import { ErrorBanner } from '@/components/ui/ErrorBanner';
+import { AuditLogSection } from '@/components/audit/AuditLogSection';
 
 /**
  * EIR DETAIL — one gate transaction, live against gecko_tos.
@@ -46,6 +47,8 @@ export function EirDetailView({ id }: { id: string }) {
   const charges = useApi<VisitQuote>(
     e && canAt(WINDOW_PERMISSIONS.collect, e.branchId) ? visitQuotePath(e.truckVisitId) : null);
   const [voiding, setVoiding] = useState(false);
+  /** Bumped after an amend or a void on this screen, so an open audit log re-reads. */
+  const [auditKey, setAuditKey] = useState(0);
   const [amending, setAmending] = useState(false);
   /**
    * Amending a RECORDED gate document is supervisor work, so it takes the same
@@ -578,15 +581,22 @@ export function EirDetailView({ id }: { id: string }) {
           that returns, not the plumbing. Restore from
           docs/snapshots/eir-detail.three-column-2026-10-08.tsx */}
 
+      {/* The EIR's own trail, and its truck visit's — the amend above changes
+          the visit, and the visit trail is where that and the truck's other
+          EIRs and pick-ups are told. */}
+      {e && <AuditLogSection path={`${GATE_API}/transactions/${e.gateTransactionId}/audit`} refreshKey={auditKey} />}
+      {e && <AuditLogSection title="Truck visit log" path={`${GATE_API}/visits/${e.truckVisitId}/audit`}
+        refreshKey={auditKey} showRef />}
+
       {amending && e && visit.data && (
         <AmendTruckModal eir={e} visit={visit.data}
           onClose={() => setAmending(false)}
-          onSaved={() => { setAmending(false); visit.reload(); eir.reload(); }} />
+          onSaved={() => { setAmending(false); visit.reload(); eir.reload(); setAuditKey(k => k + 1); }} />
       )}
 
       {voiding && (
         <VoidModal eir={e} onClose={() => setVoiding(false)}
-                   onVoided={() => { setVoiding(false); eir.reload(); }} />
+                   onVoided={() => { setVoiding(false); eir.reload(); setAuditKey(k => k + 1); }} />
       )}
     </div>
   );
