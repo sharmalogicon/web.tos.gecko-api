@@ -13068,3 +13068,65 @@ th.gecko-cell-tight {
 }
 .gecko-mc-issue-error { color: var(--gecko-error-600); }
 [data-theme="dark"] .gecko-mc-issue-error { color: var(--gecko-error-300); }
+
+/* ── Booking audit log tab (owner 2026-11-14) ────────────────────────────────
+   Read-only. People in bold; the gate, EDI, jobs and scripts in teal with a
+   bolt. A field change reads "<label>: <from> → <to>" in mono so the values
+   line up and a code is never mistaken for prose. */
+.gecko-audit-tab { padding: 24px; }
+.gecko-audit-table { font-size: 12px; }
+.gecko-audit-col-when { width: 120px; }
+.gecko-audit-col-by { width: 110px; }
+.gecko-audit-col-ref { width: 150px; }
+.gecko-audit-ref { font-family: var(--gecko-font-mono); font-size: 11px; color: var(--gecko-text-primary); overflow-wrap: anywhere; }
+.gecko-audit-when { white-space: nowrap; font-size: 11px; color: var(--gecko-text-secondary); }
+.gecko-audit-by-person { font-weight: 600; color: var(--gecko-text-primary); }
+.gecko-audit-by-system {
+  display: inline-flex; align-items: center; gap: 5px;
+  font-weight: 600; color: var(--gecko-info-700);
+}
+.gecko-audit-by-system-icon { color: var(--gecko-info-500); flex-shrink: 0; }
+.gecko-audit-action { font-weight: 500; }
+.gecko-audit-gate-icon { margin-right: 5px; vertical-align: -2px; color: var(--gecko-text-secondary); }
+.gecko-audit-no-action { margin-left: 6px; font-size: 11px; font-weight: 400; color: var(--gecko-text-disabled); }
+.gecko-audit-detail { font-size: 11px; color: var(--gecko-text-secondary); }
+.gecko-audit-reason { font-style: italic; margin-bottom: 2px; }
+.gecko-audit-change { font-family: var(--gecko-font-mono); line-height: 1.55; overflow-wrap: anywhere; }
+.gecko-audit-more {
+  margin-top: 2px; padding: 0; border: 0; background: none; cursor: pointer;
+  font-size: 11px; font-weight: 600; color: var(--gecko-primary-700);
+}
+.gecko-audit-more:hover { text-decoration: underline; }
+.gecko-audit-empty { padding: 28px 16px; text-align: center; font-size: 12px; color: var(--gecko-text-secondary); }
+[data-theme="dark"] .gecko-audit-by-system { color: var(--gecko-info-300); }
+[data-theme="dark"] .gecko-audit-by-system-icon { color: var(--gecko-info-400); }
+[data-theme="dark"] .gecko-audit-more { color: var(--gecko-primary-300); }
+
+/* The collapsible audit card under a receipt / invoice / statement. */
+.gecko-audit-section { padding: 0; overflow: hidden; }
+.gecko-audit-section-head {
+  display: flex; align-items: center; gap: 8px; width: 100%;
+  padding: 12px 16px; border: 0; background: none; cursor: pointer; text-align: left;
+  color: var(--gecko-text-secondary);
+}
+.gecko-audit-section-head:hover { background: var(--gecko-bg-subtle); }
+.gecko-audit-section-title { font-size: 13px; font-weight: 600; color: var(--gecko-text-primary); }
+.gecko-audit-section-count {
+  font-size: 10px; font-weight: 700; padding: 1px 6px; border-radius: 10px;
+  background: var(--gecko-bg-subtle); color: var(--gecko-text-secondary);
+}
+.gecko-audit-section-chevron { margin-left: auto; }
+.gecko-audit-section-body { padding: 0 16px 16px; }
+/* A gate move that was dated back (GATE_BACKDATED): the summary in warning amber. */
+.gecko-audit-action-backdated { color: var(--gecko-warning-700); }
+[data-theme="dark"] .gecko-audit-action-backdated { color: var(--gecko-warning-400); }
+/* Long change lines (an order type's step "2. GIF · required, billable, seal,
+   vessel/voyage") wrap inside DETAIL rather than widening the table; rows line
+   up at the top so a five-line detail does not float the date in the middle. */
+.gecko-audit-table td { vertical-align: top; }
+.gecko-audit-detail { white-space: normal; min-width: 220px; }
+/* "+ …" / "− …" marks on an added / removed line (master and tariff trails). */
+.gecko-audit-added { font-weight: 700; color: var(--gecko-success-700); }
+.gecko-audit-removed { font-weight: 700; color: var(--gecko-error-700); }
+[data-theme="dark"] .gecko-audit-added { color: var(--gecko-success-400); }
+[data-theme="dark"] .gecko-audit-removed { color: var(--gecko-error-400); }

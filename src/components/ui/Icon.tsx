@@ -53,6 +53,10 @@ const IconPaths: Record<string, React.ReactNode> = {
   activity: <path d="M3 12h4l3-9 4 18 3-9h4"/>,
   flame: <path d="M12 2s4 4 4 8a4 4 0 0 1-8 0c0-1 .5-2 1-3-3 2-5 5-5 8a6 6 0 0 0 12 0c0-6-4-10-4-13Z"/>,
   thermometer: <><path d="M14 14V5a2 2 0 1 0-4 0v9a4 4 0 1 0 4 0Z"/></>,
+  // A boom barrier: the post, its pivot and the striped arm — the gate.
+  gate: <><path d="M4 21V9"/><circle cx="4" cy="7" r="2"/><path d="M6 6h15v3H6"/><path d="M10 6v3M14 6v3M18 6v3"/></>,
+  // A mains plug — reefer power.
+  plug: <><path d="M9 2v6M15 2v6"/><path d="M6 8h12v4a6 6 0 0 1-12 0Z"/><path d="M12 18v4"/></>,
   tool: <><path d="M14.7 6.3a1 1 0 0 0 0 1.4l1.6 1.6a1 1 0 0 0 1.4 0l3.77-3.77a6 6 0 0 1-7.94 7.94l-6.91 6.91a2.12 2.12 0 0 1-3-3l6.91-6.91a6 6 0 0 1 7.94-7.94l-3.76 3.76Z"/></>,
   percent: <><path d="M19 5 5 19"/><circle cx="6.5" cy="6.5" r="2.5"/><circle cx="17.5" cy="17.5" r="2.5"/></>,
   fileText: <><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8Z"/><path d="M14 2v6h6"/><path d="M16 13H8"/><path d="M16 17H8"/><path d="M10 9H8"/></>,

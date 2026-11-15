@@ -33,6 +33,7 @@ import {
 } from '@/lib/order-types-catalog';
 import { ErrorBanner } from '@/components/ui/ErrorBanner';
 import { SameRefNote, useSameRefBookings, type SameRefBooking } from './SameRefNote';
+import { BookingAuditTab } from './BookingAuditTab';
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -472,14 +473,6 @@ const BLANK_CONTAINER: Container = {
   vas: [],
   endReason: null,
 };
-
-const AUDIT_LOG = [
-  { by: 'SOMPORN',     on: '2026-04-23T11:46', action: 'Modified vessel details',         field: 'Voyage No → 0344-022B' },
-  { by: 'SOMPORN',     on: '2026-04-23T11:30', action: 'Added container #15',             field: 'EITU9845677 · 40HC' },
-  { by: 'System·EDI',  on: '2026-04-24T00:45', action: 'FULL IN recorded via EIR',        field: 'EITU9845677 · Truck GISCT1260412213' },
-  { by: 'System·EDI',  on: '2026-04-24T00:42', action: 'FULL IN recorded via EIR',        field: 'EITU9844201 · Truck GISCT1260412209' },
-  { by: 'SOMPORN',     on: '2026-04-23T11:26', action: 'Booking created',                 field: 'EGLV149602390729 · EXP CY/CY' },
-];
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
@@ -1610,39 +1603,6 @@ function CargoCategorySelect({ value, onChange }: { value: string; onChange: (v:
   );
 }
 
-function TabAudit() {
-  return (
-    <div style={{ padding: '24px' }}>
-      <div className="gecko-table-card">
-        <table className="gecko-table gecko-table-comfortable" style={{ fontSize: 12 }}>
-          <thead>
-            <tr>
-              <th style={{ width: 120 }}>Date / Time</th>
-              <th style={{ width: 110 }}>By</th>
-              <th>Action</th>
-              <th>Detail</th>
-            </tr>
-          </thead>
-          <tbody>
-            {AUDIT_LOG.map((a, i) => (
-              <tr key={i}>
-                <td className="gecko-cell-sub" style={{ marginTop: 0, whiteSpace: 'nowrap' }}>
-                  {formatDateTime(a.on)}
-                </td>
-                <td style={{ fontSize: 12, fontWeight: 600, color: a.by.startsWith('System') ? 'var(--gecko-info-700)' : 'var(--gecko-text-primary)' }}>
-                  {a.by.startsWith('System') ? <span className="gecko-row" style={{ gap: 5 }}><Icon name="zap" size={11} style={{ color: 'var(--gecko-info-500)' }} />{a.by}</span> : a.by}
-                </td>
-                <td style={{ fontWeight: 500 }}>{a.action}</td>
-                <td className="gecko-cell-sub" style={{ marginTop: 0 }}>{a.field}</td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
-      </div>
-    </div>
-  );
-}
-
 // ─── Main Page ────────────────────────────────────────────────────────────────
 
 /**
@@ -1773,6 +1733,8 @@ export function BookingWorkspace({ bookingId }: { bookingId?: string }) {
   const [containers, setContainers] = useState<Container[]>([]);
   const [requirements, setRequirements] = useState<ApiRequirement[]>([]);
   const [sameRefSaved, setSameRefSaved] = useState<SameRefBooking[]>([]);
+  /** Entries in the audit log, once the tab has read it — for the tab's count chip. */
+  const [auditCount, setAuditCount] = useState<number | null>(null);
 
   /** Re-read the booking whole: header, lines and boxes in one call. */
   async function reloadBooking(id: string, seedForm = false) {
@@ -2603,7 +2565,11 @@ export function BookingWorkspace({ bookingId }: { bookingId?: string }) {
               >
                 <Icon name={tab.icon} size={14} />
                 {tab.label}
-                {tab.id === 'containers' && <span style={{ fontSize: 10, fontWeight: 700, background: activeTab === tab.id ? 'var(--gecko-primary-100)' : 'var(--gecko-bg-subtle)', color: activeTab === tab.id ? 'var(--gecko-primary-700)' : 'var(--gecko-text-disabled)', borderRadius: 10, padding: '1px 6px', marginLeft: 2 }}>{containers.length}</span>}
+                {(tab.id === 'containers' || (tab.id === 'audit' && auditCount !== null && created)) && (
+                  <span style={{ fontSize: 10, fontWeight: 700, background: activeTab === tab.id ? 'var(--gecko-primary-100)' : 'var(--gecko-bg-subtle)', color: activeTab === tab.id ? 'var(--gecko-primary-700)' : 'var(--gecko-text-disabled)', borderRadius: 10, padding: '1px 6px', marginLeft: 2 }}>
+                    {tab.id === 'containers' ? containers.length : auditCount}
+                  </span>
+                )}
               </button>
             ))}
           </div>
@@ -2639,7 +2605,9 @@ export function BookingWorkspace({ bookingId }: { bookingId?: string }) {
               <TabCargo form={form} patch={patch} created={created} readOnly={readOnly}
                 onSave={() => void putHeader()} saving={saving} error={saveError} />
             )}
-            {activeTab === 'audit'      && <TabAudit />}
+            {activeTab === 'audit' && (
+              <BookingAuditTab bookingId={created?.bookingId ?? null} refreshKey={created} onCount={setAuditCount} />
+            )}
           </div>
         </div>
 
@@ -2859,13 +2827,13 @@ export function BookingWorkspace({ bookingId }: { bookingId?: string }) {
           totalContainers={containers.length}
           containersWithRecordedMoves={containers.filter(c => c.movements.some(m => m.status)).length}
           onCancel={() => setChangeOrderTypeOpen(false)}
-          onConfirm={(newCode, remarks) => {
+          onConfirm={newCode => {
             setChangeOrderTypeOpen(false);
             setOrderTypeCode(newCode);
             toast({
               variant: 'warning',
               title: 'Order type changed',
-              message: `Booking ${b.bookingNo} now uses ${newCode}. Movement templates re-seeded across ${containers.length} containers.${remarks ? ` · Audit: ${remarks}` : ''}`,
+              message: `Booking ${b.bookingNo} now uses ${newCode}. Movement templates re-seeded across ${containers.length} containers.`,
             });
           }}
         />
@@ -3401,7 +3369,9 @@ function ChangeOrderTypeModal({
   totalContainers: number;
   containersWithRecordedMoves: number;
   onCancel: () => void;
-  onConfirm: (newCode: string, remarks: string) => void;
+  // No remark: the API stores none on a header change, so one typed here
+  // would never reach the audit log.
+  onConfirm: (newCode: string) => void;
 }) {
   const eligible = useMemo(
     () => ACTIVE_ORDER_TYPES.filter(o => o.bookingType === bookingType),
@@ -3409,7 +3379,6 @@ function ChangeOrderTypeModal({
   );
   const [picked, setPicked] = useState<string>(currentOrderTypeCode);
   const [typedBL, setTypedBL] = useState('');
-  const [remarks, setRemarks] = useState('');
 
   const isDifferent = picked && picked !== currentOrderTypeCode;
   const blMatches = typedBL.trim().toUpperCase() === bookingNo.toUpperCase();
@@ -3547,17 +3516,6 @@ function ChangeOrderTypeModal({
                   Doesn&apos;t match — must equal <span className="gecko-mono" style={{ fontWeight: 700 }}>{bookingNo}</span>
                 </div>
               )}
-
-              <div className="gecko-field">
-                <div className="gecko-field-label">Remarks for audit log <span className="gecko-helper-text" style={{ marginTop: 0, display: 'inline', fontWeight: 500 }}>(optional)</span></div>
-                <textarea
-                  className="gecko-textarea"
-                  rows={2}
-                  value={remarks}
-                  onChange={e => setRemarks(e.target.value)}
-                  placeholder={`e.g. Customer changed shipping plan from ${currentOrderTypeCode} to ${picked}`}
-                />
-              </div>
             </div>
           )}
         </div>
@@ -3579,7 +3537,7 @@ function ChangeOrderTypeModal({
           <button
             className="gecko-btn gecko-btn-warning gecko-btn-sm"
             disabled={!armed}
-            onClick={() => armed && onConfirm(picked, remarks.trim())}
+            onClick={() => armed && onConfirm(picked)}
           >
             <Icon name="alertTriangle" size={13} /> Change order type
           </button>
