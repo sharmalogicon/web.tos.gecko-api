@@ -16,6 +16,7 @@ import { RoleBadge } from '../_components/RoleBadge';
 import { ContactsSection } from '../_components/ContactsSection';
 import { formatDateTime } from '@/lib/format';
 import { ErrorBanner } from '@/components/ui/ErrorBanner';
+import { AuditLogSection } from '@/components/audit/AuditLogSection';
 
 function Info({ label, value, mono, lang }: { label: string; value: React.ReactNode; mono?: boolean; lang?: string }) {
   return (
@@ -265,6 +266,11 @@ export default function CustomerDetailPage() {
               </tbody>
             </table>
           </div>
+
+          {/* Details, roles, customer terms and contacts — who changed what.
+              The page re-reads the customer after a save or a contact change,
+              and a new copy of it is the cue to re-read the trail. */}
+          <AuditLogSection path={`${partyPath(party.partyCode)}/audit`} refreshKey={party} lineDiff />
         </>
       )}
 

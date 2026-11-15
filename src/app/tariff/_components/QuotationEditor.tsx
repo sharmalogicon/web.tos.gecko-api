@@ -11,6 +11,7 @@ import { useApiList } from '@/lib/api/use-api';
 import { useSession } from '@/lib/auth/session';
 import { Fact } from '@/components/ui/Fact';
 import { ExcelImportPanel } from './ExcelImportPanel';
+import { isReasonCancelled, useChangeReason } from './ChangeReason';
 import { FreeTimeMatrix } from './FreeTimeMatrix';
 import { PartyPicker } from '@/components/ui/PartyPicker';
 import { RateDialog } from './RateDialog';
@@ -109,6 +110,8 @@ export function QuotationEditor({ initial }: { initial?: QuotationInitial }) {
   // Seeded when editing: `saveHeader` then PUTs instead of POSTing, which is
   // what makes this the same screen for both jobs.
   const [created, setCreated] = useState<Schedule | null>(initial?.schedule ?? null);
+  /** An APPROVED tariff edited in place asks why, once per save (owner 2026-11-14). */
+  const { reasonFor, withReason, dialog: reasonDialog } = useChangeReason();
   /**
    * EDITING AN APPROVED TARIFF IN PLACE (API, 2026-11-01).
    *
@@ -169,10 +172,10 @@ export function QuotationEditor({ initial }: { initial?: QuotationInitial }) {
   }
 
   /** Header: create once, then PUT on retries. Returns the current rowVersion or null on failure. */
-  async function saveHeader(): Promise<{ schedule: Schedule } | null> {
+  async function saveHeader(reason: string | null): Promise<{ schedule: Schedule } | null> {
     try {
       const schedule = created
-        ? await apiSend<Schedule>('PUT', `/api/revenue/tariffs/${created.scheduleId}`, { ...headerBody(), scheduleNo: created.scheduleNo, rowVersion })
+        ? await apiSend<Schedule>('PUT', `/api/revenue/tariffs/${created.scheduleId}`, { ...headerBody(), scheduleNo: created.scheduleNo, rowVersion, reason })
         : await apiSend<Schedule>('POST', '/api/revenue/tariffs', headerBody());
       setCreated(schedule);
       setRowVersion(schedule.rowVersion);
@@ -205,7 +208,18 @@ export function QuotationEditor({ initial }: { initial?: QuotationInitial }) {
       return;
     }
 
-    const header = await saveHeader();
+    // One save of an approved tariff is one change: asked once, and the same
+    // reason goes with the header, the rates and the free time. A tariff that
+    // needs none (draft, pending, new, trucking) asks nothing and sends null.
+    let reason: string | null;
+    try {
+      reason = await reasonFor(created);
+    } catch (e) {
+      if (isReasonCancelled(e)) { setSaving(null); return; }
+      throw e;
+    }
+
+    const header = await saveHeader(reason);
     if (!header) { setSaving(null); return; }
     let version = header.schedule.rowVersion;
     const id = header.schedule.scheduleId;
@@ -221,7 +235,7 @@ export function QuotationEditor({ initial }: { initial?: QuotationInitial }) {
 
     if (converted.length > 0 || created) {
       try {
-        const set = await apiSend<RateSet>('PUT', `/api/revenue/tariffs/${id}/rates`, { rowVersion: version, rates: converted.map(c => c.item) });
+        const set = await apiSend<RateSet>('PUT', `/api/revenue/tariffs/${id}/rates`, { rowVersion: version, rates: converted.map(c => c.item), reason });
         version = set.rowVersion;
         setRowVersion(version);
       } catch (e) {
@@ -239,7 +253,7 @@ export function QuotationEditor({ initial }: { initial?: QuotationInitial }) {
     const rules = freeTime.filter(f => f.freeUnits.trim() !== '');
     if (rules.length > 0 || created) {
       try {
-        const set = await apiSend<FreeTimeSet>('PUT', `/api/revenue/tariffs/${id}/free-time`, { rowVersion: version, rules: rules.map(toFreeTimeItem) });
+        const set = await apiSend<FreeTimeSet>('PUT', `/api/revenue/tariffs/${id}/free-time`, { rowVersion: version, rules: rules.map(toFreeTimeItem), reason });
         setRowVersion(set.rowVersion);
       } catch (e) {
         const error = e instanceof ApiError ? e : new ApiError(0, 'Could not reach the Gecko API.');
@@ -455,7 +469,8 @@ export function QuotationEditor({ initial }: { initial?: QuotationInitial }) {
             prompt to create it — one click, no page change. */}
         {canImport && (created
           ? <ExcelImportPanel scheduleId={created.scheduleId} scheduleNo={created.scheduleNo} versionNo={created.versionNo}
-              editable onApplied={() => router.push(`/tariff/plans/${created.scheduleId}`)} />
+              editable onApplied={() => router.push(`/tariff/plans/${created.scheduleId}`)}
+              confirmWith={send => withReason(created, send)} />
           : (
             <div className="gecko-table-card">
               <div className="gecko-row" style={{ padding: '14px 18px', gap: 10 }}>
@@ -550,6 +565,7 @@ export function QuotationEditor({ initial }: { initial?: QuotationInitial }) {
 
 
       </div>
+      {reasonDialog}
     </div>
   );
 }

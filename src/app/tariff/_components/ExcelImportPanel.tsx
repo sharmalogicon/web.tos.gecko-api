@@ -3,6 +3,7 @@ import React, { useRef, useState } from 'react';
 import { Icon } from '@/components/ui/Icon';
 import { useToast } from '@/components/ui/Toast';
 import { ApiError } from '@/lib/api/problem';
+import { isReasonCancelled } from './ChangeReason';
 import {
   cancelImport, confirmImport, downloadTariffTemplate, isImportNote, uploadTariffWorkbook,
   type ImportPreview, type ImportRowView,
@@ -21,12 +22,17 @@ import {
  * Surcharge conditions are not edited in Excel; a line that keeps its RateKey
  * keeps them.
  */
-export function ExcelImportPanel({ scheduleId, scheduleNo, versionNo, editable, onApplied }: {
+export function ExcelImportPanel({ scheduleId, scheduleNo, versionNo, editable, onApplied, confirmWith }: {
   scheduleId: string;
   scheduleNo: string;
   versionNo: number;
   editable: boolean;
   onApplied: () => void;
+  /**
+   * Wraps the confirm, handing it the reason an APPROVED tariff edited in place
+   * needs (null when it needs none). Absent: confirmed with no reason.
+   */
+  confirmWith?: (send: (reason: string | null) => Promise<ImportPreview>) => Promise<ImportPreview>;
 }) {
   const { toast } = useToast();
   const [busy, setBusy] = useState<'download' | 'upload' | 'confirm' | 'cancel' | null>(null);
@@ -61,13 +67,19 @@ export function ExcelImportPanel({ scheduleId, scheduleNo, versionNo, editable, 
     if (!preview) return;
     setBusy(which); setError(null);
     try {
-      const result = which === 'confirm' ? await confirmImport(preview.importBatchId) : await cancelImport(preview.importBatchId);
+      const batchId = preview.importBatchId;
+      const result = which === 'confirm'
+        ? await (confirmWith ?? (send => send(null)))(reason => confirmImport(batchId, reason))
+        : await cancelImport(batchId);
       setPreview(result);
       if (which === 'confirm') {
         toast({ variant: 'success', title: 'Workbook applied', message: `${result.rowsInsert} added · ${result.rowsUpdate} changed · ${result.rowsDelete} removed` });
         onApplied();
       }
-    } catch (e) { fail(e); } finally { setBusy(null); }
+    } catch (e) {
+      // Closed the reason dialog: nothing was sent, the preview stands.
+      if (!isReasonCancelled(e)) fail(e);
+    } finally { setBusy(null); }
   }
 
   // A PRICE_CHANGE note is not an issue: an UPDATE row explaining "555 → 600"

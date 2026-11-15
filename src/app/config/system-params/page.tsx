@@ -11,6 +11,8 @@ import {
 import { EditableTable } from '@/app/masters/lookups/_components/EditableTable';
 import { SettingsTable } from './_components/SettingsSection';
 import { ErrorBanner } from '@/components/ui/ErrorBanner';
+import { Modal } from '@/components/ui/Modal';
+import { AuditLog } from '@/components/audit/AuditLog';
 
 /**
  * LIVE against gecko_master — tenant settings (config.tenant_setting over the
@@ -55,6 +57,8 @@ function SystemParams() {
 
   const settings = useApi<TenantSetting[]>(branch ? settingsPath(branch) : settingsPath(null));
   const series = useApi<NumberSeries[]>(`${NUMBER_SERIES_PATH}?includeInactive=true`);
+  /** The series whose audit log is open, if any. */
+  const [auditOf, setAuditOf] = useState<NumberSeries | null>(null);
 
   const modules = useMemo(() => [...new Set((settings.data ?? []).map(s => s.owningModule))], [settings.data]);
   const [picked, setPicked] = useState<Section | null>(asked === 'series' ? { kind: 'series' } : null);
@@ -131,6 +135,18 @@ function SystemParams() {
                     </div>
                   ),
                 },
+                {
+                  // Read-only, so every viewer has it — not only those who may
+                  // edit the row (the actions column is theirs).
+                  key: 'numberSeriesId', label: 'History', kind: 'text', width: 100, editableWhen: () => false,
+                  render: s => (s.numberSeriesId
+                    ? (
+                      <button type="button" className="gecko-btn gecko-btn-ghost gecko-btn-sm" onClick={() => setAuditOf(s)}>
+                        <Icon name="clock" size={13} /> Audit log
+                      </button>
+                    )
+                    : '—'),
+                },
               ]}
               rows={series.data}
               loading={series.loading}
@@ -152,6 +168,14 @@ function SystemParams() {
           )}
         </div>
       </div>
+
+      {auditOf?.numberSeriesId && (
+        <Modal isOpen onClose={() => setAuditOf(null)} size="xl"
+          title={`Audit log — ${auditOf.seriesKey}`}
+          subtitle="Newest first — who changed this number series, old → new">
+          <AuditLog path={`${NUMBER_SERIES_PATH}/${auditOf.numberSeriesId}/audit`} lineDiff />
+        </Modal>
+      )}
     </div>
   );
 }

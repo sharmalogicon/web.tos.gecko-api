@@ -28,6 +28,8 @@ import {
 } from '@/lib/api/revenue';
 import { ExcelImportPanel } from '../../_components/ExcelImportPanel';
 import { ErrorBanner } from '@/components/ui/ErrorBanner';
+import { AuditLog } from '@/components/audit/AuditLog';
+import { isReasonCancelled, useChangeReason } from '../../_components/ChangeReason';
 
 /**
  * LIVE against gecko_revenue. One version of one price agreement.
@@ -45,7 +47,7 @@ import { ErrorBanner } from '@/components/ui/ErrorBanner';
  *     rejected, by whom — not invented workflow steps.
  */
 
-type Tab = 'overview' | 'charges' | 'storage' | 'activity';
+type Tab = 'overview' | 'charges' | 'storage' | 'activity' | 'audit';
 
 export default function TariffScheduleDetailPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = use(params);
@@ -57,7 +59,7 @@ export default function TariffScheduleDetailPage({ params }: { params: Promise<{
   // longer a tab — the import card sits on Overview — so it simply lands there.
   const requested = searchParams.get('tab');
   const [tab, setTab] = useState<Tab>(
-    requested === 'charges' || requested === 'storage' || requested === 'activity' ? requested : 'overview');
+    requested === 'charges' || requested === 'storage' || requested === 'activity' || requested === 'audit' ? requested : 'overview');
   const [busy, setBusy] = useState<string | null>(null);
 
   const schedule = useApi<Schedule>(`/api/revenue/tariffs/${id}`);
@@ -81,6 +83,9 @@ export default function TariffScheduleDetailPage({ params }: { params: Promise<{
     [catalogs]);
 
   const reloadAll = () => { schedule.reload(); rateSet.reload(); freeTime.reload(); };
+
+  /** An APPROVED tariff edited in place asks why before each save (owner 2026-11-14). */
+  const { withReason, dialog: reasonDialog } = useChangeReason();
 
   // ── editing the priced rows, in the dialog that creates them ─────────────
   //
@@ -120,14 +125,17 @@ export default function TariffScheduleDetailPage({ params }: { params: Promise<{
       return false;
     }
     try {
-      await apiSend('PUT', `/api/revenue/tariffs/${id}/rates`, {
+      await withReason(s, reason => apiSend('PUT', `/api/revenue/tariffs/${id}/rates`, {
         rowVersion: rateSet.data?.rowVersion ?? s?.rowVersion,
         rates: converted.map(c => c.item),
-      });
+        reason,
+      }));
       setRateErrors(undefined);
       reloadAll();
       return true;
     } catch (e) {
+      // Closed the reason dialog: nothing was sent, so nothing to report.
+      if (isReasonCancelled(e)) { undo(); return false; }
       const error = e instanceof ApiError ? e : new ApiError(0, 'Could not reach the Gecko API.');
       // The server keys its refusals per row; the dialog shows the one it is on.
       const mine = editingId
@@ -138,7 +146,7 @@ export default function TariffScheduleDetailPage({ params }: { params: Promise<{
       undo();
       return false;
     }
-  }, [id, rateSet.data, s, editingId]);
+  }, [id, rateSet.data, s, editingId, withReason]);
 
   async function saveRate(saved: RateDraft) {
     setRateBusy(editingId);
@@ -182,14 +190,16 @@ export default function TariffScheduleDetailPage({ params }: { params: Promise<{
     setFreeBusy(true);
     setFreeError(null);
     try {
-      await apiSend('PUT', `/api/revenue/tariffs/${id}/free-time`, {
+      await withReason(s, reason => apiSend('PUT', `/api/revenue/tariffs/${id}/free-time`, {
         rowVersion: freeTime.data?.rowVersion ?? s?.rowVersion,
         // An empty cell is not a rule: it means "take STANDARD's free days".
         rules: rules.filter(f => f.freeUnits.trim() !== '').map(toFreeTimeItem),
-      });
+        reason,
+      }));
       setFreeEdit(null);
       reloadAll();
     } catch (e) {
+      if (isReasonCancelled(e)) return;
       const error = e instanceof ApiError ? e : new ApiError(0, 'Could not reach the Gecko API.');
       setFreeError(error.forField('rules') ?? error.message);
     } finally {
@@ -471,6 +481,7 @@ export default function TariffScheduleDetailPage({ params }: { params: Promise<{
             { id: 'charges', label: `Move charges (${moveCharges.length})`, icon: 'truck' },
             { id: 'storage', label: `Storage & time (${timeCharges.length})`, icon: 'clock' },
             { id: 'activity', label: 'Activity', icon: 'activity' },
+            { id: 'audit', label: 'Audit log', icon: 'clock' },
           ] as { id: Tab; label: string; icon: string }[]).map(t => (
             <button key={t.id} className={`gecko-tab ${tab === t.id ? 'gecko-tab-active' : ''}`} onClick={() => setTab(t.id)}>
               <Icon name={t.icon} size={13} /> {t.label}
@@ -492,7 +503,8 @@ export default function TariffScheduleDetailPage({ params }: { params: Promise<{
                 when a clerk wants to drop the customer's workbook in. */}
             {s.isEditable && canManage && can('revenue.import.manage') && (
               <ExcelImportPanel scheduleId={s.scheduleId} scheduleNo={s.scheduleNo} versionNo={s.versionNo}
-                editable onApplied={reloadAll} />
+                editable onApplied={reloadAll}
+                confirmWith={send => withReason(s, send)} />
             )}
             {/* Parties on the left, storage free days beside them — the shape of
                 Vector's Customer Rate Profile, in our cards. */}
@@ -646,6 +658,12 @@ export default function TariffScheduleDetailPage({ params }: { params: Promise<{
           </div>
         )}
 
+        {/* This version's own trail — a revision is its own version, and its
+            first line says which one it started from. Every write on this
+            screen re-reads the tariff, which re-reads this. */}
+        {tab === 'audit' && (
+          <AuditLog path={`/api/revenue/tariffs/${s.scheduleId}/audit`} refreshKey={s} lineDiff />
+        )}
         {tab === 'activity' && (
           <Card title="Approval trail" icon="activity" subtitle="What the API recorded — system versioning keeps every earlier state of the row.">
             <div>
@@ -693,6 +711,8 @@ export default function TariffScheduleDetailPage({ params }: { params: Promise<{
         onSave={saveRate} />
 
       <AskDialog ask={ask} onClose={() => setAsk(null)} />
+      {/* After the rate dialog, so it stacks above it when a rate save asks why. */}
+      {reasonDialog}
     </div>
   );
 }

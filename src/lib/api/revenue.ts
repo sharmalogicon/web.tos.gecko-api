@@ -488,7 +488,12 @@ export function uploadTariffWorkbook(scheduleId: string, file: File): Promise<Im
   return apiUpload<ImportPreview>(`/api/revenue/tariffs/${scheduleId}/imports`, form);
 }
 
-export const confirmImport = (batchId: string) => apiSend<ImportPreview>('POST', `/api/revenue/imports/${batchId}/confirm`);
+/**
+ * Apply an uploaded workbook. An upload into an APPROVED tariff edited in place
+ * must say why (owner 2026-11-14): `{ reason }` then. Otherwise no body, as before.
+ */
+export const confirmImport = (batchId: string, reason: string | null = null) =>
+  apiSend<ImportPreview>('POST', `/api/revenue/imports/${batchId}/confirm`, reason ? { reason } : undefined);
 export const cancelImport = (batchId: string) => apiSend<ImportPreview>('POST', `/api/revenue/imports/${batchId}/cancel`);
 
 /**

@@ -16,6 +16,7 @@ import {
 import { ChargeCodeForm, chargeErrors, formFromCharge, requestFromCharge, type ChargeFormValue } from '../_components/ChargeCodeForm';
 import { VariantsEditor, requestFromRows, rowsFromVariants, variantErrors, type VariantRow } from '../_components/VariantsEditor';
 import { ErrorBanner } from '@/components/ui/ErrorBanner';
+import { AuditLogSection } from '@/components/audit/AuditLogSection';
 
 /**
  * One charge code: its own fields, and its billing matrix (bill-to × payment
@@ -298,6 +299,10 @@ export default function ChargeCodeDetailPage() {
             </table>
           </div>
         )}
+
+        {/* Settings and its bill-to / payment-term variants — who changed
+            what. Each save re-reads the charge code, and so this. */}
+        <AuditLogSection path={`${chargeCodePath(code)}/audit`} refreshKey={data} lineDiff />
       </div>
       <ConfirmDialog
         isOpen={confirmDelete}

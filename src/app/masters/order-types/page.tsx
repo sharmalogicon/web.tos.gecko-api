@@ -18,6 +18,7 @@ import { formatDate, formatDateTime } from '@/lib/format';
 import { OrderTypeForm, formFromOrderType, orderTypeErrors, requestFromOrderType, type OrderTypeFormValue } from './_components/OrderTypeForm';
 import { StepsEditor, requestFromSteps, rowsFromSteps, stepErrors, type StepRow } from './_components/StepsEditor';
 import { ChargesTables } from './_components/ChargesTables';
+import { AuditLogSection } from '@/components/audit/AuditLogSection';
 import { RulesEditor, RulesSummary, activeRuleCount, rulesDiffer, rulesFrom, walkInShape } from './_components/RulesPanel';
 import { chargeRowErrors, requestFromCharges, rowsFromCharges, type ChargeRow } from './_components/charge-rows';
 import { ErrorBanner } from '@/components/ui/ErrorBanner';
@@ -767,6 +768,10 @@ export default function OrderTypeMasterPage() {
                   )}
                 </div>
               </div>
+
+              {/* Settings, steps and charges — who changed what. A save of any
+                  of them re-reads the order type, which re-reads this. */}
+              <AuditLogSection path={detailPath && `${detailPath}/audit`} refreshKey={current} lineDiff />
             </>
           )}
         </div>
