@@ -13091,7 +13091,6 @@ th.gecko-cell-tight {
 .gecko-audit-no-action { margin-left: 6px; font-size: 11px; font-weight: 400; color: var(--gecko-text-disabled); }
 .gecko-audit-detail { font-size: 11px; color: var(--gecko-text-secondary); }
 .gecko-audit-reason { font-style: italic; margin-bottom: 2px; }
-.gecko-audit-change { font-family: var(--gecko-font-mono); line-height: 1.55; overflow-wrap: anywhere; }
 .gecko-audit-more {
   margin-top: 2px; padding: 0; border: 0; background: none; cursor: pointer;
   font-size: 11px; font-weight: 600; color: var(--gecko-primary-700);
@@ -13130,3 +13129,42 @@ th.gecko-cell-tight {
 .gecko-audit-removed { font-weight: 700; color: var(--gecko-error-700); }
 [data-theme="dark"] .gecko-audit-added { color: var(--gecko-success-400); }
 [data-theme="dark"] .gecko-audit-removed { color: var(--gecko-error-400); }
+
+/* An entry's changes as Field | Old value | New value, nested in the Detail cell. */
+.gecko-audit-changes { width: 100%; border-collapse: collapse; table-layout: fixed; font-size: 11px; margin-top: 2px; }
+/* Scoped under the outer table so its th / td padding and borders don't leak in. */
+.gecko-table.gecko-audit-table .gecko-audit-changes th {
+  padding: 3px 8px 3px 0; text-align: left; border-bottom: 1px solid var(--gecko-border);
+  font-size: 10px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.03em;
+  white-space: normal; color: var(--gecko-text-secondary); background: none;
+}
+.gecko-table.gecko-audit-table .gecko-audit-changes td {
+  padding: 3px 8px 3px 0; vertical-align: top; border-bottom: 1px solid var(--gecko-border);
+  overflow-wrap: anywhere; line-height: 1.45;
+}
+.gecko-table.gecko-audit-table .gecko-audit-changes tbody tr:last-child td { border-bottom: 0; }
+.gecko-table .gecko-audit-changes tbody tr:hover { background: none; }
+/* A removed + added line pair: the shared identity once, then the tiers straight across. */
+.gecko-table.gecko-audit-table .gecko-audit-changes tr.gecko-audit-changes-group td { border-bottom: 0; padding-bottom: 0; }
+.gecko-table.gecko-audit-table .gecko-audit-changes td.gecko-audit-changes-identity {
+  font-family: var(--gecko-font-mono); color: var(--gecko-text-secondary); font-style: italic;
+}
+.gecko-table.gecko-audit-table .gecko-audit-changes td.gecko-audit-changes-sub {
+  padding-left: 10px; font-family: var(--gecko-font-mono); font-weight: 400;
+}
+.gecko-audit-changes .gecko-audit-changes-field { width: 30%; color: var(--gecko-text-secondary); }
+.gecko-audit-changes .gecko-audit-changes-old { width: 35%; font-family: var(--gecko-font-mono); color: var(--gecko-text-secondary); }
+.gecko-audit-changes .gecko-audit-changes-new { width: 35%; font-family: var(--gecko-font-mono); color: var(--gecko-text-primary); font-weight: 600; }
+.gecko-audit-changes td.gecko-audit-changes-field { font-weight: 500; }
+@media (max-width: 640px) {
+  .gecko-audit-changes thead { display: none; }
+  .gecko-audit-changes, .gecko-audit-changes tbody, .gecko-audit-changes tr { display: block; width: 100%; }
+  .gecko-audit-changes tr { padding: 3px 0; border-bottom: 1px solid var(--gecko-border); }
+  .gecko-audit-changes tbody tr:last-child { border-bottom: 0; }
+  .gecko-table.gecko-audit-table .gecko-audit-changes td { display: inline; padding: 0; border: 0; width: auto; }
+  .gecko-table.gecko-audit-table .gecko-audit-changes td.gecko-audit-changes-field { display: block; }
+  .gecko-audit-changes td.gecko-audit-changes-new::before { content: ' → '; font-weight: 400; color: var(--gecko-text-secondary); }
+}
+@media print {
+  .gecko-audit-changes thead { display: table-header-group; }
+}
