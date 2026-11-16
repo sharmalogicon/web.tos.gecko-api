@@ -14,6 +14,7 @@ import { eirPath, formatKg, type ContainerHolds } from '@/lib/api/gate-eir';
 import { statusLabel } from '@/lib/format';
 import type { Hold } from '@/lib/api/holds';
 import { REEFER_SESSIONS_PATH, type ReeferSession } from '@/lib/api/reefer';
+import type { EquipmentType } from '@/lib/api/equipment-types';
 import { yardsPath, type Yard } from '@/lib/api/yards';
 import { YARD_MANAGE, useYardLocation, type YardLocation } from '@/lib/api/yard-map';
 import { MoveBoxDialog } from '@/components/yard/MoveBoxDialog';
@@ -95,6 +96,10 @@ function UnitInquiry() {
   const s = story.data;
   const current = s?.current ?? null;
   const yards = useApiList<Yard>(current?.yardId && can(STORY_PERMISSIONS.yardView) ? yardsPath(current.branchId) : null);
+  // The type master's reefer flag — read only by those who may (mdm.equipment.view); the
+  // ISO code and the registry still answer for anyone else.
+  const equipmentTypes = useApiList<EquipmentType>(asked && can(STORY_PERMISSIONS.registryView)
+    ? '/api/master/equipment-types?pageSize=200&includeInactive=true' : null);
   const yard = current?.yardId ? yards.data?.find(y => y.yardId === current.yardId) ?? null : null;
   /**
    * WHERE IT STANDS, in slot terms. The story knows the position TEXT; only
@@ -131,6 +136,21 @@ function UnitInquiry() {
   const holdsNow = activeHolds.data?.holds ?? [];
   const holdsGone = released.data ?? [];
   const reg = registry.data;
+
+  /**
+   * IS THIS A REEFER? The Reefer tab is for boxes that take power (owner
+   * 2026-11-15) — a dry box has no plug sessions, and an empty "Reefer (0)" tab
+   * on every 20GP is noise. Any one of these says yes:
+   *   - its equipment type is flagged reefer in the type master;
+   *   - its ISO 6346 size-type code is an R type (22R1, 45R1 …);
+   *   - its registry names a reefer unit (make or model);
+   *   - it already has reefer sessions — its plug history is never hidden.
+   */
+  const typeCode = reg?.typeCode ?? current?.equipmentTypeCode ?? s?.visits[0]?.equipmentTypeCode ?? null;
+  const isReeferBox = sessions.length > 0
+    || !!(reg?.reeferUnitMake || reg?.reeferUnitModel)
+    || /^..R/i.test(reg?.isoCode ?? '')
+    || (equipmentTypes.data ?? []).some(t => t.typeCode === typeCode && t.isReefer);
   // The stay the header describes: the open one, else the newest closed one.
   const latest = current ?? s?.visits[0] ?? null;
   const bannerLine = current?.lineCode ?? s?.visits[0]?.lineCode ?? s?.bookings[0]?.lineCode ?? reg?.ownerCode ?? null;
@@ -317,7 +337,7 @@ function UnitInquiry() {
               ['moves', `EIRs (${moveRows.length})`, 'transferH'],
               ...(can(STORY_PERMISSIONS.holdView) ? [['holds', `Holds (${holdsNow.length} active)`, 'lock'] as const] : []),
               ['bookings', `Bookings (${s.bookings.length})`, 'clipboardList'],
-              ...(can(STORY_PERMISSIONS.reeferView) ? [['reefer', `Reefer (${sessions.length})`, 'thermometer'] as const] : []),
+              ...(can(STORY_PERMISSIONS.reeferView) && isReeferBox ? [['reefer', `Reefer (${sessions.length})`, 'thermometer'] as const] : []),
             ] as const).map(([k, label, icon]) => {
               const active = tab === k;
               return (
@@ -399,7 +419,7 @@ function UnitInquiry() {
             )}
             {tab === 'holds' && <HoldsTab now={holdsNow} released={holdsGone} />}
             {tab === 'bookings' && <BookingsTab story={s} canBookings={can(STORY_PERMISSIONS.bookingView)} />}
-            {tab === 'reefer' && <ReeferTab sessions={sessions} />}
+            {tab === 'reefer' && isReeferBox && <ReeferTab sessions={sessions} />}
           </div>
         </div>
       )}
