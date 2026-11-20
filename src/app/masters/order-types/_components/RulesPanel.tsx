@@ -29,10 +29,15 @@ import {
  */
 
 export const rulesFrom = (rules: OrderTypeRules | undefined): OrderTypeRules =>
-  rules ? { ...rules, releaseGradeCodes: [...(rules.releaseGradeCodes ?? [])] } : { ...NO_RULES, releaseGradeCodes: [] };
+  // isSwap coerced so the Rules save always sends true/false, never undefined
+  // (which the API would read as "leave it unchanged").
+  rules
+    ? { ...rules, isSwap: rules.isSwap === true, releaseGradeCodes: [...(rules.releaseGradeCodes ?? [])] }
+    : { ...NO_RULES, releaseGradeCodes: [] };
 
 export const rulesDiffer = (a: OrderTypeRules, b: OrderTypeRules): boolean =>
   a.isWalkIn !== b.isWalkIn
+  || a.isSwap !== b.isSwap
   || a.paymentRule !== b.paymentRule
   || a.ownerMatch !== b.ownerMatch
   || a.maxBoxesPerTruck !== b.maxBoxesPerTruck
@@ -46,6 +51,7 @@ export const rulesDiffer = (a: OrderTypeRules, b: OrderTypeRules): boolean =>
  */
 export const activeRuleCount = (r: OrderTypeRules): number =>
   (r.isWalkIn ? 1 : 0)
+  + (r.isSwap ? 1 : 0)
   + (r.paymentRule ? 1 : 0)
   + (r.ownerMatch ? 1 : 0)
   + (r.maxBoxesPerTruck !== null ? 1 : 0)
@@ -69,13 +75,15 @@ export function walkInShape(steps: OrderTypeStep[], vocabulary: OrderTypeVocabul
   return { ok: true, chip: `${direction} · ${load}` };
 }
 
+const SWAP_HINT = 'Truck-in form and EIR print กลับตู้/ถ่ายหางตู้เปล่า (empty box) or กลับตู้/ถ่ายหางตู้หนัก (full box) for this order type.';
+
 // ─── read ─────────────────────────────────────────────────────────────────────
 
 export function RulesSummary({ rules, walkInChip }: { rules: OrderTypeRules; walkInChip: string | null }) {
   const payment = PAYMENT_RULES.find(p => p.value === (rules.paymentRule ?? ''));
   const owner = OWNER_MATCHES.find(o => o.value === (rules.ownerMatch ?? ''));
   const captured = CAPTURE_RULES.filter(r => rules[r.key]);
-  const plain = !rules.isWalkIn && !rules.paymentRule && !rules.ownerMatch
+  const plain = !rules.isWalkIn && !rules.isSwap && !rules.paymentRule && !rules.ownerMatch
     && rules.releaseGradeCodes.length === 0 && rules.maxBoxesPerTruck === null
     && captured.length === 0;
 
@@ -97,6 +105,7 @@ export function RulesSummary({ rules, walkInChip }: { rules: OrderTypeRules; wal
           {walkInChip && <span className="gecko-badge gecko-badge-info gecko-ot-rules-chip">{walkInChip}</span>}
         </Read>
       )}
+      {rules.isSwap && <Read label="Swap">{SWAP_HINT}</Read>}
       {captured.length > 0 && (
         <Read label="The gate must key">
           <span className="gecko-ot-rules-grades">
@@ -198,6 +207,20 @@ export function RulesEditor({ value, onChange, steps, vocabulary, localErrors, a
             already does, the save is refused and names it.
           </div>
         )}
+      </div>
+
+      {/* ── Swap: wording on the truck-in form and the EIR print ── */}
+      <div className="gecko-ot-rule-block">
+        <label className="gecko-ot-rule-tick">
+          <input type="checkbox" className="gecko-checkbox"
+            checked={value.isSwap}
+            onChange={e => set({ isSwap: e.target.checked })} />
+          <span>
+            <span className="gecko-ot-rule-name">Swap</span>
+            <span className="gecko-cell-meta">{SWAP_HINT}</span>
+          </span>
+        </label>
+        {err('rules.isSwap') && <div className="gecko-field-error">{err('rules.isSwap')}</div>}
       </div>
 
       {/* ── R7-R10 what the gate must capture ── */}

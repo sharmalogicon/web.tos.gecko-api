@@ -445,6 +445,8 @@ interface ApiOrderType {
    */
   requiresVesselSchedule: boolean;
   isActive: boolean;
+  /** Only isWalkIn is read here: the gate raises walk-in bookings, never a clerk. */
+  rules?: { isWalkIn?: boolean } | null;
 }
 
 /** A sailing the booking can point at. */
@@ -2310,6 +2312,12 @@ export function BookingWorkspace({ bookingId }: { bookingId?: string }) {
    * the GATE raises those, not a booking clerk. Offering a choice only to reject
    * it teaches people the screen is unreliable.
    *
+   * WALK-IN order types (rules.isWalkIn) are left out for the same reason: the
+   * gate raises a walk-in booking itself and the API refuses one made by hand.
+   * The one exception is the order type this booking ALREADY carries — an
+   * existing walk-in booking opened here must still show its own order type,
+   * not a blank "Choose…". Nowhere else (list, search filters) filters these.
+   *
    * NOTHING ELSE is filtered. The order type is the CHOICE; direction, booking
    * type, service and cargo class are its ATTRIBUTES, read off whichever one is
    * picked. Filtering the list by a direction would be backwards — and against
@@ -2319,8 +2327,9 @@ export function BookingWorkspace({ bookingId }: { bookingId?: string }) {
   const offerableOrderTypes = useMemo(
     // isActive matters: a retired order type must not be offered on a new
     // booking even though old bookings still carry it.
-    () => (apiOrderTypes ?? []).filter(ot => ot.isActive && ot.orderTypeCode !== 'BLIND GATE IN'),
-    [apiOrderTypes]);
+    () => (apiOrderTypes ?? []).filter(ot => ot.isActive && ot.orderTypeCode !== 'BLIND GATE IN'
+      && (ot.rules?.isWalkIn !== true || ot.orderTypeCode === orderTypeCode)),
+    [apiOrderTypes, orderTypeCode]);
 
   /** The chosen order type decides the direction; the badge only reports it. */
   const summary = {

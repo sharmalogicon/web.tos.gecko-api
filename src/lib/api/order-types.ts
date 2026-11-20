@@ -57,6 +57,15 @@ export interface OrderTypeRules {
   requireYard: boolean;
   /** The slot inside that yard. Implies requireYard; the editor keeps the pair honest. */
   requirePosition: boolean;
+  /**
+   * SWAP (owner 2026-11-20): the truck-in form and the EIR print the swap wording —
+   * กลับตู้/ถ่ายหางตู้เปล่า for an empty box, กลับตู้/ถ่ายหางตู้หนัก for a full one.
+   *
+   * The API takes null/omitted as "leave it as it is"; this screen always sends
+   * the tick's true/false, since the Rules card is the only caller that sends
+   * `rules` at all and it always shows the tick.
+   */
+  isSwap: boolean;
 }
 
 /** R2's four answers. `''` is "as the charges say" — the API's null. */
@@ -83,6 +92,7 @@ export const OWNER_MATCHES: { value: string; label: string; hint: string }[] = [
 export const NO_RULES: OrderTypeRules = {
   isWalkIn: false, paymentRule: null, releaseGradeCodes: [], ownerMatch: null, maxBoxesPerTruck: null,
   requireSeal: false, requireCargoWeight: false, requireYard: false, requirePosition: false,
+  isSwap: false,
 };
 
 /**

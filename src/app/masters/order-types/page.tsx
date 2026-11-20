@@ -514,6 +514,7 @@ export default function OrderTypeMasterPage() {
                         saying in the list, because nothing else on the row
                         explains why those boxes are missing from the figures. */}
                     {o.showInInventory === false && <span className="gecko-ot-item-noinv">Not in inventory</span>}
+                    {o.rules?.isSwap && <span className="gecko-ot-item-noinv">Swap</span>}
                     {gone
                       ? <span className="gecko-ot-item-tag gecko-ot-item-tag-gone">deleted {formatDate(o.deletedAt)}</span>
                       : !o.isActive && <span className="gecko-ot-item-tag">inactive</span>}
